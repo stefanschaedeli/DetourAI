@@ -208,10 +208,18 @@ class RecomputeRequest(BaseModel):
 # OSRM enrichment helper
 # ---------------------------------------------------------------------------
 
-async def _enrich_options_with_osrm(options: list, prev_location: str) -> list:
-    """Geocode each option with Nominatim, then compute real drive time via OSRM."""
+async def _enrich_options_with_osrm(
+    options: list, prev_location: str, segment_target: str = ""
+) -> tuple[list, Optional[dict]]:
+    """Geocode each option with Nominatim, then compute real drive time via OSRM.
+    Returns (enriched_options, map_anchors) where map_anchors holds lat/lon for
+    the prev_location (start pin) and segment_target (goal pin)."""
     prev_coords = await geocode_nominatim(prev_location)
     await asyncio.sleep(0.35)
+    target_coords = None
+    if segment_target:
+        target_coords = await geocode_nominatim(segment_target)
+        await asyncio.sleep(0.35)
     for opt in options:
         place = f"{opt.get('region', '')}, {opt.get('country', '')}"
         coords = await geocode_nominatim(place)
@@ -224,7 +232,15 @@ async def _enrich_options_with_osrm(options: list, prev_location: str) -> list:
             opt["lat"] = coords[0]
             opt["lon"] = coords[1]
             opt["maps_url"] = build_maps_url([prev_location, place])
-    return options
+    map_anchors = {
+        "prev_lat": prev_coords[0] if prev_coords else None,
+        "prev_lon": prev_coords[1] if prev_coords else None,
+        "prev_label": prev_location,
+        "target_lat": target_coords[0] if target_coords else None,
+        "target_lon": target_coords[1] if target_coords else None,
+        "target_label": segment_target,
+    }
+    return options, map_anchors
 
 
 # ---------------------------------------------------------------------------
@@ -262,7 +278,7 @@ async def plan_trip(request: TravelRequest):
     estimated_total_stops = result.get("estimated_total_stops", 4)
     route_could_be_complete = result.get("route_could_be_complete", False)
 
-    options = await _enrich_options_with_osrm(options, request.start_location)
+    options, map_anchors = await _enrich_options_with_osrm(options, request.start_location, segment_target)
 
     job["current_options"] = options
     job["route_could_be_complete"] = route_could_be_complete
@@ -284,6 +300,7 @@ async def plan_trip(request: TravelRequest):
             "segment_index": 0,
             "segment_count": len(request.via_points) + 1,
             "segment_target": segment_target,
+            "map_anchors": map_anchors,
         },
     }
 
@@ -365,7 +382,7 @@ async def select_stop(job_id: str, body: StopSelectRequest):
         next_options = next_result.get("options", [])
         estimated_total = next_result.get("estimated_total_stops", 4)
         prev_loc = via_point.location
-        next_options = await _enrich_options_with_osrm(next_options, prev_loc)
+        next_options, map_anchors = await _enrich_options_with_osrm(next_options, prev_loc, segment_target)
         job["current_options"] = next_options
         job["route_could_be_complete"] = next_result.get("route_could_be_complete", False)
         save_job(job_id, job)
@@ -387,6 +404,7 @@ async def select_stop(job_id: str, body: StopSelectRequest):
                 "segment_index": job["segment_index"],
                 "segment_count": n_segments,
                 "segment_target": segment_target,
+                "map_anchors": map_anchors,
             },
         }
 
@@ -432,7 +450,7 @@ async def select_stop(job_id: str, body: StopSelectRequest):
         next_options = next_result.get("options", [])
         estimated_total = next_result.get("estimated_total_stops", 4)
         prev_loc_else = selected.get("region", request.start_location)
-        next_options = await _enrich_options_with_osrm(next_options, prev_loc_else)
+        next_options, map_anchors = await _enrich_options_with_osrm(next_options, prev_loc_else, segment_target)
         job["current_options"] = next_options
         job["route_could_be_complete"] = next_result.get("route_could_be_complete", False)
         save_job(job_id, job)
@@ -452,6 +470,7 @@ async def select_stop(job_id: str, body: StopSelectRequest):
                 "segment_index": seg_idx,
                 "segment_count": n_segments,
                 "segment_target": segment_target,
+                "map_anchors": map_anchors,
             },
         }
 
@@ -497,7 +516,7 @@ async def recompute_options(job_id: str, body: RecomputeRequest):
     )
 
     options = result.get("options", [])
-    options = await _enrich_options_with_osrm(options, prev_location)
+    options, map_anchors = await _enrich_options_with_osrm(options, prev_location, segment_target)
 
     job["current_options"] = options
     job["route_could_be_complete"] = result.get("route_could_be_complete", False)
@@ -516,6 +535,7 @@ async def recompute_options(job_id: str, body: RecomputeRequest):
             "segment_index": seg_idx,
             "segment_count": n_segments,
             "segment_target": segment_target,
+            "map_anchors": map_anchors,
         },
     }
 

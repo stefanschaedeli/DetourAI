@@ -213,15 +213,22 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
   margin-bottom: 20px;
 }
 
-/* Leaflet numbered markers */
-.map-marker-num {
+/* Leaflet markers — shared base */
+.map-marker-num,
+.map-marker-anchor {
   width: 28px; height: 28px; border-radius: 50%;
-  background: var(--accent); color: #fff;
+  color: #fff;
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 700;
   border: 2px solid #fff;
   box-shadow: 0 2px 6px rgba(0,0,0,.3);
 }
+/* Option markers: blue */
+.map-marker-num { background: var(--accent); }
+/* Start pin: green */
+.map-marker-anchor.start-pin { background: #34c759; }
+/* Segment-target pin: red */
+.map-marker-anchor.target-pin { background: #ff3b30; }
 
 /* Option cards: flex-column, full width */
 .options-grid {

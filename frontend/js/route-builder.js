@@ -78,7 +78,7 @@ function renderOptions(options, meta) {
   }).join('');
 
   // Init Leaflet map
-  _initMap(meta.segment_target || '', options);
+  _initMap(meta.map_anchors || {}, options);
 
   // Show confirm button if route could be complete
   if (confirmBtn) {
@@ -99,12 +99,9 @@ function _buildExtraFields(opt) {
   return parts.length > 0 ? `<div class="opt-extra-fields">${parts.join('')}</div>` : '';
 }
 
-function _initMap(segmentTarget, options) {
+function _initMap(anchors, options) {
   const mapEl = document.getElementById('route-map');
   if (!mapEl) return;
-
-  // Collect coords from options that have lat/lon
-  const validOptions = options.filter(o => o.lat && o.lon);
 
   if (!_map) {
     _map = L.map('route-map').setView([47, 8], 6);
@@ -118,7 +115,38 @@ function _initMap(segmentTarget, options) {
 
   const bounds = [];
 
-  validOptions.forEach((opt, i) => {
+  // Start pin (green)
+  if (anchors.prev_lat && anchors.prev_lon) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="map-marker-anchor start-pin">S</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+    });
+    const m = L.marker([anchors.prev_lat, anchors.prev_lon], { icon })
+      .bindPopup(`<b>Start: ${anchors.prev_label || ''}</b>`)
+      .addTo(_map);
+    _mapMarkers.push(m);
+    bounds.push([anchors.prev_lat, anchors.prev_lon]);
+  }
+
+  // Segment target pin (red)
+  if (anchors.target_lat && anchors.target_lon) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="map-marker-anchor target-pin">Z</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+    });
+    const m = L.marker([anchors.target_lat, anchors.target_lon], { icon })
+      .bindPopup(`<b>Ziel: ${anchors.target_label || ''}</b>`)
+      .addTo(_map);
+    _mapMarkers.push(m);
+    bounds.push([anchors.target_lat, anchors.target_lon]);
+  }
+
+  // Option pins (blue, numbered)
+  options.filter(o => o.lat && o.lon).forEach((opt, i) => {
     const icon = L.divIcon({
       className: '',
       html: `<div class="map-marker-num">${i + 1}</div>`,
@@ -134,7 +162,7 @@ function _initMap(segmentTarget, options) {
   });
 
   if (bounds.length > 0) {
-    _map.fitBounds(bounds, { padding: [30, 30], maxZoom: 9 });
+    _map.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });
   }
 
   setTimeout(() => { if (_map) _map.invalidateSize(); }, 100);
