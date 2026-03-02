@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Travelman — KI-Reiseplaner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ======================================================== Header -->
+<header class="app-header">
+  <div class="app-logo">Travelman</div>
+  <div class="app-subtitle">KI-gestützter Reiseplaner</div>
+</header>
+
+<main>
+
+  <!-- ============================================================ Resume banner -->
+  <div class="resume-banner" id="resume-banner">
+    <p>Es gibt einen gespeicherten Reiseplan. Möchten Sie dort weitermachen?</p>
+    <button class="btn btn-primary" onclick="resumeResult()">Fortsetzen</button>
+    <button class="btn btn-secondary" onclick="dismissResume()">Ignorieren</button>
+  </div>
+
+  <!-- ============================================================ Form section -->
+  <section class="section active" id="form-section">
+
+    <!-- Step indicators -->
+    <div class="step-indicators">
+      <div class="step-indicator">
+        <div class="step active" id="step-1">1</div>
+        <div class="step-label">Route</div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-indicator">
+        <div class="step" id="step-2">2</div>
+        <div class="step-label">Reisende</div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-indicator">
+        <div class="step" id="step-3">3</div>
+        <div class="step-label">Aktivitäten</div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-indicator">
+        <div class="step" id="step-4">4</div>
+        <div class="step-label">Unterkunft</div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-indicator">
+        <div class="step" id="step-5">5</div>
+        <div class="step-label">Zusammenfassung</div>
+      </div>
+    </div>
+
+    <!-- ---- Step 1: Route ---- -->
+    <div class="form-step active" id="form-step-1">
+      <h2 class="form-section-title">Wohin geht die Reise?</h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="start-location">Startort</label>
+          <input type="text" id="start-location" placeholder="z.B. Liestal, Schweiz">
+        </div>
+        <div class="form-group">
+          <label for="main-destination">Hauptziel</label>
+          <input type="text" id="main-destination" placeholder="z.B. Paris, Frankreich">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="start-date">Startdatum</label>
+          <input type="date" id="start-date">
+        </div>
+        <div class="form-group">
+          <label for="end-date">Enddatum</label>
+          <input type="date" id="end-date">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Via-Punkte (optional)</label>
+        <div id="via-points-list"></div>
+        <button class="btn btn-secondary" onclick="addViaPoint()" style="margin-top:8px">+ Via-Punkt hinzufügen</button>
+      </div>
+
+      <div class="form-nav">
+        <div></div>
+        <button class="btn btn-primary" onclick="nextStep()">Weiter →</button>
+      </div>
+    </div>
+
+    <!-- ---- Step 2: Travellers ---- -->
+    <div class="form-step" id="form-step-2">
+      <h2 class="form-section-title">Wer reist mit?</h2>
+
+      <div class="form-group">
+        <label>Erwachsene</label>
+        <div class="adults-counter">
+          <button onclick="changeAdults(-1)">−</button>
+          <span class="adults-count" id="adults-count">2</span>
+          <button onclick="changeAdults(1)">+</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Kinder (Alter)</label>
+        <div id="children-list"></div>
+        <button class="btn btn-secondary" onclick="addChild()" style="margin-top:8px">+ Kind hinzufügen</button>
+      </div>
+
+      <div class="form-group">
+        <label>Reisestil (Mehrfachauswahl)</label>
+        <div class="style-grid" id="travel-style-grid"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="travel-description">Beschreibung Ihrer Wunschreise (optional)</label>
+        <textarea id="travel-description" rows="3" placeholder="Was soll diese Reise besonders machen?"></textarea>
+      </div>
+
+      <div class="form-nav">
+        <button class="btn btn-secondary" onclick="prevStep()">← Zurück</button>
+        <button class="btn btn-primary" onclick="nextStep()">Weiter →</button>
+      </div>
+    </div>
+
+    <!-- ---- Step 3: Activities ---- -->
+    <div class="form-step" id="form-step-3">
+      <h2 class="form-section-title">Aktivitäten & Erlebnisse</h2>
+
+      <div class="form-group">
+        <label>Pflichtaktivitäten</label>
+        <div class="tag-input-row">
+          <input type="text" id="mandatory-tag-input" placeholder="z.B. Eiffelturm besuchen"
+            onkeydown="if(event.key==='Enter'){addTagFromInput();event.preventDefault()}">
+          <button class="btn btn-secondary" onclick="addTagFromInput()">Hinzufügen</button>
+        </div>
+        <div class="tags-container" id="mandatory-tags"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Max. Aktivitäten pro Stop</label>
+        <select id="max-activities">
+          <option value="3">3</option>
+          <option value="5" selected>5</option>
+          <option value="8">8</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Max. Restaurants pro Stop</label>
+        <select id="max-restaurants">
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Aktivitätsradius: <strong id="activities-radius-display">30</strong> km</label>
+        <div class="slider-row">
+          <input type="range" id="activities-radius" min="10" max="100" value="30" step="5">
+        </div>
+      </div>
+
+      <div class="form-nav">
+        <button class="btn btn-secondary" onclick="prevStep()">← Zurück</button>
+        <button class="btn btn-primary" onclick="nextStep()">Weiter →</button>
+      </div>
+    </div>
+
+    <!-- ---- Step 4: Accommodation ---- -->
+    <div class="form-step" id="form-step-4">
+      <h2 class="form-section-title">Unterkunft & Budget</h2>
+
+      <div class="form-group">
+        <label>Unterkunftsart (Mehrfachauswahl)</label>
+        <div class="acc-style-grid">
+          <div class="acc-style" data-id="hotel" onclick="toggleAccStyle(this)">Hotel</div>
+          <div class="acc-style" data-id="apartment" onclick="toggleAccStyle(this)">Apartment</div>
+          <div class="acc-style" data-id="camping" onclick="toggleAccStyle(this)">Camping</div>
+          <div class="acc-style" data-id="hostel" onclick="toggleAccStyle(this)">Hostel</div>
+          <div class="acc-style" data-id="airbnb" onclick="toggleAccStyle(this)">Airbnb</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Ausstattung (Mehrfachauswahl)</label>
+        <div class="must-have-grid">
+          <div class="must-have" data-id="pool" onclick="toggleMustHave(this)">Pool</div>
+          <div class="must-have" data-id="wifi" onclick="toggleMustHave(this)">WiFi</div>
+          <div class="must-have" data-id="parking" onclick="toggleMustHave(this)">Parkplatz</div>
+          <div class="must-have" data-id="kitchen" onclick="toggleMustHave(this)">Küche</div>
+          <div class="must-have" data-id="breakfast" onclick="toggleMustHave(this)">Frühstück</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Hotelradius: <strong id="hotel-radius-display">10</strong> km</label>
+        <div class="slider-row">
+          <input type="range" id="hotel-radius" min="1" max="50" value="10" step="1">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Max. Fahrzeit pro Tag: <strong id="max-drive-hours-display">4.5</strong>h</label>
+        <div class="slider-row">
+          <input type="range" id="max-drive-hours" min="1" max="10" value="4.5" step="0.5">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="budget-chf">Gesamtbudget (CHF)</label>
+        <input type="number" id="budget-chf" value="3000" min="500" max="50000" step="100">
+      </div>
+
+      <div class="form-nav">
+        <button class="btn btn-secondary" onclick="prevStep()">← Zurück</button>
+        <button class="btn btn-primary" onclick="nextStep()">Weiter →</button>
+      </div>
+    </div>
+
+    <!-- ---- Step 5: Summary ---- -->
+    <div class="form-step" id="form-step-5">
+      <h2 class="form-section-title">Zusammenfassung</h2>
+      <div id="summary-content"></div>
+
+      <div class="form-nav">
+        <button class="btn btn-secondary" onclick="prevStep()">← Zurück</button>
+        <button class="btn btn-primary" id="submit-btn" onclick="submitTrip()">Reise planen</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============================================================ Route builder -->
+  <section class="section" id="route-builder">
+    <div class="route-builder-header">
+      <h2>Route aufbauen</h2>
+      <button class="btn btn-secondary" onclick="backToForm()">← Zurück zum Formular</button>
+    </div>
+
+    <div class="route-status" id="route-status">
+      <div class="route-status-info">
+        <strong>Stop #1</strong>
+        <span class="badge">Optionen werden geladen…</span>
+      </div>
+    </div>
+
+    <div class="built-stops">
+      <h3>Ausgewählte Stops</h3>
+      <div id="built-stops-list"></div>
+    </div>
+
+    <div class="options-grid" id="route-options-container">
+      <div class="shimmer-card"></div>
+      <div class="shimmer-card"></div>
+      <div class="shimmer-card"></div>
+    </div>
+
+    <div class="confirm-route-area">
+      <button class="btn btn-primary" id="confirm-route-btn" style="display:none" onclick="confirmRoute()">
+        Route bestätigen →
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================================================ Accommodation -->
+  <section class="section" id="accommodation">
+    <div class="accommodation-header">
+      <div>
+        <h2>Unterkunft wählen</h2>
+        <p style="color:var(--text-sub)">Wählen Sie für jeden Stop eine Unterkunft.</p>
+      </div>
+      <button class="btn btn-secondary" onclick="redoRoute()">Route neu wählen</button>
+    </div>
+
+    <div class="acc-budget-info" id="acc-budget-info">
+      <!-- rendered by JS -->
+    </div>
+
+    <div id="accommodation-stops-container">
+      <!-- Stop panels rendered by JS -->
+    </div>
+
+    <div class="accommodation-actions">
+      <div></div>
+      <button class="btn btn-primary" id="start-planning-btn" disabled onclick="startPlanningWithAllSelections()">
+        Planung starten →
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================================================ Progress -->
+  <section class="section" id="progress">
+    <h2 class="progress-header">Reiseplan wird erstellt…</h2>
+
+    <div class="progress-agent-status" id="progress-agent-status">
+      Agenten werden gestartet…
+    </div>
+
+    <div class="progress-timeline" id="progress-timeline">
+      <div class="shimmer-line"></div>
+      <div class="shimmer-line short"></div>
+    </div>
+
+    <div class="error-msg" id="progress-error" style="display:none"></div>
+  </section>
+
+  <!-- ============================================================ Travel guide -->
+  <section class="section" id="travel-guide">
+    <h2 style="margin-bottom:24px">Ihr Reiseplan</h2>
+
+    <div class="guide-tabs">
+      <button class="guide-tab active" data-tab="overview" onclick="switchGuideTab('overview')">Übersicht</button>
+      <button class="guide-tab" data-tab="stops" onclick="switchGuideTab('stops')">Stops & Details</button>
+      <button class="guide-tab" data-tab="dayplan" onclick="switchGuideTab('dayplan')">Tagesplan</button>
+      <button class="guide-tab" data-tab="budget" onclick="switchGuideTab('budget')">Budget</button>
+    </div>
+
+    <div id="guide-content">
+      <!-- rendered by JS -->
+    </div>
+
+    <div style="margin-top:24px">
+      <button class="btn btn-secondary" onclick="showSection('form-section')">Neue Reise planen</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- ======================================================== Debug panel -->
+<button class="debug-toggle" onclick="toggleDebugLog()">Debug</button>
+<div class="debug-panel" id="debug-panel">
+  <div class="debug-panel-header">
+    <span>Debug Log</span>
+    <button onclick="toggleDebugLog()" style="background:none;border:none;color:#e0e0e0;cursor:pointer">×</button>
+  </div>
+  <div id="debug-log"></div>
+</div>
+
+<!-- ======================================================== JS modules -->
+<script src="js/state.js"></script>
+<script src="js/api.js"></script>
+<script src="js/form.js"></script>
+<script src="js/route-builder.js"></script>
+<script src="js/accommodation.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/guide.js"></script>
+
+<script>
+  // Initialize on DOM ready
+  document.addEventListener('DOMContentLoaded', () => {
+    initForm();
+    // Sync slider displays
+    ['hotel-radius', 'activities-radius', 'max-drive-hours'].forEach(id => {
+      const s = document.getElementById(id);
+      const d = document.getElementById(id + '-display');
+      if (s && d) { d.textContent = s.value; s.oninput = () => { d.textContent = s.value; saveFormToCache(); }; }
+    });
+  });
+</script>
+
+</body>
+</html>
