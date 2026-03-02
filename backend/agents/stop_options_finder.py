@@ -29,15 +29,17 @@ class StopOptionsFinderAgent:
         segment_index: int = 0,
         segment_count: int = 1,
         extra_instructions: str = "",
+        route_geometry: dict = None,
     ) -> dict:
         req = self.request
+        geo = route_geometry or {}
 
         prev_stop = selected_stops[-1]["region"] if selected_stops else req.start_location
         prev_country = selected_stops[-1].get("country", "") if selected_stops else "CH"
 
         stops_str = ""
         if selected_stops:
-            parts = [f"Stop {s['id']}: {s['region']} ({s.get('country','?')}, {s.get('nights',1)} Nächte)"
+            parts = [f"Stop {s['id']}: {s['region']} ({s.get('country','?')}, {s.get('nights',1)} Nächte, {s.get('drive_km','?')} km vom Vorgänger)"
                      for s in selected_stops]
             stops_str = "Bisherige Stopps: " + ", ".join(parts) + "\n"
 
@@ -55,15 +57,32 @@ class StopOptionsFinderAgent:
         if extra_instructions:
             extra_hint = f"\nSonderwunsch des Nutzers: {extra_instructions}\n"
 
+        # Build geometry context block
+        geo_lines = []
+        if geo.get("segment_total_km"):
+            geo_lines.append(f"Gesamtstrecke {prev_stop} → {segment_target}: ~{geo['segment_total_km']:.0f} km / ~{geo.get('segment_total_hours', 0):.1f}h Fahrzeit")
+        if geo.get("stops_remaining") is not None:
+            geo_lines.append(f"Empfohlene Anzahl weiterer Stopps bis {segment_target}: {geo['stops_remaining']}")
+        if geo.get("ideal_km_from_prev"):
+            geo_lines.append(
+                f"Ideale Distanz dieses Stops vom letzten Stop: ~{geo['ideal_km_from_prev']:.0f} km / ~{geo.get('ideal_hours_from_prev', 0):.1f}h"
+                f" (gleichmässige Aufteilung der Reststrecke auf {geo['stops_remaining']} Etappen)"
+            )
+            geo_lines.append(
+                f"→ Wähle Orte die ca. {geo['ideal_km_from_prev']:.0f} km von {prev_stop} entfernt liegen, "
+                f"NICHT direkt am Start und NICHT direkt am Ziel."
+            )
+        geo_block = "\n".join(geo_lines) + "\n" if geo_lines else ""
+
         prompt = f"""Segment {segment_index + 1} von {segment_count} Richtung: {segment_target}
 
-Start: {req.start_location}
+Start der Gesamtreise: {req.start_location}
+Letzter Stop (Abfahrtspunkt): {prev_stop}
+Endziel dieses Segments: {segment_target}
 Aktueller Stop #{stop_number}
-Letzter Stop: {prev_stop}
-Endziel des Segments: {segment_target}
 {stops_str}
-Verbleibende Tage im Segment: {days_remaining}
-Maximale Fahrzeit pro Tag: {req.max_drive_hours_per_day}h
+{geo_block}Verbleibende Tage im Segment: {days_remaining}
+Maximale Fahrzeit pro Etappe: {req.max_drive_hours_per_day}h
 Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
 Reisende: {req.adults} Erwachsene{', ' + str(len(req.children)) + ' Kinder (Alter: ' + ', '.join(str(c) for c in req.children) + ')' if req.children else ''}
 {complete_hint}{extra_hint}
@@ -72,9 +91,11 @@ Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor:
 - option_type "scenic": landschaftlich schöne Alternative
 - option_type "cultural": kulturell interessante Alternative
 
-PFLICHT: drive_hours MUSS für ALLE 3 Optionen ≤ {req.max_drive_hours_per_day}h sein.
-Falls der direkte Weg zum Segment-Ziel zu weit ist, wähle einen Zwischenstopp auf dem Weg.
-Teile lange Strecken auf mehrere Etappen auf — niemals drive_hours > {req.max_drive_hours_per_day}h vorschlagen.
+PFLICHT — alle 3 Regeln einhalten:
+1. drive_hours von {prev_stop} zu diesem Stop: ≤ {req.max_drive_hours_per_day}h
+2. Distanz: ~{geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80):.0f} km von {prev_stop}
+   (Toleranz ±30%; NICHT unter {geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80) * 0.5:.0f} km — zu nahe am letzten Stop)
+3. Teile lange Strecken auf — niemals direkt zum Ziel springen wenn noch {geo.get('stops_remaining', 1)} Etappe(n) geplant sind
 Nächte: {req.min_nights_per_stop}–{req.max_nights_per_stop}.
 
 Befülle folgende Felder kontextabhängig:

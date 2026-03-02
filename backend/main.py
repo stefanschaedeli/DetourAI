@@ -205,6 +205,46 @@ class RecomputeRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Route geometry helper — total distance for a segment
+# ---------------------------------------------------------------------------
+
+async def _calc_route_geometry(
+    from_location: str,
+    to_location: str,
+    stops_remaining: int,
+    max_drive_hours: float,
+) -> dict:
+    """
+    Geocodes from/to, queries OSRM for the full segment distance, then
+    calculates the ideal per-etappe distance given stops_remaining.
+    Returns a dict consumed by StopOptionsFinderAgent.find_options().
+    """
+    from_coords = await geocode_nominatim(from_location)
+    await asyncio.sleep(0.35)
+    to_coords = await geocode_nominatim(to_location)
+    await asyncio.sleep(0.35)
+
+    if not from_coords or not to_coords:
+        return {}
+
+    total_hours, total_km = await osrm_route([from_coords, to_coords])
+    if total_km <= 0:
+        return {}
+
+    n = max(1, stops_remaining)
+    ideal_km = total_km / n
+    ideal_hours = total_hours / n
+
+    return {
+        "segment_total_km": total_km,
+        "segment_total_hours": total_hours,
+        "stops_remaining": n,
+        "ideal_km_from_prev": ideal_km,
+        "ideal_hours_from_prev": min(ideal_hours, max_drive_hours),
+    }
+
+
+# ---------------------------------------------------------------------------
 # OSRM enrichment helper
 # ---------------------------------------------------------------------------
 
@@ -274,6 +314,12 @@ async def plan_trip(request: TravelRequest):
         request.via_points[0].location if request.via_points else request.main_destination
     )
 
+    # Estimate how many stops fit in this segment based on days/nights budget
+    stops_in_segment = max(1, (job["segment_budget"] - 1) // (1 + request.min_nights_per_stop))
+    route_geo = await _calc_route_geometry(
+        request.start_location, segment_target, stops_in_segment, request.max_drive_hours_per_day
+    )
+
     agent = StopOptionsFinderAgent(request, job_id)
     result = await agent.find_options(
         selected_stops=[],
@@ -283,6 +329,7 @@ async def plan_trip(request: TravelRequest):
         segment_target=segment_target,
         segment_index=0,
         segment_count=len(request.via_points) + 1,
+        route_geometry=route_geo,
     )
 
     options = result.get("options", [])
@@ -382,6 +429,12 @@ async def select_stop(job_id: str, body: StopSelectRequest):
             else request.main_destination
         )
 
+        stops_in_new_seg = max(1, (job["segment_budget"] - 1) // (1 + request.min_nights_per_stop))
+        prev_loc = via_point.location
+        next_geo = await _calc_route_geometry(
+            prev_loc, segment_target, stops_in_new_seg, request.max_drive_hours_per_day
+        )
+
         agent = StopOptionsFinderAgent(request, job_id)
         next_result = await agent.find_options(
             selected_stops=job["selected_stops"],
@@ -391,10 +444,10 @@ async def select_stop(job_id: str, body: StopSelectRequest):
             segment_target=segment_target,
             segment_index=seg_idx,
             segment_count=n_segments,
+            route_geometry=next_geo,
         )
         next_options = next_result.get("options", [])
         estimated_total = next_result.get("estimated_total_stops", 4)
-        prev_loc = via_point.location
         next_options, map_anchors = await _enrich_options_with_osrm(
             next_options, prev_loc, segment_target, request.max_drive_hours_per_day
         )
@@ -452,6 +505,12 @@ async def select_stop(job_id: str, body: StopSelectRequest):
             if seg_idx < len(request.via_points)
             else request.main_destination
         )
+        prev_loc_else = selected.get("region", request.start_location)
+        stops_left = max(1, route_status["days_remaining"] // (1 + request.min_nights_per_stop))
+        next_geo = await _calc_route_geometry(
+            prev_loc_else, segment_target, stops_left, request.max_drive_hours_per_day
+        )
+
         agent = StopOptionsFinderAgent(request, job_id)
         next_result = await agent.find_options(
             selected_stops=job["selected_stops"],
@@ -461,10 +520,10 @@ async def select_stop(job_id: str, body: StopSelectRequest):
             segment_target=segment_target,
             segment_index=seg_idx,
             segment_count=n_segments,
+            route_geometry=next_geo,
         )
         next_options = next_result.get("options", [])
         estimated_total = next_result.get("estimated_total_stops", 4)
-        prev_loc_else = selected.get("region", request.start_location)
         next_options, map_anchors = await _enrich_options_with_osrm(
             next_options, prev_loc_else, segment_target, request.max_drive_hours_per_day
         )
@@ -519,6 +578,10 @@ async def recompute_options(job_id: str, body: RecomputeRequest):
     )
 
     prev_location = selected_stops[-1]["region"] if selected_stops else request.start_location
+    stops_left_rc = max(1, route_status["days_remaining"] // (1 + request.min_nights_per_stop))
+    recompute_geo = await _calc_route_geometry(
+        prev_location, segment_target, stops_left_rc, request.max_drive_hours_per_day
+    )
 
     agent = StopOptionsFinderAgent(request, job_id)
     result = await agent.find_options(
@@ -530,6 +593,7 @@ async def recompute_options(job_id: str, body: RecomputeRequest):
         segment_index=seg_idx,
         segment_count=n_segments,
         extra_instructions=body.extra_instructions,
+        route_geometry=recompute_geo,
     )
 
     options = result.get("options", [])
