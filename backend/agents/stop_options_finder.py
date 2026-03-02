@@ -6,6 +6,8 @@ from agents._client import get_client, get_model
 
 SYSTEM_PROMPT = (
     "Du bist ein Reiseplaner. Schlage genau 3 Zwischenstopps vor: direct, scenic, cultural. "
+    "KRITISCH: Jede Option muss drive_hours ≤ dem angegebenen Maximum einhalten. "
+    "Wähle nähere Zwischenstopps wenn nötig — lieber einen kürzeren Etappenstopp als das Limit zu überschreiten. "
     "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
 )
 
@@ -70,7 +72,9 @@ Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor:
 - option_type "scenic": landschaftlich schöne Alternative
 - option_type "cultural": kulturell interessante Alternative
 
-Fahrzeit muss ≤ {req.max_drive_hours_per_day}h sein.
+PFLICHT: drive_hours MUSS für ALLE 3 Optionen ≤ {req.max_drive_hours_per_day}h sein.
+Falls der direkte Weg zum Segment-Ziel zu weit ist, wähle einen Zwischenstopp auf dem Weg.
+Teile lange Strecken auf mehrere Etappen auf — niemals drive_hours > {req.max_drive_hours_per_day}h vorschlagen.
 Nächte: {req.min_nights_per_stop}–{req.max_nights_per_stop}.
 
 Befülle folgende Felder kontextabhängig:

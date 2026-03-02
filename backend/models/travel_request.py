@@ -62,3 +62,6 @@ class TravelRequest(BaseModel):
     # Budget
     budget_chf: float = 3000.0
     budget_buffer_percent: float = 10.0
+    budget_accommodation_pct: int = 60
+    budget_food_pct: int = 20
+    budget_activities_pct: int = 20

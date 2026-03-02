@@ -37,6 +37,7 @@ class AccommodationResearcherAgent:
         children_count = len(req.children)
         styles_str = ", ".join(req.accommodation_styles) if req.accommodation_styles else "hotel, apartment"
         must_haves_str = ", ".join(req.accommodation_must_haves) if req.accommodation_must_haves else "WiFi"
+        preferred_type = req.accommodation_styles[0] if req.accommodation_styles else "hotel"
 
         prompt = f"""Finde 3 Unterkunftsoptionen in {region}, {country}:
 
@@ -60,7 +61,7 @@ Gib exakt dieses JSON zurück:
       "id": "acc_{stop_id}_budget",
       "option_type": "budget",
       "name": "...",
-      "type": "hotel",
+      "type": "{preferred_type}",
       "price_per_night_chf": {budget_rate:.0f},
       "total_price_chf": {budget_rate * nights:.0f},
       "price_range": "€",
@@ -76,7 +77,7 @@ Gib exakt dieses JSON zurück:
       "id": "acc_{stop_id}_comfort",
       "option_type": "comfort",
       "name": "...",
-      "type": "hotel",
+      "type": "{preferred_type}",
       "price_per_night_chf": {comfort_rate:.0f},
       "total_price_chf": {comfort_rate * nights:.0f},
       "price_range": "€€",
@@ -92,7 +93,7 @@ Gib exakt dieses JSON zurück:
       "id": "acc_{stop_id}_premium",
       "option_type": "premium",
       "name": "...",
-      "type": "hotel",
+      "type": "{preferred_type}",
       "price_per_night_chf": {premium_rate:.0f},
       "total_price_chf": {premium_rate * nights:.0f},
       "price_range": "€€€",
@@ -138,10 +139,9 @@ Gib exakt dieses JSON zurück:
         text = response.content[0].text
         result = parse_agent_json(text)
 
-        type_map = {"budget": "hostel", "comfort": "hotel", "premium": "luxury hotel"}
         for opt in result.get("options", []):
-            opt_type = type_map.get(opt.get("option_type", ""), "hotel")
-            images = await fetch_unsplash_images(f"{region} {opt_type}", "hotel")
+            actual_type = opt.get("type") or preferred_type
+            images = await fetch_unsplash_images(f"{region} {actual_type}", preferred_type)
             opt.update(images)
 
         return result

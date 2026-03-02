@@ -18,6 +18,33 @@
   <div class="app-logo">Travelman</div>
   <div class="app-subtitle">KI-gestützter Reiseplaner</div>
   <button class="btn-clear-data" onclick="clearAppData()" title="Daten löschen und neu starten">Neu starten</button>
+  <div class="header-settings">
+    <button class="btn-icon settings-btn" onclick="toggleSettings()" title="Einstellungen" aria-label="Einstellungen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+    <div class="settings-menu" id="settings-menu" style="display:none">
+      <div class="settings-menu-title">Einstellungen</div>
+      <div class="settings-item">
+        <label for="max-activities">Max. Aktivitäten pro Stop</label>
+        <select id="max-activities">
+          <option value="3">3</option>
+          <option value="5" selected>5</option>
+          <option value="8">8</option>
+        </select>
+      </div>
+      <div class="settings-item">
+        <label for="max-restaurants">Max. Restaurants pro Stop</label>
+        <select id="max-restaurants">
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+    </div>
+  </div>
 </header>
 
 <main>
@@ -56,6 +83,11 @@
       <div class="step-connector"></div>
       <div class="step-indicator">
         <div class="step" id="step-5">5</div>
+        <div class="step-label">Budget</div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-indicator">
+        <div class="step" id="step-6">6</div>
         <div class="step-label">Zusammenfassung</div>
       </div>
     </div>
@@ -90,6 +122,13 @@
         <label>Via-Punkte (optional)</label>
         <div id="via-points-list"></div>
         <button class="btn btn-secondary" onclick="addViaPoint()" style="margin-top:8px">+ Via-Punkt hinzufügen</button>
+      </div>
+
+      <div class="form-group">
+        <label>Max. Fahrzeit pro Tag: <strong id="max-drive-hours-display">4.5</strong>h</label>
+        <div class="slider-row">
+          <input type="range" id="max-drive-hours" min="1" max="10" value="4.5" step="0.5">
+        </div>
       </div>
 
       <div class="form-nav">
@@ -148,25 +187,7 @@
       </div>
 
       <div class="form-group">
-        <label>Max. Aktivitäten pro Stop</label>
-        <select id="max-activities">
-          <option value="3">3</option>
-          <option value="5" selected>5</option>
-          <option value="8">8</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Max. Restaurants pro Stop</label>
-        <select id="max-restaurants">
-          <option value="2">2</option>
-          <option value="3" selected>3</option>
-          <option value="5">5</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Aktivitätsradius: <strong id="activities-radius-display">30</strong> km</label>
+        <label>Max. Distanz zu Übernachtungsort: <strong id="activities-radius-display">30</strong> km</label>
         <div class="slider-row">
           <input type="range" id="activities-radius" min="10" max="100" value="30" step="5">
         </div>
@@ -180,7 +201,7 @@
 
     <!-- ---- Step 4: Accommodation ---- -->
     <div class="form-step" id="form-step-4">
-      <h2 class="form-section-title">Unterkunft & Budget</h2>
+      <h2 class="form-section-title">Unterkunft</h2>
 
       <div class="form-group">
         <label>Unterkunftsart (Mehrfachauswahl)</label>
@@ -211,16 +232,24 @@
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Max. Fahrzeit pro Tag: <strong id="max-drive-hours-display">4.5</strong>h</label>
-        <div class="slider-row">
-          <input type="range" id="max-drive-hours" min="1" max="10" value="4.5" step="0.5">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="min-nights">Min. Nächte pro Stop</label>
+          <select id="min-nights">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
         </div>
-      </div>
-
-      <div class="form-group">
-        <label for="budget-chf">Gesamtbudget (CHF)</label>
-        <input type="number" id="budget-chf" value="3000" min="500" max="50000" step="100">
+        <div class="form-group">
+          <label for="max-nights">Max. Nächte pro Stop</label>
+          <select id="max-nights">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="7">7</option>
+          </select>
+        </div>
       </div>
 
       <div class="form-nav">
@@ -229,8 +258,53 @@
       </div>
     </div>
 
-    <!-- ---- Step 5: Summary ---- -->
+    <!-- ---- Step 5: Budget ---- -->
     <div class="form-step" id="form-step-5">
+      <h2 class="form-section-title">Budget</h2>
+
+      <div class="form-group">
+        <label for="budget-chf">Gesamtbudget (CHF)</label>
+        <input type="number" id="budget-chf" value="3000" min="500" max="50000" step="100">
+      </div>
+
+      <div class="form-group budget-split-group">
+        <label>Budgetaufteilung</label>
+        <p class="form-hint">Die Prozentsätze müssen zusammen 100% ergeben.</p>
+
+        <div class="budget-slider-row">
+          <span class="budget-slider-label">🏨 Unterkunft</span>
+          <input type="range" id="budget-acc-pct" min="10" max="80" value="60" step="5">
+          <strong id="budget-acc-pct-display">60</strong>%
+        </div>
+        <div class="budget-slider-row">
+          <span class="budget-slider-label">🍽️ Verpflegung</span>
+          <input type="range" id="budget-food-pct" min="5" max="50" value="20" step="5">
+          <strong id="budget-food-pct-display">20</strong>%
+        </div>
+        <div class="budget-slider-row">
+          <span class="budget-slider-label">🎭 Aktivitäten</span>
+          <input type="range" id="budget-act-pct" min="5" max="50" value="20" step="5">
+          <strong id="budget-act-pct-display">20</strong>%
+        </div>
+
+        <div class="budget-total-check" id="budget-total-check">
+          Summe: <strong id="budget-pct-sum">100</strong>% ✓
+        </div>
+        <div class="budget-preview">
+          Verfügbar: 🏨 CHF <strong id="bp-acc">1'800</strong> ·
+                     🍽️ CHF <strong id="bp-food">600</strong> ·
+                     🎭 CHF <strong id="bp-act">600</strong>
+        </div>
+      </div>
+
+      <div class="form-nav">
+        <button class="btn btn-secondary" onclick="prevStep()">← Zurück</button>
+        <button class="btn btn-primary" onclick="nextStep()">Weiter →</button>
+      </div>
+    </div>
+
+    <!-- ---- Step 6: Summary ---- -->
+    <div class="form-step" id="form-step-6">
       <h2 class="form-section-title">Zusammenfassung</h2>
       <div id="summary-content"></div>
 

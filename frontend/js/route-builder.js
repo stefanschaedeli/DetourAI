@@ -56,18 +56,23 @@ function renderOptions(options, meta) {
   container.innerHTML = options.map((opt, i) => {
     const flag = FLAGS[opt.country] || '';
     const driveKm = opt.drive_km ? ` · ${opt.drive_km} km` : '';
+    const overLimit = opt.drives_over_limit;
+    const driveWarning = overLimit
+      ? `<span class="drive-over-limit-badge">⚠ Fahrzeit überschreitet Limit</span>`
+      : '';
     const mapsLink = opt.maps_url
       ? `<a class="option-maps-link" href="${esc(opt.maps_url)}" target="_blank" rel="noopener">&#x1F5FA; Google Maps</a>`
       : '';
     const extraFields = _buildExtraFields(opt);
     return `
-      <div class="option-card" id="option-card-${i}" onclick="selectOption(${i})">
+      <div class="option-card${overLimit ? ' over-limit' : ''}" id="option-card-${i}" onclick="selectOption(${i})">
         <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
         <h3>${flag} ${esc(opt.region)}, ${esc(opt.country)}</h3>
         <div class="option-meta">
-          <span>${opt.drive_hours}h Fahrt${driveKm}</span>
+          <span class="${overLimit ? 'drive-hours-over' : ''}">${opt.drive_hours}h Fahrt${driveKm}</span>
           <span>${opt.nights} Nacht${opt.nights !== 1 ? 'e' : ''}</span>
         </div>
+        ${driveWarning}
         <p class="option-teaser">${esc(opt.teaser)}</p>
         <ul class="option-highlights">
           ${(opt.highlights || []).map(h => `<li>${esc(h)}</li>`).join('')}

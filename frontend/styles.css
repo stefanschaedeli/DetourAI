@@ -293,6 +293,17 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
 .route-complete-msg { text-align: center; padding: 32px; }
 .confirm-route-area { text-align: center; margin-top: 16px; }
 
+/* Drive-time over-limit indicator */
+.option-card.over-limit { border-color: var(--warning); }
+.option-card.over-limit:hover { border-color: #e07000; }
+.drive-hours-over { color: var(--warning); font-weight: 600; }
+.drive-over-limit-badge {
+  display: inline-block; padding: 2px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 500;
+  background: #fff3cc; color: #7a4f00;
+  margin-bottom: 8px;
+}
+
 /* ============================================================ Accommodation */
 .accommodation-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
 .acc-budget-info { background: #f5f5f7; border-radius: 8px; padding: 14px 20px; margin-bottom: 20px; font-size: 14px; }
@@ -551,3 +562,29 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
 .loading-counter {
   color: rgba(255,255,255,.65); font-size: 13px;
 }
+
+/* ============================================================ Budget sliders (Step 5) */
+.budget-split-group { }
+.form-hint { font-size: 13px; color: #888; margin: -4px 0 12px; }
+.budget-slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.budget-slider-label { width: 120px; font-size: 14px; }
+.budget-slider-row input[type=range] { flex: 1; }
+.budget-total-check { font-size: 14px; margin-top: 8px; color: #555; }
+.budget-total-check.invalid { color: #e03; }
+.budget-preview { font-size: 13px; color: #777; margin-top: 6px; }
+
+/* ============================================================ Settings menu */
+.header-settings { position: relative; }
+.settings-btn { background: none; border: none; cursor: pointer; color: #555; padding: 8px; border-radius: 6px; }
+.settings-btn:hover { background: #f0f0f0; }
+.settings-menu {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: #fff; border: 1px solid #ddd; border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.12); min-width: 220px;
+  padding: 12px; z-index: 500;
+}
+.settings-menu-title { font-weight: 600; font-size: 13px; color: #888; margin-bottom: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.settings-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+.settings-item:last-child { border-bottom: none; }
+.settings-item label { font-size: 14px; color: #333; }
+.settings-item select { font-size: 14px; border: 1px solid #ccc; border-radius: 6px; padding: 4px 8px; }

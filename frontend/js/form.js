@@ -6,9 +6,18 @@ function initForm() {
   renderViaPoints();
   initTravelStyles();
   initSliders();
+  initBudgetSliders();
   setupFormAutoSave();
   restoreFormFromCache();
   checkResume();
+
+  // Close settings menu on click outside
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.header-settings')) {
+      const m = document.getElementById('settings-menu');
+      if (m) m.style.display = 'none';
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -29,8 +38,8 @@ function goToStep(n) {
 
 function nextStep() {
   if (!validateStep(S.step)) return;
-  if (S.step < 5) {
-    if (S.step === 4) renderSummary();
+  if (S.step < 6) {
+    if (S.step === 5) renderSummary();
     goToStep(S.step + 1);
   }
 }
@@ -50,7 +59,27 @@ function validateStep(n) {
     if (!sd || !ed) { alert('Bitte Reisedaten eingeben.'); return false; }
     if (sd >= ed) { alert('Enddatum muss nach Startdatum liegen.'); return false; }
   }
+  if (n === 5) {
+    const acc  = parseInt(document.getElementById('budget-acc-pct')?.value)  || 0;
+    const food = parseInt(document.getElementById('budget-food-pct')?.value) || 0;
+    const act  = parseInt(document.getElementById('budget-act-pct')?.value)  || 0;
+    if (acc + food + act !== 100) {
+      alert('Die Budgetaufteilung muss zusammen 100% ergeben.');
+      return false;
+    }
+  }
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Settings menu
+// ---------------------------------------------------------------------------
+
+function toggleSettings() {
+  const menu = document.getElementById('settings-menu');
+  if (!menu) return;
+  const open = menu.style.display !== 'none';
+  menu.style.display = open ? 'none' : 'block';
 }
 
 // ---------------------------------------------------------------------------
@@ -223,11 +252,49 @@ function initSliders() {
       slider.oninput = () => { display.textContent = slider.value; saveFormToCache(); };
     }
   });
+}
 
+// ---------------------------------------------------------------------------
+// Budget sliders
+// ---------------------------------------------------------------------------
+
+function initBudgetSliders() {
+  ['budget-acc-pct', 'budget-food-pct', 'budget-act-pct'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.oninput = () => { updateBudgetPreview(); saveFormToCache(); };
+  });
   const budgetInput = document.getElementById('budget-chf');
-  if (budgetInput) {
-    budgetInput.oninput = saveFormToCache;
+  if (budgetInput) budgetInput.oninput = () => { updateBudgetPreview(); saveFormToCache(); };
+  updateBudgetPreview();
+}
+
+function updateBudgetPreview() {
+  const acc  = parseInt(document.getElementById('budget-acc-pct')?.value)  || 60;
+  const food = parseInt(document.getElementById('budget-food-pct')?.value) || 20;
+  const act  = parseInt(document.getElementById('budget-act-pct')?.value)  || 20;
+  const sum  = acc + food + act;
+  const total = parseFloat(document.getElementById('budget-chf')?.value) || 3000;
+
+  const sumEl   = document.getElementById('budget-pct-sum');
+  const checkEl = document.getElementById('budget-total-check');
+  if (sumEl) sumEl.textContent = sum;
+  if (checkEl) {
+    checkEl.classList.toggle('invalid', sum !== 100);
+    // Replace the text node after the <strong>
+    const strong = checkEl.querySelector('strong');
+    if (strong && strong.nextSibling) {
+      strong.nextSibling.textContent = sum === 100 ? '% ✓' : '% ✗ (muss 100% sein)';
+    }
   }
+
+  const fmt = v => Math.round(total * v / 100).toLocaleString('de-CH');
+  const el  = id => document.getElementById(id);
+  if (el('budget-acc-pct-display'))  el('budget-acc-pct-display').textContent  = acc;
+  if (el('budget-food-pct-display')) el('budget-food-pct-display').textContent = food;
+  if (el('budget-act-pct-display'))  el('budget-act-pct-display').textContent  = act;
+  if (el('bp-acc'))  el('bp-acc').textContent  = fmt(acc);
+  if (el('bp-food')) el('bp-food').textContent = fmt(food);
+  if (el('bp-act'))  el('bp-act').textContent  = fmt(act);
 }
 
 // ---------------------------------------------------------------------------
@@ -258,12 +325,15 @@ function buildPayload() {
     max_restaurants_per_stop: parseInt(document.getElementById('max-restaurants')?.value) || 3,
     activities_radius_km: parseInt(document.getElementById('activities-radius')?.value) || 30,
     max_drive_hours_per_day: parseFloat(document.getElementById('max-drive-hours')?.value) || 4.5,
-    min_nights_per_stop: 1,
-    max_nights_per_stop: 5,
+    min_nights_per_stop: parseInt(document.getElementById('min-nights')?.value) || 1,
+    max_nights_per_stop: parseInt(document.getElementById('max-nights')?.value) || 5,
     accommodation_styles:    getSelectedAccStyles(),
     accommodation_must_haves: getSelectedMustHaves(),
     hotel_radius_km: parseInt(document.getElementById('hotel-radius')?.value) || 10,
     budget_chf: parseFloat(document.getElementById('budget-chf')?.value) || 3000,
+    budget_accommodation_pct: parseInt(document.getElementById('budget-acc-pct')?.value)  || 60,
+    budget_food_pct:          parseInt(document.getElementById('budget-food-pct')?.value) || 20,
+    budget_activities_pct:    parseInt(document.getElementById('budget-act-pct')?.value)  || 20,
     via_points: viaPoints
       .filter(vp => vp.location.trim())
       .map(vp => ({
@@ -289,7 +359,7 @@ function renderSummary() {
       <div class="summary-item"><span class="summary-label">Datum</span><span>${esc(p.start_date)} – ${esc(p.end_date)} (${p.total_days} Tage)</span></div>
       <div class="summary-item"><span class="summary-label">Reisende</span><span>${p.adults} Erwachsene${p.children.length ? ', ' + p.children.length + ' Kinder' : ''}</span></div>
       <div class="summary-item"><span class="summary-label">Stile</span><span>${p.travel_styles.map(s => TRAVEL_STYLES.find(t => t.id === s)?.label || s).join(', ') || '–'}</span></div>
-      <div class="summary-item"><span class="summary-label">Budget</span><span>CHF ${(p.budget_chf || 0).toLocaleString('de-CH')}</span></div>
+      <div class="summary-item"><span class="summary-label">Budget</span><span>CHF ${(p.budget_chf || 0).toLocaleString('de-CH')} (Unterkunft ${p.budget_accommodation_pct}% / Essen ${p.budget_food_pct}% / Aktivitäten ${p.budget_activities_pct}%)</span></div>
       <div class="summary-item"><span class="summary-label">Max. Fahrzeit</span><span>${p.max_drive_hours_per_day}h/Tag</span></div>
       ${p.mandatory_activities.length ? `<div class="summary-item"><span class="summary-label">Pflichtaktivitäten</span><span>${p.mandatory_activities.map(a => esc(a.name)).join(', ')}</span></div>` : ''}
       ${p.via_points.length ? `<div class="summary-item"><span class="summary-label">Via-Punkte</span><span>${p.via_points.map(vp => esc(vp.location)).join(' → ')}</span></div>` : ''}
@@ -357,6 +427,13 @@ function restoreFormFromCache() {
   setVal('max-drive-hours', cached.max_drive_hours_per_day);
   setVal('hotel-radius', cached.hotel_radius_km);
   setVal('activities-radius', cached.activities_radius_km);
+  setVal('min-nights', cached.min_nights_per_stop);
+  setVal('max-nights', cached.max_nights_per_stop);
+  setVal('budget-acc-pct',  cached.budget_accommodation_pct);
+  setVal('budget-food-pct', cached.budget_food_pct);
+  setVal('budget-act-pct',  cached.budget_activities_pct);
+  setVal('max-activities',  cached.max_activities_per_stop);
+  setVal('max-restaurants', cached.max_restaurants_per_stop);
 
   if (cached.travelStyles) {
     S.travelStyles = cached.travelStyles;
@@ -385,6 +462,8 @@ function restoreFormFromCache() {
     viaPoints = cached.viaPoints;
     renderViaPoints();
   }
+
+  updateBudgetPreview();
 }
 
 function clearAppData() {
