@@ -2,25 +2,30 @@
 
 const API = '/api';  // Nginx proxy — no localhost port
 
-async function _fetch(url, opts = {}) {
+async function _fetch(url, opts = {}, label) {
   S.apiCalls++;
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-    ...opts,
-  });
-  if (!res.ok) {
-    let detail = '';
-    try { detail = (await res.json()).detail || ''; } catch (e) {}
-    throw new Error(`HTTP ${res.status}: ${detail || res.statusText}`);
+  showLoading(label || 'Anfrage läuft…');
+  try {
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      ...opts,
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).detail || ''; } catch (e) {}
+      throw new Error(`HTTP ${res.status}: ${detail || res.statusText}`);
+    }
+    return res;
+  } finally {
+    hideLoading();
   }
-  return res;
 }
 
 async function apiPlanTrip(payload) {
   const res = await _fetch(`${API}/plan-trip`, {
     method: 'POST',
     body: JSON.stringify(payload),
-  });
+  }, 'Route wird analysiert…');
   return res.json();
 }
 
@@ -28,17 +33,19 @@ async function apiSelectStop(jobId, idx) {
   const res = await _fetch(`${API}/select-stop/${jobId}`, {
     method: 'POST',
     body: JSON.stringify({ option_index: idx }),
-  });
+  }, 'Nächste Routenoption wird geladen…');
   return res.json();
 }
 
 async function apiConfirmRoute(jobId) {
-  const res = await _fetch(`${API}/confirm-route/${jobId}`, { method: 'POST' });
+  const res = await _fetch(`${API}/confirm-route/${jobId}`, { method: 'POST' },
+    'Route wird bestätigt…');
   return res.json();
 }
 
 async function apiStartAccommodations(jobId) {
-  const res = await _fetch(`${API}/start-accommodations/${jobId}`, { method: 'POST' });
+  const res = await _fetch(`${API}/start-accommodations/${jobId}`, { method: 'POST' },
+    'Unterkunftsuche wird gestartet…');
   return res.json();
 }
 
@@ -46,7 +53,7 @@ async function apiConfirmAccommodations(jobId, selections) {
   const res = await _fetch(`${API}/confirm-accommodations/${jobId}`, {
     method: 'POST',
     body: JSON.stringify({ selections }),
-  });
+  }, 'Unterkünfte werden bestätigt…');
   return res.json();
 }
 
@@ -54,22 +61,24 @@ async function apiSelectAccommodation(jobId, stopId, optionIdx) {
   const res = await _fetch(`${API}/select-accommodation/${jobId}`, {
     method: 'POST',
     body: JSON.stringify({ stop_id: stopId, option_index: optionIdx }),
-  });
+  }, 'Unterkunft wird ausgewählt…');
   return res.json();
 }
 
 async function apiStartPlanning(jobId) {
-  const res = await _fetch(`${API}/start-planning/${jobId}`, { method: 'POST' });
+  const res = await _fetch(`${API}/start-planning/${jobId}`, { method: 'POST' },
+    'Reiseplan wird erstellt…');
   return res.json();
 }
 
 async function apiGetResult(jobId) {
-  const res = await _fetch(`${API}/result/${jobId}`);
+  const res = await _fetch(`${API}/result/${jobId}`, {}, 'Ergebnisse werden geladen…');
   return res.json();
 }
 
 async function apiGenerateOutput(jobId, type) {
-  const res = await _fetch(`${API}/generate-output/${jobId}/${type}`, { method: 'POST' });
+  const res = await _fetch(`${API}/generate-output/${jobId}/${type}`, { method: 'POST' },
+    'Dokument wird erstellt…');
   return res.blob();
 }
 
@@ -77,7 +86,7 @@ async function apiRecomputeOptions(jobId, extraInstructions) {
   const res = await _fetch(`${API}/recompute-options/${jobId}`, {
     method: 'POST',
     body: JSON.stringify({ extra_instructions: extraInstructions }),
-  });
+  }, 'Routenoptionen werden neu berechnet…');
   return res.json();
 }
 

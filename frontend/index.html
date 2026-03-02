@@ -345,6 +345,18 @@
 
 </main>
 
+<!-- ======================================================== Loading overlay -->
+<div id="loading-overlay" class="loading-overlay" aria-live="polite" aria-busy="false" style="display:none">
+  <div class="loading-overlay-inner">
+    <div class="loading-progress-bar">
+      <div class="loading-progress-fill loading-progress-indeterminate"></div>
+    </div>
+    <div class="spinner"></div>
+    <div class="loading-label" id="loading-label">Bitte warten…</div>
+    <div class="loading-counter" id="loading-counter" style="display:none"></div>
+  </div>
+</div>
+
 <!-- ======================================================== Lightbox -->
 <div id="lightbox-overlay" class="lightbox-overlay" style="display:none">
   <button class="lightbox-close" onclick="closeLightbox()">×</button>
@@ -363,6 +375,7 @@
 </div>
 
 <!-- ======================================================== JS modules -->
+<script src="js/loading.js"></script>
 <script src="js/state.js"></script>
 <script src="js/api.js"></script>
 <script src="js/form.js"></script>

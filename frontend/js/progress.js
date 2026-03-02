@@ -132,10 +132,11 @@ function onJobComplete(data) {
 
   markAllStopsDone();
 
-  // Short delay for UX then show guide
+  showLoading('Reiseführer wird aufbereitet…');
   setTimeout(() => {
     showTravelGuide(data);
     showSection('travel-guide');
+    hideLoading();
   }, 800);
 }
 
