@@ -26,6 +26,7 @@ class StopOptionsFinderAgent:
         segment_target: str,
         segment_index: int = 0,
         segment_count: int = 1,
+        extra_instructions: str = "",
     ) -> dict:
         req = self.request
 
@@ -45,6 +46,13 @@ class StopOptionsFinderAgent:
                 f"(Ziel: {segment_target}). Mindestens eine Option sollte direkt zum Ziel führen.\n"
             )
 
+        has_children = bool(req.children)
+        family_field = '"family_friendly": true,' if has_children else ""
+
+        extra_hint = ""
+        if extra_instructions:
+            extra_hint = f"\nSonderwunsch des Nutzers: {extra_instructions}\n"
+
         prompt = f"""Segment {segment_index + 1} von {segment_count} Richtung: {segment_target}
 
 Start: {req.start_location}
@@ -55,8 +63,8 @@ Endziel des Segments: {segment_target}
 Verbleibende Tage im Segment: {days_remaining}
 Maximale Fahrzeit pro Tag: {req.max_drive_hours_per_day}h
 Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
-Reisende: {req.adults} Erwachsene{', ' + str(len(req.children)) + ' Kinder' if req.children else ''}
-{complete_hint}
+Reisende: {req.adults} Erwachsene{', ' + str(len(req.children)) + ' Kinder (Alter: ' + ', '.join(str(c) for c in req.children) + ')' if req.children else ''}
+{complete_hint}{extra_hint}
 Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor:
 - option_type "direct": kürzeste Route Richtung {segment_target}
 - option_type "scenic": landschaftlich schöne Alternative
@@ -65,12 +73,20 @@ Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor:
 Fahrzeit muss ≤ {req.max_drive_hours_per_day}h sein.
 Nächte: {req.min_nights_per_stop}–{req.max_nights_per_stop}.
 
+Befülle folgende Felder kontextabhängig:
+- population: Einwohnerzahl als lesbarer String (z.B. "45'000 Einwohner"), falls bekannt
+- altitude_m: Meereshöhe in Metern, besonders relevant für Bergregionen
+- language: Hauptsprache der Region
+- climate_note: Klimahinweis passend zur Reisezeit ({getattr(req, 'start_date', 'unbekannt')})
+- must_see: Top 2-3 Sehenswürdigkeiten passend zu den Reisestilen {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
+{('- family_friendly: true/false (Kinder reisen mit)' if has_children else '')}
+
 Gib exakt dieses JSON zurück:
 {{
   "options": [
-    {{"id": 1, "option_type": "direct", "region": "...", "country": "FR", "drive_hours": 3.5, "nights": 2, "highlights": ["...", "..."], "teaser": "..."}},
-    {{"id": 2, "option_type": "scenic", "region": "...", "country": "FR", "drive_hours": 4.0, "nights": 2, "highlights": ["...", "..."], "teaser": "..."}},
-    {{"id": 3, "option_type": "cultural", "region": "...", "country": "FR", "drive_hours": 3.0, "nights": 2, "highlights": ["...", "..."], "teaser": "..."}}
+    {{"id": 1, "option_type": "direct", "region": "...", "country": "FR", "drive_hours": 3.5, "drive_km": 280, "nights": 2, "highlights": ["...", "..."], "teaser": "...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}},
+    {{"id": 2, "option_type": "scenic", "region": "...", "country": "FR", "drive_hours": 4.0, "drive_km": 320, "nights": 2, "highlights": ["...", "..."], "teaser": "...", "population": "...", "altitude_m": 1200, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}},
+    {{"id": 3, "option_type": "cultural", "region": "...", "country": "FR", "drive_hours": 3.0, "drive_km": 250, "nights": 2, "highlights": ["...", "..."], "teaser": "...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}}
   ],
   "estimated_total_stops": 4,
   "route_could_be_complete": false
@@ -82,14 +98,13 @@ Gib exakt dieses JSON zurück:
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=1024,
+                max_tokens=1500,
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )
 
         response = await call_with_retry(call, job_id=self.job_id, agent_name="StopOptionsFinder")
         text = response.content[0].text
-        # Return Claude's result immediately — no Nominatim/OSRM validation here.
-        # Drive times on option cards are for display only; the authoritative
-        # OSRM enrichment runs later in DayPlannerAgent._enrich_with_osrm().
+        # Return Claude's result immediately — drive_hours/drive_km are placeholders.
+        # Authoritative OSRM enrichment runs in main.py after this call.
         return parse_agent_json(text)

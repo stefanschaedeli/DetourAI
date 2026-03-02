@@ -8,10 +8,21 @@ class StopOption(BaseModel):
     region: str
     country: str
     drive_hours: float
+    drive_km: float = 0.0
     nights: int
     highlights: List[str] = []
     teaser: str
     is_fixed: bool = False
+    # Enriched fields
+    population: Optional[str] = None
+    altitude_m: Optional[int] = None
+    language: Optional[str] = None
+    climate_note: Optional[str] = None
+    must_see: List[str] = []
+    family_friendly: Optional[bool] = None
+    maps_url: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
 
 
 class StopOptionsResponse(BaseModel):

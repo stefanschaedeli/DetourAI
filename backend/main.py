@@ -8,6 +8,7 @@ from typing import Optional
 import redis as redis_lib
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +20,7 @@ from models.travel_request import TravelRequest
 from models.stop_option import StopSelectRequest
 from models.accommodation_option import AccommodationSelectRequest, BudgetState
 from utils.debug_logger import debug_logger, LogLevel
+from utils.maps_helper import geocode_nominatim, osrm_route, build_maps_url
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
@@ -195,6 +197,37 @@ def _new_job(request: TravelRequest) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Request model for recompute endpoint
+# ---------------------------------------------------------------------------
+
+class RecomputeRequest(BaseModel):
+    extra_instructions: str = ""
+
+
+# ---------------------------------------------------------------------------
+# OSRM enrichment helper
+# ---------------------------------------------------------------------------
+
+async def _enrich_options_with_osrm(options: list, prev_location: str) -> list:
+    """Geocode each option with Nominatim, then compute real drive time via OSRM."""
+    prev_coords = await geocode_nominatim(prev_location)
+    await asyncio.sleep(0.35)
+    for opt in options:
+        place = f"{opt.get('region', '')}, {opt.get('country', '')}"
+        coords = await geocode_nominatim(place)
+        await asyncio.sleep(0.35)
+        if prev_coords and coords:
+            hours, km = await osrm_route([prev_coords, coords])
+            if hours > 0:
+                opt["drive_hours"] = hours
+                opt["drive_km"] = km
+            opt["lat"] = coords[0]
+            opt["lon"] = coords[1]
+            opt["maps_url"] = build_maps_url([prev_location, place])
+    return options
+
+
+# ---------------------------------------------------------------------------
 # POST /api/plan-trip
 # ---------------------------------------------------------------------------
 
@@ -228,6 +261,8 @@ async def plan_trip(request: TravelRequest):
     options = result.get("options", [])
     estimated_total_stops = result.get("estimated_total_stops", 4)
     route_could_be_complete = result.get("route_could_be_complete", False)
+
+    options = await _enrich_options_with_osrm(options, request.start_location)
 
     job["current_options"] = options
     job["route_could_be_complete"] = route_could_be_complete
@@ -329,6 +364,8 @@ async def select_stop(job_id: str, body: StopSelectRequest):
         )
         next_options = next_result.get("options", [])
         estimated_total = next_result.get("estimated_total_stops", 4)
+        prev_loc = via_point.location
+        next_options = await _enrich_options_with_osrm(next_options, prev_loc)
         job["current_options"] = next_options
         job["route_could_be_complete"] = next_result.get("route_could_be_complete", False)
         save_job(job_id, job)
@@ -394,6 +431,8 @@ async def select_stop(job_id: str, body: StopSelectRequest):
         )
         next_options = next_result.get("options", [])
         estimated_total = next_result.get("estimated_total_stops", 4)
+        prev_loc_else = selected.get("region", request.start_location)
+        next_options = await _enrich_options_with_osrm(next_options, prev_loc_else)
         job["current_options"] = next_options
         job["route_could_be_complete"] = next_result.get("route_could_be_complete", False)
         save_job(job_id, job)
@@ -415,6 +454,70 @@ async def select_stop(job_id: str, body: StopSelectRequest):
                 "segment_target": segment_target,
             },
         }
+
+
+# ---------------------------------------------------------------------------
+# POST /api/recompute-options/{job_id}
+# ---------------------------------------------------------------------------
+
+@app.post("/api/recompute-options/{job_id}")
+async def recompute_options(job_id: str, body: RecomputeRequest):
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    job = get_job(job_id)
+    request = TravelRequest(**job["request"])
+
+    seg_idx = job.get("segment_index", 0)
+    n_segments = len(request.via_points) + 1
+    segment_target = (
+        request.via_points[seg_idx].location
+        if seg_idx < len(request.via_points)
+        else request.main_destination
+    )
+
+    selected_stops = job.get("selected_stops", [])
+    stop_number = job.get("stop_counter", 0) + 1
+    route_status = _calc_route_status(
+        request, job.get("segment_stops", []), job.get("segment_budget", request.total_days),
+        seg_idx == n_segments - 1
+    )
+
+    prev_location = selected_stops[-1]["region"] if selected_stops else request.start_location
+
+    agent = StopOptionsFinderAgent(request, job_id)
+    result = await agent.find_options(
+        selected_stops=selected_stops,
+        stop_number=stop_number,
+        days_remaining=route_status["days_remaining"],
+        route_could_be_complete=route_status["route_could_be_complete"],
+        segment_target=segment_target,
+        segment_index=seg_idx,
+        segment_count=n_segments,
+        extra_instructions=body.extra_instructions,
+    )
+
+    options = result.get("options", [])
+    options = await _enrich_options_with_osrm(options, prev_location)
+
+    job["current_options"] = options
+    job["route_could_be_complete"] = result.get("route_could_be_complete", False)
+    save_job(job_id, job)
+
+    return {
+        "job_id": job_id,
+        "status": "building_route",
+        "options": options,
+        "meta": {
+            "stop_number": stop_number,
+            "days_remaining": route_status["days_remaining"],
+            "estimated_total_stops": result.get("estimated_total_stops", 4),
+            "route_could_be_complete": route_status["route_could_be_complete"],
+            "must_complete": route_status["must_complete"],
+            "segment_index": seg_idx,
+            "segment_count": n_segments,
+            "segment_target": segment_target,
+        },
+    }
 
 
 # ---------------------------------------------------------------------------

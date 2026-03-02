@@ -1,6 +1,8 @@
 'use strict';
 
 let routeMeta = {};
+let _map = null;
+let _mapMarkers = [];
 
 function startRouteBuilding(data) {
   S.selectedStops = [];
@@ -46,14 +48,19 @@ function renderOptions(options, meta) {
       </div>
     `;
     if (confirmBtn) confirmBtn.style.display = 'none';
+    _clearMap();
     return;
   }
 
   container.innerHTML = options.map((opt, i) => {
     const flag = FLAGS[opt.country] || '';
     const driveKm = opt.drive_km ? ` · ${opt.drive_km} km` : '';
+    const mapsLink = opt.maps_url
+      ? `<a class="option-maps-link" href="${esc(opt.maps_url)}" target="_blank" rel="noopener">&#x1F5FA; Google Maps</a>`
+      : '';
+    const extraFields = _buildExtraFields(opt);
     return `
-      <div class="option-card" onclick="selectOption(${i})">
+      <div class="option-card" id="option-card-${i}" onclick="selectOption(${i})">
         <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
         <h3>${flag} ${esc(opt.region)}, ${esc(opt.country)}</h3>
         <div class="option-meta">
@@ -64,14 +71,84 @@ function renderOptions(options, meta) {
         <ul class="option-highlights">
           ${(opt.highlights || []).map(h => `<li>${esc(h)}</li>`).join('')}
         </ul>
+        ${extraFields}
+        ${mapsLink}
       </div>
     `;
   }).join('');
+
+  // Init Leaflet map
+  _initMap(meta.segment_target || '', options);
 
   // Show confirm button if route could be complete
   if (confirmBtn) {
     confirmBtn.style.display = meta.route_could_be_complete ? 'block' : 'none';
   }
+}
+
+function _buildExtraFields(opt) {
+  const parts = [];
+  if (opt.population) parts.push(`<span class="opt-extra-tag">${esc(opt.population)}</span>`);
+  if (opt.altitude_m) parts.push(`<span class="opt-extra-tag">${opt.altitude_m} m</span>`);
+  if (opt.language) parts.push(`<span class="opt-extra-tag">${esc(opt.language)}</span>`);
+  if (opt.climate_note) parts.push(`<span class="opt-extra-tag">${esc(opt.climate_note)}</span>`);
+  if (opt.family_friendly === true) parts.push(`<span class="opt-extra-tag family">Familienfreundlich</span>`);
+  if (opt.must_see && opt.must_see.length > 0) {
+    parts.push(`<div class="opt-must-see">Must-see: ${opt.must_see.map(m => esc(m)).join(', ')}</div>`);
+  }
+  return parts.length > 0 ? `<div class="opt-extra-fields">${parts.join('')}</div>` : '';
+}
+
+function _initMap(segmentTarget, options) {
+  const mapEl = document.getElementById('route-map');
+  if (!mapEl) return;
+
+  // Collect coords from options that have lat/lon
+  const validOptions = options.filter(o => o.lat && o.lon);
+
+  if (!_map) {
+    _map = L.map('route-map').setView([47, 8], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(_map);
+  } else {
+    _mapMarkers.forEach(m => _map.removeLayer(m));
+    _mapMarkers = [];
+  }
+
+  const bounds = [];
+
+  validOptions.forEach((opt, i) => {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="map-marker-num">${i + 1}</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+    });
+    const marker = L.marker([opt.lat, opt.lon], { icon })
+      .bindPopup(`<b>${i + 1}. ${opt.region}</b><br>${opt.drive_hours}h · ${opt.drive_km || '?'} km`)
+      .addTo(_map);
+    marker.on('click', () => scrollToOption(i));
+    _mapMarkers.push(marker);
+    bounds.push([opt.lat, opt.lon]);
+  });
+
+  if (bounds.length > 0) {
+    _map.fitBounds(bounds, { padding: [30, 30], maxZoom: 9 });
+  }
+
+  setTimeout(() => { if (_map) _map.invalidateSize(); }, 100);
+}
+
+function _clearMap() {
+  if (_map) {
+    _mapMarkers.forEach(m => _map.removeLayer(m));
+    _mapMarkers = [];
+  }
+}
+
+function scrollToOption(i) {
+  document.getElementById(`option-card-${i}`)?.scrollIntoView({ behavior: 'smooth' });
 }
 
 function renderBuiltStops() {
@@ -100,6 +177,7 @@ async function selectOption(idx) {
 
   const container = document.getElementById('route-options-container');
   container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Nächste Optionen werden geladen…</p></div>';
+  _clearMap();
 
   try {
     const data = await apiSelectStop(S.jobId, idx);
@@ -177,6 +255,26 @@ function saveRouteState() {
     stopsOrder.push(s.id);
   });
   lsSet(LS_ROUTE, { jobId: S.jobId, stops: stopsObj, stopsOrder });
+}
+
+async function recomputeOptions() {
+  const input = document.getElementById('recompute-input');
+  if (!input || S.loadingOptions) return;
+  S.loadingOptions = true;
+
+  const extra = input.value.trim();
+  const container = document.getElementById('route-options-container');
+  container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Neue Optionen werden berechnet…</p></div>';
+  _clearMap();
+
+  try {
+    const data = await apiRecomputeOptions(S.jobId, extra);
+    input.value = '';
+    renderOptions(data.options || [], data.meta || {});
+  } catch (err) {
+    container.innerHTML = `<div class="error-msg">Fehler: ${esc(err.message)}</div>`;
+    S.loadingOptions = false;
+  }
 }
 
 function searchNextStop() {

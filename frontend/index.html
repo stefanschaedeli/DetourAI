@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -247,12 +249,19 @@
       <button class="btn btn-secondary" onclick="backToForm()">← Zurück zum Formular</button>
     </div>
 
+    <div class="recompute-bar" id="recompute-bar">
+      <input type="text" id="recompute-input" placeholder="Sonderwunsch, z.B. «lieber Meeresküste» oder «mit Sehenswürdigkeit X»">
+      <button class="btn btn-secondary" onclick="recomputeOptions()">Neu berechnen</button>
+    </div>
+
     <div class="route-status" id="route-status">
       <div class="route-status-info">
         <strong>Stop #1</strong>
         <span class="badge">Optionen werden geladen…</span>
       </div>
     </div>
+
+    <div id="route-map"></div>
 
     <div class="built-stops">
       <h3>Ausgewählte Stops</h3>

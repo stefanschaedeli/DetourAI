@@ -73,6 +73,14 @@ async function apiGenerateOutput(jobId, type) {
   return res.blob();
 }
 
+async function apiRecomputeOptions(jobId, extraInstructions) {
+  const res = await _fetch(`${API}/recompute-options/${jobId}`, {
+    method: 'POST',
+    body: JSON.stringify({ extra_instructions: extraInstructions }),
+  });
+  return res.json();
+}
+
 /**
  * Open SSE connection for a job.
  * @param {string} jobId
