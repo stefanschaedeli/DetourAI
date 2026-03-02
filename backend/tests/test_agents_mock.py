@@ -133,18 +133,62 @@ def test_accommodation_researcher_instantiation(mocker):
 
 
 # ---------------------------------------------------------------------------
-# Activities agent — WikipediaEnricher filter
+# Activities agent — no enricher attribute
 # ---------------------------------------------------------------------------
 
-def test_wikipedia_enricher_filter():
-    from agents.activities_agent import SKIP_PATTERN
-    # These should be filtered
-    assert SKIP_PATTERN.search("File:Logo_Wikipedia.png")
-    assert SKIP_PATTERN.search("File:Flag_of_France.svg")
-    assert SKIP_PATTERN.search("File:Icon_map.png")
-    # These should pass
-    assert not SKIP_PATTERN.search("File:Annecy_Lake.jpg")
-    assert not SKIP_PATTERN.search("File:Mont_Blanc_view.jpg")
+def test_activities_agent_no_enricher(mocker):
+    from models.travel_request import TravelRequest
+    from agents.activities_agent import ActivitiesAgent
+
+    mock_client = MagicMock()
+    mocker.patch('anthropic.Anthropic', return_value=mock_client)
+    mocker.patch('agents._client.os.getenv', return_value='sk-ant-test')
+
+    request = TravelRequest(
+        start_location="Liestal",
+        main_destination="Paris",
+        start_date="2026-06-01",
+        end_date="2026-06-10",
+        total_days=10,
+    )
+    agent = ActivitiesAgent(request, "test_job")
+    assert not hasattr(agent, 'enricher')
+
+
+# ---------------------------------------------------------------------------
+# image_fetcher — no key returns all None
+# ---------------------------------------------------------------------------
+
+def test_fetch_unsplash_images_no_key(mocker):
+    import asyncio
+    mocker.patch.dict('os.environ', {}, clear=True)
+    # Remove UNSPLASH_ACCESS_KEY if present
+    import os
+    os.environ.pop('UNSPLASH_ACCESS_KEY', None)
+
+    from utils.image_fetcher import fetch_unsplash_images
+
+    async def _run():
+        return await fetch_unsplash_images("Paris hotel", "hotel")
+
+    result = asyncio.run(_run())
+    assert result == {"image_overview": None, "image_mood": None, "image_customer": None}
+
+
+# ---------------------------------------------------------------------------
+# image_fetcher — URL validator
+# ---------------------------------------------------------------------------
+
+def test_fetch_unsplash_url_validator():
+    from utils.image_fetcher import _validate_unsplash_url
+    # Valid URLs
+    assert _validate_unsplash_url("https://images.unsplash.com/photo-123") == "https://images.unsplash.com/photo-123"
+    assert _validate_unsplash_url("https://plus.unsplash.com/photo-456") == "https://plus.unsplash.com/photo-456"
+    # Invalid URLs
+    assert _validate_unsplash_url("https://source.unsplash.com/featured") is None
+    assert _validate_unsplash_url("https://example.com/image.jpg") is None
+    assert _validate_unsplash_url(None) is None
+    assert _validate_unsplash_url("") is None
 
 
 # ---------------------------------------------------------------------------

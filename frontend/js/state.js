@@ -84,3 +84,50 @@ function showSection(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
 }
+
+/** Build a 3-image gallery strip (overview + mood + customer). Returns '' if all null. */
+function buildImageGallery(overview, mood, customer, altText) {
+  if (!overview && !mood && !customer) return '';
+  const alt = esc(altText || '');
+  const img = (url, cls, caption) => url
+    ? `<div class="${cls}"><img src="${esc(url)}" alt="${alt}" loading="lazy"
+         data-lightbox-url="${esc(url)}" data-lightbox-caption="${esc(caption || altText || '')}"
+         onerror="this.style.display='none'"></div>`
+    : `<div class="${cls}"></div>`;
+  return `<div class="img-gallery">
+    ${img(overview, 'img-gallery-overview', altText + ' — Übersicht')}
+    ${img(mood,     'img-gallery-mood',     altText + ' — Atmosphäre')}
+    ${img(customer, 'img-gallery-customer', altText + ' — Besucher')}
+  </div>`;
+}
+
+/** Open lightbox for a validated Unsplash URL. */
+function openLightbox(url, caption) {
+  const valid = url && (
+    url.startsWith('https://images.unsplash.com/') ||
+    url.startsWith('https://plus.unsplash.com/')
+  );
+  if (!valid) return;
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox-caption').textContent = caption || '';
+  const overlay = document.getElementById('lightbox-overlay');
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+/** Close the lightbox overlay. */
+function closeLightbox() {
+  const overlay = document.getElementById('lightbox-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// Event delegation for lightbox open/close
+document.addEventListener('click', e => {
+  const img = e.target.closest('[data-lightbox-url]');
+  if (img) {
+    openLightbox(img.dataset.lightboxUrl, img.dataset.lightboxCaption);
+  } else if (e.target.id === 'lightbox-overlay') {
+    closeLightbox();
+  }
+});

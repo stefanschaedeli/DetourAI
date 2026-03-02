@@ -5,6 +5,7 @@ from agents.activities_agent import ActivitiesAgent
 from agents.restaurants_agent import RestaurantsAgent
 from agents.day_planner import DayPlannerAgent
 from utils.debug_logger import debug_logger, LogLevel
+from utils.image_fetcher import fetch_unsplash_images
 
 
 class TravelPlannerOrchestrator:
@@ -46,6 +47,7 @@ class TravelPlannerOrchestrator:
 
         act_map: dict = {}
         rest_map: dict = {}
+        loc_img_map: dict = {}
         all_research: list = []
 
         await debug_logger.log(LogLevel.INFO, f"Forschungsphase: {len(stops)} Stops", job_id=job_id)
@@ -78,15 +80,24 @@ class TravelPlannerOrchestrator:
                 "restaurants": result.get("restaurants", []),
             })
 
+        async def research_location_images(stop):
+            sid = stop.get("id")
+            region = stop.get("region", "")
+            country = stop.get("country", "")
+            images = await fetch_unsplash_images(f"{region} {country}", "location travel")
+            loc_img_map[sid] = images
+
         tasks = []
         for stop in stops:
             tasks.append(research_activities(stop))
             tasks.append(research_restaurants(stop))
+            tasks.append(research_location_images(stop))
         await asyncio.gather(*tasks)
 
         # Merge research results
         for stop in stops:
             sid = stop.get("id")
+            stop.update(loc_img_map.get(sid, {}))
             merged = {}
             merged.update(act_map.get(sid, {}))
             merged.update(rest_map.get(sid, {}))

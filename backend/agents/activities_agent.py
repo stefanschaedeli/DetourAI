@@ -1,86 +1,15 @@
 import asyncio
-import re
-import aiohttp
 from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
+from utils.image_fetcher import fetch_unsplash_images
 from agents._client import get_client, get_model
 
 SYSTEM_PROMPT = (
     "Du bist ein Aktivitätsberater für Reisende. "
     "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
 )
-
-SKIP_PATTERN = re.compile(r'(logo|icon|map|symbol|flag|coat|seal|blank)', re.IGNORECASE)
-
-
-class WikipediaEnricher:
-    """Fetches up to 4 Wikipedia images per activity."""
-
-    async def get_images(self, activity_name: str) -> list[str]:
-        try:
-            params = {
-                "action": "query",
-                "titles": activity_name,
-                "prop": "pageimages|images",
-                "format": "json",
-                "pithumbsize": 800,
-            }
-            async with aiohttp.ClientSession() as s:
-                async with s.get(
-                    "https://en.wikipedia.org/w/api.php",
-                    params=params,
-                    headers={"User-Agent": "Travelman2/1.0"},
-                    timeout=aiohttp.ClientTimeout(total=10),
-                ) as r:
-                    data = await r.json()
-
-            pages = data.get("query", {}).get("pages", {})
-            image_titles = []
-            for page in pages.values():
-                # Collect image titles
-                for img in page.get("images", []):
-                    title = img.get("title", "")
-                    if not SKIP_PATTERN.search(title):
-                        image_titles.append(title)
-                        if len(image_titles) >= 8:
-                            break
-
-            if not image_titles:
-                return []
-
-            # Batch fetch imageinfo
-            titles_str = "|".join(image_titles[:8])
-            info_params = {
-                "action": "query",
-                "titles": titles_str,
-                "prop": "imageinfo",
-                "iiprop": "url",
-                "iiurlwidth": 800,
-                "format": "json",
-            }
-            async with aiohttp.ClientSession() as s:
-                async with s.get(
-                    "https://en.wikipedia.org/w/api.php",
-                    params=info_params,
-                    headers={"User-Agent": "Travelman2/1.0"},
-                    timeout=aiohttp.ClientTimeout(total=10),
-                ) as r:
-                    info_data = await r.json()
-
-            urls = []
-            for page in info_data.get("query", {}).get("pages", {}).values():
-                for ii in page.get("imageinfo", []):
-                    url = ii.get("thumburl") or ii.get("url", "")
-                    if url and not SKIP_PATTERN.search(url):
-                        urls.append(url)
-                        if len(urls) >= 4:
-                            break
-            return urls
-
-        except Exception:
-            return []
 
 
 class ActivitiesAgent:
@@ -89,7 +18,6 @@ class ActivitiesAgent:
         self.job_id = job_id
         self.client = get_client()
         self.model = get_model("claude-sonnet-4-5")
-        self.enricher = WikipediaEnricher()
 
     async def run_stop(self, stop: dict) -> dict:
         req = self.request
@@ -124,9 +52,7 @@ Gib exakt dieses JSON zurück:
       "suitable_for_children": true,
       "notes": "...",
       "address": "...",
-      "google_maps_url": "https://maps.google.com/?q=...",
-      "image_url": null,
-      "image_urls": []
+      "google_maps_url": "https://maps.google.com/?q=..."
     }}
   ]
 }}"""
@@ -149,14 +75,12 @@ Gib exakt dieses JSON zurück:
         text = response.content[0].text
         result = parse_agent_json(text)
 
-        # WikipediaEnricher: fetch images for each activity
         activities = result.get("top_activities", [])
         for activity in activities:
-            await asyncio.sleep(0.4)  # 400ms between activities
-            images = await self.enricher.get_images(activity.get("name", ""))
-            if images:
-                activity["image_url"] = images[0]
-                activity["image_urls"] = images
+            images = await fetch_unsplash_images(
+                f"{activity.get('name', '')} {region}", "activity"
+            )
+            activity.update(images)
 
         result["top_activities"] = activities
         return result

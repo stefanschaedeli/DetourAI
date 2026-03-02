@@ -17,7 +17,9 @@ class AccommodationOption(BaseModel):
     teaser: str
     suitable_for_children: bool = False
     booking_hint: str = ""
-    image_url: Optional[str] = None  # representative photo URL
+    image_overview: Optional[str] = None
+    image_mood: Optional[str] = None
+    image_customer: Optional[str] = None
 
 
 class BudgetState(BaseModel):

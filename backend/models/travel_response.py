@@ -10,6 +10,9 @@ class StopAccommodation(BaseModel):
     rating: Optional[float] = None
     features: List[str] = []
     booking_url: Optional[str] = None
+    image_overview: Optional[str] = None
+    image_mood: Optional[str] = None
+    image_customer: Optional[str] = None
 
 
 class StopActivity(BaseModel):
@@ -21,8 +24,9 @@ class StopActivity(BaseModel):
     notes: Optional[str] = None
     address: Optional[str] = None
     google_maps_url: Optional[str] = None
-    image_url: Optional[str] = None
-    image_urls: List[str] = []
+    image_overview: Optional[str] = None
+    image_mood: Optional[str] = None
+    image_customer: Optional[str] = None
 
 
 class Restaurant(BaseModel):
@@ -31,6 +35,9 @@ class Restaurant(BaseModel):
     price_range: str                 # €, €€, €€€
     family_friendly: bool = False
     notes: Optional[str] = None
+    image_overview: Optional[str] = None
+    image_mood: Optional[str] = None
+    image_customer: Optional[str] = None
 
 
 class TravelStop(BaseModel):
@@ -48,6 +55,9 @@ class TravelStop(BaseModel):
     restaurants: List[Restaurant] = []
     google_maps_url: Optional[str] = None
     notes: Optional[str] = None
+    image_overview: Optional[str] = None
+    image_mood: Optional[str] = None
+    image_customer: Optional[str] = None
 
 
 class DayPlan(BaseModel):

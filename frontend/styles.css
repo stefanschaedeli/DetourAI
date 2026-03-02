@@ -38,6 +38,19 @@ body {
 }
 .app-logo { font-size: 22px; font-weight: 700; color: var(--accent); }
 .app-subtitle { color: var(--text-sub); font-size: 14px; }
+.btn-clear-data {
+  margin-left: auto;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.btn-clear-data:hover { background: var(--bg); color: var(--danger); border-color: var(--danger); }
 
 main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
 
@@ -223,9 +236,6 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
 .acc-option-card:last-child { border-right: none; }
 .acc-option-card:hover { background: #f5f8ff; }
 .acc-option-card.selected { background: #e8f0ff; }
-.acc-card-img { width: 100%; height: 160px; overflow: hidden; flex-shrink: 0; }
-.acc-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s; }
-.acc-option-card:hover .acc-card-img img { transform: scale(1.04); }
 .acc-option-card > *:not(.acc-card-img) { padding-left: 20px; padding-right: 20px; }
 .acc-option-card > .acc-option-type { margin-top: 14px; }
 .acc-option-card > .acc-features { padding-bottom: 16px; }
@@ -299,7 +309,6 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
 
 .activities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
 .activity-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-.activity-img { width: 100%; height: 150px; object-fit: cover; }
 .activity-content { padding: 12px; }
 .activity-content strong { display: block; font-size: 14px; margin-bottom: 4px; }
 .activity-content p { font-size: 13px; color: var(--text-sub); margin-bottom: 6px; }
@@ -387,3 +396,31 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
 .log-agent   { color: #cf86ff; }
 .log-api     { color: #80d0ff; }
 .log-debug   { color: #a0a0a0; }
+
+/* ============================================================ Image gallery */
+.img-gallery {
+  display: grid;
+  grid-template-areas: "overview overview" "mood customer";
+  grid-template-columns: 1fr 1fr;
+  gap: 4px; border-radius: var(--radius) var(--radius) 0 0;
+  overflow: hidden; background: var(--border);
+}
+.img-gallery-overview { grid-area: overview; height: 160px; }
+.img-gallery-mood     { grid-area: mood;     height: 100px; }
+.img-gallery-customer { grid-area: customer; height: 100px; }
+.img-gallery img { width: 100%; height: 100%; object-fit: cover; display: block;
+  cursor: zoom-in; transition: transform .25s, opacity .15s; }
+.img-gallery img:hover { transform: scale(1.04); opacity: .9; }
+
+/* ============================================================ Lightbox */
+.lightbox-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.88);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9000; flex-direction: column; gap: 12px; padding: 24px; cursor: pointer;
+}
+.lightbox-img { max-width: 92vw; max-height: 80vh; object-fit: contain;
+  border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,.6); cursor: default; }
+.lightbox-caption { color: rgba(255,255,255,.8); font-size: 14px; text-align: center; }
+.lightbox-close { position: absolute; top: 16px; right: 20px; background: none;
+  border: none; color: #fff; font-size: 36px; cursor: pointer; opacity: .7; }
+.lightbox-close:hover { opacity: 1; }

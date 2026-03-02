@@ -387,6 +387,44 @@ function restoreFormFromCache() {
   }
 }
 
+function clearAppData() {
+  if (!confirm('Alle gespeicherten Daten löschen und neu starten? Die Formularfelder bleiben erhalten.')) return;
+
+  // Close any open SSE connections
+  if (S.sse) { try { S.sse.close(); } catch (e) {} S.sse = null; }
+  if (typeof accSSE !== 'undefined' && accSSE) { try { accSSE.close(); } catch (e) {} }
+
+  // Clear all non-form localStorage keys
+  lsClear(LS_ROUTE);
+  lsClear(LS_ACCOMMODATIONS);
+  lsClear(LS_RESULT);
+
+  // Reset runtime state (keep form-related fields)
+  S.step = 1;
+  S.jobId = null;
+  S.logs = [];
+  S.apiCalls = 0;
+  S.debugOpen = false;
+  S.result = null;
+  S.selectedStops = [];
+  S.currentOptions = [];
+  S.loadingOptions = false;
+  S.confirmingRoute = false;
+  S.allStops = [];
+  S.selectedAccommodations = {};
+  S.prefetchedOptions = {};
+  S.pendingSelections = {};
+  S.allAccLoaded = false;
+  S.accSelectionCount = 0;
+
+  // Hide resume banner
+  document.getElementById('resume-banner').style.display = 'none';
+
+  // Return to form step 1
+  goToStep(1);
+  showSection('form-section');
+}
+
 function checkResume() {
   const result = lsGet(LS_RESULT);
   if (result && result.jobId) {

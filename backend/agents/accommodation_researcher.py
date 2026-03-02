@@ -3,6 +3,7 @@ from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
+from utils.image_fetcher import fetch_unsplash_images
 from agents._client import get_client, get_model
 
 SYSTEM_PROMPT = (
@@ -37,12 +38,6 @@ class AccommodationResearcherAgent:
         styles_str = ", ".join(req.accommodation_styles) if req.accommodation_styles else "hotel, apartment"
         must_haves_str = ", ".join(req.accommodation_must_haves) if req.accommodation_must_haves else "WiFi"
 
-        # Build Unsplash source URLs — no API key required, uses keyword-based search
-        region_slug = region.lower().replace(" ", "+")
-        img_budget  = f"https://source.unsplash.com/featured/600x400/?{region_slug}+hostel"
-        img_comfort = f"https://source.unsplash.com/featured/600x400/?{region_slug}+hotel"
-        img_premium = f"https://source.unsplash.com/featured/600x400/?{region_slug}+luxury+hotel"
-
         prompt = f"""Finde 3 Unterkunftsoptionen in {region}, {country}:
 
 Reisende: {req.adults} Erwachsene{f', {children_count} Kinder' if children_count else ''}
@@ -75,8 +70,7 @@ Gib exakt dieses JSON zurück:
       "features": ["WiFi", "Parkplatz"],
       "teaser": "...",
       "suitable_for_children": true,
-      "booking_hint": "booking.com",
-      "image_url": "{img_budget}"
+      "booking_hint": "booking.com"
     }},
     {{
       "id": "acc_{stop_id}_comfort",
@@ -92,8 +86,7 @@ Gib exakt dieses JSON zurück:
       "features": ["WiFi", "Frühstück", "Parkplatz"],
       "teaser": "...",
       "suitable_for_children": true,
-      "booking_hint": "booking.com",
-      "image_url": "{img_comfort}"
+      "booking_hint": "booking.com"
     }},
     {{
       "id": "acc_{stop_id}_premium",
@@ -109,8 +102,7 @@ Gib exakt dieses JSON zurück:
       "features": ["WiFi", "Pool", "Spa", "Frühstück"],
       "teaser": "...",
       "suitable_for_children": true,
-      "booking_hint": "booking.com",
-      "image_url": "{img_premium}"
+      "booking_hint": "booking.com"
     }}
   ]
 }}"""
@@ -144,4 +136,12 @@ Gib exakt dieses JSON zurück:
 
         response = await _call_with_semaphore()
         text = response.content[0].text
-        return parse_agent_json(text)
+        result = parse_agent_json(text)
+
+        type_map = {"budget": "hostel", "comfort": "hotel", "premium": "luxury hotel"}
+        for opt in result.get("options", []):
+            opt_type = type_map.get(opt.get("option_type", ""), "hotel")
+            images = await fetch_unsplash_images(f"{region} {opt_type}", "hotel")
+            opt.update(images)
+
+        return result

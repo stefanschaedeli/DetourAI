@@ -104,10 +104,12 @@ function renderStops(plan) {
               </div>
               ${stop.google_maps_url ? `<a href="${esc(stop.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
             </div>
+            ${buildImageGallery(stop.image_overview, stop.image_mood, stop.image_customer, esc(stop.region))}
 
             ${acc.name ? `
               <div class="stop-accommodation">
                 <h4>Unterkunft</h4>
+                ${buildImageGallery(acc.image_overview, acc.image_mood, acc.image_customer, esc(acc.name))}
                 <div class="acc-summary">
                   <strong>${esc(acc.name)}</strong>
                   <span class="acc-type-tag">${esc(acc.type || '')}</span>
@@ -123,7 +125,7 @@ function renderStops(plan) {
                 <div class="activities-grid">
                   ${acts.map(act => `
                     <div class="activity-card">
-                      ${act.image_url ? `<img src="${esc(act.image_url)}" alt="${esc(act.name)}" class="activity-img" loading="lazy">` : ''}
+                      ${buildImageGallery(act.image_overview, act.image_mood, act.image_customer, esc(act.name))}
                       <div class="activity-content">
                         <strong>${esc(act.name)}</strong>
                         <p>${esc(act.description)}</p>
@@ -146,11 +148,14 @@ function renderStops(plan) {
                 <div class="restaurants-list">
                   ${rests.map(r => `
                     <div class="restaurant-item">
-                      <strong>${esc(r.name)}</strong>
-                      <span class="cuisine-tag">${esc(r.cuisine)}</span>
-                      <span class="price-range">${esc(r.price_range)}</span>
-                      ${r.family_friendly ? '<span class="family-tag">Familienfreundlich</span>' : ''}
-                      ${r.notes ? `<p class="rest-notes">${esc(r.notes)}</p>` : ''}
+                      ${buildImageGallery(r.image_overview, r.image_mood, r.image_customer, esc(r.name))}
+                      <div style="padding: 10px">
+                        <strong>${esc(r.name)}</strong>
+                        <span class="cuisine-tag">${esc(r.cuisine)}</span>
+                        <span class="price-range">${esc(r.price_range)}</span>
+                        ${r.family_friendly ? '<span class="family-tag">Familienfreundlich</span>' : ''}
+                        ${r.notes ? `<p class="rest-notes">${esc(r.notes)}</p>` : ''}
+                      </div>
                     </div>
                   `).join('')}
                 </div>

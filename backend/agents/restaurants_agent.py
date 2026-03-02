@@ -2,6 +2,7 @@ from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
+from utils.image_fetcher import fetch_unsplash_images
 from agents._client import get_client, get_model
 
 SYSTEM_PROMPT = (
@@ -67,4 +68,13 @@ Gib exakt dieses JSON zurück:
 
         response = await call_with_retry(call, job_id=self.job_id, agent_name="RestaurantsAgent")
         text = response.content[0].text
-        return parse_agent_json(text)
+        result = parse_agent_json(text)
+
+        for restaurant in result.get("restaurants", []):
+            images = await fetch_unsplash_images(
+                f"{restaurant.get('name', '')} {region} {restaurant.get('cuisine', '')}",
+                "restaurant",
+            )
+            restaurant.update(images)
+
+        return result

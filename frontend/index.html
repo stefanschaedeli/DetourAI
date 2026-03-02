@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Travelman — KI-Reiseplaner</title>
+  <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
@@ -14,6 +15,7 @@
 <header class="app-header">
   <div class="app-logo">Travelman</div>
   <div class="app-subtitle">KI-gestützter Reiseplaner</div>
+  <button class="btn-clear-data" onclick="clearAppData()" title="Daten löschen und neu starten">Neu starten</button>
 </header>
 
 <main>
@@ -334,6 +336,13 @@
 
 </main>
 
+<!-- ======================================================== Lightbox -->
+<div id="lightbox-overlay" class="lightbox-overlay" style="display:none">
+  <button class="lightbox-close" onclick="closeLightbox()">×</button>
+  <img id="lightbox-img" src="" alt="" class="lightbox-img">
+  <div id="lightbox-caption" class="lightbox-caption"></div>
+</div>
+
 <!-- ======================================================== Debug panel -->
 <button class="debug-toggle" onclick="toggleDebugLog()">Debug</button>
 <div class="debug-panel" id="debug-panel">
@@ -357,6 +366,7 @@
   // Initialize on DOM ready
   document.addEventListener('DOMContentLoaded', () => {
     initForm();
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
     // Sync slider displays
     ['hotel-radius', 'activities-radius', 'max-drive-hours'].forEach(id => {
       const s = document.getElementById(id);

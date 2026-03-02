@@ -91,9 +91,9 @@ function onAccommodationLoaded(data) {
     const selectedClass = S.pendingSelections[stopId] === i ? 'selected' : '';
     const stars = opt.rating ? '★'.repeat(Math.round(opt.rating / 2)) : '';
     const features = (opt.features || []).slice(0, 4).map(f => `<span class="feature-tag">${esc(f)}</span>`).join('');
-    const imgHtml = opt.image_url
-      ? `<div class="acc-card-img"><img src="${esc(opt.image_url)}" alt="${esc(opt.name)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`
-      : '';
+    const imgHtml = buildImageGallery(
+      opt.image_overview, opt.image_mood, opt.image_customer, esc(opt.name)
+    );
     return `
       <div class="acc-option-card ${selectedClass}" onclick="selectAccommodationInPanel(${stopId}, ${i})"
            data-stop="${stopId}" data-idx="${i}">
