@@ -212,8 +212,8 @@ async def _enrich_options_with_osrm(
     options: list, prev_location: str, segment_target: str = ""
 ) -> tuple[list, Optional[dict]]:
     """Geocode each option with Nominatim, then compute real drive time via OSRM.
-    Returns (enriched_options, map_anchors) where map_anchors holds lat/lon for
-    the prev_location (start pin) and segment_target (goal pin)."""
+    Agent-supplied lat/lon are used as fallback when Nominatim returns nothing.
+    Returns (enriched_options, map_anchors) with coords for start and target pins."""
     prev_coords = await geocode_nominatim(prev_location)
     await asyncio.sleep(0.35)
     target_coords = None
@@ -222,16 +222,22 @@ async def _enrich_options_with_osrm(
         await asyncio.sleep(0.35)
     for opt in options:
         place = f"{opt.get('region', '')}, {opt.get('country', '')}"
-        coords = await geocode_nominatim(place)
+        nom_coords = await geocode_nominatim(place)
         await asyncio.sleep(0.35)
-        if prev_coords and coords:
-            hours, km = await osrm_route([prev_coords, coords])
-            if hours > 0:
-                opt["drive_hours"] = hours
-                opt["drive_km"] = km
+        # Prefer Nominatim; fall back to agent-provided lat/lon
+        agent_lat = opt.get("lat")
+        agent_lon = opt.get("lon")
+        agent_coords = (agent_lat, agent_lon) if agent_lat and agent_lon else None
+        coords = nom_coords or agent_coords
+        if coords:
             opt["lat"] = coords[0]
             opt["lon"] = coords[1]
             opt["maps_url"] = build_maps_url([prev_location, place])
+            if prev_coords:
+                hours, km = await osrm_route([prev_coords, coords])
+                if hours > 0:
+                    opt["drive_hours"] = hours
+                    opt["drive_km"] = km
     map_anchors = {
         "prev_lat": prev_coords[0] if prev_coords else None,
         "prev_lon": prev_coords[1] if prev_coords else None,

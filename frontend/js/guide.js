@@ -3,6 +3,7 @@
 let activeTab = 'overview';
 let _guideMap = null;
 let _guideMapMarkers = [];
+let _guideMapLine = null;
 
 function showTravelGuide(plan) {
   S.result = plan;
@@ -196,6 +197,7 @@ function _initGuideMap(plan) {
     _guideMap.remove();
     _guideMap = null;
     _guideMapMarkers = [];
+    _guideMapLine = null;
   }
 
   _guideMap = L.map('guide-map').setView([47, 8], 6);
@@ -219,6 +221,12 @@ function _initGuideMap(plan) {
   }
 
   // Stop pins — last stop gets red Z, others blue numbered
+  // Collect ordered route points for polyline: start → stops in sequence
+  const routePoints = [];
+  if (plan.start_lat && plan.start_lng) {
+    routePoints.push([plan.start_lat, plan.start_lng]);
+  }
+
   stops.forEach((stop, i) => {
     const sLat = stop.lat;
     const sLng = stop.lng;
@@ -238,7 +246,13 @@ function _initGuideMap(plan) {
     marker.on('click', () => _scrollToGuideStop(stop.id));
     _guideMapMarkers.push(marker);
     bounds.push([sLat, sLng]);
+    routePoints.push([sLat, sLng]);
   });
+
+  // Draw solid route polyline through all points in order
+  if (routePoints.length >= 2) {
+    _guideMapLine = L.polyline(routePoints, { color: '#0071e3', weight: 3, opacity: 0.8 }).addTo(_guideMap);
+  }
 
   if (bounds.length > 0) {
     _guideMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });

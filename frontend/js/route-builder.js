@@ -3,6 +3,7 @@
 let routeMeta = {};
 let _map = null;
 let _mapMarkers = [];
+let _mapLines = [];
 
 function startRouteBuilding(data) {
   S.selectedStops = [];
@@ -110,7 +111,9 @@ function _initMap(anchors, options) {
     }).addTo(_map);
   } else {
     _mapMarkers.forEach(m => _map.removeLayer(m));
+    _mapLines.forEach(l => _map.removeLayer(l));
     _mapMarkers = [];
+    _mapLines = [];
   }
 
   const bounds = [];
@@ -145,7 +148,11 @@ function _initMap(anchors, options) {
     bounds.push([anchors.target_lat, anchors.target_lon]);
   }
 
-  // Option pins (blue, numbered)
+  // Option pins (blue, numbered) + branch lines from start → option → target
+  const startPt = (anchors.prev_lat && anchors.prev_lon) ? [anchors.prev_lat, anchors.prev_lon] : null;
+  const targetPt = (anchors.target_lat && anchors.target_lon) ? [anchors.target_lat, anchors.target_lon] : null;
+  const branchColors = ['#0071e3', '#1a7a1a', '#b36000'];
+
   options.filter(o => o.lat && o.lon).forEach((opt, i) => {
     const icon = L.divIcon({
       className: '',
@@ -159,6 +166,17 @@ function _initMap(anchors, options) {
     marker.on('click', () => scrollToOption(i));
     _mapMarkers.push(marker);
     bounds.push([opt.lat, opt.lon]);
+
+    const color = branchColors[i] || '#888';
+    const optPt = [opt.lat, opt.lon];
+    if (startPt) {
+      const line = L.polyline([startPt, optPt], { color, weight: 2.5, dashArray: '6 5', opacity: 0.75 }).addTo(_map);
+      _mapLines.push(line);
+    }
+    if (targetPt) {
+      const line = L.polyline([optPt, targetPt], { color, weight: 2.5, dashArray: '6 5', opacity: 0.5 }).addTo(_map);
+      _mapLines.push(line);
+    }
   });
 
   if (bounds.length > 0) {
@@ -171,7 +189,9 @@ function _initMap(anchors, options) {
 function _clearMap() {
   if (_map) {
     _mapMarkers.forEach(m => _map.removeLayer(m));
+    _mapLines.forEach(l => _map.removeLayer(l));
     _mapMarkers = [];
+    _mapLines = [];
   }
 }
 
