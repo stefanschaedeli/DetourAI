@@ -52,7 +52,7 @@ body {
 }
 .btn-clear-data:hover { background: var(--bg); color: var(--danger); border-color: var(--danger); }
 
-main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 
 .section { display: none; }
 .section.active { display: block; }
@@ -611,6 +611,20 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
 .loading-counter {
   color: rgba(255,255,255,.65); font-size: 13px;
 }
+
+/* ============================================================ Quick-submit sticky bar */
+.quick-submit-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  display: none; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 14px 24px;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+}
+.quick-submit-bar.visible { display: flex; }
+.quick-submit-hint { font-size: 14px; color: var(--text-sub); }
+.quick-submit-btn { padding: 12px 28px; font-size: 16px; }
 
 /* ============================================================ Budget sliders (Step 5) */
 .budget-split-group { }

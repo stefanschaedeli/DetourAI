@@ -83,6 +83,7 @@ function showSection(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
+  if (typeof updateQuickSubmitBar === 'function') updateQuickSubmitBar();
 }
 
 /** Build a 3-image gallery strip (overview + mood + customer). Returns '' if all null. */

@@ -10,6 +10,7 @@ function initForm() {
   setupFormAutoSave();
   restoreFormFromCache();
   checkResume();
+  updateQuickSubmitBar();
 
   // Close settings menu on click outside
   document.addEventListener('click', e => {
@@ -74,6 +75,36 @@ function validateStep(n) {
 // ---------------------------------------------------------------------------
 // Settings menu
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Quick-submit sticky bar
+// ---------------------------------------------------------------------------
+
+function updateQuickSubmitBar() {
+  const bar = document.getElementById('quick-submit-bar');
+  if (!bar) return;
+  // Show only when form-section is active and step 1 required fields are filled
+  const formActive = document.getElementById('form-section')?.classList.contains('active');
+  const start = document.getElementById('start-location')?.value.trim();
+  const dest  = document.getElementById('main-destination')?.value.trim();
+  const sd    = document.getElementById('start-date')?.value;
+  const ed    = document.getElementById('end-date')?.value;
+  const ready = formActive && start && dest && sd && ed && sd < ed;
+  bar.classList.toggle('visible', !!ready);
+}
+
+async function quickSubmitTrip() {
+  // Validate step 1 (required fields) — skip steps 2-6 validation
+  const start = document.getElementById('start-location')?.value.trim();
+  const dest  = document.getElementById('main-destination')?.value.trim();
+  const sd    = document.getElementById('start-date')?.value;
+  const ed    = document.getElementById('end-date')?.value;
+  if (!start) { alert('Bitte Startort eingeben.'); return; }
+  if (!dest)  { alert('Bitte Hauptziel eingeben.'); return; }
+  if (!sd || !ed) { alert('Bitte Reisedaten eingeben.'); return; }
+  if (sd >= ed)   { alert('Enddatum muss nach Startdatum liegen.'); return; }
+  await submitTrip();
+}
 
 function toggleSettings() {
   const menu = document.getElementById('settings-menu');
@@ -403,6 +434,7 @@ async function submitTrip() {
 function saveFormToCache() {
   const p = buildPayload();
   lsSet(LS_FORM, { ...p, viaPoints, travelStyles: S.travelStyles, children: S.children, mandatoryTags: S.mandatoryTags });
+  updateQuickSubmitBar();
 }
 
 function setupFormAutoSave() {
