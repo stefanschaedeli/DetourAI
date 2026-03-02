@@ -205,12 +205,20 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
 }
 .recompute-bar input:focus { outline: none; border-color: var(--accent); }
 
-/* Route map */
+/* Route map (route builder) */
 #route-map {
   height: 340px;
   border-radius: 8px;
   border: 1px solid var(--border);
   margin-bottom: 20px;
+}
+
+/* Guide overview map */
+#guide-map {
+  height: 420px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-top: 24px;
 }
 
 /* Leaflet markers — shared base */

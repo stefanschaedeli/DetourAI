@@ -1,6 +1,8 @@
 'use strict';
 
 let activeTab = 'overview';
+let _guideMap = null;
+let _guideMapMarkers = [];
 
 function showTravelGuide(plan) {
   S.result = plan;
@@ -19,11 +21,16 @@ function renderGuide(plan, tab) {
   if (!content) return;
 
   switch (activeTab) {
-    case 'overview':   content.innerHTML = renderOverview(plan);  break;
+    case 'overview':
+      content.innerHTML = renderOverview(plan);
+      _initGuideMap(plan);
+      break;
     case 'stops':      content.innerHTML = renderStops(plan);     break;
     case 'dayplan':    content.innerHTML = renderDayPlan(plan);   break;
     case 'budget':     content.innerHTML = renderBudget(plan);    break;
-    default:           content.innerHTML = renderOverview(plan);
+    default:
+      content.innerHTML = renderOverview(plan);
+      _initGuideMap(plan);
   }
 }
 
@@ -78,6 +85,8 @@ function renderOverview(plan) {
           `).join('')}
         </div>
       </div>
+
+      <div id="guide-map"></div>
     </div>
   `;
 }
@@ -93,7 +102,7 @@ function renderStops(plan) {
         const rests = stop.restaurants || [];
 
         return `
-          <div class="stop-card">
+          <div class="stop-card" id="guide-stop-${stop.id}">
             <div class="stop-header">
               <div class="stop-number">Stop ${stop.id}</div>
               <h3>${flag} ${esc(stop.region)}, ${esc(stop.country)}</h3>
@@ -166,6 +175,76 @@ function renderStops(plan) {
       }).join('')}
     </div>
   `;
+}
+
+function _scrollToGuideStop(stopId) {
+  switchGuideTab('stops');
+  // After tab switch the DOM is re-rendered; use rAF to wait one frame
+  requestAnimationFrame(() => {
+    document.getElementById(`guide-stop-${stopId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+function _initGuideMap(plan) {
+  const mapEl = document.getElementById('guide-map');
+  if (!mapEl) return;
+
+  const stops = plan.stops || [];
+
+  // Destroy old map instance if the element was replaced by innerHTML
+  if (_guideMap) {
+    _guideMap.remove();
+    _guideMap = null;
+    _guideMapMarkers = [];
+  }
+
+  _guideMap = L.map('guide-map').setView([47, 8], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(_guideMap);
+
+  const bounds = [];
+
+  // Start pin (green S)
+  if (plan.start_lat && plan.start_lng) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="map-marker-anchor start-pin">S</div>`,
+      iconSize: [28, 28], iconAnchor: [14, 14],
+    });
+    L.marker([plan.start_lat, plan.start_lng], { icon })
+      .bindPopup(`<b>Start: ${esc(plan.start_location)}</b>`)
+      .addTo(_guideMap);
+    bounds.push([plan.start_lat, plan.start_lng]);
+  }
+
+  // Stop pins — last stop gets red Z, others blue numbered
+  stops.forEach((stop, i) => {
+    const sLat = stop.lat;
+    const sLng = stop.lng;
+    if (!sLat || !sLng) return;
+
+    const isLast = i === stops.length - 1;
+    const icon = L.divIcon({
+      className: '',
+      html: isLast
+        ? `<div class="map-marker-anchor target-pin">Z</div>`
+        : `<div class="map-marker-num">${stop.id}</div>`,
+      iconSize: [28, 28], iconAnchor: [14, 14],
+    });
+    const marker = L.marker([sLat, sLng], { icon })
+      .bindPopup(`<b>${FLAGS[stop.country] || ''} ${stop.region}</b><br>${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}`)
+      .addTo(_guideMap);
+    marker.on('click', () => _scrollToGuideStop(stop.id));
+    _guideMapMarkers.push(marker);
+    bounds.push([sLat, sLng]);
+  });
+
+  if (bounds.length > 0) {
+    _guideMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });
+  }
+
+  setTimeout(() => { if (_guideMap) _guideMap.invalidateSize(); }, 100);
 }
 
 function renderDayPlan(plan) {

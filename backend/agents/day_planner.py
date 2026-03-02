@@ -63,6 +63,9 @@ class DayPlannerAgent:
             coords.append(await geocode_nominatim(loc))
             await asyncio.sleep(0.35)
 
+        # Store start coords for use in the final result
+        self._start_coords = coords[0] if coords else None
+
         # OSRM calls in parallel
         osrm_tasks = []
         for i in range(1, len(coords)):
@@ -219,11 +222,12 @@ Gib exakt dieses JSON zurück:
 
         await debug_logger.log(LogLevel.SUCCESS, "DayPlanner abgeschlossen", job_id=self.job_id, agent="DayPlanner")
 
+        start_coords = getattr(self, "_start_coords", None)
         return {
             "job_id": self.job_id,
             "start_location": req.start_location,
-            "start_lat": None,
-            "start_lng": None,
+            "start_lat": start_coords[0] if start_coords else None,
+            "start_lng": start_coords[1] if start_coords else None,
             "stops": stops,
             "day_plans": day_plans,
             "cost_estimate": cost_estimate,
