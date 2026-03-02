@@ -82,6 +82,18 @@ async function apiGenerateOutput(jobId, type) {
   return res.blob();
 }
 
+async function apiPatchJob(jobId, action, extraDays, viaPointLocation) {
+  const res = await _fetch(`${API}/patch-job/${jobId}`, {
+    method: 'POST',
+    body: JSON.stringify({
+      action,
+      extra_days: extraDays || 2,
+      via_point_location: viaPointLocation || '',
+    }),
+  }, 'Route wird angepasst…');
+  return res.json();
+}
+
 async function apiRecomputeOptions(jobId, extraInstructions) {
   const res = await _fetch(`${API}/recompute-options/${jobId}`, {
     method: 'POST',

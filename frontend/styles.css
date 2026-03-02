@@ -304,6 +304,55 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
   margin-bottom: 8px;
 }
 
+/* All-over-limit banner */
+.all-over-limit-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: #fff8e6; border: 1px solid #f5c842; border-radius: var(--radius);
+  padding: 14px 20px; margin-bottom: 16px;
+}
+.all-over-limit-banner p { flex: 1; font-size: 14px; color: #7a4f00; margin: 0; }
+
+/* Route-adjust modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9000; padding: 24px;
+}
+.modal-box {
+  background: #fff; border-radius: 14px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.18);
+  padding: 28px; max-width: 480px; width: 100%;
+  position: relative;
+}
+.modal-close {
+  position: absolute; top: 14px; right: 18px;
+  background: none; border: none; font-size: 24px; cursor: pointer;
+  color: var(--text-sub); line-height: 1;
+}
+.modal-close:hover { color: var(--text); }
+.modal-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+.modal-desc { font-size: 14px; color: var(--text-sub); margin-bottom: 20px; }
+.modal-option {
+  border: 2px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 12px; cursor: pointer;
+  transition: border-color .15s;
+}
+.modal-option:has(input:checked) { border-color: var(--accent); background: #f0f6ff; }
+.modal-option-header {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.modal-option-header input[type=radio] { width: 16px; height: 16px; accent-color: var(--accent); }
+.modal-option-desc { font-size: 13px; color: var(--text-sub); margin: 6px 0 0 26px; }
+.modal-option-detail { margin: 10px 0 0 26px; font-size: 14px; }
+.modal-option-detail select,
+.modal-option-detail input[type=text] {
+  margin-left: 8px; padding: 5px 10px; border: 1px solid var(--border);
+  border-radius: 7px; font-size: 14px; background: #fff;
+}
+.modal-option-detail input[type=text] { margin-left: 0; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
 /* ============================================================ Accommodation */
 .accommodation-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
 .acc-budget-info { background: #f5f5f7; border-radius: 8px; padding: 14px 20px; margin-bottom: 20px; font-size: 14px; }

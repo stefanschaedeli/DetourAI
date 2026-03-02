@@ -8,6 +8,11 @@ let _mapLines = [];
 function startRouteBuilding(data) {
   S.selectedStops = [];
   routeMeta = data.meta || {};
+  // Persist max_drive_hours from payload for use in all-over-limit banner
+  const cachedForm = lsGet(LS_FORM);
+  if (cachedForm && cachedForm.max_drive_hours_per_day) {
+    routeMeta.max_drive_hours = cachedForm.max_drive_hours_per_day;
+  }
   renderOptions(data.options || [], data.meta || {});
 }
 
@@ -53,6 +58,8 @@ function renderOptions(options, meta) {
     return;
   }
 
+  const allOverLimit = options.length > 0 && options.every(o => o.drives_over_limit);
+
   container.innerHTML = options.map((opt, i) => {
     const flag = FLAGS[opt.country] || '';
     const driveKm = opt.drive_km ? ` · ${opt.drive_km} km` : '';
@@ -82,6 +89,17 @@ function renderOptions(options, meta) {
       </div>
     `;
   }).join('');
+
+  // Banner when ALL options exceed limit
+  if (allOverLimit) {
+    const banner = document.createElement('div');
+    banner.className = 'all-over-limit-banner';
+    banner.innerHTML = `
+      <p>⚠ Alle vorgeschlagenen Etappen überschreiten die maximale Fahrzeit von ${routeMeta.max_drive_hours || ''}h.</p>
+      <button class="btn btn-secondary" onclick="openRouteAdjustModal()">Route anpassen…</button>
+    `;
+    container.prepend(banner);
+  }
 
   // Init Leaflet map
   _initMap(meta.map_anchors || {}, options);
@@ -334,5 +352,119 @@ function searchNextStop() {
   // Manual trigger if needed
   if (S.currentOptions.length > 0) {
     renderOptions(S.currentOptions, routeMeta);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Route-adjust modal (shown when all options exceed drive limit)
+// ---------------------------------------------------------------------------
+
+function openRouteAdjustModal() {
+  const existing = document.getElementById('route-adjust-modal');
+  if (existing) existing.remove();
+
+  const maxH = routeMeta.max_drive_hours || 4.5;
+  const overlay = document.createElement('div');
+  overlay.id = 'route-adjust-modal';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeRouteAdjustModal()">×</button>
+      <h3 class="modal-title">Route anpassen</h3>
+      <p class="modal-desc">
+        Alle vorgeschlagenen Etappen überschreiten die maximale Fahrzeit von <strong>${maxH}h</strong>.
+        Wählen Sie eine Lösung:
+      </p>
+
+      <div class="modal-option" id="modal-opt-days">
+        <label class="modal-option-header">
+          <input type="radio" name="adjust-action" value="add_days" checked>
+          <span>Reisedauer verlängern</span>
+        </label>
+        <p class="modal-option-desc">Mehr Tage einplanen, damit kürzere Tagesetappen möglich werden.</p>
+        <div class="modal-option-detail" id="modal-detail-days">
+          <label>Zusätzliche Tage:
+            <select id="modal-extra-days">
+              <option value="1">+ 1 Tag</option>
+              <option value="2" selected>+ 2 Tage</option>
+              <option value="3">+ 3 Tage</option>
+              <option value="5">+ 5 Tage</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-option" id="modal-opt-via">
+        <label class="modal-option-header">
+          <input type="radio" name="adjust-action" value="add_via_point">
+          <span>Zwischenstopp einfügen</span>
+        </label>
+        <p class="modal-option-desc">Einen fixen Routenpunkt einfügen, der die Etappe verkürzt.</p>
+        <div class="modal-option-detail" id="modal-detail-via" style="display:none">
+          <label>Ortschaft:
+            <input type="text" id="modal-via-input" placeholder="z.B. Bern, Schweiz" style="width:100%;margin-top:6px">
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeRouteAdjustModal()">Abbrechen</button>
+        <button class="btn btn-primary" onclick="applyRouteAdjust()">Anwenden</button>
+      </div>
+    </div>
+  `;
+
+  // Toggle detail panels on radio change
+  overlay.querySelectorAll('input[name="adjust-action"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.getElementById('modal-detail-days').style.display =
+        r.value === 'add_days' ? '' : 'none';
+      document.getElementById('modal-detail-via').style.display =
+        r.value === 'add_via_point' ? '' : 'none';
+    });
+  });
+
+  // Close on backdrop click
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeRouteAdjustModal();
+  });
+
+  document.body.appendChild(overlay);
+}
+
+function closeRouteAdjustModal() {
+  const m = document.getElementById('route-adjust-modal');
+  if (m) m.remove();
+}
+
+async function applyRouteAdjust() {
+  const action = document.querySelector('input[name="adjust-action"]:checked')?.value;
+  if (!action) return;
+
+  const extraDays = parseInt(document.getElementById('modal-extra-days')?.value) || 2;
+  const viaLoc = (document.getElementById('modal-via-input')?.value || '').trim();
+
+  if (action === 'add_via_point' && !viaLoc) {
+    alert('Bitte eine Ortschaft für den Zwischenstopp eingeben.');
+    return;
+  }
+
+  closeRouteAdjustModal();
+  S.loadingOptions = true;
+
+  const container = document.getElementById('route-options-container');
+  container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Route wird angepasst…</p></div>';
+  _clearMap();
+
+  try {
+    const data = await apiPatchJob(S.jobId, action, extraDays, viaLoc);
+    // Update persisted max_drive_hours if total_days changed
+    if (data.meta && data.meta.total_days) {
+      routeMeta.max_drive_hours = routeMeta.max_drive_hours; // unchanged — only days shift
+    }
+    renderOptions(data.options || [], data.meta || {});
+  } catch (err) {
+    container.innerHTML = `<div class="error-msg">Fehler beim Anpassen: ${esc(err.message)}</div>`;
+    S.loadingOptions = false;
   }
 }

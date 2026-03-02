@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import uuid
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -619,6 +620,127 @@ async def recompute_options(job_id: str, body: RecomputeRequest):
             "segment_count": n_segments,
             "segment_target": segment_target,
             "map_anchors": map_anchors,
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# POST /api/patch-job/{job_id}
+# Adjusts job when all options exceed drive limit.
+# action="add_days"      → extra_days added to total_days + segment_budget
+# action="add_via_point" → inserts a new via-point before current segment target,
+#                          splits the segment and recomputes options
+# ---------------------------------------------------------------------------
+
+class PatchJobRequest(BaseModel):
+    action: str                  # "add_days" | "add_via_point"
+    extra_days: int = 2          # used by "add_days"
+    via_point_location: str = "" # used by "add_via_point"
+
+
+@app.post("/api/patch-job/{job_id}")
+async def patch_job(job_id: str, body: PatchJobRequest):
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    job = get_job(job_id)
+    req_data = job["request"]
+
+    if body.action == "add_days":
+        req_data["total_days"] += body.extra_days
+        req_data["end_date"] = str(
+            date.fromisoformat(str(req_data["end_date"])) +
+            timedelta(days=body.extra_days)
+        )
+        job["request"] = req_data
+        job["segment_budget"] += body.extra_days
+
+    elif body.action == "add_via_point":
+        if not body.via_point_location.strip():
+            raise HTTPException(status_code=400, detail="via_point_location darf nicht leer sein")
+        seg_idx = job.get("segment_index", 0)
+        # Insert the new via-point before the current segment target
+        vp_list = req_data.get("via_points", [])
+        new_vp = {"location": body.via_point_location.strip(), "fixed_date": None, "notes": None}
+        vp_list.insert(seg_idx, new_vp)
+        req_data["via_points"] = vp_list
+        # Add a day for the extra stop
+        req_data["total_days"] += 1
+        req_data["end_date"] = str(
+            date.fromisoformat(str(req_data["end_date"])) +
+            timedelta(days=1)
+        )
+        job["request"] = req_data
+        # Recalculate segment budget for the (now shorter) current segment
+        request_tmp = TravelRequest(**req_data)
+        job["segment_budget"] = _calc_segment_budget(request_tmp, seg_idx)
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Unbekannte Aktion: {body.action}")
+
+    save_job(job_id, job)
+
+    # Recompute options with updated job state
+    request = TravelRequest(**job["request"])
+    seg_idx = job.get("segment_index", 0)
+    n_segments = len(request.via_points) + 1
+    segment_target = (
+        request.via_points[seg_idx].location
+        if seg_idx < len(request.via_points)
+        else request.main_destination
+    )
+
+    selected_stops = job.get("selected_stops", [])
+    stop_number = job.get("stop_counter", 0) + 1
+    route_status = _calc_route_status(
+        request, job.get("segment_stops", []), job["segment_budget"],
+        seg_idx == n_segments - 1
+    )
+
+    prev_location = selected_stops[-1]["region"] if selected_stops else request.start_location
+    stops_left = max(1, route_status["days_remaining"] // (1 + request.min_nights_per_stop))
+    geo = await _calc_route_geometry(
+        prev_location, segment_target, stops_left, request.max_drive_hours_per_day
+    )
+
+    agent = StopOptionsFinderAgent(request, job_id)
+    result = await agent.find_options(
+        selected_stops=selected_stops,
+        stop_number=stop_number,
+        days_remaining=route_status["days_remaining"],
+        route_could_be_complete=route_status["route_could_be_complete"],
+        segment_target=segment_target,
+        segment_index=seg_idx,
+        segment_count=n_segments,
+        route_geometry=geo,
+    )
+
+    options = result.get("options", [])
+    options, map_anchors = await _enrich_options_with_osrm(
+        options, prev_location, segment_target, request.max_drive_hours_per_day
+    )
+    job["current_options"] = options
+    job["route_could_be_complete"] = result.get("route_could_be_complete", False)
+    save_job(job_id, job)
+
+    new_status = _calc_route_status(
+        request, job.get("segment_stops", []), job["segment_budget"],
+        seg_idx == n_segments - 1
+    )
+    return {
+        "job_id": job_id,
+        "status": "building_route",
+        "options": options,
+        "meta": {
+            "stop_number": stop_number,
+            "days_remaining": new_status["days_remaining"],
+            "estimated_total_stops": result.get("estimated_total_stops", 4),
+            "route_could_be_complete": new_status["route_could_be_complete"],
+            "must_complete": new_status["must_complete"],
+            "segment_index": seg_idx,
+            "segment_count": n_segments,
+            "segment_target": segment_target,
+            "map_anchors": map_anchors,
+            "total_days": request.total_days,
         },
     }
 
