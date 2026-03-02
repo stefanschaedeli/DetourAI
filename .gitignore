@@ -1,0 +1,47 @@
+CLAUDE.local.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Environment secrets
+backend/.env
+.env
+.env.local
+
+# macOS
+.DS_Store
+*.DS_Store
+
+# Outputs
+outputs/*.pdf
+outputs/*.pptx
+
+# Node (if ever)
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Claude skill templates (local)
+code-reviewer.md
+doc-writer.md
+document.md
+fix-issue.md
+global-CLAUDE.md
+refactor.md
+review.md
+security-reviewer.md
+settings.json
+.mcp.json
+.claude/
