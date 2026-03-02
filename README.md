@@ -25,11 +25,16 @@ Day-by-day travel guide  ·  PDF export  ·  PPTX export
 ## Features
 
 - **Interactive route building** — Claude suggests stops segment by segment; you tap the ones you want
+- **Leaflet map in route builder** — live map with start pin, segment-target pin, and numbered option pins; dashed branch lines visualise each alternative; marker click scrolls to the option card
+- **"Neu berechnen" bar** — free-text field to steer the next suggestion (e.g. "lieber Meeresküste") and re-run the agent with a custom instruction
+- **Rich stop metadata** — options now include population, altitude, language, climate note, must-see highlights, and family-friendliness
 - **Parallel accommodation research** — budget / comfort / premium options per stop loaded simultaneously
 - **Six specialised AI agents** — route architect, stop finder, accommodation researcher, activities, restaurants, day planner
-- **Real driving times** — OSRM replaces AI estimates with actual road distances
+- **Real driving times** — OSRM replaces AI estimates with actual road distances and kilometres
+- **Agent-supplied coordinates** — StopOptionsFinder provides WGS84 lat/lon for every option; Nominatim result takes priority, agent coords serve as guaranteed fallback so all pins always appear
 - **Real-time progress** — Server-Sent Events stream every agent action to the browser
 - **Budget tracking** — 45 % accommodation · 15 % food · CHF 80/stop activities · CHF 12/h fuel
+- **Interactive overview map in travel guide** — full route polyline (start → all stops → destination) with clickable pins; clicking a pin switches to the Stops & Details tab and scrolls to that stop's card
 - **Export** — download the final plan as PDF or PPTX
 - **Resume** — browser-local state so you can pick up where you left off
 - **Swiss-first** — all output in German, all prices in CHF
@@ -197,23 +202,39 @@ Review everything, then click **Reise planen**.
 
 ### Route builder
 
-Claude proposes **3 stop options** for the first segment. Pick one, and it immediately suggests the next. Keep picking until the full route is built, then confirm.
+Claude proposes **3 stop options** for the current segment. Pick one, and it immediately suggests the next three. Keep picking until the full route is built, then confirm.
+
+Each round displays:
+- A **Leaflet map** with a green Start pin, a red Ziel pin, and blue numbered pins for each option; dashed coloured lines connect start → option → target for each branch
+- A **"Neu berechnen"** bar to re-run the agent with a free-text instruction (e.g. "lieber Küste" or "Weingegend bevorzugt")
+- Option cards stacked vertically, each with OSRM-verified drive time and distance, Google Maps link, and contextual metadata (altitude, language, must-sees, family score)
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  Route aufbauen                                                  │
-│  Ausgewählte Stops:  Liestal  →  Bern  →  Lyon                  │
-├──────────────────────────────────────────────────────────────────┤
-│  ┌────────────────┐   ┌────────────────┐   ┌────────────────┐   │
-│  │  Grenoble      │   │  Valence       │   │  Avignon       │   │
-│  │                │   │                │   │                │   │
-│  │  Fahrtzeit 2.5h│   │  Fahrtzeit 2.1h│   │  Fahrtzeit 3.0h│   │
-│  │                │   │                │   │                │   │
-│  │  Bergkulisse,  │   │  Rhône-Tal,    │   │  Historische   │   │
-│  │  UNESCO-Stadt  │   │  Lavendelfelder│   │  Altstadt      │   │
-│  │  ★ 4.5         │   │  ★ 4.2         │   │  ★ 4.7         │   │
-│  │   [Wählen]     │   │   [Wählen]     │   │   [Wählen]     │   │
-│  └────────────────┘   └────────────────┘   └────────────────┘   │
+│                                                                  │
+│  [Sonderwunsch eingeben…]              [Neu berechnen]           │
+│                                                                  │
+│  Stop #3 → Paris  (Segment 1/1)    3 Tage verbleibend            │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │  🗺  [Karte: S  ──┬── 1.Grenoble ──┬── Z:Paris ]        │    │
+│  │                  ├── 2.Valence  ──┤                     │    │
+│  │                  └── 3.Avignon  ──┘                     │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │  direct   🇫🇷 Grenoble, FR                               │    │
+│  │  2.5h Fahrt · 210 km    2 Nächte                        │    │
+│  │  Bergkulisse · UNESCO-Altstadt · Isère-Tal               │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │  scenic   🇫🇷 Valence, FR                                │    │
+│  │  2.1h Fahrt · 175 km    2 Nächte                        │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │  cultural  🇫🇷 Avignon, FR                               │    │
+│  │  3.0h Fahrt · 290 km    2 Nächte                        │    │
+│  └──────────────────────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -286,10 +307,12 @@ The finished plan is presented in four tabs:
 
 | Tab | Content |
 |-----|---------|
-| **Übersicht** | Route visualisation, key stats, Google Maps link, download buttons |
+| **Übersicht** | Route visualisation, key stats, Google Maps link, interactive Leaflet route map, download buttons |
 | **Stops & Details** | Per-stop card: accommodation, top activities (duration / price / kid-friendly), top restaurants (cuisine / price range) |
 | **Tagesplan** | Day-by-day breakdown with driving legs, highlights, and Maps route links |
 | **Budget** | Itemised: accommodation · fuel · activities · food · ferries · total vs. budget |
+
+The **overview map** shows the complete route as a solid blue polyline from start through all stops to the final destination. Clicking any pin switches to the *Stops & Details* tab and scrolls directly to that stop's card.
 
 ---
 
@@ -359,8 +382,9 @@ python3 -m pytest tests/test_agents_mock.py        # agents (no API key needed)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/plan-trip` | Submit form, receive first stop options |
-| `POST` | `/api/select-stop/{job_id}` | Choose a stop, receive next options |
+| `POST` | `/api/plan-trip` | Submit form, receive first stop options (with OSRM + map anchors) |
+| `POST` | `/api/select-stop/{job_id}` | Choose a stop, receive next options (with OSRM + map anchors) |
+| `POST` | `/api/recompute-options/{job_id}` | Re-run StopOptionsFinder with optional `extra_instructions` |
 | `POST` | `/api/confirm-route/{job_id}` | Confirm route, begin accommodation loading |
 | `POST` | `/api/start-accommodations/{job_id}` | Trigger parallel accommodation fetch |
 | `POST` | `/api/select-accommodation/{job_id}` | Select accommodation for one stop |
@@ -425,6 +449,36 @@ travelman3/
 | Food | 15 % of total budget |
 | Activities | ~CHF 80 per stop |
 | Fuel | CHF 12 per driving hour |
+
+---
+
+## Changelog
+
+### v1.2.3 (2026-03-02)
+- **Route lines on maps** — dashed branch lines (start → option → target) per alternative in the route-builder map; solid polyline through all stops in the guide overview map
+- **Agent-supplied coordinates as fallback** — StopOptionsFinder now returns WGS84 `lat`/`lon` for every option; used when Nominatim geocoding fails so all 3 pins always appear
+
+### v1.2.2 (2026-03-02)
+- **Interactive map in travel guide overview** — Leaflet map with start pin, numbered stop pins, and red final-destination pin; clicking a pin navigates to the stop's detail card
+- `DayPlannerAgent` now writes `start_lat`/`start_lng` into the result (was always `null`)
+
+### v1.2.1 (2026-03-02)
+- **Start and segment-target pins on route-builder map** — green "S" pin for the current position, red "Z" pin for the segment goal; coordinates geocoded server-side alongside the option pins and delivered via `map_anchors` in the `meta` response
+
+### v1.2 (2026-03-02)
+- **Leaflet map in route builder** — numbered option pins, start pin, segment-target pin; marker click scrolls to the corresponding option card
+- **"Neu berechnen" bar** — free-text special instruction field that re-runs StopOptionsFinder with `extra_instructions`; input cleared after use
+- **New endpoint** `POST /api/recompute-options/{job_id}`
+- **OSRM-verified drive times** in route builder — Nominatim + OSRM enrichment runs server-side after every agent call; no more hallucinated drive estimates
+- **Rich stop metadata** — `population`, `altitude_m`, `language`, `climate_note`, `must_see`, `family_friendly` added to `StopOption`
+- **Google Maps link** per option card
+- **Option cards stacked vertically** (single-column layout)
+
+### v1.1 (2026-03-01)
+- Unsplash image galleries with lightbox support in the travel guide
+
+### v1.0 (2026-02-28)
+- Initial release — full 5-step form, 6 AI agents, SSE progress, PDF/PPTX export
 
 ---
 
