@@ -49,7 +49,7 @@ function renderOverview(plan) {
       <div class="overview-hero">
         <h2>Reise: ${esc(plan.start_location)} → ${esc(stops[stops.length - 1]?.region || '')}</h2>
         <p>${stops.length} Stops · ${plan.day_plans?.length || 0} Tage</p>
-        ${mapUrl ? `<a href="${esc(mapUrl)}" target="_blank" class="btn btn-secondary">
+        ${mapUrl ? `<a href="${safeUrl(mapUrl)}" target="_blank" class="btn btn-secondary">
           Google Maps öffnen
         </a>` : ''}
       </div>
@@ -112,7 +112,7 @@ function renderStops(plan) {
                 ${stop.drive_hours_from_prev > 0 ? ` · ${stop.drive_hours_from_prev}h Fahrt` : ''}
                 ${stop.drive_km_from_prev > 0 ? ` · ${stop.drive_km_from_prev} km` : ''}
               </div>
-              ${stop.google_maps_url ? `<a href="${esc(stop.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
+              ${stop.google_maps_url ? `<a href="${safeUrl(stop.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
             </div>
             ${buildImageGallery(stop.image_overview, stop.image_mood, stop.image_customer, esc(stop.region))}
 
@@ -144,7 +144,7 @@ function renderStops(plan) {
                           ${act.price_chf > 0 ? ` · CHF ${act.price_chf}` : ' · kostenlos'}
                           ${act.suitable_for_children ? ' · familienfreundlich' : ''}
                         </div>
-                        ${act.google_maps_url ? `<a href="${esc(act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
+                        ${act.google_maps_url ? `<a href="${safeUrl(act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
                       </div>
                     </div>
                   `).join('')}
@@ -280,7 +280,7 @@ function renderDayPlan(plan) {
             </div>
           ` : ''}
           ${dp.google_maps_route_url ? `
-            <a href="${esc(dp.google_maps_route_url)}" target="_blank" class="btn btn-sm">Route in Maps</a>
+            <a href="${safeUrl(dp.google_maps_route_url)}" target="_blank" class="btn btn-sm">Route in Maps</a>
           ` : ''}
         </div>
       `).join('')}

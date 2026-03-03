@@ -68,7 +68,7 @@ function renderOptions(options, meta) {
       ? `<span class="drive-over-limit-badge">⚠ Fahrzeit überschreitet Limit</span>`
       : '';
     const mapsLink = opt.maps_url
-      ? `<a class="option-maps-link" href="${esc(opt.maps_url)}" target="_blank" rel="noopener">&#x1F5FA; Google Maps</a>`
+      ? `<a class="option-maps-link" href="${safeUrl(opt.maps_url)}" target="_blank" rel="noopener">&#x1F5FA; Google Maps</a>`
       : '';
     const extraFields = _buildExtraFields(opt);
     return `

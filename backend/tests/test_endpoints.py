@@ -116,8 +116,8 @@ def test_select_stop_invalid_index(client, mock_redis):
         "route_could_be_complete": False,
     }
     mock_redis.get.return_value = json.dumps(job)
-    r = client.post("/api/select-stop/testjob", json={"option_index": 5})
-    assert r.status_code == 422  # Pydantic validation
+    r = client.post("/api/select-stop/abcdef1234567890abcdef1234567890", json={"option_index": 5})
+    assert r.status_code == 422  # Pydantic validation (TravelRequest missing fields in stored job)
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +153,7 @@ def test_get_result_not_found(client, mock_redis):
 def test_get_result_success(client, mock_redis):
     job = {"status": "complete", "result": {"job_id": "abc", "stops": []}}
     mock_redis.get.return_value = json.dumps(job)
-    r = client.get("/api/result/abc")
+    r = client.get("/api/result/abcdef1234567890abcdef1234567890")
     assert r.status_code == 200
     data = r.json()
     assert data["status"] == "complete"
@@ -189,7 +189,7 @@ def test_confirm_accommodations_success(client, mock_redis):
         "segment_stops": [], "route_could_be_complete": False,
     }
     mock_redis.get.return_value = json.dumps(job)
-    r = client.post("/api/confirm-accommodations/testjob", json={"selections": {"1": 0}})
+    r = client.post("/api/confirm-accommodations/abcdef1234567890abcdef1234567890", json={"selections": {"1": 0}})
     assert r.status_code == 200
     data = r.json()
     assert data["status"] == "accommodations_confirmed"

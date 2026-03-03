@@ -2,13 +2,11 @@ version: '3.9'
 services:
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
 
   backend:
     build:
       context: .
       dockerfile: infra/Dockerfile.backend
-    ports: ["8000:8000"]
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - TEST_MODE=${TEST_MODE:-true}
@@ -32,5 +30,5 @@ services:
     build:
       context: .
       dockerfile: infra/Dockerfile.frontend
-    ports: ["80:80"]
+    ports: ["80:8080"]
     depends_on: [backend]

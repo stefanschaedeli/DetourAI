@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import uuid
 from datetime import date, timedelta
 from pathlib import Path
@@ -88,11 +89,16 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
 
 app = FastAPI(title="Travelman2 API", version="1.0.0")
 
+_CORS_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost,http://localhost:80,http://127.0.0.1"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_CORS_ORIGINS,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
 )
 
 OUTPUTS_DIR = Path(__file__).parent.parent / "outputs"
@@ -108,7 +114,12 @@ FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 # Helpers
 # ---------------------------------------------------------------------------
 
+_JOB_ID_RE = re.compile(r'^[a-f0-9]{32}$')
+
+
 def get_job(job_id: str) -> dict:
+    if not _JOB_ID_RE.match(job_id):
+        raise HTTPException(status_code=404, detail="Job nicht gefunden")
     raw = redis_client.get(f"job:{job_id}")
     if not raw:
         raise HTTPException(status_code=404, detail=f"Job {job_id} nicht gefunden")
@@ -303,7 +314,7 @@ async def _enrich_options_with_osrm(
 async def plan_trip(request: TravelRequest):
     from agents.stop_options_finder import StopOptionsFinderAgent
 
-    job_id = uuid.uuid4().hex[:8]
+    job_id = uuid.uuid4().hex   # 32 chars — not guessable
     job = _new_job(request)
     save_job(job_id, job)
 

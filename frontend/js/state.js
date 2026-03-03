@@ -78,6 +78,16 @@ function esc(str) {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Allow only http:// and https:// URLs.
+ * Returns '' for javascript:, data:, or any other scheme.
+ */
+function safeUrl(url) {
+  if (!url) return '';
+  const s = String(url).trim();
+  return (s.startsWith('https://') || s.startsWith('http://')) ? s : '';
+}
+
 /** Show a section, hide all others. */
 function showSection(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));

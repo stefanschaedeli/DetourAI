@@ -212,7 +212,7 @@ function renderTags() {
   container.innerHTML = S.mandatoryTags.map(tag => `
     <span class="tag">
       ${esc(tag)}
-      <button onclick="removeTag('${esc(tag)}')" title="Entfernen">×</button>
+      <button onclick="removeTag(${JSON.stringify(tag)})" title="Entfernen">×</button>
     </span>
   `).join('');
 }

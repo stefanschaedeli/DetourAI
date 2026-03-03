@@ -1,6 +1,7 @@
 import asyncio
 import aiohttp
 from typing import Optional
+from urllib.parse import quote
 
 
 async def geocode_nominatim(place: str, country_code: str = "") -> Optional[tuple[float, float]]:
@@ -48,10 +49,10 @@ def build_maps_url(locations: list[str]) -> Optional[str]:
     if not locs:
         return None
     if len(locs) == 1:
-        return f"https://maps.google.com/?q={locs[0].replace(' ', '+')}"
-    origin = locs[0].replace(' ', '+')
-    dest   = locs[-1].replace(' ', '+')
-    wp     = '|'.join(l.replace(' ', '+') for l in locs[1:-1])
+        return f"https://maps.google.com/?q={quote(locs[0])}"
+    origin = quote(locs[0])
+    dest   = quote(locs[-1])
+    wp     = '|'.join(quote(l) for l in locs[1:-1])
     url    = f"https://www.google.com/maps/dir/?api=1&origin={origin}&destination={dest}"
     if wp:
         url += f"&waypoints={wp}"
