@@ -12,6 +12,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - TEST_MODE=${TEST_MODE:-true}
       - REDIS_URL=redis://redis:6379
+      - OUTPUTS_DIR=/app/outputs
     depends_on: [redis]
     volumes:
       - ./outputs:/app/outputs
