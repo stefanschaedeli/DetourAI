@@ -407,6 +407,12 @@ async def _find_and_stream_options(
     )
     await asyncio.sleep(0.2)
 
+    await debug_logger.log(
+        LogLevel.INFO,
+        f"Route-Optionen: {prev_location} → {segment_target} (Stop #{stop_number}, {days_remaining} Tage)",
+        job_id=job_id, agent="StopOptionsFinder",
+    )
+
     map_anchors = {
         "prev_lat": prev_coords[0] if prev_coords else None,
         "prev_lon": prev_coords[1] if prev_coords else None,
@@ -445,6 +451,11 @@ async def _find_and_stream_options(
         # It's an individual option — enrich it now
         opt = item
         place = f"{opt.get('region', '')}, {opt.get('country', '')}"
+        await debug_logger.log(
+            LogLevel.INFO,
+            f"  [{option_index + 1}/3] Geocoding + OSRM: {place}",
+            job_id=job_id, agent="StopOptionsFinder",
+        )
         nom_coords = await geocode_nominatim(place)
         await asyncio.sleep(0.08)  # brief pause after each geocode
         agent_lat = opt.get("lat")
@@ -465,6 +476,14 @@ async def _find_and_stream_options(
         if max_drive_hours > 0:
             opt["drives_over_limit"] = opt.get("drive_hours", 0) > max_drive_hours
 
+        limit_flag = " ⚠ LIMIT" if opt.get("drives_over_limit") else ""
+        await debug_logger.log(
+            LogLevel.SUCCESS,
+            f"  [{option_index + 1}/3] {opt.get('option_type','?'):8} {place}: "
+            f"{opt.get('drive_hours', '?')}h / {opt.get('drive_km', '?')} km{limit_flag}",
+            job_id=job_id, agent="StopOptionsFinder",
+        )
+
         enriched_options.append(opt)
 
         # Emit SSE event so frontend can show this option immediately
@@ -479,6 +498,12 @@ async def _find_and_stream_options(
             },
         )
         option_index += 1
+
+    await debug_logger.log(
+        LogLevel.SUCCESS,
+        f"Alle {len(enriched_options)} Optionen bereit → SSE route_options_done",
+        job_id=job_id, agent="StopOptionsFinder",
+    )
 
     # Signal that all options are done
     await debug_logger.push_event(

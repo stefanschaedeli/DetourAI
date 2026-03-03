@@ -21,28 +21,46 @@ async function _fetch(url, opts = {}, label) {
   }
 }
 
+/** Like _fetch but without the blocking loading overlay (skeleton cards provide feedback). */
+async function _fetchQuiet(url, opts = {}) {
+  S.apiCalls++;
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    ...opts,
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json()).detail || ''; } catch (e) {}
+    throw new Error(`HTTP ${res.status}: ${detail || res.statusText}`);
+  }
+  return res;
+}
+
 async function apiInitJob(payload) {
-  const res = await _fetch(`${API}/init-job`, {
+  // No loading overlay — skeleton cards provide visual feedback
+  const res = await _fetchQuiet(`${API}/init-job`, {
     method: 'POST',
     body: JSON.stringify(payload),
-  }, 'Reise wird initialisiert…');
+  });
   return res.json();
 }
 
 async function apiPlanTrip(payload, jobId) {
+  // No loading overlay — skeleton cards stream in progressively
   const url = jobId ? `${API}/plan-trip?job_id=${encodeURIComponent(jobId)}` : `${API}/plan-trip`;
-  const res = await _fetch(url, {
+  const res = await _fetchQuiet(url, {
     method: 'POST',
     body: JSON.stringify(payload),
-  }, 'Route wird analysiert…');
+  });
   return res.json();
 }
 
 async function apiSelectStop(jobId, idx) {
-  const res = await _fetch(`${API}/select-stop/${jobId}`, {
+  // No overlay — skeleton cards show the loading state
+  const res = await _fetchQuiet(`${API}/select-stop/${jobId}`, {
     method: 'POST',
     body: JSON.stringify({ option_index: idx }),
-  }, 'Nächste Routenoption wird geladen…');
+  });
   return res.json();
 }
 
@@ -92,22 +110,22 @@ async function apiGenerateOutput(jobId, type) {
 }
 
 async function apiPatchJob(jobId, action, extraDays, viaPointLocation) {
-  const res = await _fetch(`${API}/patch-job/${jobId}`, {
+  const res = await _fetchQuiet(`${API}/patch-job/${jobId}`, {
     method: 'POST',
     body: JSON.stringify({
       action,
       extra_days: extraDays || 2,
       via_point_location: viaPointLocation || '',
     }),
-  }, 'Route wird angepasst…');
+  });
   return res.json();
 }
 
 async function apiRecomputeOptions(jobId, extraInstructions) {
-  const res = await _fetch(`${API}/recompute-options/${jobId}`, {
+  const res = await _fetchQuiet(`${API}/recompute-options/${jobId}`, {
     method: 'POST',
     body: JSON.stringify({ extra_instructions: extraInstructions }),
-  }, 'Routenoptionen werden neu berechnet…');
+  });
   return res.json();
 }
 

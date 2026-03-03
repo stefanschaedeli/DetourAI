@@ -418,8 +418,9 @@ async function submitTrip() {
     lsSet(LS_ROUTE, { jobId: preJobId, stops: {}, stopsOrder: [] });
     lsClear(LS_ACCOMMODATIONS);
 
-    // 2. Show route-builder section and open SSE — spinner is already visible
+    // 2. Show route-builder section with skeleton cards, then open SSE
     showSection('route-builder');
+    _showSkeletonCards();
     openRouteSSE(preJobId);
 
     // 3. Trigger actual planning (Claude + OSRM); SSE delivers options progressively

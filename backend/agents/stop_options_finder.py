@@ -296,7 +296,16 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
                 full_text = stream.get_final_text()
             return results, full_text
 
+        import time as _time
+        t0 = _time.monotonic()
         partial_results, final_text = await asyncio.to_thread(_do_stream)
+        elapsed = _time.monotonic() - t0
+
+        await debug_logger.log(
+            LogLevel.SUCCESS,
+            f"← Stream fertig in {elapsed:.1f}s — {len(partial_results)} Option(en) im Stream erkannt",
+            job_id=self.job_id, agent="StopOptionsFinder",
+        )
 
         for kind, payload in partial_results:
             if kind == "option":

@@ -22,6 +22,20 @@ function openRouteSSE(jobId) {
   });
 }
 
+function _showSkeletonCards() {
+  const container = document.getElementById('route-options-container');
+  if (!container) return;
+  container.innerHTML = [0, 1, 2].map(i => `
+    <div class="option-card option-skeleton" id="option-slot-${i}">
+      <div class="skeleton-badge shimmer-elem"></div>
+      <div class="skeleton-title shimmer-elem"></div>
+      <div class="skeleton-meta shimmer-elem"></div>
+      <div class="skeleton-line shimmer-elem"></div>
+      <div class="skeleton-line shimmer-elem short"></div>
+    </div>
+  `).join('');
+}
+
 function closeRouteSSE() {
   if (_routeSSE) { _routeSSE.close(); _routeSSE = null; }
 }
@@ -30,25 +44,26 @@ function onRouteOptionReady(data) {
   const opt = data.option;
   if (!opt) return;
 
-  const alreadyShown = _streamingOptions.some(o => o.id === opt.id && o.option_type === opt.option_type);
-  if (alreadyShown) return;
+  const optIndex = data.option_index ?? _streamingOptions.length;
 
-  _streamingOptions.push(opt);
+  // Dedup: ignore if we already have this slot filled
+  if (_streamingOptions[optIndex] != null) return;
 
-  // Store map anchors from first event for later map init
+  _streamingOptions[optIndex] = opt;
+
+  // Store map anchors from first event
   if (!_streamingMeta && data.map_anchors) {
     _streamingMeta = data.map_anchors;
   }
 
-  // If we're in the loading state, switch container to card view
-  const container = document.getElementById('route-options-container');
-  if (!container) return;
-
-  if (container.querySelector('.loading-spinner') || container.innerHTML === '') {
-    container.innerHTML = '';
+  // Replace skeleton slot with real card
+  const slot = document.getElementById(`option-slot-${optIndex}`);
+  if (slot) {
+    _replaceSkeletonWithCard(slot, opt, optIndex);
+  } else {
+    // No skeleton (e.g. first load before skeleton was shown) — append
+    appendOptionCard(opt, optIndex);
   }
-
-  appendOptionCard(opt, _streamingOptions.length - 1);
 }
 
 function onRouteOptionsDone(data) {
@@ -62,14 +77,7 @@ function onRouteOptionsDone(data) {
   closeRouteSSE();
 }
 
-function appendOptionCard(opt, i) {
-  const container = document.getElementById('route-options-container');
-  if (!container) return;
-
-  // Remove route-complete message if present
-  const completeMsg = container.querySelector('.route-complete-msg');
-  if (completeMsg) completeMsg.remove();
-
+function _buildOptionCardHTML(opt, i) {
   const flag = FLAGS[opt.country] || '';
   const driveKm = opt.drive_km ? ` · ${opt.drive_km} km` : '';
   const overLimit = opt.drives_over_limit;
@@ -80,28 +88,47 @@ function appendOptionCard(opt, i) {
     ? `<a class="option-maps-link" href="${safeUrl(opt.maps_url)}" target="_blank" rel="noopener">&#x1F5FA; Google Maps</a>`
     : '';
   const extraFields = _buildExtraFields(opt);
+  return {
+    classes: `option-card${overLimit ? ' over-limit' : ''}`,
+    id: `option-card-${i}`,
+    html: `
+      <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
+      <h3>${flag} ${esc(opt.region)}, ${esc(opt.country)}</h3>
+      <div class="option-meta">
+        <span class="${overLimit ? 'drive-hours-over' : ''}">${opt.drive_hours}h Fahrt${driveKm}</span>
+        <span>${opt.nights} Nacht${opt.nights !== 1 ? 'e' : ''}</span>
+      </div>
+      ${driveWarning}
+      <p class="option-teaser">${esc(opt.teaser)}</p>
+      <ul class="option-highlights">
+        ${(opt.highlights || []).map(h => `<li>${esc(h)}</li>`).join('')}
+      </ul>
+      ${extraFields}
+      ${mapsLink}
+    `,
+  };
+}
 
+function _replaceSkeletonWithCard(slotEl, opt, i) {
+  const { classes, id, html } = _buildOptionCardHTML(opt, i);
+  slotEl.className = classes + ' option-card-streaming';
+  slotEl.id = id;
+  slotEl.setAttribute('onclick', `selectOption(${i})`);
+  slotEl.innerHTML = html;
+  requestAnimationFrame(() => requestAnimationFrame(() => slotEl.classList.add('visible')));
+}
+
+function appendOptionCard(opt, i) {
+  const container = document.getElementById('route-options-container');
+  if (!container) return;
+
+  const { classes, id, html } = _buildOptionCardHTML(opt, i);
   const card = document.createElement('div');
-  card.className = `option-card${overLimit ? ' over-limit' : ''} option-card-streaming`;
-  card.id = `option-card-${i}`;
+  card.className = classes + ' option-card-streaming';
+  card.id = id;
   card.setAttribute('onclick', `selectOption(${i})`);
-  card.innerHTML = `
-    <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
-    <h3>${flag} ${esc(opt.region)}, ${esc(opt.country)}</h3>
-    <div class="option-meta">
-      <span class="${overLimit ? 'drive-hours-over' : ''}">${opt.drive_hours}h Fahrt${driveKm}</span>
-      <span>${opt.nights} Nacht${opt.nights !== 1 ? 'e' : ''}</span>
-    </div>
-    ${driveWarning}
-    <p class="option-teaser">${esc(opt.teaser)}</p>
-    <ul class="option-highlights">
-      ${(opt.highlights || []).map(h => `<li>${esc(h)}</li>`).join('')}
-    </ul>
-    ${extraFields}
-    ${mapsLink}
-  `;
+  card.innerHTML = html;
 
-  // Trigger CSS fade-in
   requestAnimationFrame(() => {
     container.appendChild(card);
     requestAnimationFrame(() => card.classList.add('visible'));
@@ -383,40 +410,50 @@ async function selectOption(idx) {
   const cards = document.querySelectorAll('.option-card');
   cards.forEach((c, i) => c.classList.toggle('selected', i === idx));
 
-  const container = document.getElementById('route-options-container');
-  container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Nächste Optionen werden geladen…</p></div>';
   _clearMap();
 
-  // Open SSE before HTTP call so we can stream options as they arrive
+  // Open SSE + show skeletons before HTTP call — options stream in progressively
   if (S.jobId) openRouteSSE(S.jobId);
+  _showSkeletonCards();
 
   try {
     const data = await apiSelectStop(S.jobId, idx);
 
     addBuiltStop(data.selected_stop);
-
-    // Via-point was auto-added?
-    if (data.via_point_added) {
-      addBuiltStop(data.via_point_added);
-    }
-
+    if (data.via_point_added) addBuiltStop(data.via_point_added);
     saveRouteState();
 
     const options = data.options || [];
     const meta    = data.meta || {};
 
     if (options.length === 0 && meta.route_could_be_complete) {
-      // Route done — show confirm
+      // Route done — close SSE and show confirm
+      closeRouteSSE();
+      _streamingOptions = [];
       renderOptions([], meta);
-    } else if (options.length > 0) {
-      renderOptions(options, meta);
+    } else if (_streamingOptions.filter(Boolean).length >= options.length && options.length > 0) {
+      // Streaming already delivered all cards — just update state/map/status
+      S.currentOptions = options;
+      S.loadingOptions = false;
+      closeRouteSSE();
+      _updateRouteStatus(meta);
+      renderBuiltStops();
+      _initMap(meta.map_anchors || _streamingMeta || {}, options);
+      const confirmBtn = document.getElementById('confirm-route-btn');
+      if (confirmBtn) confirmBtn.style.display = meta.route_could_be_complete ? 'block' : 'none';
+      _streamingOptions = [];
+      _streamingMeta = null;
     } else {
-      // Unexpected: show confirm
-      renderOptions([], meta);
+      // Streaming didn't finish yet or SSE unavailable — render from HTTP response
+      closeRouteSSE();
+      _streamingOptions = [];
+      renderOptions(options, meta);
     }
 
   } catch (err) {
-    container.innerHTML = `<div class="error-msg">Fehler: ${esc(err.message)}</div>`;
+    const container = document.getElementById('route-options-container');
+    if (container) container.innerHTML = `<div class="error-msg">Fehler: ${esc(err.message)}</div>`;
+    closeRouteSSE();
     S.loadingOptions = false;
   }
 }
@@ -474,18 +511,33 @@ async function recomputeOptions() {
   S.loadingOptions = true;
 
   const extra = input.value.trim();
-  const container = document.getElementById('route-options-container');
-  container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Neue Optionen werden berechnet…</p></div>';
   _clearMap();
-
   if (S.jobId) openRouteSSE(S.jobId);
+  _showSkeletonCards();
 
   try {
     const data = await apiRecomputeOptions(S.jobId, extra);
     input.value = '';
-    renderOptions(data.options || [], data.meta || {});
+    const options = data.options || [];
+    const meta = data.meta || {};
+    if (_streamingOptions.filter(Boolean).length >= options.length && options.length > 0) {
+      S.currentOptions = options;
+      S.loadingOptions = false;
+      closeRouteSSE();
+      _updateRouteStatus(meta);
+      renderBuiltStops();
+      _initMap(meta.map_anchors || _streamingMeta || {}, options);
+      _streamingOptions = [];
+      _streamingMeta = null;
+    } else {
+      closeRouteSSE();
+      _streamingOptions = [];
+      renderOptions(options, meta);
+    }
   } catch (err) {
-    container.innerHTML = `<div class="error-msg">Fehler: ${esc(err.message)}</div>`;
+    const container = document.getElementById('route-options-container');
+    if (container) container.innerHTML = `<div class="error-msg">Fehler: ${esc(err.message)}</div>`;
+    closeRouteSSE();
     S.loadingOptions = false;
   }
 }
@@ -594,21 +646,32 @@ async function applyRouteAdjust() {
   closeRouteAdjustModal();
   S.loadingOptions = true;
 
-  const container = document.getElementById('route-options-container');
-  container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Route wird angepasst…</p></div>';
   _clearMap();
-
   if (S.jobId) openRouteSSE(S.jobId);
+  _showSkeletonCards();
 
   try {
     const data = await apiPatchJob(S.jobId, action, extraDays, viaLoc);
-    // Update persisted max_drive_hours if total_days changed
-    if (data.meta && data.meta.total_days) {
-      routeMeta.max_drive_hours = routeMeta.max_drive_hours; // unchanged — only days shift
+    const options = data.options || [];
+    const meta = data.meta || {};
+    if (_streamingOptions.filter(Boolean).length >= options.length && options.length > 0) {
+      S.currentOptions = options;
+      S.loadingOptions = false;
+      closeRouteSSE();
+      _updateRouteStatus(meta);
+      renderBuiltStops();
+      _initMap(meta.map_anchors || _streamingMeta || {}, options);
+      _streamingOptions = [];
+      _streamingMeta = null;
+    } else {
+      closeRouteSSE();
+      _streamingOptions = [];
+      renderOptions(options, meta);
     }
-    renderOptions(data.options || [], data.meta || {});
   } catch (err) {
-    container.innerHTML = `<div class="error-msg">Fehler beim Anpassen: ${esc(err.message)}</div>`;
+    const container = document.getElementById('route-options-container');
+    if (container) container.innerHTML = `<div class="error-msg">Fehler beim Anpassen: ${esc(err.message)}</div>`;
+    closeRouteSSE();
     S.loadingOptions = false;
   }
 }
