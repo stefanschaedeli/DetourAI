@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 import os
 import re
 import uuid
@@ -18,7 +17,6 @@ from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
 load_dotenv()
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
 
 from models.travel_request import TravelRequest
 from models.stop_option import StopSelectRequest
