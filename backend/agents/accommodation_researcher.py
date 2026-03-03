@@ -1,10 +1,26 @@
 import asyncio
+from datetime import timedelta
+from urllib.parse import quote
 from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
 from utils.image_fetcher import fetch_unsplash_images
 from agents._client import get_client, get_model
+
+
+def _build_booking_url(region: str, checkin, nights: int, adults: int, children: int) -> str:
+    checkout = checkin + timedelta(days=nights)
+    return (
+        f"https://www.booking.com/search.html"
+        f"?ss={quote(region)}"
+        f"&checkin={checkin.isoformat()}"
+        f"&checkout={checkout.isoformat()}"
+        f"&group_adults={adults}"
+        f"&group_children={children}"
+        f"&no_rooms=1"
+        f"&lang=de"
+    )
 
 SYSTEM_PROMPT = (
     "Du bist ein Unterkunftsberater. "
@@ -39,7 +55,7 @@ class AccommodationResearcherAgent:
         must_haves_str = ", ".join(req.accommodation_must_haves) if req.accommodation_must_haves else "WiFi"
         preferred_type = req.accommodation_styles[0] if req.accommodation_styles else "hotel"
 
-        prompt = f"""Finde 3 Unterkunftsoptionen in {region}, {country}:
+        prompt = f"""Finde 4 Unterkunftsoptionen (3 Standard + 1 Geheimtipp) in {region}, {country}:
 
 Reisende: {req.adults} Erwachsene{f', {children_count} Kinder' if children_count else ''}
 Nächte: {nights}
@@ -104,9 +120,28 @@ Gib exakt dieses JSON zurück:
       "teaser": "...",
       "suitable_for_children": true,
       "booking_hint": "booking.com"
+    }},
+    {{
+      "id": "acc_{stop_id}_geheimtipp",
+      "option_type": "geheimtipp",
+      "name": "...",
+      "type": "bauernhof",
+      "price_per_night_chf": {comfort_rate:.0f},
+      "total_price_chf": {comfort_rate * nights:.0f},
+      "price_range": "€€",
+      "separate_rooms_available": true,
+      "max_persons": 4,
+      "rating": 9.2,
+      "features": ["Natur", "Authentisch", "Ruhig"],
+      "teaser": "...",
+      "suitable_for_children": true,
+      "booking_hint": "",
+      "geheimtipp_hinweis": "Buche direkt beim Hof oder über lokales Tourismusbüro."
     }}
   ]
-}}"""
+}}
+
+Der Geheimtipp soll etwas Besonderes/Ungewöhnliches für die Region sein (Bauernhof, Glamping, Baumhaus, Boutique-Hotel, Weingut, etc.). Geheimtipp hat KEINEN booking_hint."""
 
         await debug_logger.log(
             LogLevel.API, f"→ Anthropic API call: {self.model} (Stop {stop_id}: {region})",
@@ -120,7 +155,7 @@ Gib exakt dieses JSON zurück:
                     def call():
                         return self.client.messages.create(
                             model=self.model,
-                            max_tokens=1024,
+                            max_tokens=1500,
                             system=SYSTEM_PROMPT,
                             messages=[{"role": "user", "content": prompt}],
                         )
@@ -129,7 +164,7 @@ Gib exakt dieses JSON zurück:
                 def call():
                     return self.client.messages.create(
                         model=self.model,
-                        max_tokens=1024,
+                        max_tokens=1500,
                         system=SYSTEM_PROMPT,
                         messages=[{"role": "user", "content": prompt}],
                     )
@@ -139,7 +174,20 @@ Gib exakt dieses JSON zurück:
         text = response.content[0].text
         result = parse_agent_json(text)
 
+        arrival_day = stop.get("arrival_day", 1)
+        checkin = req.start_date + timedelta(days=arrival_day - 1)
+
         for opt in result.get("options", []):
+            if opt.get("option_type") != "geheimtipp":
+                opt["booking_url"] = _build_booking_url(
+                    region=region,
+                    checkin=checkin,
+                    nights=nights,
+                    adults=req.adults,
+                    children=children_count,
+                )
+            else:
+                opt["booking_url"] = None
             actual_type = opt.get("type") or preferred_type
             images = await fetch_unsplash_images(f"{region} {actual_type}", preferred_type)
             opt.update(images)

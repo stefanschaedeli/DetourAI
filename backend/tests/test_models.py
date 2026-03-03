@@ -142,7 +142,7 @@ def test_stop_select_invalid_negative():
 # ---------------------------------------------------------------------------
 
 def test_accommodation_option_types():
-    for opt_type in ["budget", "comfort", "premium"]:
+    for opt_type in ["budget", "comfort", "premium", "geheimtipp"]:
         opt = AccommodationOption(
             id=f"acc_1_{opt_type}",
             option_type=opt_type,
@@ -154,6 +154,40 @@ def test_accommodation_option_types():
             teaser="Ein gutes Hotel",
         )
         assert opt.option_type == opt_type
+
+
+def test_accommodation_booking_url():
+    opt = AccommodationOption(
+        id="acc_1_comfort",
+        option_type="comfort",
+        name="Hotel Test",
+        type="hotel",
+        price_per_night_chf=150.0,
+        total_price_chf=300.0,
+        price_range="€€",
+        teaser="Komfortables Hotel",
+        booking_url="https://www.booking.com/search.html?ss=Annecy&checkin=2026-06-02&checkout=2026-06-04&group_adults=2&group_children=0&no_rooms=1&lang=de",
+    )
+    assert opt.booking_url is not None
+    assert "booking.com" in opt.booking_url
+
+
+def test_accommodation_geheimtipp_no_booking_url():
+    opt = AccommodationOption(
+        id="acc_1_geheimtipp",
+        option_type="geheimtipp",
+        name="Berghof Alpenblick",
+        type="bauernhof",
+        price_per_night_chf=120.0,
+        total_price_chf=240.0,
+        price_range="€€",
+        teaser="Authentischer Bauernhof mit Panoramablick",
+        booking_url=None,
+        geheimtipp_hinweis="Buche direkt beim Hof oder über lokales Tourismusbüro.",
+    )
+    assert opt.booking_url is None
+    assert opt.geheimtipp_hinweis is not None
+    assert opt.option_type == "geheimtipp"
 
 
 def test_accommodation_option_defaults():

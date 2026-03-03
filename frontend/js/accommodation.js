@@ -61,6 +61,7 @@ function buildAllStopPanels(stops) {
           <div class="shimmer-card"></div>
           <div class="shimmer-card"></div>
           <div class="shimmer-card"></div>
+          <div class="shimmer-card"></div>
         </div>
       </div>
     `;
@@ -73,8 +74,13 @@ function onAccommodationLoading(data) {
   if (!panel) return;
   const grid = panel.querySelector('.acc-options-grid');
   if (grid) {
-    grid.innerHTML = '<div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div>';
+    grid.innerHTML = '<div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div>';
   }
+}
+
+function optTypeLabel(type) {
+  const labels = { budget: 'Budget', comfort: 'Komfort', premium: 'Premium', geheimtipp: 'Geheimtipp' };
+  return labels[type] || esc(type);
 }
 
 function onAccommodationLoaded(data) {
@@ -94,11 +100,19 @@ function onAccommodationLoaded(data) {
     const imgHtml = buildImageGallery(
       opt.image_overview, opt.image_mood, opt.image_customer, esc(opt.name)
     );
+    const isGeheimtipp = opt.option_type === 'geheimtipp';
+    const cardClass = isGeheimtipp ? 'acc-option-card acc-geheimtipp-card' : 'acc-option-card';
+    const bookingBtn = (!isGeheimtipp && opt.booking_url)
+      ? `<a class="acc-booking-link" href="${esc(opt.booking_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Bei Booking.com anschauen →</a>`
+      : '';
+    const geheimtippHint = (isGeheimtipp && opt.geheimtipp_hinweis)
+      ? `<div class="acc-geheimtipp-hint">${esc(opt.geheimtipp_hinweis)}</div>`
+      : '';
     return `
-      <div class="acc-option-card ${selectedClass}" onclick="selectAccommodationInPanel(${stopId}, ${i})"
+      <div class="${cardClass} ${selectedClass}" onclick="selectAccommodationInPanel(${stopId}, ${i})"
            data-stop="${stopId}" data-idx="${i}">
         ${imgHtml}
-        <div class="acc-option-type type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
+        <div class="acc-option-type type-${esc(opt.option_type)}">${optTypeLabel(opt.option_type)}</div>
         <h4>${esc(opt.name)}</h4>
         <div class="acc-type-badge">${esc(opt.type)}</div>
         ${stars ? `<div class="acc-stars">${stars}</div>` : ''}
@@ -109,6 +123,8 @@ function onAccommodationLoaded(data) {
         <div class="acc-total">Total: CHF ${(opt.total_price_chf || 0).toLocaleString('de-CH')}</div>
         <p class="acc-teaser">${esc(opt.teaser)}</p>
         <div class="acc-features">${features}</div>
+        ${geheimtippHint}
+        ${bookingBtn}
       </div>
     `;
   }).join('');

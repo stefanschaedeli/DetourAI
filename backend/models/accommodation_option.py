@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 class AccommodationOption(BaseModel):
     id: str
-    option_type: str                 # budget, comfort, premium
+    option_type: str                 # budget, comfort, premium, geheimtipp
     name: str
     type: str                        # hotel, apartment, camping, hostel, airbnb
     price_per_night_chf: float
@@ -17,6 +17,8 @@ class AccommodationOption(BaseModel):
     teaser: str
     suitable_for_children: bool = False
     booking_hint: str = ""
+    geheimtipp_hinweis: Optional[str] = None
+    booking_url: Optional[str] = None  # Booking.com deeplink (None für Geheimtipp)
     image_overview: Optional[str] = None
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None

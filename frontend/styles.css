@@ -280,9 +280,10 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .type-scenic   { background: #dfffdf; color: #1a7a1a; }
 .type-cultural { background: #fff0df; color: #b36000; }
 .type-via_point { background: #f0dfff; color: #6600b3; }
-.type-budget   { background: #dff0ff; color: #0071e3; }
-.type-comfort  { background: #dfffdf; color: #1a7a1a; }
-.type-premium  { background: #fffadf; color: #b38600; }
+.type-budget      { background: #dff0ff; color: #0071e3; }
+.type-comfort     { background: #dfffdf; color: #1a7a1a; }
+.type-premium     { background: #fffadf; color: #b38600; }
+.type-geheimtipp  { background: #f0dfff; color: #6600b3; }
 .option-card h3 { font-size: 18px; margin-bottom: 6px; }
 .option-meta { display: flex; gap: 12px; font-size: 13px; color: var(--text-sub); margin-bottom: 10px; }
 .option-teaser { font-size: 14px; color: var(--text-sub); margin-bottom: 10px; }
@@ -385,8 +386,9 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .acc-stop-header h3 { flex: 1; font-size: 18px; }
 .acc-nights { color: var(--text-sub); font-size: 14px; }
 
-.acc-options-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
-@media (max-width: 680px) { .acc-options-grid { grid-template-columns: 1fr; } }
+.acc-options-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+@media (max-width: 900px) { .acc-options-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .acc-options-grid { grid-template-columns: 1fr; } }
 .acc-option-card {
   padding: 0; border-right: 1px solid var(--border);
   cursor: pointer; transition: background .15s; display: flex; flex-direction: column;
@@ -408,6 +410,31 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .acc-teaser { font-size: 13px; color: var(--text-sub); margin-bottom: 10px; }
 .acc-features { display: flex; flex-wrap: wrap; gap: 4px; }
 .feature-tag { background: #f0f0f5; padding: 2px 7px; border-radius: 999px; font-size: 11px; }
+
+.acc-geheimtipp-card { border-left: 3px solid #9b59b6; background: #fdf9ff; }
+.acc-geheimtipp-card:hover { background: #f7f0ff; }
+.acc-geheimtipp-card.selected { background: #ede0ff; border-left-color: #6600b3; }
+
+.acc-booking-link {
+  display: inline-block;
+  margin: 8px 20px 14px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #003580;
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+}
+.acc-booking-link:hover { background: #00224f; }
+
+.acc-geheimtipp-hint {
+  margin: 6px 20px 10px;
+  font-size: 12px;
+  color: #6600b3;
+  font-style: italic;
+  line-height: 1.4;
+}
 
 .accommodation-actions { display: flex; justify-content: space-between; margin-top: 24px; }
 
