@@ -101,7 +101,7 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
-OUTPUTS_DIR = Path(__file__).parent.parent / "outputs"
+OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", "/app/outputs"))
 OUTPUTS_DIR.mkdir(exist_ok=True)
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"

@@ -4,6 +4,7 @@ services:
     image: redis:7-alpine
 
   backend:
+    image: travelman/backend:latest
     build:
       context: .
       dockerfile: infra/Dockerfile.backend
@@ -16,6 +17,7 @@ services:
       - ./outputs:/app/outputs
 
   celery:
+    image: travelman/backend:latest
     build:
       context: .
       dockerfile: infra/Dockerfile.backend
@@ -27,6 +29,7 @@ services:
     depends_on: [redis]
 
   frontend:
+    image: travelman/frontend:latest
     build:
       context: .
       dockerfile: infra/Dockerfile.frontend
