@@ -409,15 +409,23 @@ async function submitTrip() {
 
   try {
     const payload = buildPayload();
-    const data = await apiPlanTrip(payload);
 
-    S.jobId = data.job_id;
-    S.currentOptions = data.options || [];
+    // 1. Pre-init job so we can open SSE before Claude starts
+    const initData = await apiInitJob(payload);
+    const preJobId = initData.job_id;
+    S.jobId = preJobId;
 
-    lsSet(LS_ROUTE, { jobId: data.job_id, stops: {}, stopsOrder: [] });
+    lsSet(LS_ROUTE, { jobId: preJobId, stops: {}, stopsOrder: [] });
     lsClear(LS_ACCOMMODATIONS);
 
+    // 2. Show route-builder section and open SSE — spinner is already visible
     showSection('route-builder');
+    openRouteSSE(preJobId);
+
+    // 3. Trigger actual planning (Claude + OSRM); SSE delivers options progressively
+    const data = await apiPlanTrip(payload, preJobId);
+
+    S.currentOptions = data.options || [];
     startRouteBuilding(data);
 
   } catch (err) {

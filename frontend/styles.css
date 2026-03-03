@@ -249,6 +249,12 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
   background: var(--card); border: 2px solid var(--border); border-radius: var(--radius);
   padding: 20px; cursor: pointer; transition: all .15s;
 }
+/* Progressive streaming: cards fade in one by one */
+.option-card-streaming {
+  opacity: 0; transform: translateY(12px);
+  transition: opacity .3s ease, transform .3s ease, border-color .15s, box-shadow .15s;
+}
+.option-card-streaming.visible { opacity: 1; transform: translateY(0); }
 .option-card:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-2px); }
 .option-card.selected { border-color: var(--accent); background: #f0f6ff; }
 .option-type-badge {

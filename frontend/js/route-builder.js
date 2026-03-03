@@ -5,6 +5,109 @@ let _map = null;
 let _mapMarkers = [];
 let _mapLines = [];
 
+// SSE connection for route-building phase (progressive option streaming)
+let _routeSSE = null;
+let _streamingOptions = [];    // options collected from SSE before HTTP response
+let _streamingMeta = null;     // map_anchors from first route_option_ready event
+
+function openRouteSSE(jobId) {
+  if (_routeSSE) { _routeSSE.close(); _routeSSE = null; }
+  _streamingOptions = [];
+  _streamingMeta = null;
+
+  _routeSSE = openSSE(jobId, {
+    route_option_ready: onRouteOptionReady,
+    route_options_done: onRouteOptionsDone,
+    onerror: () => {},  // silently ignore — HTTP response is the fallback
+  });
+}
+
+function closeRouteSSE() {
+  if (_routeSSE) { _routeSSE.close(); _routeSSE = null; }
+}
+
+function onRouteOptionReady(data) {
+  const opt = data.option;
+  if (!opt) return;
+
+  const alreadyShown = _streamingOptions.some(o => o.id === opt.id && o.option_type === opt.option_type);
+  if (alreadyShown) return;
+
+  _streamingOptions.push(opt);
+
+  // Store map anchors from first event for later map init
+  if (!_streamingMeta && data.map_anchors) {
+    _streamingMeta = data.map_anchors;
+  }
+
+  // If we're in the loading state, switch container to card view
+  const container = document.getElementById('route-options-container');
+  if (!container) return;
+
+  if (container.querySelector('.loading-spinner') || container.innerHTML === '') {
+    container.innerHTML = '';
+  }
+
+  appendOptionCard(opt, _streamingOptions.length - 1);
+}
+
+function onRouteOptionsDone(data) {
+  // All options arrived via SSE — init the map now that we have all coords
+  const container = document.getElementById('route-options-container');
+  if (!container) return;
+
+  const anchors = _streamingMeta || data.map_anchors || {};
+  const opts = data.options || _streamingOptions;
+  _initMap(anchors, opts);
+  closeRouteSSE();
+}
+
+function appendOptionCard(opt, i) {
+  const container = document.getElementById('route-options-container');
+  if (!container) return;
+
+  // Remove route-complete message if present
+  const completeMsg = container.querySelector('.route-complete-msg');
+  if (completeMsg) completeMsg.remove();
+
+  const flag = FLAGS[opt.country] || '';
+  const driveKm = opt.drive_km ? ` · ${opt.drive_km} km` : '';
+  const overLimit = opt.drives_over_limit;
+  const driveWarning = overLimit
+    ? `<span class="drive-over-limit-badge">⚠ Fahrzeit überschreitet Limit</span>`
+    : '';
+  const mapsLink = opt.maps_url
+    ? `<a class="option-maps-link" href="${safeUrl(opt.maps_url)}" target="_blank" rel="noopener">&#x1F5FA; Google Maps</a>`
+    : '';
+  const extraFields = _buildExtraFields(opt);
+
+  const card = document.createElement('div');
+  card.className = `option-card${overLimit ? ' over-limit' : ''} option-card-streaming`;
+  card.id = `option-card-${i}`;
+  card.setAttribute('onclick', `selectOption(${i})`);
+  card.innerHTML = `
+    <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
+    <h3>${flag} ${esc(opt.region)}, ${esc(opt.country)}</h3>
+    <div class="option-meta">
+      <span class="${overLimit ? 'drive-hours-over' : ''}">${opt.drive_hours}h Fahrt${driveKm}</span>
+      <span>${opt.nights} Nacht${opt.nights !== 1 ? 'e' : ''}</span>
+    </div>
+    ${driveWarning}
+    <p class="option-teaser">${esc(opt.teaser)}</p>
+    <ul class="option-highlights">
+      ${(opt.highlights || []).map(h => `<li>${esc(h)}</li>`).join('')}
+    </ul>
+    ${extraFields}
+    ${mapsLink}
+  `;
+
+  // Trigger CSS fade-in
+  requestAnimationFrame(() => {
+    container.appendChild(card);
+    requestAnimationFrame(() => card.classList.add('visible'));
+  });
+}
+
 function startRouteBuilding(data) {
   S.selectedStops = [];
   routeMeta = data.meta || {};
@@ -13,7 +116,41 @@ function startRouteBuilding(data) {
   if (cachedForm && cachedForm.max_drive_hours_per_day) {
     routeMeta.max_drive_hours = cachedForm.max_drive_hours_per_day;
   }
+  // If streaming already populated the container, only update state + map
+  if (_streamingOptions.length >= (data.options || []).length && _streamingOptions.length > 0) {
+    S.currentOptions = data.options || _streamingOptions;
+    S.loadingOptions = false;
+    closeRouteSSE();
+    _updateRouteStatus(data.meta || {});
+    renderBuiltStops();
+    _initMap(data.meta?.map_anchors || _streamingMeta || {}, S.currentOptions);
+    const confirmBtn = document.getElementById('confirm-route-btn');
+    if (confirmBtn) confirmBtn.style.display = (data.meta || {}).route_could_be_complete ? 'block' : 'none';
+    _streamingOptions = [];
+    _streamingMeta = null;
+    return;
+  }
+  _streamingOptions = [];
+  _streamingMeta = null;
+  closeRouteSSE();
   renderOptions(data.options || [], data.meta || {});
+}
+
+function _updateRouteStatus(meta) {
+  const status = document.getElementById('route-status');
+  if (!status) return;
+  const stopNum = (meta.stop_number || 1);
+  const daysRem = (meta.days_remaining || 0);
+  const target  = meta.segment_target || '';
+  const segInfo = meta.segment_count > 1
+    ? ` (Segment ${(meta.segment_index || 0) + 1}/${meta.segment_count} → ${esc(target)})`
+    : ` → ${esc(target)}`;
+  status.innerHTML = `
+    <div class="route-status-info">
+      <strong>Stop #${stopNum}</strong>${segInfo}
+      <span class="badge">${daysRem} Tage verbleibend</span>
+    </div>
+  `;
 }
 
 function renderOptions(options, meta) {
@@ -250,6 +387,9 @@ async function selectOption(idx) {
   container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Nächste Optionen werden geladen…</p></div>';
   _clearMap();
 
+  // Open SSE before HTTP call so we can stream options as they arrive
+  if (S.jobId) openRouteSSE(S.jobId);
+
   try {
     const data = await apiSelectStop(S.jobId, idx);
 
@@ -337,6 +477,8 @@ async function recomputeOptions() {
   const container = document.getElementById('route-options-container');
   container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Neue Optionen werden berechnet…</p></div>';
   _clearMap();
+
+  if (S.jobId) openRouteSSE(S.jobId);
 
   try {
     const data = await apiRecomputeOptions(S.jobId, extra);
@@ -455,6 +597,8 @@ async function applyRouteAdjust() {
   const container = document.getElementById('route-options-container');
   container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Route wird angepasst…</p></div>';
   _clearMap();
+
+  if (S.jobId) openRouteSSE(S.jobId);
 
   try {
     const data = await apiPatchJob(S.jobId, action, extraDays, viaLoc);

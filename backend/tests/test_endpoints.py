@@ -68,20 +68,31 @@ def test_plan_trip_missing_destination(client, sample_request):
 def test_plan_trip_success(client, mock_redis, sample_request, mocker):
     mock_options = [
         {"id": 1, "option_type": "direct", "region": "Basel", "country": "CH",
+         "lat": 47.55, "lon": 7.59,
          "drive_hours": 0.5, "nights": 1, "highlights": [], "teaser": "Test", "is_fixed": False},
         {"id": 2, "option_type": "scenic", "region": "Colmar", "country": "FR",
+         "lat": 48.07, "lon": 7.35,
          "drive_hours": 1.0, "nights": 2, "highlights": [], "teaser": "Test", "is_fixed": False},
         {"id": 3, "option_type": "cultural", "region": "Mulhouse", "country": "FR",
+         "lat": 47.74, "lon": 7.33,
          "drive_hours": 0.8, "nights": 1, "highlights": [], "teaser": "Test", "is_fixed": False},
     ]
 
-    async def mock_find_options(*args, **kwargs):
-        return {"options": mock_options, "estimated_total_stops": 4, "route_could_be_complete": False}
+    async def mock_find_options_streaming(*args, **kwargs):
+        for opt in mock_options:
+            yield opt
+        yield {
+            "_all_options": mock_options,
+            "estimated_total_stops": 4,
+            "route_could_be_complete": False,
+        }
 
     mocker.patch(
-        'agents.stop_options_finder.StopOptionsFinderAgent.find_options',
-        side_effect=mock_find_options,
+        'agents.stop_options_finder.StopOptionsFinderAgent.find_options_streaming',
+        side_effect=mock_find_options_streaming,
     )
+    mocker.patch('main.geocode_nominatim', return_value=(47.5, 7.6))
+    mocker.patch('main.osrm_route', return_value=(1.0, 80.0))
 
     r = client.post("/api/plan-trip", json=sample_request)
     assert r.status_code == 200

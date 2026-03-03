@@ -21,8 +21,17 @@ async function _fetch(url, opts = {}, label) {
   }
 }
 
-async function apiPlanTrip(payload) {
-  const res = await _fetch(`${API}/plan-trip`, {
+async function apiInitJob(payload) {
+  const res = await _fetch(`${API}/init-job`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }, 'Reise wird initialisiert…');
+  return res.json();
+}
+
+async function apiPlanTrip(payload, jobId) {
+  const url = jobId ? `${API}/plan-trip?job_id=${encodeURIComponent(jobId)}` : `${API}/plan-trip`;
+  const res = await _fetch(url, {
     method: 'POST',
     body: JSON.stringify(payload),
   }, 'Route wird analysiert…');
@@ -115,7 +124,7 @@ function openSSE(jobId, handlers) {
     'debug_log', 'route_ready', 'stop_done', 'agent_start', 'agent_done',
     'job_complete', 'job_error', 'accommodation_loading', 'accommodation_loaded',
     'accommodations_all_loaded', 'stop_research_started', 'activities_loaded',
-    'restaurants_loaded', 'ping',
+    'restaurants_loaded', 'route_option_ready', 'route_options_done', 'ping',
   ];
 
   events.forEach(evt => {

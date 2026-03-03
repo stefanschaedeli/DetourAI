@@ -203,6 +203,7 @@ def _new_job(request: TravelRequest) -> dict:
         "accommodation_index": 0,
         "prefetched_accommodations": {},
         "all_accommodations_loaded": False,
+        "route_geometry_cache": {},  # key: "{from}|{to}|{stops}" → dict
         "result": None,
         "error": None,
     }
@@ -227,14 +228,20 @@ async def _calc_route_geometry(
     max_drive_hours: float,
 ) -> dict:
     """
-    Geocodes from/to, queries OSRM for the full segment distance, then
-    calculates the ideal per-etappe distance given stops_remaining.
+    Geocodes from/to in parallel, queries OSRM for the full segment distance,
+    then calculates the ideal per-etappe distance given stops_remaining.
     Returns a dict consumed by StopOptionsFinderAgent.find_options().
     """
-    from_coords = await geocode_nominatim(from_location)
-    await asyncio.sleep(0.35)
-    to_coords = await geocode_nominatim(to_location)
-    await asyncio.sleep(0.35)
+    async def _geocode_delayed(place: str, delay: float):
+        if delay > 0:
+            await asyncio.sleep(delay)
+        return await geocode_nominatim(place)
+
+    from_coords, to_coords = await asyncio.gather(
+        _geocode_delayed(from_location, 0.0),
+        _geocode_delayed(to_location, 0.1),
+    )
+    await asyncio.sleep(0.25)  # Nominatim cool-down after parallel burst
 
     if not from_coords or not to_coords:
         return {}
@@ -256,6 +263,27 @@ async def _calc_route_geometry(
     }
 
 
+async def _calc_route_geometry_cached(
+    job: dict,
+    job_id: str,
+    from_location: str,
+    to_location: str,
+    stops_remaining: int,
+    max_drive_hours: float,
+) -> dict:
+    """Cache wrapper around _calc_route_geometry — keyed by segment + stops count."""
+    cache_key = f"{from_location}|{to_location}|{stops_remaining}"
+    cache = job.setdefault("route_geometry_cache", {})
+    if cache_key in cache:
+        return cache[cache_key]
+
+    result = await _calc_route_geometry(from_location, to_location, stops_remaining, max_drive_hours)
+    if result:
+        cache[cache_key] = result
+        save_job(job_id, job)
+    return result
+
+
 # ---------------------------------------------------------------------------
 # OSRM enrichment helper
 # ---------------------------------------------------------------------------
@@ -264,37 +292,70 @@ async def _enrich_options_with_osrm(
     options: list, prev_location: str, segment_target: str = "",
     max_drive_hours: float = 0.0,
 ) -> tuple[list, Optional[dict]]:
-    """Geocode each option with Nominatim, then compute real drive time via OSRM.
-    Agent-supplied lat/lon are used as fallback when Nominatim returns nothing.
-    Sets drives_over_limit=True on options that exceed max_drive_hours (if given).
-    Returns (enriched_options, map_anchors) with coords for start and target pins."""
-    prev_coords = await geocode_nominatim(prev_location)
-    await asyncio.sleep(0.35)
-    target_coords = None
+    """Geocode all places in parallel (with small stagger), then run all OSRM
+    calls in parallel. Agent-supplied lat/lon are used as fallback when
+    Nominatim returns nothing. Sets drives_over_limit=True on options that
+    exceed max_drive_hours (if given). Returns (enriched_options, map_anchors)."""
+
+    async def _geocode_delayed(place: str, delay: float):
+        if delay > 0:
+            await asyncio.sleep(delay)
+        return await geocode_nominatim(place)
+
+    # Build ordered list of places: [prev, (target,) opt0, opt1, opt2]
+    opt_places = [f"{o.get('region', '')}, {o.get('country', '')}" for o in options]
+    all_places = [prev_location]
     if segment_target:
-        target_coords = await geocode_nominatim(segment_target)
-        await asyncio.sleep(0.35)
-    for opt in options:
-        place = f"{opt.get('region', '')}, {opt.get('country', '')}"
-        nom_coords = await geocode_nominatim(place)
-        await asyncio.sleep(0.35)
-        # Prefer Nominatim; fall back to agent-provided lat/lon
+        all_places.append(segment_target)
+    all_places.extend(opt_places)
+
+    # Phase 1: parallel geocoding (80 ms stagger to be polite to Nominatim)
+    coords_results = await asyncio.gather(
+        *[_geocode_delayed(p, i * 0.08) for i, p in enumerate(all_places)]
+    )
+    # Brief cool-down after the burst
+    await asyncio.sleep(0.25)
+
+    prev_coords = coords_results[0]
+    if segment_target:
+        target_coords = coords_results[1]
+        opt_start = 2
+    else:
+        target_coords = None
+        opt_start = 1
+
+    # Phase 2: parallel OSRM calls (no rate limit on self-hosted OSRM)
+    async def _osrm_for_opt(i: int, opt: dict):
+        nom_coords = coords_results[opt_start + i]
         agent_lat = opt.get("lat")
         agent_lon = opt.get("lon")
         agent_coords = (agent_lat, agent_lon) if agent_lat and agent_lon else None
         coords = nom_coords or agent_coords
+        if not coords:
+            return i, None, None, None
+        place = opt_places[i]
+        maps_url = build_maps_url([prev_location, place])
+        if prev_coords:
+            hours, km = await osrm_route([prev_coords, coords])
+            return i, coords, maps_url, (hours, km)
+        return i, coords, maps_url, None
+
+    osrm_results = await asyncio.gather(*[_osrm_for_opt(i, opt) for i, opt in enumerate(options)])
+
+    for i, opt in enumerate(options):
+        _, coords, maps_url, route_data = osrm_results[i]
         if coords:
             opt["lat"] = coords[0]
             opt["lon"] = coords[1]
-            opt["maps_url"] = build_maps_url([prev_location, place])
-            if prev_coords:
-                hours, km = await osrm_route([prev_coords, coords])
+            opt["maps_url"] = maps_url
+            if route_data:
+                hours, km = route_data
                 if hours > 0:
                     opt["drive_hours"] = hours
                     opt["drive_km"] = km
-        # Flag options that exceed the user's max drive time limit
         if max_drive_hours > 0:
             opt["drives_over_limit"] = opt.get("drive_hours", 0) > max_drive_hours
+
     map_anchors = {
         "prev_lat": prev_coords[0] if prev_coords else None,
         "prev_lon": prev_coords[1] if prev_coords else None,
@@ -307,15 +368,163 @@ async def _enrich_options_with_osrm(
 
 
 # ---------------------------------------------------------------------------
+# Streaming helper: Claude → OSRM enrichment → SSE events per option
+# ---------------------------------------------------------------------------
+
+async def _find_and_stream_options(
+    agent,
+    job_id: str,
+    selected_stops: list,
+    stop_number: int,
+    days_remaining: int,
+    route_could_be_complete: bool,
+    segment_target: str,
+    segment_index: int,
+    segment_count: int,
+    prev_location: str,
+    max_drive_hours: float,
+    route_geometry: dict,
+    extra_instructions: str = "",
+) -> tuple[list, dict, int, bool]:
+    """
+    Runs StopOptionsFinder in streaming mode. Each option is individually
+    OSRM-enriched and pushed as a 'route_option_ready' SSE event as soon as
+    it's available. Returns (enriched_options, map_anchors, estimated_total_stops,
+    route_could_be_complete) once all 3 options are done.
+    """
+    # Pre-geocode prev + target in parallel (reuse for all option OSRM calls)
+    async def _geocode_delayed(place: str, delay: float):
+        if delay > 0:
+            await asyncio.sleep(delay)
+        return await geocode_nominatim(place)
+
+    async def _none_coro():
+        return None
+
+    prev_coords, target_coords = await asyncio.gather(
+        _geocode_delayed(prev_location, 0.0),
+        _geocode_delayed(segment_target, 0.1) if segment_target else _none_coro(),
+    )
+    await asyncio.sleep(0.2)
+
+    map_anchors = {
+        "prev_lat": prev_coords[0] if prev_coords else None,
+        "prev_lon": prev_coords[1] if prev_coords else None,
+        "prev_label": prev_location,
+        "target_lat": target_coords[0] if target_coords else None,
+        "target_lon": target_coords[1] if target_coords else None,
+        "target_label": segment_target,
+    }
+
+    enriched_options: list = []
+    estimated_total_stops = 4
+    final_route_could_be_complete = route_could_be_complete
+
+    option_index = 0
+
+    async for item in agent.find_options_streaming(
+        selected_stops=selected_stops,
+        stop_number=stop_number,
+        days_remaining=days_remaining,
+        route_could_be_complete=route_could_be_complete,
+        segment_target=segment_target,
+        segment_index=segment_index,
+        segment_count=segment_count,
+        extra_instructions=extra_instructions,
+        route_geometry=route_geometry,
+    ):
+        # Sentinel item from streaming — contains metadata
+        if "_all_options" in item:
+            estimated_total_stops = item.get("estimated_total_stops", 4)
+            final_route_could_be_complete = item.get("route_could_be_complete", False)
+            # Ensure enriched_options is complete (may already be set)
+            if not enriched_options and item.get("_all_options"):
+                enriched_options = item["_all_options"]
+            continue
+
+        # It's an individual option — enrich it now
+        opt = item
+        place = f"{opt.get('region', '')}, {opt.get('country', '')}"
+        nom_coords = await geocode_nominatim(place)
+        await asyncio.sleep(0.08)  # brief pause after each geocode
+        agent_lat = opt.get("lat")
+        agent_lon = opt.get("lon")
+        agent_coords = (agent_lat, agent_lon) if agent_lat and agent_lon else None
+        coords = nom_coords or agent_coords
+
+        if coords:
+            opt["lat"] = coords[0]
+            opt["lon"] = coords[1]
+            opt["maps_url"] = build_maps_url([prev_location, place])
+            if prev_coords:
+                hours, km = await osrm_route([prev_coords, coords])
+                if hours > 0:
+                    opt["drive_hours"] = hours
+                    opt["drive_km"] = km
+
+        if max_drive_hours > 0:
+            opt["drives_over_limit"] = opt.get("drive_hours", 0) > max_drive_hours
+
+        enriched_options.append(opt)
+
+        # Emit SSE event so frontend can show this option immediately
+        await debug_logger.push_event(
+            job_id,
+            "route_option_ready",
+            agent_id="StopOptionsFinder",
+            data={
+                "option": opt,
+                "option_index": option_index,
+                "map_anchors": map_anchors,
+            },
+        )
+        option_index += 1
+
+    # Signal that all options are done
+    await debug_logger.push_event(
+        job_id,
+        "route_options_done",
+        agent_id="StopOptionsFinder",
+        data={
+            "options": enriched_options,
+            "map_anchors": map_anchors,
+            "estimated_total_stops": estimated_total_stops,
+            "route_could_be_complete": final_route_could_be_complete,
+        },
+    )
+
+    return enriched_options, map_anchors, estimated_total_stops, final_route_could_be_complete
+
+
+# ---------------------------------------------------------------------------
+# POST /api/init-job  — create job_id before SSE is opened
+# The frontend calls this first, opens SSE, then calls plan-trip with the id.
+# ---------------------------------------------------------------------------
+
+@app.post("/api/init-job")
+async def init_job(request: TravelRequest):
+    job_id = uuid.uuid4().hex
+    job = _new_job(request)
+    save_job(job_id, job)
+    return {"job_id": job_id}
+
+
+# ---------------------------------------------------------------------------
 # POST /api/plan-trip
 # ---------------------------------------------------------------------------
 
 @app.post("/api/plan-trip")
-async def plan_trip(request: TravelRequest):
+async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
     from agents.stop_options_finder import StopOptionsFinderAgent
 
-    job_id = uuid.uuid4().hex   # 32 chars — not guessable
-    job = _new_job(request)
+    if job_id and _JOB_ID_RE.match(job_id):
+        # Reuse pre-initialised job (SSE may already be open)
+        job = get_job(job_id)
+        # Overwrite request in case it changed (shouldn't differ, but be safe)
+        job["request"] = request.model_dump(mode="json")
+    else:
+        job_id = uuid.uuid4().hex
+        job = _new_job(request)
     save_job(job_id, job)
 
     await debug_logger.log(LogLevel.INFO, f"Neue Reise: {request.start_location} → {request.main_destination}",
@@ -328,29 +537,27 @@ async def plan_trip(request: TravelRequest):
 
     # Estimate how many stops fit in this segment based on days/nights budget
     stops_in_segment = max(1, (job["segment_budget"] - 1) // (1 + request.min_nights_per_stop))
-    route_geo = await _calc_route_geometry(
-        request.start_location, segment_target, stops_in_segment, request.max_drive_hours_per_day
+    route_geo = await _calc_route_geometry_cached(
+        job, job_id, request.start_location, segment_target,
+        stops_in_segment, request.max_drive_hours_per_day
     )
 
     agent = StopOptionsFinderAgent(request, job_id)
-    result = await agent.find_options(
-        selected_stops=[],
-        stop_number=1,
-        days_remaining=job["segment_budget"],
-        route_could_be_complete=False,
-        segment_target=segment_target,
-        segment_index=0,
-        segment_count=len(request.via_points) + 1,
-        route_geometry=route_geo,
-    )
-
-    options = result.get("options", [])
-    estimated_total_stops = result.get("estimated_total_stops", 4)
-    route_could_be_complete = result.get("route_could_be_complete", False)
-
-    options, map_anchors = await _enrich_options_with_osrm(
-        options, request.start_location, segment_target, request.max_drive_hours_per_day
-    )
+    options, map_anchors, estimated_total_stops, route_could_be_complete = \
+        await _find_and_stream_options(
+            agent=agent,
+            job_id=job_id,
+            selected_stops=[],
+            stop_number=1,
+            days_remaining=job["segment_budget"],
+            route_could_be_complete=False,
+            segment_target=segment_target,
+            segment_index=0,
+            segment_count=len(request.via_points) + 1,
+            prev_location=request.start_location,
+            max_drive_hours=request.max_drive_hours_per_day,
+            route_geometry=route_geo,
+        )
 
     job["current_options"] = options
     job["route_could_be_complete"] = route_could_be_complete
@@ -443,28 +650,28 @@ async def select_stop(job_id: str, body: StopSelectRequest):
 
         stops_in_new_seg = max(1, (job["segment_budget"] - 1) // (1 + request.min_nights_per_stop))
         prev_loc = via_point.location
-        next_geo = await _calc_route_geometry(
-            prev_loc, segment_target, stops_in_new_seg, request.max_drive_hours_per_day
+        next_geo = await _calc_route_geometry_cached(
+            job, job_id, prev_loc, segment_target, stops_in_new_seg, request.max_drive_hours_per_day
         )
 
         agent = StopOptionsFinderAgent(request, job_id)
-        next_result = await agent.find_options(
-            selected_stops=job["selected_stops"],
-            stop_number=job["stop_counter"] + 1,
-            days_remaining=job["segment_budget"],
-            route_could_be_complete=False,
-            segment_target=segment_target,
-            segment_index=seg_idx,
-            segment_count=n_segments,
-            route_geometry=next_geo,
-        )
-        next_options = next_result.get("options", [])
-        estimated_total = next_result.get("estimated_total_stops", 4)
-        next_options, map_anchors = await _enrich_options_with_osrm(
-            next_options, prev_loc, segment_target, request.max_drive_hours_per_day
-        )
+        next_options, map_anchors, estimated_total, route_complete = \
+            await _find_and_stream_options(
+                agent=agent,
+                job_id=job_id,
+                selected_stops=job["selected_stops"],
+                stop_number=job["stop_counter"] + 1,
+                days_remaining=job["segment_budget"],
+                route_could_be_complete=False,
+                segment_target=segment_target,
+                segment_index=seg_idx,
+                segment_count=n_segments,
+                prev_location=prev_loc,
+                max_drive_hours=request.max_drive_hours_per_day,
+                route_geometry=next_geo,
+            )
         job["current_options"] = next_options
-        job["route_could_be_complete"] = next_result.get("route_could_be_complete", False)
+        job["route_could_be_complete"] = route_complete
         save_job(job_id, job)
 
         new_status = _calc_route_status(request, job["segment_stops"], job["segment_budget"], is_last_segment)
@@ -519,28 +726,28 @@ async def select_stop(job_id: str, body: StopSelectRequest):
         )
         prev_loc_else = selected.get("region", request.start_location)
         stops_left = max(1, route_status["days_remaining"] // (1 + request.min_nights_per_stop))
-        next_geo = await _calc_route_geometry(
-            prev_loc_else, segment_target, stops_left, request.max_drive_hours_per_day
+        next_geo = await _calc_route_geometry_cached(
+            job, job_id, prev_loc_else, segment_target, stops_left, request.max_drive_hours_per_day
         )
 
         agent = StopOptionsFinderAgent(request, job_id)
-        next_result = await agent.find_options(
-            selected_stops=job["selected_stops"],
-            stop_number=job["stop_counter"] + 1,
-            days_remaining=route_status["days_remaining"],
-            route_could_be_complete=route_status["route_could_be_complete"],
-            segment_target=segment_target,
-            segment_index=seg_idx,
-            segment_count=n_segments,
-            route_geometry=next_geo,
-        )
-        next_options = next_result.get("options", [])
-        estimated_total = next_result.get("estimated_total_stops", 4)
-        next_options, map_anchors = await _enrich_options_with_osrm(
-            next_options, prev_loc_else, segment_target, request.max_drive_hours_per_day
-        )
+        next_options, map_anchors, estimated_total, route_complete = \
+            await _find_and_stream_options(
+                agent=agent,
+                job_id=job_id,
+                selected_stops=job["selected_stops"],
+                stop_number=job["stop_counter"] + 1,
+                days_remaining=route_status["days_remaining"],
+                route_could_be_complete=route_status["route_could_be_complete"],
+                segment_target=segment_target,
+                segment_index=seg_idx,
+                segment_count=n_segments,
+                prev_location=prev_loc_else,
+                max_drive_hours=request.max_drive_hours_per_day,
+                route_geometry=next_geo,
+            )
         job["current_options"] = next_options
-        job["route_could_be_complete"] = next_result.get("route_could_be_complete", False)
+        job["route_could_be_complete"] = route_complete
         save_job(job_id, job)
 
         new_status = _calc_route_status(request, job["segment_stops"], job["segment_budget"], is_last_segment)
@@ -591,30 +798,30 @@ async def recompute_options(job_id: str, body: RecomputeRequest):
 
     prev_location = selected_stops[-1]["region"] if selected_stops else request.start_location
     stops_left_rc = max(1, route_status["days_remaining"] // (1 + request.min_nights_per_stop))
-    recompute_geo = await _calc_route_geometry(
-        prev_location, segment_target, stops_left_rc, request.max_drive_hours_per_day
+    recompute_geo = await _calc_route_geometry_cached(
+        job, job_id, prev_location, segment_target, stops_left_rc, request.max_drive_hours_per_day
     )
 
     agent = StopOptionsFinderAgent(request, job_id)
-    result = await agent.find_options(
-        selected_stops=selected_stops,
-        stop_number=stop_number,
-        days_remaining=route_status["days_remaining"],
-        route_could_be_complete=route_status["route_could_be_complete"],
-        segment_target=segment_target,
-        segment_index=seg_idx,
-        segment_count=n_segments,
-        extra_instructions=body.extra_instructions,
-        route_geometry=recompute_geo,
-    )
-
-    options = result.get("options", [])
-    options, map_anchors = await _enrich_options_with_osrm(
-        options, prev_location, segment_target, request.max_drive_hours_per_day
-    )
+    options, map_anchors, estimated_total_stops, route_complete = \
+        await _find_and_stream_options(
+            agent=agent,
+            job_id=job_id,
+            selected_stops=selected_stops,
+            stop_number=stop_number,
+            days_remaining=route_status["days_remaining"],
+            route_could_be_complete=route_status["route_could_be_complete"],
+            segment_target=segment_target,
+            segment_index=seg_idx,
+            segment_count=n_segments,
+            prev_location=prev_location,
+            max_drive_hours=request.max_drive_hours_per_day,
+            route_geometry=recompute_geo,
+            extra_instructions=body.extra_instructions,
+        )
 
     job["current_options"] = options
-    job["route_could_be_complete"] = result.get("route_could_be_complete", False)
+    job["route_could_be_complete"] = route_complete
     save_job(job_id, job)
 
     return {
@@ -624,7 +831,7 @@ async def recompute_options(job_id: str, body: RecomputeRequest):
         "meta": {
             "stop_number": stop_number,
             "days_remaining": route_status["days_remaining"],
-            "estimated_total_stops": result.get("estimated_total_stops", 4),
+            "estimated_total_stops": estimated_total_stops,
             "route_could_be_complete": route_status["route_could_be_complete"],
             "must_complete": route_status["must_complete"],
             "segment_index": seg_idx,
@@ -709,28 +916,28 @@ async def patch_job(job_id: str, body: PatchJobRequest):
 
     prev_location = selected_stops[-1]["region"] if selected_stops else request.start_location
     stops_left = max(1, route_status["days_remaining"] // (1 + request.min_nights_per_stop))
-    geo = await _calc_route_geometry(
-        prev_location, segment_target, stops_left, request.max_drive_hours_per_day
+    geo = await _calc_route_geometry_cached(
+        job, job_id, prev_location, segment_target, stops_left, request.max_drive_hours_per_day
     )
 
     agent = StopOptionsFinderAgent(request, job_id)
-    result = await agent.find_options(
-        selected_stops=selected_stops,
-        stop_number=stop_number,
-        days_remaining=route_status["days_remaining"],
-        route_could_be_complete=route_status["route_could_be_complete"],
-        segment_target=segment_target,
-        segment_index=seg_idx,
-        segment_count=n_segments,
-        route_geometry=geo,
-    )
-
-    options = result.get("options", [])
-    options, map_anchors = await _enrich_options_with_osrm(
-        options, prev_location, segment_target, request.max_drive_hours_per_day
-    )
+    options, map_anchors, estimated_total_stops, route_complete = \
+        await _find_and_stream_options(
+            agent=agent,
+            job_id=job_id,
+            selected_stops=selected_stops,
+            stop_number=stop_number,
+            days_remaining=route_status["days_remaining"],
+            route_could_be_complete=route_status["route_could_be_complete"],
+            segment_target=segment_target,
+            segment_index=seg_idx,
+            segment_count=n_segments,
+            prev_location=prev_location,
+            max_drive_hours=request.max_drive_hours_per_day,
+            route_geometry=geo,
+        )
     job["current_options"] = options
-    job["route_could_be_complete"] = result.get("route_could_be_complete", False)
+    job["route_could_be_complete"] = route_complete
     save_job(job_id, job)
 
     new_status = _calc_route_status(
@@ -744,7 +951,7 @@ async def patch_job(job_id: str, body: PatchJobRequest):
         "meta": {
             "stop_number": stop_number,
             "days_remaining": new_status["days_remaining"],
-            "estimated_total_stops": result.get("estimated_total_stops", 4),
+            "estimated_total_stops": estimated_total_stops,
             "route_could_be_complete": new_status["route_could_be_complete"],
             "must_complete": new_status["must_complete"],
             "segment_index": seg_idx,
