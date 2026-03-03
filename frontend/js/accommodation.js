@@ -108,6 +108,13 @@ function onAccommodationLoaded(data) {
     const geheimtippHint = (isGeheimtipp && opt.geheimtipp_hinweis)
       ? `<div class="acc-geheimtipp-hint">${esc(opt.geheimtipp_hinweis)}</div>`
       : '';
+    const isRealPrice = opt.price_source === 'booking.com';
+    const priceLabel = isRealPrice
+      ? `CHF ${(opt.price_per_night_chf || 0).toLocaleString('de-CH')}`
+      : `ca. CHF ${(opt.price_per_night_chf || 0).toLocaleString('de-CH')}`;
+    const priceNote = isRealPrice
+      ? `<span class="price-source real">Booking.com-Preis</span>`
+      : `<span class="price-source estimate">Schätzung</span>`;
     return `
       <div class="${cardClass} ${selectedClass}" onclick="selectAccommodationInPanel(${stopId}, ${i})"
            data-stop="${stopId}" data-idx="${i}">
@@ -117,9 +124,10 @@ function onAccommodationLoaded(data) {
         <div class="acc-type-badge">${esc(opt.type)}</div>
         ${stars ? `<div class="acc-stars">${stars}</div>` : ''}
         <div class="acc-price">
-          <strong>CHF ${(opt.price_per_night_chf || 0).toLocaleString('de-CH')}</strong>
+          <strong>${priceLabel}</strong>
           <span>/Nacht</span>
         </div>
+        ${priceNote}
         <div class="acc-total">Total: CHF ${(opt.total_price_chf || 0).toLocaleString('de-CH')}</div>
         <p class="acc-teaser">${esc(opt.teaser)}</p>
         <div class="acc-features">${features}</div>

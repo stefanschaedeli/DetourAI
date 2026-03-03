@@ -19,6 +19,7 @@ class AccommodationOption(BaseModel):
     booking_hint: str = ""
     geheimtipp_hinweis: Optional[str] = None
     booking_url: Optional[str] = None  # Booking.com deeplink (None für Geheimtipp)
+    price_source: str = "estimate"     # "booking.com" oder "estimate"
     image_overview: Optional[str] = None
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None

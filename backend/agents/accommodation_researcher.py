@@ -6,14 +6,17 @@ from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
 from utils.image_fetcher import fetch_unsplash_images
+from utils.hotel_price_fetcher import fetch_real_price
 from agents._client import get_client, get_model
 
 
-def _build_booking_url(region: str, checkin, nights: int, adults: int, children: int) -> str:
+def _build_booking_url(hotel_name: str, region: str, checkin, nights: int, adults: int, children: int) -> str:
     checkout = checkin + timedelta(days=nights)
+    search_term = f"{hotel_name}, {region}"
     return (
-        f"https://www.booking.com/search.html"
-        f"?ss={quote(region)}"
+        f"https://www.booking.com/searchresults.html"
+        f"?ss={quote(search_term)}"
+        f"&ss_raw={quote(search_term)}"
         f"&checkin={checkin.isoformat()}"
         f"&checkout={checkout.isoformat()}"
         f"&group_adults={adults}"
@@ -67,6 +70,9 @@ Preisrahmen pro Nacht:
 - Budget:  CHF {budget_rate:.0f} (65%)
 - Komfort: CHF {comfort_rate:.0f} (100%)
 - Premium: CHF {premium_rate:.0f} (160%)
+
+WICHTIG: Verwende realistische, tatsächlich existierende Hotelnamen für {region}.
+Keine fiktiven Namen. Recherchiere Beispiele für die Region.
 
 Gib exakt dieses JSON zurück:
 {{
@@ -176,10 +182,30 @@ Der Geheimtipp soll etwas Besonderes/Ungewöhnliches für die Region sein (Bauer
 
         arrival_day = stop.get("arrival_day", 1)
         checkin = req.start_date + timedelta(days=arrival_day - 1)
+        checkin_str = checkin.isoformat()
+        checkout_str = (checkin + timedelta(days=nights)).isoformat()
 
-        for opt in result.get("options", []):
-            if opt.get("option_type") != "geheimtipp":
+        async def enrich_option(opt: dict) -> dict:
+            opt_type = opt.get("option_type")
+            hotel_name = opt.get("name", "")
+
+            if opt_type != "geheimtipp" and hotel_name:
+                real_price, _ = await fetch_real_price(
+                    hotel_name=hotel_name,
+                    region=region,
+                    checkin=checkin_str,
+                    checkout=checkout_str,
+                    adults=req.adults,
+                )
+                if real_price is not None:
+                    opt["price_per_night_chf"] = round(real_price, 0)
+                    opt["total_price_chf"] = round(real_price * nights, 0)
+                    opt["price_source"] = "booking.com"
+                else:
+                    opt["price_source"] = "estimate"
+
                 opt["booking_url"] = _build_booking_url(
+                    hotel_name=hotel_name,
                     region=region,
                     checkin=checkin,
                     nights=nights,
@@ -188,8 +214,14 @@ Der Geheimtipp soll etwas Besonderes/Ungewöhnliches für die Region sein (Bauer
                 )
             else:
                 opt["booking_url"] = None
+                opt["price_source"] = "estimate"
+
             actual_type = opt.get("type") or preferred_type
             images = await fetch_unsplash_images(f"{region} {actual_type}", preferred_type)
             opt.update(images)
+            return opt
+
+        options = await asyncio.gather(*[enrich_option(opt) for opt in result.get("options", [])])
+        result["options"] = list(options)
 
         return result

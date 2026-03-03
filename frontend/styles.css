@@ -406,6 +406,9 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .acc-price { margin-bottom: 4px; }
 .acc-price strong { font-size: 18px; color: var(--accent); }
 .acc-price span { font-size: 13px; color: var(--text-sub); }
+.price-source { font-size: 11px; padding: 2px 8px; border-radius: 999px; margin-bottom: 4px; display: inline-block; }
+.price-source.real { background: #d4edda; color: #155724; }
+.price-source.estimate { background: #fff3cd; color: #856404; }
 .acc-total { font-size: 13px; color: var(--text-sub); margin-bottom: 8px; }
 .acc-teaser { font-size: 13px; color: var(--text-sub); margin-bottom: 10px; }
 .acc-features { display: flex; flex-wrap: wrap; gap: 4px; }

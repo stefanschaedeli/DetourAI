@@ -207,6 +207,24 @@ def test_accommodation_option_defaults():
     assert opt.suitable_for_children is False
 
 
+def test_accommodation_price_source_default():
+    opt = AccommodationOption(
+        id="acc_1_budget", option_type="budget", name="Test",
+        type="hotel", price_per_night_chf=100, total_price_chf=200,
+        price_range="€€", teaser="Test",
+    )
+    assert opt.price_source == "estimate"
+
+
+def test_accommodation_price_source_real():
+    opt = AccommodationOption(
+        id="acc_1_comfort", option_type="comfort", name="Test",
+        type="hotel", price_per_night_chf=150, total_price_chf=300,
+        price_range="€€", teaser="Test", price_source="booking.com",
+    )
+    assert opt.price_source == "booking.com"
+
+
 # ---------------------------------------------------------------------------
 # BudgetState
 # ---------------------------------------------------------------------------
