@@ -183,3 +183,19 @@ REDIS_URL=redis://localhost:6379 # job state store
 - Destination: Französische Alpen → Paris
 - Duration: 10 days, 2 adults, CHF 5'000
 - Max drive time/day: 4.5h
+
+---
+
+## Git Workflow (REQUIRED)
+After **every** change, commit immediately as a patch release and push:
+
+```bash
+git add <changed files>
+git commit -m "type: beschreibung\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git tag vX.X.Y        # increment patch number from latest tag
+git push && git push --tags
+```
+
+- Version scheme: `x.x.y` — only increment `y` for each change
+- Check current version with `git tag --sort=-v:refname | head -1`
+- Commit message in German, type prefix in English (fix/feat/perf/docs/refactor)
