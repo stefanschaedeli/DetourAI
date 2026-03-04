@@ -33,6 +33,9 @@ node_modules/
 .vscode/
 *.swp
 
+# Local setup scripts (not for version control)
+install.sh
+
 # Claude skill templates (local)
 code-reviewer.md
 doc-writer.md
