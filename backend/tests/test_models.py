@@ -142,29 +142,25 @@ def test_stop_select_invalid_negative():
 # ---------------------------------------------------------------------------
 
 def test_accommodation_option_types():
-    for opt_type in ["budget", "comfort", "premium", "geheimtipp"]:
+    for acc_type in ["hotel", "apartment", "camping", "hostel", "bauernhof"]:
         opt = AccommodationOption(
-            id=f"acc_1_{opt_type}",
-            option_type=opt_type,
+            id=f"acc_1_{acc_type}",
             name="Test Hotel",
-            type="hotel",
+            type=acc_type,
             price_per_night_chf=100.0,
             total_price_chf=200.0,
-            price_range="€€",
             teaser="Ein gutes Hotel",
         )
-        assert opt.option_type == opt_type
+        assert opt.type == acc_type
 
 
 def test_accommodation_booking_url():
     opt = AccommodationOption(
-        id="acc_1_comfort",
-        option_type="comfort",
+        id="acc_1_1",
         name="Hotel Test",
         type="hotel",
         price_per_night_chf=150.0,
         total_price_chf=300.0,
-        price_range="€€",
         teaser="Komfortables Hotel",
         booking_url="https://www.booking.com/search.html?ss=Annecy&checkin=2026-06-02&checkout=2026-06-04&group_adults=2&group_children=0&no_rooms=1&lang=de",
     )
@@ -172,57 +168,69 @@ def test_accommodation_booking_url():
     assert "booking.com" in opt.booking_url
 
 
-def test_accommodation_geheimtipp_no_booking_url():
+def test_accommodation_geheimtipp_fields():
     opt = AccommodationOption(
-        id="acc_1_geheimtipp",
-        option_type="geheimtipp",
+        id="acc_1_3",
         name="Berghof Alpenblick",
         type="bauernhof",
         price_per_night_chf=120.0,
         total_price_chf=240.0,
-        price_range="€€",
         teaser="Authentischer Bauernhof mit Panoramablick",
         booking_url=None,
+        is_geheimtipp=True,
+        booking_search_url="https://www.booking.com/searchresults.html?ss=Annecy%2C+FR",
         geheimtipp_hinweis="Buche direkt beim Hof oder über lokales Tourismusbüro.",
     )
     assert opt.booking_url is None
+    assert opt.is_geheimtipp is True
     assert opt.geheimtipp_hinweis is not None
-    assert opt.option_type == "geheimtipp"
+    assert opt.booking_search_url is not None
 
 
 def test_accommodation_option_defaults():
     opt = AccommodationOption(
-        id="acc_1_budget",
-        option_type="budget",
+        id="acc_1_1",
         name="Budget Inn",
         type="hostel",
         price_per_night_chf=60.0,
         total_price_chf=120.0,
-        price_range="€",
         teaser="Günstig und central",
     )
     assert opt.separate_rooms_available is False
     assert opt.max_persons == 4
     assert opt.rating is None
     assert opt.suitable_for_children is False
+    assert opt.is_geheimtipp is False
+    assert opt.matched_must_haves == []
+    assert opt.description == ""
 
 
-def test_accommodation_price_source_default():
+def test_accommodation_description_and_must_haves():
     opt = AccommodationOption(
-        id="acc_1_budget", option_type="budget", name="Test",
-        type="hotel", price_per_night_chf=100, total_price_chf=200,
-        price_range="€€", teaser="Test",
+        id="acc_1_2",
+        name="Test Hotel",
+        type="hotel",
+        price_per_night_chf=100,
+        total_price_chf=200,
+        teaser="Test",
+        description="Komfortables Hotel mit WiFi und Parkplatz.",
+        matched_must_haves=["WiFi", "Parkplatz"],
     )
-    assert opt.price_source == "estimate"
+    assert "WiFi" in opt.matched_must_haves
+    assert opt.description != ""
 
 
-def test_accommodation_price_source_real():
+def test_accommodation_hotel_website_url():
     opt = AccommodationOption(
-        id="acc_1_comfort", option_type="comfort", name="Test",
-        type="hotel", price_per_night_chf=150, total_price_chf=300,
-        price_range="€€", teaser="Test", price_source="booking.com",
+        id="acc_1_2",
+        name="Test Hotel",
+        type="hotel",
+        price_per_night_chf=150,
+        total_price_chf=300,
+        teaser="Test",
+        hotel_website_url="https://example-hotel.com",
     )
-    assert opt.price_source == "booking.com"
+    assert opt.hotel_website_url == "https://example-hotel.com"
 
 
 # ---------------------------------------------------------------------------

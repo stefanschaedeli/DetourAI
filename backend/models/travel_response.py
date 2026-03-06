@@ -9,7 +9,12 @@ class StopAccommodation(BaseModel):
     total_price_chf: float
     rating: Optional[float] = None
     features: List[str] = []
+    description: Optional[str] = None
+    is_geheimtipp: bool = False
+    matched_must_haves: List[str] = []
     booking_url: Optional[str] = None
+    hotel_website_url: Optional[str] = None
+    booking_search_url: Optional[str] = None
     image_overview: Optional[str] = None
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None

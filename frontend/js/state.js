@@ -67,6 +67,22 @@ function lsClear(key) {
   try { localStorage.removeItem(key); } catch (e) {}
 }
 
+/**
+ * Escape text and wrap any matched must-have terms in <strong>.
+ * Safe to use with innerHTML.
+ */
+function highlightMustHaves(text, mustHaves) {
+  let safe = esc(text);
+  if (!mustHaves || mustHaves.length === 0) return safe;
+  mustHaves.forEach(term => {
+    if (!term) return;
+    const escaped = esc(term);
+    const re = new RegExp(escaped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    safe = safe.replace(re, m => `<strong>${m}</strong>`);
+  });
+  return safe;
+}
+
 /** Escape user content for safe HTML insertion. */
 function esc(str) {
   if (str == null) return '';

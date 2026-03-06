@@ -205,3 +205,89 @@ def test_confirm_accommodations_success(client, mock_redis):
     data = r.json()
     assert data["status"] == "accommodations_confirmed"
     assert data["selected_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Research accommodation (new endpoint)
+# ---------------------------------------------------------------------------
+
+def test_research_accommodation_not_found(client, mock_redis):
+    mock_redis.get.return_value = None
+    r = client.post("/api/research-accommodation/fakeid", json={"stop_id": "1", "extra_instructions": ""})
+    assert r.status_code == 404
+
+
+def test_research_accommodation_stop_not_found(client, mock_redis):
+    job = {
+        "status": "loading_accommodations",
+        "request": {
+            "start_location": "Liestal", "main_destination": "Paris",
+            "start_date": "2026-06-01", "end_date": "2026-06-10",
+            "total_days": 10, "budget_chf": 5000, "adults": 2,
+            "min_nights_per_stop": 1, "budget_buffer_percent": 10,
+        },
+        "selected_stops": [{"id": 1, "region": "Annecy", "nights": 2, "country": "FR", "arrival_day": 3}],
+        "selected_accommodations": [],
+        "prefetched_accommodations": {},
+        "stop_counter": 1, "segment_index": 0, "segment_budget": 10,
+        "segment_stops": [], "route_could_be_complete": False,
+    }
+    mock_redis.get.return_value = json.dumps(job)
+    r = client.post(
+        "/api/research-accommodation/abcdef1234567890abcdef1234567890",
+        json={"stop_id": "99", "extra_instructions": ""}
+    )
+    assert r.status_code == 404
+    assert "99" in r.json()["detail"]
+
+
+def test_research_accommodation_success(client, mock_redis, mocker):
+    job = {
+        "status": "loading_accommodations",
+        "request": {
+            "start_location": "Liestal", "main_destination": "Paris",
+            "start_date": "2026-06-01", "end_date": "2026-06-10",
+            "total_days": 10, "budget_chf": 5000, "adults": 2,
+            "min_nights_per_stop": 1, "budget_buffer_percent": 10,
+        },
+        "selected_stops": [{"id": 1, "region": "Annecy", "nights": 2, "country": "FR", "arrival_day": 3}],
+        "selected_accommodations": [],
+        "prefetched_accommodations": {},
+        "stop_counter": 1, "segment_index": 0, "segment_budget": 10,
+        "segment_stops": [], "route_could_be_complete": False,
+    }
+    mock_redis.get.return_value = json.dumps(job)
+
+    mock_options = [
+        {"id": "acc_1_1", "name": "Hotel Test", "type": "hotel",
+         "price_per_night_chf": 120, "total_price_chf": 240,
+         "teaser": "Test", "description": "Test hotel", "is_geheimtipp": False,
+         "matched_must_haves": [], "features": []},
+        {"id": "acc_1_2", "name": "Apartment Test", "type": "apartment",
+         "price_per_night_chf": 100, "total_price_chf": 200,
+         "teaser": "Test", "description": "Test apt", "is_geheimtipp": False,
+         "matched_must_haves": [], "features": []},
+        {"id": "acc_1_3", "name": "Geheimtipp Test", "type": "bauernhof",
+         "price_per_night_chf": 90, "total_price_chf": 180,
+         "teaser": "Secret", "description": "Hidden gem", "is_geheimtipp": True,
+         "matched_must_haves": [], "features": []},
+    ]
+
+    async def mock_find_options(stop, budget_per_night, semaphore=None):
+        return {"stop_id": 1, "region": "Annecy", "options": mock_options}
+
+    mocker.patch(
+        'agents.accommodation_researcher.AccommodationResearcherAgent.find_options',
+        side_effect=mock_find_options,
+    )
+
+    r = client.post(
+        "/api/research-accommodation/abcdef1234567890abcdef1234567890",
+        json={"stop_id": "1", "extra_instructions": "am See bitte"}
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["job_id"] == "abcdef1234567890abcdef1234567890"
+    assert data["stop_id"] == "1"
+    assert len(data["options"]) == 3
+    assert mock_redis.setex.called

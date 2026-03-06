@@ -4,22 +4,23 @@ from pydantic import BaseModel
 
 class AccommodationOption(BaseModel):
     id: str
-    option_type: str                 # budget, comfort, premium, geheimtipp
     name: str
-    type: str                        # hotel, apartment, camping, hostel, airbnb
+    type: str                        # hotel, apartment, camping, hostel, airbnb, bauernhof, etc.
     price_per_night_chf: float
     total_price_chf: float
-    price_range: str                 # €, €€, €€€
     separate_rooms_available: bool = False
     max_persons: int = 4
     rating: Optional[float] = None
     features: List[str] = []
     teaser: str
+    description: str = ""            # 1-2 Absätze: Zimmerausstattung, Aktivitäten, Services
     suitable_for_children: bool = False
-    booking_hint: str = ""
     geheimtipp_hinweis: Optional[str] = None
-    booking_url: Optional[str] = None  # Booking.com deeplink (None für Geheimtipp)
-    price_source: str = "estimate"     # "booking.com" oder "estimate"
+    is_geheimtipp: bool = False
+    matched_must_haves: List[str] = []
+    booking_url: Optional[str] = None        # Booking.com deeplink (mit Hotelname)
+    hotel_website_url: Optional[str] = None  # Direkte Hotelwebseite
+    booking_search_url: Optional[str] = None  # Booking.com Suchlink (nur Stadt, für Geheimtipp)
     image_overview: Optional[str] = None
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None
@@ -40,3 +41,8 @@ class BudgetState(BaseModel):
 class AccommodationSelectRequest(BaseModel):
     stop_id: int
     option_index: int
+
+
+class AccommodationResearchRequest(BaseModel):
+    stop_id: str
+    extra_instructions: str = ""

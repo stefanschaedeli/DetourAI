@@ -20,7 +20,7 @@ load_dotenv()
 
 from models.travel_request import TravelRequest
 from models.stop_option import StopSelectRequest
-from models.accommodation_option import AccommodationSelectRequest, BudgetState
+from models.accommodation_option import AccommodationSelectRequest, BudgetState, AccommodationResearchRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.maps_helper import geocode_nominatim, osrm_route, build_maps_url
 
@@ -1167,6 +1167,44 @@ async def select_accommodation(job_id: str, body: AccommodationSelectRequest):
         "options": next_options,
         "stop_number": acc_idx + 2,
         "total_stops": len(selected_stops),
+    }
+
+
+# ---------------------------------------------------------------------------
+# POST /api/research-accommodation/{job_id}
+# ---------------------------------------------------------------------------
+
+@app.post("/api/research-accommodation/{job_id}")
+async def research_accommodation(job_id: str, body: AccommodationResearchRequest):
+    """Re-research accommodations for a single stop with optional extra instructions."""
+    job = get_job(job_id)
+    request = TravelRequest(**job["request"])
+    selected_stops = job.get("selected_stops", [])
+
+    stop_id_int = int(body.stop_id) if body.stop_id.isdigit() else None
+    stop = next((s for s in selected_stops if s.get("id") == stop_id_int), None)
+    if stop is None:
+        raise HTTPException(status_code=404, detail=f"Stop {body.stop_id} nicht gefunden")
+
+    total_nights = sum(s.get("nights", request.min_nights_per_stop) for s in selected_stops)
+    acc_budget = request.budget_chf * 0.45
+    budget_per_night = acc_budget / max(1, total_nights)
+
+    from agents.accommodation_researcher import AccommodationResearcherAgent
+    agent = AccommodationResearcherAgent(request, job_id, extra_instructions=body.extra_instructions)
+    result = await agent.find_options(stop, budget_per_night)
+
+    new_options = result.get("options", [])
+    prefetched = job.get("prefetched_accommodations", {})
+    prefetched[str(stop_id_int)] = new_options
+    job["prefetched_accommodations"] = prefetched
+    save_job(job_id, job)
+
+    return {
+        "job_id": job_id,
+        "stop_id": body.stop_id,
+        "stop": stop,
+        "options": new_options,
     }
 
 

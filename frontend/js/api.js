@@ -121,6 +121,14 @@ async function apiPatchJob(jobId, action, extraDays, viaPointLocation) {
   return res.json();
 }
 
+async function apiResearchAccommodation(jobId, stopId, extraInstructions) {
+  const res = await _fetchQuiet(`${API}/research-accommodation/${jobId}`, {
+    method: 'POST',
+    body: JSON.stringify({ stop_id: String(stopId), extra_instructions: extraInstructions || '' }),
+  });
+  return res.json();
+}
+
 async function apiRecomputeOptions(jobId, extraInstructions) {
   const res = await _fetchQuiet(`${API}/recompute-options/${jobId}`, {
     method: 'POST',

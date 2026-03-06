@@ -6,7 +6,6 @@ from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
 from utils.image_fetcher import fetch_unsplash_images
-from utils.hotel_price_fetcher import fetch_real_price
 from agents._client import get_client, get_model
 
 
@@ -25,6 +24,23 @@ def _build_booking_url(hotel_name: str, region: str, checkin, nights: int, adult
         f"&lang=de"
     )
 
+
+def _build_booking_search_url(city: str, country: str, checkin, nights: int, adults: int, children: int) -> str:
+    """Geheimtipp: Suchlink nur mit Stadt/Region, kein konkreter Hotelname."""
+    checkout = checkin + timedelta(days=nights)
+    search_term = f"{city}, {country}"
+    return (
+        f"https://www.booking.com/searchresults.html"
+        f"?ss={quote(search_term)}"
+        f"&checkin={checkin.isoformat()}"
+        f"&checkout={checkout.isoformat()}"
+        f"&group_adults={adults}"
+        f"&group_children={children}"
+        f"&no_rooms=1"
+        f"&lang=de"
+    )
+
+
 SYSTEM_PROMPT = (
     "Du bist ein Unterkunftsberater. "
     "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
@@ -32,22 +48,16 @@ SYSTEM_PROMPT = (
 
 
 class AccommodationResearcherAgent:
-    def __init__(self, request: TravelRequest, job_id: str):
+    def __init__(self, request: TravelRequest, job_id: str, extra_instructions: str = ""):
         self.request = request
         self.job_id = job_id
+        self.extra_instructions = extra_instructions
         self.client = get_client()
         self.model = get_model("claude-sonnet-4-5")
 
     async def find_options(self, stop: dict, budget_per_night: float,
                            semaphore: asyncio.Semaphore = None) -> dict:
         req = self.request
-        buffer = 1 - req.budget_buffer_percent / 100
-        effective_rate = budget_per_night * buffer
-
-        budget_rate    = round(effective_rate * 0.65, 2)
-        comfort_rate   = round(effective_rate, 2)
-        premium_rate   = round(effective_rate * 1.6, 2)
-
         nights = stop.get("nights", req.min_nights_per_stop)
         stop_id = stop.get("id", 1)
         region = stop.get("region", "")
@@ -56,23 +66,35 @@ class AccommodationResearcherAgent:
         children_count = len(req.children)
         styles_str = ", ".join(req.accommodation_styles) if req.accommodation_styles else "hotel, apartment"
         must_haves_str = ", ".join(req.accommodation_must_haves) if req.accommodation_must_haves else "WiFi"
-        preferred_type = req.accommodation_styles[0] if req.accommodation_styles else "hotel"
 
-        prompt = f"""Finde 4 Unterkunftsoptionen (3 Standard + 1 Geheimtipp) in {region}, {country}:
+        budget_min = round(budget_per_night * 0.75, 0)
+        budget_max = round(budget_per_night * 1.30, 0)
+
+        children_hint = ""
+        if children_count > 0:
+            children_hint = f"\nKinder: {children_count} — erwähne bitte Kindermenüs, Spielbereiche, Kinderanimation oder familienfreundliche Aktivitäten in der Beschreibung."
+
+        extra_hint = ""
+        if self.extra_instructions:
+            extra_hint = f"\nZusätzliche Wünsche des Gastes: {self.extra_instructions}"
+
+        prompt = f"""Finde genau 3 Unterkunftsoptionen in {region}, {country}.
 
 Reisende: {req.adults} Erwachsene{f', {children_count} Kinder' if children_count else ''}
 Nächte: {nights}
-Unterkunftsstile: {styles_str}
-Ausstattung gewünscht: {must_haves_str}
+Gewünschte Unterkunftstypen: {styles_str}
+Pflichtausstattung (must-haves): {must_haves_str}
 Suchradius: {req.hotel_radius_km} km
+Preisrahmen pro Nacht: CHF {budget_min:.0f} – CHF {budget_max:.0f}{children_hint}{extra_hint}
 
-Preisrahmen pro Nacht:
-- Budget:  CHF {budget_rate:.0f} (65%)
-- Komfort: CHF {comfort_rate:.0f} (100%)
-- Premium: CHF {premium_rate:.0f} (160%)
-
-WICHTIG: Verwende realistische, tatsächlich existierende Hotelnamen für {region}.
-Keine fiktiven Namen. Recherchiere Beispiele für die Region.
+REGELN:
+1. Alle 3 Optionen müssen vom Typ in [{styles_str}] sein — keine anderen Typen.
+2. Versuche, alle must-haves zu erfüllen. Falls nicht möglich, erkläre es kurz im Teaser.
+3. Die dritte Option (is_geheimtipp: true) soll etwas Besonderes/Ungewöhnliches für die Region sein (Glamping, Baumhaus, Boutique-Hotel, Weingut, Bauernhof, etc.) — aber ebenfalls vom erlaubten Typ.
+4. Verwende realistische, tatsächlich existierende Hotelnamen für {region}.
+5. Beschreibung: 1-2 Absätze auf Deutsch mit Zimmerausstattung, Hotelaktivitäten und spezifischen Services.
+6. matched_must_haves: Array mit den must-haves, die diese Unterkunft konkret erfüllt.
+7. hotel_website_url: Echte Hotelwebseite falls bekannt, sonst null.
 
 Gib exakt dieses JSON zurück:
 {{
@@ -80,74 +102,59 @@ Gib exakt dieses JSON zurück:
   "region": "{region}",
   "options": [
     {{
-      "id": "acc_{stop_id}_budget",
-      "option_type": "budget",
+      "id": "acc_{stop_id}_1",
       "name": "...",
-      "type": "{preferred_type}",
-      "price_per_night_chf": {budget_rate:.0f},
-      "total_price_chf": {budget_rate * nights:.0f},
-      "price_range": "€",
+      "type": "...",
+      "price_per_night_chf": {budget_min:.0f},
+      "total_price_chf": {budget_min * nights:.0f},
       "separate_rooms_available": false,
       "max_persons": 4,
-      "rating": 7.5,
+      "rating": 8.0,
       "features": ["WiFi", "Parkplatz"],
       "teaser": "...",
+      "description": "...",
       "suitable_for_children": true,
-      "booking_hint": "booking.com"
+      "is_geheimtipp": false,
+      "matched_must_haves": ["WiFi"],
+      "hotel_website_url": null
     }},
     {{
-      "id": "acc_{stop_id}_comfort",
-      "option_type": "comfort",
+      "id": "acc_{stop_id}_2",
       "name": "...",
-      "type": "{preferred_type}",
-      "price_per_night_chf": {comfort_rate:.0f},
-      "total_price_chf": {comfort_rate * nights:.0f},
-      "price_range": "€€",
+      "type": "...",
+      "price_per_night_chf": {budget_per_night:.0f},
+      "total_price_chf": {budget_per_night * nights:.0f},
       "separate_rooms_available": true,
       "max_persons": 4,
       "rating": 8.5,
       "features": ["WiFi", "Frühstück", "Parkplatz"],
       "teaser": "...",
+      "description": "...",
       "suitable_for_children": true,
-      "booking_hint": "booking.com"
+      "is_geheimtipp": false,
+      "matched_must_haves": ["WiFi", "Frühstück"],
+      "hotel_website_url": null
     }},
     {{
-      "id": "acc_{stop_id}_premium",
-      "option_type": "premium",
+      "id": "acc_{stop_id}_3",
       "name": "...",
-      "type": "{preferred_type}",
-      "price_per_night_chf": {premium_rate:.0f},
-      "total_price_chf": {premium_rate * nights:.0f},
-      "price_range": "€€€",
+      "type": "...",
+      "price_per_night_chf": {budget_per_night:.0f},
+      "total_price_chf": {budget_per_night * nights:.0f},
       "separate_rooms_available": true,
       "max_persons": 4,
       "rating": 9.0,
-      "features": ["WiFi", "Pool", "Spa", "Frühstück"],
-      "teaser": "...",
-      "suitable_for_children": true,
-      "booking_hint": "booking.com"
-    }},
-    {{
-      "id": "acc_{stop_id}_geheimtipp",
-      "option_type": "geheimtipp",
-      "name": "...",
-      "type": "bauernhof",
-      "price_per_night_chf": {comfort_rate:.0f},
-      "total_price_chf": {comfort_rate * nights:.0f},
-      "price_range": "€€",
-      "separate_rooms_available": true,
-      "max_persons": 4,
-      "rating": 9.2,
       "features": ["Natur", "Authentisch", "Ruhig"],
       "teaser": "...",
+      "description": "...",
       "suitable_for_children": true,
-      "booking_hint": "",
-      "geheimtipp_hinweis": "Buche direkt beim Hof oder über lokales Tourismusbüro."
+      "is_geheimtipp": true,
+      "matched_must_haves": [],
+      "hotel_website_url": null,
+      "geheimtipp_hinweis": "Buche direkt beim Betrieb oder über lokales Tourismusbüro."
     }}
   ]
-}}
-
-Der Geheimtipp soll etwas Besonderes/Ungewöhnliches für die Region sein (Bauernhof, Glamping, Baumhaus, Boutique-Hotel, Weingut, etc.). Geheimtipp hat KEINEN booking_hint."""
+}}"""
 
         await debug_logger.log(
             LogLevel.API, f"→ Anthropic API call: {self.model} (Stop {stop_id}: {region})",
@@ -161,7 +168,7 @@ Der Geheimtipp soll etwas Besonderes/Ungewöhnliches für die Region sein (Bauer
                     def call():
                         return self.client.messages.create(
                             model=self.model,
-                            max_tokens=1500,
+                            max_tokens=2500,
                             system=SYSTEM_PROMPT,
                             messages=[{"role": "user", "content": prompt}],
                         )
@@ -170,7 +177,7 @@ Der Geheimtipp soll etwas Besonderes/Ungewöhnliches für die Region sein (Bauer
                 def call():
                     return self.client.messages.create(
                         model=self.model,
-                        max_tokens=1500,
+                        max_tokens=2500,
                         system=SYSTEM_PROMPT,
                         messages=[{"role": "user", "content": prompt}],
                     )
@@ -182,28 +189,12 @@ Der Geheimtipp soll etwas Besonderes/Ungewöhnliches für die Region sein (Bauer
 
         arrival_day = stop.get("arrival_day", 1)
         checkin = req.start_date + timedelta(days=arrival_day - 1)
-        checkin_str = checkin.isoformat()
-        checkout_str = (checkin + timedelta(days=nights)).isoformat()
 
         async def enrich_option(opt: dict) -> dict:
-            opt_type = opt.get("option_type")
             hotel_name = opt.get("name", "")
+            is_geheimtipp = opt.get("is_geheimtipp", False)
 
-            if opt_type != "geheimtipp" and hotel_name:
-                real_price, _ = await fetch_real_price(
-                    hotel_name=hotel_name,
-                    region=region,
-                    checkin=checkin_str,
-                    checkout=checkout_str,
-                    adults=req.adults,
-                )
-                if real_price is not None:
-                    opt["price_per_night_chf"] = round(real_price, 0)
-                    opt["total_price_chf"] = round(real_price * nights, 0)
-                    opt["price_source"] = "booking.com"
-                else:
-                    opt["price_source"] = "estimate"
-
+            if hotel_name and not is_geheimtipp:
                 opt["booking_url"] = _build_booking_url(
                     hotel_name=hotel_name,
                     region=region,
@@ -214,10 +205,19 @@ Der Geheimtipp soll etwas Besonderes/Ungewöhnliches für die Region sein (Bauer
                 )
             else:
                 opt["booking_url"] = None
-                opt["price_source"] = "estimate"
 
-            actual_type = opt.get("type") or preferred_type
-            images = await fetch_unsplash_images(f"{region} {actual_type}", preferred_type)
+            if is_geheimtipp:
+                opt["booking_search_url"] = _build_booking_search_url(
+                    city=region,
+                    country=country,
+                    checkin=checkin,
+                    nights=nights,
+                    adults=req.adults,
+                    children=children_count,
+                )
+
+            actual_type = opt.get("type") or (req.accommodation_styles[0] if req.accommodation_styles else "hotel")
+            images = await fetch_unsplash_images(f"{region} {actual_type}", actual_type)
             opt.update(images)
             return opt
 

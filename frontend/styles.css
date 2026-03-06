@@ -386,7 +386,7 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .acc-stop-header h3 { flex: 1; font-size: 18px; }
 .acc-nights { color: var(--text-sub); font-size: 14px; }
 
-.acc-options-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+.acc-options-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
 @media (max-width: 900px) { .acc-options-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 520px) { .acc-options-grid { grid-template-columns: 1fr; } }
 .acc-option-card {
@@ -396,32 +396,32 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .acc-option-card:last-child { border-right: none; }
 .acc-option-card:hover { background: #f5f8ff; }
 .acc-option-card.selected { background: #e8f0ff; }
-.acc-option-card > *:not(.acc-card-img) { padding-left: 20px; padding-right: 20px; }
-.acc-option-card > .acc-option-type { margin-top: 14px; }
-.acc-option-card > .acc-features { padding-bottom: 16px; }
-.acc-option-type { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
-.acc-option-card h4 { font-size: 15px; margin-bottom: 4px; }
+.acc-option-card > *:not(.acc-card-img):not(.acc-description):not(.acc-links-row) { padding-left: 20px; padding-right: 20px; }
+.acc-option-card > .geheimtipp-badge { margin-top: 14px; }
+.acc-option-card h4 { font-size: 15px; margin-bottom: 4px; padding-top: 14px; }
 .acc-type-badge { display: inline-block; background: var(--border); padding: 2px 8px; border-radius: 999px; font-size: 11px; margin-bottom: 8px; }
 .acc-stars { color: #f5a623; margin-bottom: 6px; }
 .acc-price { margin-bottom: 4px; }
 .acc-price strong { font-size: 18px; color: var(--accent); }
 .acc-price span { font-size: 13px; color: var(--text-sub); }
-.price-source { font-size: 11px; padding: 2px 8px; border-radius: 999px; margin-bottom: 4px; display: inline-block; }
-.price-source.real { background: #d4edda; color: #155724; }
-.price-source.estimate { background: #fff3cd; color: #856404; }
 .acc-total { font-size: 13px; color: var(--text-sub); margin-bottom: 8px; }
-.acc-teaser { font-size: 13px; color: var(--text-sub); margin-bottom: 10px; }
-.acc-features { display: flex; flex-wrap: wrap; gap: 4px; }
+.acc-teaser { font-size: 13px; color: var(--text-sub); margin-bottom: 8px; }
+.acc-description { font-size: 13px; color: var(--text-sub); line-height: 1.6; margin-bottom: 12px; padding: 0 20px; }
+.acc-features { display: flex; flex-wrap: wrap; gap: 4px; padding-bottom: 12px; }
 .feature-tag { background: #f0f0f5; padding: 2px 7px; border-radius: 999px; font-size: 11px; }
+.feature-tag.must-have { background: #dff0ff; color: #0055b3; font-weight: 600; }
+
+.geheimtipp-badge { display: inline-block; background: #f0dfff; color: #6600b3; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
 
 .acc-geheimtipp-card { border-left: 3px solid #9b59b6; background: #fdf9ff; }
 .acc-geheimtipp-card:hover { background: #f7f0ff; }
 .acc-geheimtipp-card.selected { background: #ede0ff; border-left-color: #6600b3; }
 
+.acc-links-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 20px 14px; margin-top: auto; }
+
 .acc-booking-link {
   display: inline-block;
-  margin: 8px 20px 14px;
-  padding: 6px 12px;
+  padding: 5px 10px;
   font-size: 12px;
   font-weight: 500;
   background: #003580;
@@ -430,6 +430,21 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
   text-decoration: none;
 }
 .acc-booking-link:hover { background: #00224f; }
+.acc-booking-search { background: #5856d6; }
+.acc-booking-search:hover { background: #3634b3; }
+
+.acc-website-link {
+  display: inline-block;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  text-decoration: none;
+}
+.acc-website-link:hover { background: #f0f6ff; }
 
 .acc-geheimtipp-hint {
   margin: 6px 20px 10px;
@@ -438,6 +453,14 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
   font-style: italic;
   line-height: 1.4;
 }
+
+.acc-resarch-row { display: flex; gap: 10px; padding: 12px 20px 16px; border-top: 1px solid var(--border); background: #f9f9fb; }
+.acc-resarch-input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; }
+.acc-resarch-input:focus { outline: none; border-color: var(--accent); }
+.acc-error { padding: 20px; color: var(--danger); font-size: 13px; }
+
+.acc-guide-description { font-size: 13px; color: var(--text-sub); line-height: 1.6; margin-top: 10px; }
+.acc-guide-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 
 .accommodation-actions { display: flex; justify-content: space-between; margin-top: 24px; }
 

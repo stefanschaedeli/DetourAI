@@ -122,9 +122,15 @@ function renderStops(plan) {
                 ${buildImageGallery(acc.image_overview, acc.image_mood, acc.image_customer, esc(acc.name))}
                 <div class="acc-summary">
                   <strong>${esc(acc.name)}</strong>
+                  ${acc.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
                   <span class="acc-type-tag">${esc(acc.type || '')}</span>
-                  <span class="acc-price-tag">CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>
-                  ${acc.booking_url ? `<a href="${esc(acc.booking_url)}" target="_blank" class="booking-link">Buchen</a>` : ''}
+                  <span class="acc-price-tag">ca. CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>
+                </div>
+                ${acc.description ? `<div class="acc-guide-description">${highlightMustHaves(acc.description, acc.matched_must_haves || [])}</div>` : ''}
+                <div class="acc-guide-links">
+                  ${acc.booking_url ? `<a href="${safeUrl(acc.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com anschauen →</a>` : ''}
+                  ${acc.booking_search_url ? `<a href="${safeUrl(acc.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Bei Booking.com suchen →</a>` : ''}
+                  ${acc.hotel_website_url ? `<a href="${safeUrl(acc.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite →</a>` : ''}
                 </div>
               </div>
             ` : ''}

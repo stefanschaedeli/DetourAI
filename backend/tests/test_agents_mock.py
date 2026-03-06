@@ -62,6 +62,7 @@ def test_route_architect_json_parsing(mocker):
     mock_client.messages = mock_messages
 
     mocker.patch('anthropic.Anthropic', return_value=mock_client)
+    mocker.patch('agents.route_architect.get_client', return_value=mock_client)
     mocker.patch('utils.retry_helper.asyncio.to_thread', new=AsyncMock(return_value=mock_response))
 
     request = TravelRequest(
@@ -119,6 +120,7 @@ def test_accommodation_researcher_instantiation(mocker):
 
     mock_client = MagicMock()
     mocker.patch('anthropic.Anthropic', return_value=mock_client)
+    mocker.patch('agents.accommodation_researcher.get_client', return_value=mock_client)
 
     request = TravelRequest(
         start_location="Liestal",
@@ -130,6 +132,130 @@ def test_accommodation_researcher_instantiation(mocker):
     )
     agent = AccommodationResearcherAgent(request, "test_job")
     assert agent is not None
+    assert agent.extra_instructions == ""
+
+    agent2 = AccommodationResearcherAgent(request, "test_job", extra_instructions="am See")
+    assert agent2.extra_instructions == "am See"
+
+
+def test_accommodation_find_options_structure(mocker):
+    import asyncio
+    from models.travel_request import TravelRequest
+    from agents.accommodation_researcher import AccommodationResearcherAgent
+
+    mock_options = [
+        {
+            "id": "acc_1_1",
+            "name": "Hotel Seeblick",
+            "type": "hotel",
+            "price_per_night_chf": 120,
+            "total_price_chf": 240,
+            "separate_rooms_available": False,
+            "max_persons": 4,
+            "rating": 8.0,
+            "features": ["WiFi", "Parkplatz"],
+            "teaser": "Gemütliches Hotel",
+            "description": "Das Hotel Seeblick bietet komfortable Zimmer mit WiFi und Parkplatz.",
+            "suitable_for_children": True,
+            "is_geheimtipp": False,
+            "matched_must_haves": ["WiFi"],
+            "hotel_website_url": None,
+        },
+        {
+            "id": "acc_1_2",
+            "name": "Ferienwohnung Alpenblick",
+            "type": "apartment",
+            "price_per_night_chf": 150,
+            "total_price_chf": 300,
+            "separate_rooms_available": True,
+            "max_persons": 4,
+            "rating": 8.5,
+            "features": ["WiFi", "Küche", "Parkplatz"],
+            "teaser": "Moderne Ferienwohnung",
+            "description": "Moderne Ferienwohnung mit vollausgestatteter Küche und WiFi.",
+            "suitable_for_children": True,
+            "is_geheimtipp": False,
+            "matched_must_haves": ["WiFi", "Küche"],
+            "hotel_website_url": "https://example.com",
+        },
+        {
+            "id": "acc_1_3",
+            "name": "Bergbauernhof Sonnenschein",
+            "type": "bauernhof",
+            "price_per_night_chf": 100,
+            "total_price_chf": 200,
+            "separate_rooms_available": True,
+            "max_persons": 6,
+            "rating": 9.2,
+            "features": ["Natur", "Authentisch"],
+            "teaser": "Echter Bauernhof",
+            "description": "Authentischer Bergbauernhof mit Direktkontakt zu Tieren.",
+            "suitable_for_children": True,
+            "is_geheimtipp": True,
+            "matched_must_haves": [],
+            "hotel_website_url": None,
+            "geheimtipp_hinweis": "Direkt beim Hof buchen.",
+        },
+    ]
+
+    mock_api_response = MagicMock()
+    mock_api_response.content = [MagicMock(text=json.dumps({
+        "stop_id": 1, "region": "Annecy", "options": mock_options
+    }))]
+
+    mock_messages = MagicMock()
+    mock_messages.create.return_value = mock_api_response
+    mock_client = MagicMock()
+    mock_client.messages = mock_messages
+    mocker.patch('anthropic.Anthropic', return_value=mock_client)
+    mocker.patch('agents.accommodation_researcher.get_client', return_value=mock_client)
+    mocker.patch('utils.retry_helper.asyncio.to_thread', new=AsyncMock(return_value=mock_api_response))
+    mocker.patch('utils.image_fetcher.fetch_unsplash_images', new=AsyncMock(
+        return_value={"image_overview": None, "image_mood": None, "image_customer": None}
+    ))
+
+    request = TravelRequest(
+        start_location="Liestal",
+        main_destination="Paris",
+        start_date="2026-06-01",
+        end_date="2026-06-10",
+        total_days=10,
+        budget_chf=5000,
+        accommodation_styles=["hotel", "apartment"],
+        accommodation_must_haves=["WiFi"],
+    )
+    agent = AccommodationResearcherAgent(request, "test_job")
+
+    stop = {"id": 1, "region": "Annecy", "country": "FR", "nights": 2, "arrival_day": 3}
+
+    async def _run():
+        return await agent.find_options(stop, budget_per_night=150.0)
+
+    result = asyncio.run(_run())
+
+    options = result.get("options", [])
+    assert len(options) == 3
+
+    # Check new fields present, old fields absent
+    for opt in options:
+        assert "description" in opt
+        assert "matched_must_haves" in opt
+        assert "is_geheimtipp" in opt
+        assert "option_type" not in opt
+        assert "price_range" not in opt
+        assert "price_source" not in opt
+        assert "booking_hint" not in opt
+
+    # Geheimtipp is option 3
+    geheimtipp = options[2]
+    assert geheimtipp["is_geheimtipp"] is True
+    assert "booking_search_url" in geheimtipp
+    assert geheimtipp.get("booking_url") is None
+
+    # Non-geheimtipp has booking_url
+    normal = options[0]
+    assert normal["is_geheimtipp"] is False
+    assert normal.get("booking_url") is not None
 
 
 # ---------------------------------------------------------------------------

@@ -61,7 +61,12 @@ function buildAllStopPanels(stops) {
           <div class="shimmer-card"></div>
           <div class="shimmer-card"></div>
           <div class="shimmer-card"></div>
-          <div class="shimmer-card"></div>
+        </div>
+        <div class="acc-resarch-row" id="acc-resarch-row-${stop.id}">
+          <input class="acc-resarch-input" id="acc-resarch-input-${stop.id}"
+                 placeholder="z.B. ruhiger am See, mit Sauna…" />
+          <button class="btn btn-secondary acc-resarch-btn"
+                  onclick="researchAccommodation(${stop.id})">Neu suchen</button>
         </div>
       </div>
     `;
@@ -70,17 +75,70 @@ function buildAllStopPanels(stops) {
 
 function onAccommodationLoading(data) {
   const stopId = data.stop_id;
-  const panel = document.getElementById(`acc-panel-${stopId}`);
-  if (!panel) return;
-  const grid = panel.querySelector('.acc-options-grid');
+  const grid = document.getElementById(`acc-options-${stopId}`);
   if (grid) {
-    grid.innerHTML = '<div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div>';
+    grid.innerHTML = '<div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div>';
   }
 }
 
-function optTypeLabel(type) {
-  const labels = { budget: 'Budget', comfort: 'Komfort', premium: 'Premium', geheimtipp: 'Geheimtipp' };
-  return labels[type] || esc(type);
+function renderAccCards(stopId, options, mustHaves) {
+  const mh = mustHaves || (S.allStops.find(s => s.id == stopId) ? [] : []);
+  return options.map((opt, i) => {
+    const selectedClass = S.pendingSelections[stopId] === i ? 'selected' : '';
+    const stars = opt.rating ? '★'.repeat(Math.round(opt.rating / 2)) : '';
+    const features = (opt.features || []).map(f => {
+      const isMH = (opt.matched_must_haves || []).some(m => m.toLowerCase() === f.toLowerCase());
+      return `<span class="feature-tag${isMH ? ' must-have' : ''}">${esc(f)}</span>`;
+    }).slice(0, 5).join('');
+    const imgHtml = buildImageGallery(
+      opt.image_overview, opt.image_mood, opt.image_customer, esc(opt.name)
+    );
+    const isGeheimtipp = opt.is_geheimtipp === true;
+    const cardClass = isGeheimtipp ? 'acc-option-card acc-geheimtipp-card' : 'acc-option-card';
+    const geheimtippBadge = isGeheimtipp
+      ? `<span class="geheimtipp-badge">Geheimtipp</span>`
+      : '';
+    const descHtml = opt.description
+      ? `<div class="acc-description">${highlightMustHaves(opt.description, opt.matched_must_haves || [])}</div>`
+      : '';
+    const geheimtippHint = (isGeheimtipp && opt.geheimtipp_hinweis)
+      ? `<div class="acc-geheimtipp-hint">${esc(opt.geheimtipp_hinweis)}</div>`
+      : '';
+
+    // Booking links
+    const bookingDeepLink = (!isGeheimtipp && opt.booking_url)
+      ? `<a class="acc-booking-link" href="${safeUrl(opt.booking_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Bei Booking.com anschauen →</a>`
+      : '';
+    const bookingSearchLink = (isGeheimtipp && opt.booking_search_url)
+      ? `<a class="acc-booking-link acc-booking-search" href="${safeUrl(opt.booking_search_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Bei Booking.com suchen →</a>`
+      : '';
+    const websiteLink = opt.hotel_website_url
+      ? `<a class="acc-website-link" href="${safeUrl(opt.hotel_website_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Hotelwebseite →</a>`
+      : '';
+
+    return `
+      <div class="${cardClass} ${selectedClass}" onclick="selectAccommodationInPanel(${stopId}, ${i})"
+           data-stop="${stopId}" data-idx="${i}">
+        ${imgHtml}
+        ${geheimtippBadge}
+        <h4>${esc(opt.name)}</h4>
+        <div class="acc-type-badge">${esc(opt.type)}</div>
+        ${stars ? `<div class="acc-stars">${stars}</div>` : ''}
+        <div class="acc-price">
+          <strong>ca. CHF ${(opt.price_per_night_chf || 0).toLocaleString('de-CH')}</strong>
+          <span>/Nacht</span>
+        </div>
+        <div class="acc-total">Total: ca. CHF ${(opt.total_price_chf || 0).toLocaleString('de-CH')}</div>
+        <p class="acc-teaser">${esc(opt.teaser)}</p>
+        ${descHtml}
+        <div class="acc-features">${features}</div>
+        ${geheimtippHint}
+        <div class="acc-links-row">
+          ${bookingDeepLink}${bookingSearchLink}${websiteLink}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function onAccommodationLoaded(data) {
@@ -93,49 +151,7 @@ function onAccommodationLoaded(data) {
   const grid = document.getElementById(`acc-options-${stopId}`);
   if (!grid) return;
 
-  grid.innerHTML = options.map((opt, i) => {
-    const selectedClass = S.pendingSelections[stopId] === i ? 'selected' : '';
-    const stars = opt.rating ? '★'.repeat(Math.round(opt.rating / 2)) : '';
-    const features = (opt.features || []).slice(0, 4).map(f => `<span class="feature-tag">${esc(f)}</span>`).join('');
-    const imgHtml = buildImageGallery(
-      opt.image_overview, opt.image_mood, opt.image_customer, esc(opt.name)
-    );
-    const isGeheimtipp = opt.option_type === 'geheimtipp';
-    const cardClass = isGeheimtipp ? 'acc-option-card acc-geheimtipp-card' : 'acc-option-card';
-    const bookingBtn = (!isGeheimtipp && opt.booking_url)
-      ? `<a class="acc-booking-link" href="${esc(opt.booking_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Bei Booking.com anschauen →</a>`
-      : '';
-    const geheimtippHint = (isGeheimtipp && opt.geheimtipp_hinweis)
-      ? `<div class="acc-geheimtipp-hint">${esc(opt.geheimtipp_hinweis)}</div>`
-      : '';
-    const isRealPrice = opt.price_source === 'booking.com';
-    const priceLabel = isRealPrice
-      ? `CHF ${(opt.price_per_night_chf || 0).toLocaleString('de-CH')}`
-      : `ca. CHF ${(opt.price_per_night_chf || 0).toLocaleString('de-CH')}`;
-    const priceNote = isRealPrice
-      ? `<span class="price-source real">Booking.com-Preis</span>`
-      : `<span class="price-source estimate">Schätzung</span>`;
-    return `
-      <div class="${cardClass} ${selectedClass}" onclick="selectAccommodationInPanel(${stopId}, ${i})"
-           data-stop="${stopId}" data-idx="${i}">
-        ${imgHtml}
-        <div class="acc-option-type type-${esc(opt.option_type)}">${optTypeLabel(opt.option_type)}</div>
-        <h4>${esc(opt.name)}</h4>
-        <div class="acc-type-badge">${esc(opt.type)}</div>
-        ${stars ? `<div class="acc-stars">${stars}</div>` : ''}
-        <div class="acc-price">
-          <strong>${priceLabel}</strong>
-          <span>/Nacht</span>
-        </div>
-        ${priceNote}
-        <div class="acc-total">Total: CHF ${(opt.total_price_chf || 0).toLocaleString('de-CH')}</div>
-        <p class="acc-teaser">${esc(opt.teaser)}</p>
-        <div class="acc-features">${features}</div>
-        ${geheimtippHint}
-        ${bookingBtn}
-      </div>
-    `;
-  }).join('');
+  grid.innerHTML = renderAccCards(stopId, options, []);
 }
 
 function onAccommodationsAllLoaded(data) {
@@ -203,6 +219,43 @@ function renderBudgetState(bs) {
       <strong>CHF ${(bs.total_budget_chf || 0).toLocaleString('de-CH')}</strong>
     </div>
   `;
+}
+
+async function researchAccommodation(stopId) {
+  const input = document.getElementById(`acc-resarch-input-${stopId}`);
+  const extraInstructions = input ? input.value.trim() : '';
+
+  const grid = document.getElementById(`acc-options-${stopId}`);
+  if (grid) {
+    grid.innerHTML = '<div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div>';
+  }
+
+  try {
+    const result = await apiResearchAccommodation(S.jobId, stopId, extraInstructions);
+    const options = result.options || [];
+    const stop = result.stop || {};
+
+    allStopPanels[stopId] = { stop, options };
+
+    // Clear selection for this stop
+    delete S.pendingSelections[stopId];
+    S.accSelectionCount = Object.keys(S.pendingSelections).length;
+
+    if (grid) {
+      grid.innerHTML = renderAccCards(stopId, options, []);
+    }
+
+    updateBudgetFromSelections();
+
+    const btn = document.getElementById('start-planning-btn');
+    if (btn) {
+      btn.disabled = S.accSelectionCount < S.allStops.length;
+    }
+  } catch (err) {
+    if (grid) {
+      grid.innerHTML = `<div class="acc-error">Fehler bei der Suche: ${esc(err.message)}</div>`;
+    }
+  }
 }
 
 async function startPlanningWithAllSelections() {
