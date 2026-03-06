@@ -97,12 +97,15 @@ _CORS_ORIGINS = os.getenv(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_CORS_ORIGINS,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 
 OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", str(Path(__file__).parent.parent / "outputs")))
 OUTPUTS_DIR.mkdir(exist_ok=True)
+
+from utils.travel_db import _init_db, save_travel, list_travels, get_travel, delete_travel
+_init_db()
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
@@ -1333,6 +1336,42 @@ async def health():
     except Exception:
         active = 0
     return {"status": "ok", "active_jobs": active}
+
+
+# ---------------------------------------------------------------------------
+# Travel history endpoints (SQLite)
+# ---------------------------------------------------------------------------
+
+class SaveTravelRequest(BaseModel):
+    plan: dict
+
+
+@app.get("/api/travels")
+async def api_list_travels():
+    return {"travels": await list_travels()}
+
+
+@app.post("/api/travels", status_code=201)
+async def api_save_travel(body: SaveTravelRequest):
+    travel_id = await save_travel(body.plan)
+    if travel_id is None:
+        return {"saved": False, "id": None}
+    return {"saved": True, "id": travel_id}
+
+
+@app.get("/api/travels/{travel_id}")
+async def api_get_travel(travel_id: int):
+    plan = await get_travel(travel_id)
+    if plan is None:
+        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+    return plan
+
+
+@app.delete("/api/travels/{travel_id}")
+async def api_delete_travel(travel_id: int):
+    if not await delete_travel(travel_id):
+        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+    return {"deleted": True, "id": travel_id}
 
 
 # ---------------------------------------------------------------------------

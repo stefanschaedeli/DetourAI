@@ -130,6 +130,9 @@ function onJobComplete(data) {
   // Save to localStorage
   lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan: data });
 
+  // Persist to DB (non-blocking, non-fatal)
+  apiSaveTravel(data).catch(err => console.warn('DB-Speicherung:', err.message));
+
   markAllStopsDone();
 
   showLoading('Reiseführer wird aufbereitet…');

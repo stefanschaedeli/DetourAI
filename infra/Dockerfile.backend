@@ -5,7 +5,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
 RUN addgroup --system appgroup \
  && adduser --system --ingroup appgroup appuser \
- && mkdir -p /app/outputs \
- && chown -R appuser:appgroup /app/outputs
+ && mkdir -p /app/outputs /app/data \
+ && chown -R appuser:appgroup /app/outputs /app/data
 USER appuser
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -9,7 +9,6 @@ function initForm() {
   initBudgetSliders();
   setupFormAutoSave();
   restoreFormFromCache();
-  checkResume();
   updateQuickSubmitBar();
 
   // Close settings menu on click outside
@@ -545,22 +544,3 @@ function clearAppData() {
   showSection('form-section');
 }
 
-function checkResume() {
-  const result = lsGet(LS_RESULT);
-  if (result && result.jobId) {
-    document.getElementById('resume-banner').style.display = 'flex';
-  }
-}
-
-function resumeResult() {
-  const saved = lsGet(LS_RESULT);
-  if (!saved) return;
-  S.jobId = saved.jobId;
-  S.result = saved.plan;
-  showTravelGuide(saved.plan);
-  showSection('travel-guide');
-}
-
-function dismissResume() {
-  document.getElementById('resume-banner').style.display = 'none';
-}

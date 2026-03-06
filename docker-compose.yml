@@ -15,9 +15,11 @@ services:
       - TEST_MODE=${TEST_MODE:-true}
       - REDIS_URL=redis://redis:6379
       - OUTPUTS_DIR=/app/outputs
+      - DATA_DIR=/app/data
     depends_on: [redis]
     volumes:
       - ./outputs:/app/outputs
+      - travel_data:/app/data
 
   celery:
     image: travelman/backend:latest
@@ -29,7 +31,10 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - TEST_MODE=${TEST_MODE:-true}
       - REDIS_URL=redis://redis:6379
+      - DATA_DIR=/app/data
     depends_on: [redis]
+    volumes:
+      - travel_data:/app/data
 
   frontend:
     image: travelman/frontend:latest
@@ -38,3 +43,6 @@ services:
       dockerfile: infra/Dockerfile.frontend
     ports: ["80:8080"]
     depends_on: [backend]
+
+volumes:
+  travel_data:

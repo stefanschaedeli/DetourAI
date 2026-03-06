@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from models.travel_request import TravelRequest, Child, ViaPoint, MandatoryActivity
 from models.travel_response import TravelPlan, TravelStop, DayPlan, CostEstimate, StopAccommodation, StopActivity, Restaurant
 from models.stop_option import StopOption, StopOptionsResponse, StopSelectRequest
-from models.accommodation_option import AccommodationOption, BudgetState, AccommodationSelectRequest
+from models.accommodation_option import AccommodationOption, BudgetState, AccommodationSelectRequest, AccommodationResearchRequest
 
 
 # ---------------------------------------------------------------------------

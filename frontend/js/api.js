@@ -137,6 +137,25 @@ async function apiRecomputeOptions(jobId, extraInstructions) {
   return res.json();
 }
 
+async function apiSaveTravel(plan) {
+  const res = await _fetchQuiet(`${API}/travels`, {
+    method: 'POST', body: JSON.stringify({ plan }),
+  });
+  return res.json();
+}
+
+async function apiGetTravels() {
+  return (await _fetchQuiet(`${API}/travels`)).json();
+}
+
+async function apiGetTravel(id) {
+  return (await _fetchQuiet(`${API}/travels/${id}`)).json();
+}
+
+async function apiDeleteTravel(id) {
+  return (await _fetchQuiet(`${API}/travels/${id}`, { method: 'DELETE' })).json();
+}
+
 /**
  * Open SSE connection for a job.
  * @param {string} jobId

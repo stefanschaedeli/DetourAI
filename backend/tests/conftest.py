@@ -1,8 +1,13 @@
 import pytest
 import sys
 import os
+import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+# Point DATA_DIR to a writable temp location before main.py is imported
+# (main.py calls _init_db() at module level using this env var)
+os.environ.setdefault('DATA_DIR', tempfile.mkdtemp())
 
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock

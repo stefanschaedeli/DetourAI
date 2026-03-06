@@ -19,6 +19,7 @@
 <header class="app-header">
   <div class="app-logo">Travelman</div>
   <div class="app-subtitle">KI-gestützter Reiseplaner</div>
+  <button class="btn-my-travels" onclick="openTravelsDrawer()">Meine Reisen</button>
   <button class="btn-clear-data" onclick="clearAppData()" title="Daten löschen und neu starten">Neu starten</button>
   <div class="header-settings">
     <button class="btn-icon settings-btn" onclick="toggleSettings()" title="Einstellungen" aria-label="Einstellungen">
@@ -50,13 +51,6 @@
 </header>
 
 <main>
-
-  <!-- ============================================================ Resume banner -->
-  <div class="resume-banner" id="resume-banner">
-    <p>Es gibt einen gespeicherten Reiseplan. Möchten Sie dort weitermachen?</p>
-    <button class="btn btn-primary" onclick="resumeResult()">Fortsetzen</button>
-    <button class="btn btn-secondary" onclick="dismissResume()">Ignorieren</button>
-  </div>
 
   <!-- ============================================================ Form section -->
   <section class="section active" id="form-section">
@@ -448,6 +442,21 @@
   <div id="lightbox-caption" class="lightbox-caption"></div>
 </div>
 
+<!-- ======================================================== Travels drawer -->
+<div id="travels-drawer-overlay" class="travels-drawer-overlay">
+  <div id="travels-drawer" class="travels-drawer" role="dialog" aria-label="Meine Reisen">
+    <div class="travels-drawer-header">
+      <h2>Meine Reisen</h2>
+      <button class="btn-icon" onclick="closeTravelsDrawer()" aria-label="Schliessen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div id="travels-list" class="travels-list"></div>
+  </div>
+</div>
+
 <!-- ======================================================== Debug panel -->
 <button class="debug-toggle" onclick="toggleDebugLog()">Debug</button>
 <div class="debug-panel" id="debug-panel">
@@ -467,6 +476,7 @@
 <script src="js/accommodation.js"></script>
 <script src="js/progress.js"></script>
 <script src="js/guide.js"></script>
+<script src="js/travels.js"></script>
 
 <script>
   // Initialize on DOM ready

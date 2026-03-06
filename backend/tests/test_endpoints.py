@@ -291,3 +291,81 @@ def test_research_accommodation_success(client, mock_redis, mocker):
     assert data["stop_id"] == "1"
     assert len(data["options"]) == 3
     assert mock_redis.setex.called
+
+
+# ---------------------------------------------------------------------------
+# Travel history endpoints
+# ---------------------------------------------------------------------------
+
+SAMPLE_PLAN = {
+    "job_id": "abc123",
+    "start_location": "Liestal",
+    "stops": [{"region": "Annecy", "id": 1}],
+    "day_plans": [{}, {}],
+    "cost_estimate": {"total_chf": 1200.0},
+}
+
+
+def test_list_travels_empty(client, mocker):
+    mocker.patch('main.list_travels', new=AsyncMock(return_value=[]))
+    r = client.get("/api/travels")
+    assert r.status_code == 200
+    assert r.json() == {"travels": []}
+
+
+def test_list_travels(client, mocker):
+    rows = [{"id": 1, "job_id": "abc", "title": "Test", "created_at": "2026-01-01",
+             "start_location": "Liestal", "destination": "Annecy",
+             "total_days": 2, "num_stops": 1, "total_cost_chf": 1200.0}]
+    mocker.patch('main.list_travels', new=AsyncMock(return_value=rows))
+    r = client.get("/api/travels")
+    assert r.status_code == 200
+    assert len(r.json()["travels"]) == 1
+
+
+def test_save_travel(client, mocker):
+    mocker.patch('main.save_travel', new=AsyncMock(return_value=1))
+    r = client.post("/api/travels", json={"plan": SAMPLE_PLAN})
+    assert r.status_code == 201
+    data = r.json()
+    assert data["saved"] is True
+    assert data["id"] == 1
+
+
+def test_save_travel_duplicate(client, mocker):
+    mocker.patch('main.save_travel', new=AsyncMock(return_value=None))
+    r = client.post("/api/travels", json={"plan": SAMPLE_PLAN})
+    assert r.status_code == 201
+    data = r.json()
+    assert data["saved"] is False
+    assert data["id"] is None
+
+
+def test_get_travel(client, mocker):
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN))
+    r = client.get("/api/travels/1")
+    assert r.status_code == 200
+    assert r.json()["job_id"] == "abc123"
+
+
+def test_get_travel_not_found(client, mocker):
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=None))
+    r = client.get("/api/travels/9999")
+    assert r.status_code == 404
+    assert "9999" in r.json()["detail"]
+
+
+def test_delete_travel(client, mocker):
+    mocker.patch('main.delete_travel', new=AsyncMock(return_value=True))
+    r = client.delete("/api/travels/1")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["deleted"] is True
+    assert data["id"] == 1
+
+
+def test_delete_travel_not_found(client, mocker):
+    mocker.patch('main.delete_travel', new=AsyncMock(return_value=False))
+    r = client.delete("/api/travels/9999")
+    assert r.status_code == 404
+    assert "9999" in r.json()["detail"]

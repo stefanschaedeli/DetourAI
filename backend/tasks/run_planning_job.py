@@ -50,6 +50,16 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
         job2["result"] = result
         redis_client.setex(f"job:{job_id}", 86400, json.dumps(job2))
 
+        # Backend auto-save guard — fires even if SSE connection dropped
+        try:
+            from utils.travel_db import save_travel as _db_save
+            await _db_save(result)
+        except Exception as db_err:
+            await debug_logger.log(
+                LogLevel.WARNING, f"DB-Speicherung fehlgeschlagen: {db_err}",
+                job_id=job_id, agent="RunPlanningJob",
+            )
+
         await debug_logger.log(
             LogLevel.SUCCESS, "Planungsauftrag abgeschlossen",
             job_id=job_id, agent="RunPlanningJob",
