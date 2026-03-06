@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-DATA_DIR = Path(os.getenv("DATA_DIR", "/app/data"))
+DATA_DIR = Path(os.getenv("DATA_DIR", str(Path(__file__).parent.parent.parent / "data")))
 DB_PATH  = DATA_DIR / "travels.db"
 
 
