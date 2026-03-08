@@ -53,6 +53,8 @@ class TravelRequest(BaseModel):
     max_drive_hours_per_day: float = Field(default=4.5, ge=0.5, le=16)
     min_nights_per_stop: int = Field(default=1, ge=1, le=14)
     max_nights_per_stop: int = Field(default=5, ge=1, le=30)
+    proximity_origin_pct: int = Field(default=10, ge=0, le=30)   # % of segment km — min distance from trip start
+    proximity_target_pct: int = Field(default=15, ge=0, le=30)   # % of segment km — min distance from segment target
 
     # Accommodation
     accommodation_styles: List[str] = Field(default=[], max_length=5)   # hotel, apartment, camping, hostel, airbnb

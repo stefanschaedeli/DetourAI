@@ -127,6 +127,22 @@
         </div>
       </div>
 
+      <div class="form-group">
+        <label>Mindestabstand vom Startpunkt: <strong id="proximity-origin-display">10</strong>% der Streckenlänge</label>
+        <div class="slider-row">
+          <input type="range" id="proximity-origin" min="0" max="30" value="10" step="1">
+        </div>
+        <div class="form-hint">Orte näher als dieser Anteil der Gesamtstrecke am Startpunkt werden ausgeschlossen. 0 = kein Filter.</div>
+      </div>
+
+      <div class="form-group">
+        <label>Mindestabstand vom Ziel: <strong id="proximity-target-display">15</strong>% der Streckenlänge</label>
+        <div class="slider-row">
+          <input type="range" id="proximity-target" min="0" max="30" value="15" step="1">
+        </div>
+        <div class="form-hint">Orte zu nahe am Ziel werden ausgeschlossen. 0 = kein Filter.</div>
+      </div>
+
       <div class="form-nav">
         <div></div>
         <button class="btn btn-primary" onclick="nextStep()">Weiter →</button>
@@ -499,7 +515,7 @@
     initForm();
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
     // Sync slider displays
-    ['hotel-radius', 'activities-radius', 'max-drive-hours'].forEach(id => {
+    ['hotel-radius', 'activities-radius', 'max-drive-hours', 'proximity-origin', 'proximity-target'].forEach(id => {
       const s = document.getElementById(id);
       const d = document.getElementById(id + '-display');
       if (s && d) { d.textContent = s.value; s.oninput = () => { d.textContent = s.value; saveFormToCache(); }; }

@@ -355,6 +355,8 @@ function buildPayload() {
     max_restaurants_per_stop: parseInt(document.getElementById('max-restaurants')?.value) || 3,
     activities_radius_km: parseInt(document.getElementById('activities-radius')?.value) || 30,
     max_drive_hours_per_day: parseFloat(document.getElementById('max-drive-hours')?.value) || 4.5,
+    proximity_origin_pct: parseInt(document.getElementById('proximity-origin')?.value) ?? 10,
+    proximity_target_pct: parseInt(document.getElementById('proximity-target')?.value) ?? 15,
     min_nights_per_stop: parseInt(document.getElementById('min-nights')?.value) || 1,
     max_nights_per_stop: parseInt(document.getElementById('max-nights')?.value) || 5,
     accommodation_styles:    getSelectedAccStyles(),

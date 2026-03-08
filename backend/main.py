@@ -270,6 +270,8 @@ async def _calc_route_geometry(
     stops_remaining: int,
     max_drive_hours: float,
     origin_location: str = "",
+    proximity_origin_pct: int = 10,
+    proximity_target_pct: int = 15,
 ) -> dict:
     """
     Geocodes from/to in parallel, queries OSRM for the full segment distance,
@@ -304,8 +306,8 @@ async def _calc_route_geometry(
         "stops_remaining": n,
         "ideal_km_from_prev": ideal_km,
         "ideal_hours_from_prev": min(ideal_hours, max_drive_hours),
-        "min_km_from_origin": max(50.0, total_km * 0.10),
-        "min_km_from_target": max(50.0, total_km * 0.15),
+        "min_km_from_origin": max(50.0, total_km * proximity_origin_pct / 100) if proximity_origin_pct > 0 else 0.0,
+        "min_km_from_target": max(50.0, total_km * proximity_target_pct / 100) if proximity_target_pct > 0 else 0.0,
         "origin_location": origin_location or from_location,
     }
 
@@ -318,6 +320,8 @@ async def _calc_route_geometry_cached(
     stops_remaining: int,
     max_drive_hours: float,
     origin_location: str = "",
+    proximity_origin_pct: int = 10,
+    proximity_target_pct: int = 15,
 ) -> dict:
     """Cache wrapper around _calc_route_geometry — keyed by segment + stops count."""
     cache_key = f"{from_location}|{to_location}|{stops_remaining}"
@@ -325,7 +329,10 @@ async def _calc_route_geometry_cached(
     if cache_key in cache:
         return cache[cache_key]
 
-    result = await _calc_route_geometry(from_location, to_location, stops_remaining, max_drive_hours, origin_location)
+    result = await _calc_route_geometry(
+        from_location, to_location, stops_remaining, max_drive_hours, origin_location,
+        proximity_origin_pct, proximity_target_pct,
+    )
     if result:
         cache[cache_key] = result
         save_job(job_id, job)
@@ -721,6 +728,8 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
         job, job_id, request.start_location, segment_target,
         stops_in_segment, request.max_drive_hours_per_day,
         origin_location=request.start_location,
+        proximity_origin_pct=request.proximity_origin_pct,
+        proximity_target_pct=request.proximity_target_pct,
     )
 
     if not route_geo:
@@ -858,6 +867,8 @@ async def set_rundreise_mode(job_id: str, body: SetRundreiseModeRequest):
             job, job_id, prev_location, segment_target,
             max(1, route_status["days_remaining"] // (1 + request.min_nights_per_stop)),
             request.max_drive_hours_per_day, origin_location=request.start_location,
+            proximity_origin_pct=request.proximity_origin_pct,
+            proximity_target_pct=request.proximity_target_pct,
         )
     if body.activate:
         geo = _apply_rundreise_geometry(geo, route_status["days_remaining"], request.max_drive_hours_per_day)
@@ -968,6 +979,8 @@ async def select_stop(job_id: str, body: StopSelectRequest):
         next_geo = await _calc_route_geometry_cached(
             job, job_id, prev_loc, segment_target, stops_in_new_seg, request.max_drive_hours_per_day,
             origin_location=request.start_location,
+            proximity_origin_pct=request.proximity_origin_pct,
+            proximity_target_pct=request.proximity_target_pct,
         )
 
         agent = StopOptionsFinderAgent(request, job_id)
@@ -1045,6 +1058,8 @@ async def select_stop(job_id: str, body: StopSelectRequest):
         next_geo = await _calc_route_geometry_cached(
             job, job_id, prev_loc_else, segment_target, stops_left, request.max_drive_hours_per_day,
             origin_location=request.start_location,
+            proximity_origin_pct=request.proximity_origin_pct,
+            proximity_target_pct=request.proximity_target_pct,
         )
         if job.get("rundreise_mode"):
             next_geo = _apply_rundreise_geometry(next_geo, route_status["days_remaining"], request.max_drive_hours_per_day)
@@ -1120,6 +1135,8 @@ async def recompute_options(job_id: str, body: RecomputeRequest):
     recompute_geo = await _calc_route_geometry_cached(
         job, job_id, prev_location, segment_target, stops_left_rc, request.max_drive_hours_per_day,
         origin_location=request.start_location,
+        proximity_origin_pct=request.proximity_origin_pct,
+        proximity_target_pct=request.proximity_target_pct,
     )
 
     agent = StopOptionsFinderAgent(request, job_id)
@@ -1239,6 +1256,8 @@ async def patch_job(job_id: str, body: PatchJobRequest):
     geo = await _calc_route_geometry_cached(
         job, job_id, prev_location, segment_target, stops_left, request.max_drive_hours_per_day,
         origin_location=request.start_location,
+        proximity_origin_pct=request.proximity_origin_pct,
+        proximity_target_pct=request.proximity_target_pct,
     )
 
     agent = StopOptionsFinderAgent(request, job_id)
