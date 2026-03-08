@@ -40,6 +40,45 @@ function closeRouteSSE() {
   if (_routeSSE) { _routeSSE.close(); _routeSSE = null; }
 }
 
+function showRundreiseModal(meta) {
+  document.getElementById('rundreise-modal')?.remove();
+  const ratio = ((meta || {}).rundreise_threshold_ratio || 2).toFixed(1);
+  const target = esc((meta || {}).segment_target || '');
+  const overlay = document.createElement('div');
+  overlay.id = 'rundreise-modal';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h3 class="modal-title">Rundreise-Modus</h3>
+      <p class="modal-desc">Du hast <strong>${ratio}×</strong> mehr Zeit als für die direkte
+        Route nach <strong>${target}</strong> nötig wäre. Möchtest du bewusste Umwege
+        erkunden statt der direkten Strecke zu folgen?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="declineRundreise()">Nein, direkte Route</button>
+        <button class="btn btn-primary" onclick="activateRundreise()">Ja, Umwege erkunden</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function _closeRundreiseModal() { document.getElementById('rundreise-modal')?.remove(); }
+
+async function activateRundreise() { _closeRundreiseModal(); await _applyRundreiseChoice(true); }
+async function declineRundreise()  { _closeRundreiseModal(); await _applyRundreiseChoice(false); }
+
+async function _applyRundreiseChoice(activate) {
+  openRouteSSE(S.jobId);
+  _showSkeletonCards();
+  try {
+    const data = await apiSetRundreiseMode(S.jobId, activate);
+    startRouteBuilding(data);
+  } catch (err) {
+    const container = document.getElementById('route-options-container');
+    if (container) container.innerHTML = `<div class="error-msg">Fehler: ${esc(err.message)}</div>`;
+    S.loadingOptions = false;
+  }
+}
+
 function onRouteOptionReady(data) {
   const opt = data.option;
   if (!opt) return;
@@ -136,6 +175,13 @@ function appendOptionCard(opt, i) {
 }
 
 function startRouteBuilding(data) {
+  if ((data.meta || {}).rundreise_suggestion) {
+    const container = document.getElementById('route-options-container');
+    if (container) container.innerHTML = '';
+    closeRouteSSE();
+    showRundreiseModal(data.meta);
+    return;
+  }
   S.selectedStops = [];
   routeMeta = data.meta || {};
   // Persist max_drive_hours from payload for use in all-over-limit banner

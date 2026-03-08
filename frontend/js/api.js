@@ -137,6 +137,14 @@ async function apiRecomputeOptions(jobId, extraInstructions) {
   return res.json();
 }
 
+async function apiSetRundreiseMode(jobId, activate) {
+  const res = await _fetchQuiet(`${API}/set-rundreise-mode/${jobId}`, {
+    method: 'POST',
+    body: JSON.stringify({ activate }),
+  });
+  return res.json();
+}
+
 async function apiSaveTravel(plan) {
   const res = await _fetchQuiet(`${API}/travels`, {
     method: 'POST', body: JSON.stringify({ plan }),

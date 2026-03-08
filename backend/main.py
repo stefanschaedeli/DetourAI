@@ -164,6 +164,27 @@ def _calc_route_status(request: TravelRequest, segment_stops: list, segment_budg
     }
 
 
+def _detect_rundreise(route_geo: dict, days_remaining: int, max_drive_hours: float) -> tuple:
+    """Returns (suggest: bool, ratio: float). Suggest Rundreise when available time ≥ 2× direct route."""
+    if not route_geo or not route_geo.get("segment_total_hours"):
+        return False, 0.0
+    direct_hours = route_geo["segment_total_hours"]
+    available_km = days_remaining * max_drive_hours * 80 * 0.5
+    ratio = (days_remaining * max_drive_hours) / max(direct_hours, 0.01)
+    suggest = ratio >= 2.0 and route_geo.get("segment_total_km", 0) < available_km
+    return suggest, round(ratio, 2)
+
+
+def _apply_rundreise_geometry(geo: dict, days_remaining: int, max_drive_hours: float) -> dict:
+    """Returns a shallow copy of geo with Rundreise-Modus adjustments (does not mutate cache)."""
+    g = dict(geo)
+    g["ideal_km_from_prev"] = min(geo["ideal_km_from_prev"] * 2.0, max_drive_hours * 80)
+    g["ideal_hours_from_prev"] = min(g["ideal_km_from_prev"] / 80, max_drive_hours)
+    g["min_km_from_target"] = 0.0   # disable proximity-to-target filter
+    g["rundreise_mode"] = True       # signals agent prompt branch
+    return g
+
+
 def _calc_budget_state(request: TravelRequest, selected_stops: list,
                        selected_accommodations: list) -> dict:
     """45% of total budget → accommodation."""
@@ -208,6 +229,7 @@ def _new_job(request: TravelRequest) -> dict:
         "prefetched_accommodations": {},
         "all_accommodations_loaded": False,
         "route_geometry_cache": {},  # key: "{from}|{to}|{stops}" → dict
+        "rundreise_mode": False,
         "result": None,
         "error": None,
     }
@@ -548,7 +570,8 @@ async def _find_and_stream_options(
     enriched_options, estimated_total_stops, final_route_could_be_complete = await _run_one_pass(extra_instructions)
 
     # Retry if too few valid options (proximity filtering removed some)
-    if len(enriched_options) < 3 and min_km_from_origin > 0:
+    # Skip retry hint in Rundreise-Modus (target filter is disabled, different rules apply)
+    if len(enriched_options) < 3 and min_km_from_origin > 0 and not route_geometry.get("rundreise_mode"):
         retry_hint = (
             f"WICHTIG: Letzte Optionen zu nahe am Start/Ziel. "
             f"Wähle Orte die mindestens {min_km_from_origin:.0f} km vom Startpunkt {origin_location} "
@@ -652,6 +675,33 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
         origin_location=request.start_location,
     )
 
+    rundreise_suggest, rundreise_ratio = _detect_rundreise(
+        route_geo, job["segment_budget"], request.max_drive_hours_per_day
+    )
+    if rundreise_suggest:
+        job["pending_rundreise_geo"] = route_geo
+        save_job(job_id, job)
+        is_last_segment = len(request.via_points) == 0
+        route_status = _calc_route_status(request, [], job["segment_budget"], is_last_segment)
+        return {
+            "job_id": job_id,
+            "status": "building_route",
+            "options": [],
+            "meta": {
+                "stop_number": 1,
+                "days_remaining": route_status["days_remaining"],
+                "estimated_total_stops": 0,
+                "route_could_be_complete": False,
+                "must_complete": False,
+                "segment_index": 0,
+                "segment_count": len(request.via_points) + 1,
+                "segment_target": segment_target,
+                "map_anchors": {},
+                "rundreise_suggestion": True,
+                "rundreise_threshold_ratio": rundreise_ratio,
+            },
+        }
+
     agent = StopOptionsFinderAgent(request, job_id)
     options, map_anchors, estimated_total_stops, route_could_be_complete = \
         await _find_and_stream_options(
@@ -690,6 +740,85 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
             "segment_count": len(request.via_points) + 1,
             "segment_target": segment_target,
             "map_anchors": map_anchors,
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# POST /api/set-rundreise-mode/{job_id}
+# ---------------------------------------------------------------------------
+
+class SetRundreiseModeRequest(BaseModel):
+    activate: bool
+
+
+@app.post("/api/set-rundreise-mode/{job_id}")
+async def set_rundreise_mode(job_id: str, body: SetRundreiseModeRequest):
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    job = get_job(job_id)
+    request = TravelRequest(**job["request"])
+    job["rundreise_mode"] = body.activate
+    save_job(job_id, job)
+
+    seg_idx = job.get("segment_index", 0)
+    n_segments = len(request.via_points) + 1
+    segment_target = (
+        request.via_points[seg_idx].location if seg_idx < len(request.via_points)
+        else request.main_destination
+    )
+    selected_stops = job.get("selected_stops", [])
+    stop_number = job.get("stop_counter", 0) + 1
+    prev_location = selected_stops[-1]["region"] if selected_stops else request.start_location
+
+    route_status = _calc_route_status(
+        request, job.get("segment_stops", []), job.get("segment_budget", request.total_days),
+        seg_idx == n_segments - 1
+    )
+
+    # Retrieve cached geo stored by plan-trip when detection fired
+    geo = job.pop("pending_rundreise_geo", None)
+    if geo is None:
+        geo = await _calc_route_geometry_cached(
+            job, job_id, prev_location, segment_target,
+            max(1, route_status["days_remaining"] // (1 + request.min_nights_per_stop)),
+            request.max_drive_hours_per_day, origin_location=request.start_location,
+        )
+    if body.activate:
+        geo = _apply_rundreise_geometry(geo, route_status["days_remaining"], request.max_drive_hours_per_day)
+    save_job(job_id, job)  # flush pending_rundreise_geo removal
+
+    agent = StopOptionsFinderAgent(request, job_id)
+    options, map_anchors, estimated_total, route_complete = await _find_and_stream_options(
+        agent=agent, job_id=job_id, selected_stops=selected_stops,
+        stop_number=stop_number, days_remaining=route_status["days_remaining"],
+        route_could_be_complete=False, segment_target=segment_target,
+        segment_index=seg_idx, segment_count=n_segments, prev_location=prev_location,
+        max_drive_hours=request.max_drive_hours_per_day, route_geometry=geo,
+    )
+    job["current_options"] = options
+    job["route_could_be_complete"] = route_complete
+    save_job(job_id, job)
+
+    new_status = _calc_route_status(
+        request, job.get("segment_stops", []), job.get("segment_budget", request.total_days),
+        seg_idx == n_segments - 1,
+    )
+    return {
+        "job_id": job_id,
+        "status": "building_route",
+        "options": options,
+        "meta": {
+            "stop_number": stop_number,
+            "days_remaining": new_status["days_remaining"],
+            "estimated_total_stops": estimated_total,
+            "route_could_be_complete": new_status["route_could_be_complete"],
+            "must_complete": new_status["must_complete"],
+            "segment_index": seg_idx,
+            "segment_count": n_segments,
+            "segment_target": segment_target,
+            "map_anchors": map_anchors,
+            "rundreise_mode": body.activate,
         },
     }
 
@@ -747,6 +876,7 @@ async def select_stop(job_id: str, body: StopSelectRequest):
         # Move to next segment
         job["segment_index"] += 1
         job["segment_budget"] = _calc_segment_budget(request, job["segment_index"])
+        job["rundreise_mode"] = False
         job["segment_stops"] = []
 
         seg_idx = job["segment_index"]
@@ -841,6 +971,8 @@ async def select_stop(job_id: str, body: StopSelectRequest):
             job, job_id, prev_loc_else, segment_target, stops_left, request.max_drive_hours_per_day,
             origin_location=request.start_location,
         )
+        if job.get("rundreise_mode"):
+            next_geo = _apply_rundreise_geometry(next_geo, route_status["days_remaining"], request.max_drive_hours_per_day)
 
         agent = StopOptionsFinderAgent(request, job_id)
         next_options, map_anchors, estimated_total, route_complete = \
