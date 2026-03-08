@@ -236,6 +236,29 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 /* Segment-target pin: red */
 .map-marker-anchor.target-pin { background: #ff3b30; }
 
+/* Leaflet Tooltip für Kartenmarker */
+.map-marker-tooltip-wrap {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.map-marker-tooltip-wrap::before { display: none !important; }
+.map-marker-tooltip {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  min-width: 160px;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+  pointer-events: none;
+}
+.map-marker-tooltip strong { font-size: 14px; display: block; margin-bottom: 3px; }
+.map-marker-tooltip .tooltip-teaser { color: var(--text-sub); margin-top: 4px; font-size: 12px; }
+
 /* Option cards: flex-column, full width */
 .options-grid {
   display: flex;
@@ -272,7 +295,7 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .option-card.selected { border-color: var(--accent); background: #f0f6ff; }
 .option-type-badge {
   display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px;
-  font-weight: 600; text-transform: uppercase; margin-bottom: 8px;
+  font-weight: 600; text-transform: uppercase;
 }
 .type-direct   { background: #dff0ff; color: #0071e3; }
 .type-scenic   { background: #dfffdf; color: #1a7a1a; }
@@ -282,6 +305,24 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .type-comfort     { background: #dfffdf; color: #1a7a1a; }
 .type-premium     { background: #fffadf; color: #b38600; }
 .type-geheimtipp  { background: #f0dfff; color: #6600b3; }
+.option-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.option-card-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
 .option-card h3 { font-size: 18px; margin-bottom: 6px; }
 .option-meta { display: flex; gap: 12px; font-size: 13px; color: var(--text-sub); margin-bottom: 10px; }
 .option-teaser { font-size: 14px; color: var(--text-sub); margin-bottom: 10px; }

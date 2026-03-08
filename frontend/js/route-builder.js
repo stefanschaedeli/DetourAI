@@ -131,7 +131,10 @@ function _buildOptionCardHTML(opt, i) {
     classes: `option-card${overLimit ? ' over-limit' : ''}`,
     id: `option-card-${i}`,
     html: `
-      <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
+      <div class="option-card-header">
+        <span class="option-card-number">${i + 1}</span>
+        <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
+      </div>
       <h3>${flag} ${esc(opt.region)}, ${esc(opt.country)}</h3>
       <div class="option-meta">
         <span class="${overLimit ? 'drive-hours-over' : ''}">${opt.drive_hours}h Fahrt${driveKm}</span>
@@ -283,7 +286,10 @@ function renderOptions(options, meta) {
     const extraFields = _buildExtraFields(opt);
     return `
       <div class="option-card${overLimit ? ' over-limit' : ''}" id="option-card-${i}" onclick="selectOption(${i})">
-        <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
+        <div class="option-card-header">
+          <span class="option-card-number">${i + 1}</span>
+          <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
+        </div>
         <h3>${flag} ${esc(opt.region)}, ${esc(opt.country)}</h3>
         <div class="option-meta">
           <span class="${overLimit ? 'drive-hours-over' : ''}">${opt.drive_hours}h Fahrt${driveKm}</span>
@@ -393,10 +399,16 @@ function _initMap(anchors, options) {
       iconSize: [28, 28],
       iconAnchor: [14, 14],
     });
+    const tooltipHtml = `<div class="map-marker-tooltip">` +
+      `<strong>${i + 1}. ${esc(opt.region)}</strong>` +
+      `<div>${opt.drive_hours}h Fahrt · ${opt.drive_km || '?'} km</div>` +
+      `<div>${opt.nights} Nacht${opt.nights !== 1 ? 'e' : ''}</div>` +
+      (opt.teaser ? `<div class="tooltip-teaser">${esc(opt.teaser)}</div>` : '') +
+      `</div>`;
     const marker = L.marker([opt.lat, opt.lon], { icon })
-      .bindPopup(`<b>${i + 1}. ${opt.region}</b><br>${opt.drive_hours}h · ${opt.drive_km || '?'} km`)
+      .bindTooltip(tooltipHtml, { className: 'map-marker-tooltip-wrap', direction: 'top', offset: [0, -14] })
       .addTo(_map);
-    marker.on('click', () => scrollToOption(i));
+    marker.on('click', () => selectOption(i));
     _mapMarkers.push(marker);
     bounds.push([opt.lat, opt.lon]);
 
