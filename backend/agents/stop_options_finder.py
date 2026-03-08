@@ -99,11 +99,13 @@ Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor:
 - option_type "scenic": landschaftlich schöne Alternative
 - option_type "cultural": kulturell interessante Alternative
 
-PFLICHT — alle 3 Regeln einhalten:
+PFLICHT — alle 5 Regeln einhalten:
 1. drive_hours von {prev_stop} zu diesem Stop: ≤ {req.max_drive_hours_per_day}h
 2. Distanz: ~{geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80):.0f} km von {prev_stop}
    (Toleranz ±30%; NICHT unter {geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80) * 0.5:.0f} km — zu nahe am letzten Stop)
-3. Teile lange Strecken auf — niemals direkt zum Ziel springen wenn noch {geo.get('stops_remaining', 1)} Etappe(n) geplant sind
+3. NICHT zu nahe am Reise-Startpunkt {geo.get('origin_location', req.start_location)}: min {geo.get('min_km_from_origin', 50):.0f} km Luftlinie
+4. NICHT zu nahe am Ziel {segment_target}: min {geo.get('min_km_from_target', 50):.0f} km Luftlinie
+5. Teile lange Strecken auf — niemals direkt zum Ziel springen wenn noch {geo.get('stops_remaining', 1)} Etappe(n) geplant sind
 Nächte: {req.min_nights_per_stop}–{req.max_nights_per_stop}.
 
 Befülle folgende Felder kontextabhängig:
@@ -216,11 +218,13 @@ Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor:
 - option_type "scenic": landschaftlich schöne Alternative
 - option_type "cultural": kulturell interessante Alternative
 
-PFLICHT — alle 3 Regeln einhalten:
+PFLICHT — alle 5 Regeln einhalten:
 1. drive_hours von {prev_stop} zu diesem Stop: ≤ {req.max_drive_hours_per_day}h
 2. Distanz: ~{geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80):.0f} km von {prev_stop}
    (Toleranz ±30%; NICHT unter {geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80) * 0.5:.0f} km — zu nahe am letzten Stop)
-3. Teile lange Strecken auf — niemals direkt zum Ziel springen wenn noch {geo.get('stops_remaining', 1)} Etappe(n) geplant sind
+3. NICHT zu nahe am Reise-Startpunkt {geo.get('origin_location', req.start_location)}: min {geo.get('min_km_from_origin', 50):.0f} km Luftlinie
+4. NICHT zu nahe am Ziel {segment_target}: min {geo.get('min_km_from_target', 50):.0f} km Luftlinie
+5. Teile lange Strecken auf — niemals direkt zum Ziel springen wenn noch {geo.get('stops_remaining', 1)} Etappe(n) geplant sind
 Nächte: {req.min_nights_per_stop}–{req.max_nights_per_stop}.
 
 Befülle folgende Felder kontextabhängig:

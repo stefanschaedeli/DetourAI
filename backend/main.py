@@ -1,5 +1,6 @@
 import asyncio
 import json
+import math
 import os
 import re
 import uuid
@@ -221,6 +222,19 @@ class RecomputeRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Haversine distance helper (no extra OSRM call needed)
+# ---------------------------------------------------------------------------
+
+def _haversine_km(c1: tuple, c2: tuple) -> float:
+    """Great-circle distance in km between two (lat, lon) tuples."""
+    lat1, lon1 = math.radians(c1[0]), math.radians(c1[1])
+    lat2, lon2 = math.radians(c2[0]), math.radians(c2[1])
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    return 6371 * 2 * math.asin(math.sqrt(a))
+
+
+# ---------------------------------------------------------------------------
 # Route geometry helper — total distance for a segment
 # ---------------------------------------------------------------------------
 
@@ -229,6 +243,7 @@ async def _calc_route_geometry(
     to_location: str,
     stops_remaining: int,
     max_drive_hours: float,
+    origin_location: str = "",
 ) -> dict:
     """
     Geocodes from/to in parallel, queries OSRM for the full segment distance,
@@ -263,6 +278,9 @@ async def _calc_route_geometry(
         "stops_remaining": n,
         "ideal_km_from_prev": ideal_km,
         "ideal_hours_from_prev": min(ideal_hours, max_drive_hours),
+        "min_km_from_origin": max(50.0, total_km * 0.10),
+        "min_km_from_target": max(50.0, total_km * 0.15),
+        "origin_location": origin_location or from_location,
     }
 
 
@@ -273,6 +291,7 @@ async def _calc_route_geometry_cached(
     to_location: str,
     stops_remaining: int,
     max_drive_hours: float,
+    origin_location: str = "",
 ) -> dict:
     """Cache wrapper around _calc_route_geometry — keyed by segment + stops count."""
     cache_key = f"{from_location}|{to_location}|{stops_remaining}"
@@ -280,7 +299,7 @@ async def _calc_route_geometry_cached(
     if cache_key in cache:
         return cache[cache_key]
 
-    result = await _calc_route_geometry(from_location, to_location, stops_remaining, max_drive_hours)
+    result = await _calc_route_geometry(from_location, to_location, stops_remaining, max_drive_hours, origin_location)
     if result:
         cache[cache_key] = result
         save_job(job_id, job)
@@ -392,9 +411,16 @@ async def _find_and_stream_options(
     """
     Runs StopOptionsFinder in streaming mode. Each option is individually
     OSRM-enriched and pushed as a 'route_option_ready' SSE event as soon as
-    it's available. Returns (enriched_options, map_anchors, estimated_total_stops,
+    it's available. Options too close to the trip origin or segment target are
+    silently filtered; if < 3 valid options remain, the agent is retried once.
+    Returns (enriched_options, map_anchors, estimated_total_stops,
     route_could_be_complete) once all 3 options are done.
     """
+    geo = route_geometry or {}
+    min_km_from_origin: float = geo.get("min_km_from_origin", 0.0)
+    min_km_from_target: float = geo.get("min_km_from_target", 0.0)
+    origin_location: str = geo.get("origin_location", "")
+
     # Pre-geocode prev + target in parallel (reuse for all option OSRM calls)
     async def _geocode_delayed(place: str, delay: float):
         if delay > 0:
@@ -404,10 +430,18 @@ async def _find_and_stream_options(
     async def _none_coro():
         return None
 
-    prev_coords, target_coords = await asyncio.gather(
-        _geocode_delayed(prev_location, 0.0),
-        _geocode_delayed(segment_target, 0.1) if segment_target else _none_coro(),
-    )
+    if origin_location and origin_location != prev_location and min_km_from_origin > 0:
+        prev_coords, target_coords, origin_coords = await asyncio.gather(
+            _geocode_delayed(prev_location, 0.0),
+            _geocode_delayed(segment_target, 0.1) if segment_target else _none_coro(),
+            _geocode_delayed(origin_location, 0.2),
+        )
+    else:
+        prev_coords, target_coords = await asyncio.gather(
+            _geocode_delayed(prev_location, 0.0),
+            _geocode_delayed(segment_target, 0.1) if segment_target else _none_coro(),
+        )
+        origin_coords = prev_coords  # origin == prev for first stop or no-origin case
     await asyncio.sleep(0.2)
 
     await debug_logger.log(
@@ -425,71 +459,119 @@ async def _find_and_stream_options(
         "target_label": segment_target,
     }
 
-    enriched_options: list = []
-    estimated_total_stops = 4
-    final_route_could_be_complete = route_could_be_complete
+    async def _run_one_pass(extra_instr: str) -> tuple[list, int, bool]:
+        """Stream one agent call, enrich options, return (valid_options, estimated_total, route_complete)."""
+        raw_options: list = []
+        estimated: int = 4
+        r_complete: bool = route_could_be_complete
 
-    option_index = 0
+        async for item in agent.find_options_streaming(
+            selected_stops=selected_stops,
+            stop_number=stop_number,
+            days_remaining=days_remaining,
+            route_could_be_complete=route_could_be_complete,
+            segment_target=segment_target,
+            segment_index=segment_index,
+            segment_count=segment_count,
+            extra_instructions=extra_instr,
+            route_geometry=route_geometry,
+        ):
+            if "_all_options" in item:
+                estimated = item.get("estimated_total_stops", 4)
+                r_complete = item.get("route_could_be_complete", False)
+                if not raw_options and item.get("_all_options"):
+                    raw_options = item["_all_options"]
+                continue
+            raw_options.append(item)
 
-    async for item in agent.find_options_streaming(
-        selected_stops=selected_stops,
-        stop_number=stop_number,
-        days_remaining=days_remaining,
-        route_could_be_complete=route_could_be_complete,
-        segment_target=segment_target,
-        segment_index=segment_index,
-        segment_count=segment_count,
-        extra_instructions=extra_instructions,
-        route_geometry=route_geometry,
-    ):
-        # Sentinel item from streaming — contains metadata
-        if "_all_options" in item:
-            estimated_total_stops = item.get("estimated_total_stops", 4)
-            final_route_could_be_complete = item.get("route_could_be_complete", False)
-            # Ensure enriched_options is complete (may already be set)
-            if not enriched_options and item.get("_all_options"):
-                enriched_options = item["_all_options"]
-            continue
+        # Enrich + proximity-filter
+        valid: list = []
+        for i, opt in enumerate(raw_options):
+            place = f"{opt.get('region', '')}, {opt.get('country', '')}"
+            nom_coords = await geocode_nominatim(place)
+            await asyncio.sleep(0.08)
+            agent_lat = opt.get("lat")
+            agent_lon = opt.get("lon")
+            agent_coords = (agent_lat, agent_lon) if agent_lat and agent_lon else None
+            coords = nom_coords or agent_coords
 
-        # It's an individual option — enrich it now
-        opt = item
-        place = f"{opt.get('region', '')}, {opt.get('country', '')}"
-        await debug_logger.log(
-            LogLevel.INFO,
-            f"  [{option_index + 1}/3] Geocoding + OSRM: {place}",
-            job_id=job_id, agent="StopOptionsFinder",
-        )
-        nom_coords = await geocode_nominatim(place)
-        await asyncio.sleep(0.08)  # brief pause after each geocode
-        agent_lat = opt.get("lat")
-        agent_lon = opt.get("lon")
-        agent_coords = (agent_lat, agent_lon) if agent_lat and agent_lon else None
-        coords = nom_coords or agent_coords
+            if not coords:
+                continue
 
-        if coords:
             opt["lat"] = coords[0]
             opt["lon"] = coords[1]
             opt["maps_url"] = build_maps_url([prev_location, place])
+
             if prev_coords:
                 hours, km = await osrm_route([prev_coords, coords])
                 if hours > 0:
                     opt["drive_hours"] = hours
                     opt["drive_km"] = km
 
-        if max_drive_hours > 0:
-            opt["drives_over_limit"] = opt.get("drive_hours", 0) > max_drive_hours
+            if max_drive_hours > 0:
+                opt["drives_over_limit"] = opt.get("drive_hours", 0) > max_drive_hours
 
-        limit_flag = " ⚠ LIMIT" if opt.get("drives_over_limit") else ""
+            # Proximity check: too close to trip origin?
+            if origin_coords and min_km_from_origin > 0:
+                d_origin = _haversine_km(origin_coords, coords)
+                if d_origin < min_km_from_origin:
+                    await debug_logger.log(
+                        LogLevel.DEBUG,
+                        f"  Verworfen (zu nahe am Startpunkt {origin_location}: {d_origin:.0f} km < {min_km_from_origin:.0f} km): {place}",
+                        job_id=job_id, agent="StopOptionsFinder",
+                    )
+                    continue
+
+            # Proximity check: too close to segment target?
+            if target_coords and min_km_from_target > 0:
+                d_target = _haversine_km(coords, target_coords)
+                if d_target < min_km_from_target:
+                    await debug_logger.log(
+                        LogLevel.DEBUG,
+                        f"  Verworfen (zu nahe am Ziel {segment_target}: {d_target:.0f} km < {min_km_from_target:.0f} km): {place}",
+                        job_id=job_id, agent="StopOptionsFinder",
+                    )
+                    continue
+
+            limit_flag = " ⚠ LIMIT" if opt.get("drives_over_limit") else ""
+            await debug_logger.log(
+                LogLevel.SUCCESS,
+                f"  [{len(valid) + 1}/3] {opt.get('option_type', '?'):8} {place}: "
+                f"{opt.get('drive_hours', '?')}h / {opt.get('drive_km', '?')} km{limit_flag}",
+                job_id=job_id, agent="StopOptionsFinder",
+            )
+            valid.append(opt)
+
+        return valid, estimated, r_complete
+
+    # First pass
+    enriched_options, estimated_total_stops, final_route_could_be_complete = await _run_one_pass(extra_instructions)
+
+    # Retry if too few valid options (proximity filtering removed some)
+    if len(enriched_options) < 3 and min_km_from_origin > 0:
+        retry_hint = (
+            f"WICHTIG: Letzte Optionen zu nahe am Start/Ziel. "
+            f"Wähle Orte die mindestens {min_km_from_origin:.0f} km vom Startpunkt {origin_location} "
+            f"und mindestens {min_km_from_target:.0f} km vom Ziel {segment_target} entfernt liegen."
+        )
+        combined = (extra_instructions + "\n" + retry_hint).strip() if extra_instructions else retry_hint
         await debug_logger.log(
-            LogLevel.SUCCESS,
-            f"  [{option_index + 1}/3] {opt.get('option_type','?'):8} {place}: "
-            f"{opt.get('drive_hours', '?')}h / {opt.get('drive_km', '?')} km{limit_flag}",
+            LogLevel.INFO,
+            f"Nur {len(enriched_options)} gültige Option(en) — Retry mit Abstandshinweis",
             job_id=job_id, agent="StopOptionsFinder",
         )
+        retry_options, estimated_total_stops, final_route_could_be_complete = await _run_one_pass(combined)
+        # Merge: keep original valid options + fill up from retry
+        existing_regions = {o.get("region") for o in enriched_options}
+        for opt in retry_options:
+            if opt.get("region") not in existing_regions:
+                enriched_options.append(opt)
+                existing_regions.add(opt.get("region"))
+            if len(enriched_options) >= 3:
+                break
 
-        enriched_options.append(opt)
-
-        # Emit SSE event so frontend can show this option immediately
+    # Emit SSE events for all valid options
+    for option_index, opt in enumerate(enriched_options):
         await debug_logger.push_event(
             job_id,
             "route_option_ready",
@@ -500,7 +582,6 @@ async def _find_and_stream_options(
                 "map_anchors": map_anchors,
             },
         )
-        option_index += 1
 
     await debug_logger.log(
         LogLevel.SUCCESS,
@@ -567,7 +648,8 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
     stops_in_segment = max(1, (job["segment_budget"] - 1) // (1 + request.min_nights_per_stop))
     route_geo = await _calc_route_geometry_cached(
         job, job_id, request.start_location, segment_target,
-        stops_in_segment, request.max_drive_hours_per_day
+        stops_in_segment, request.max_drive_hours_per_day,
+        origin_location=request.start_location,
     )
 
     agent = StopOptionsFinderAgent(request, job_id)
@@ -679,7 +761,8 @@ async def select_stop(job_id: str, body: StopSelectRequest):
         stops_in_new_seg = max(1, (job["segment_budget"] - 1) // (1 + request.min_nights_per_stop))
         prev_loc = via_point.location
         next_geo = await _calc_route_geometry_cached(
-            job, job_id, prev_loc, segment_target, stops_in_new_seg, request.max_drive_hours_per_day
+            job, job_id, prev_loc, segment_target, stops_in_new_seg, request.max_drive_hours_per_day,
+            origin_location=request.start_location,
         )
 
         agent = StopOptionsFinderAgent(request, job_id)
@@ -755,7 +838,8 @@ async def select_stop(job_id: str, body: StopSelectRequest):
         prev_loc_else = selected.get("region", request.start_location)
         stops_left = max(1, route_status["days_remaining"] // (1 + request.min_nights_per_stop))
         next_geo = await _calc_route_geometry_cached(
-            job, job_id, prev_loc_else, segment_target, stops_left, request.max_drive_hours_per_day
+            job, job_id, prev_loc_else, segment_target, stops_left, request.max_drive_hours_per_day,
+            origin_location=request.start_location,
         )
 
         agent = StopOptionsFinderAgent(request, job_id)
@@ -827,7 +911,8 @@ async def recompute_options(job_id: str, body: RecomputeRequest):
     prev_location = selected_stops[-1]["region"] if selected_stops else request.start_location
     stops_left_rc = max(1, route_status["days_remaining"] // (1 + request.min_nights_per_stop))
     recompute_geo = await _calc_route_geometry_cached(
-        job, job_id, prev_location, segment_target, stops_left_rc, request.max_drive_hours_per_day
+        job, job_id, prev_location, segment_target, stops_left_rc, request.max_drive_hours_per_day,
+        origin_location=request.start_location,
     )
 
     agent = StopOptionsFinderAgent(request, job_id)
@@ -945,7 +1030,8 @@ async def patch_job(job_id: str, body: PatchJobRequest):
     prev_location = selected_stops[-1]["region"] if selected_stops else request.start_location
     stops_left = max(1, route_status["days_remaining"] // (1 + request.min_nights_per_stop))
     geo = await _calc_route_geometry_cached(
-        job, job_id, prev_location, segment_target, stops_left, request.max_drive_hours_per_day
+        job, job_id, prev_location, segment_target, stops_left, request.max_drive_hours_per_day,
+        origin_location=request.start_location,
     )
 
     agent = StopOptionsFinderAgent(request, job_id)
