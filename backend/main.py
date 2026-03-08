@@ -578,9 +578,9 @@ async def _find_and_stream_options(
     # First pass
     enriched_options, estimated_total_stops, final_route_could_be_complete = await _run_one_pass(extra_instructions)
 
-    # Retry if too few valid options (proximity filtering removed some)
-    # Skip retry hint in Rundreise-Modus (target filter is disabled, different rules apply)
-    if len(enriched_options) < 3 and min_km_from_origin > 0 and not route_geometry.get("rundreise_mode"):
+    # Retry only if 1–2 valid options (worth filling up; 0 goes straight to DetourOptionsAgent)
+    # Skip retry in Rundreise-Modus (target filter is disabled, different rules apply)
+    if 0 < len(enriched_options) < 3 and min_km_from_origin > 0 and not route_geometry.get("rundreise_mode"):
         retry_hint = (
             f"WICHTIG: Letzte Optionen zu nahe am Start/Ziel. "
             f"Wähle Orte die mindestens {min_km_from_origin:.0f} km vom Startpunkt {origin_location} "
@@ -602,7 +602,7 @@ async def _find_and_stream_options(
             if len(enriched_options) >= 3:
                 break
 
-    # Fallback: wenn nach beiden Passes immer noch 0 Optionen → DetourOptionsAgent
+    # Fallback: wenn 0 gültige Optionen (direkt oder nach Retry) → DetourOptionsAgent
     if len(enriched_options) == 0:
         from agents.detour_options_agent import DetourOptionsAgent
         await debug_logger.log(
