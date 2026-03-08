@@ -105,6 +105,15 @@ function onRouteOptionReady(data) {
   }
 }
 
+function _insertDetourBanner() {
+  const container = document.getElementById('route-options-container');
+  if (!container || container.querySelector('.detour-banner')) return;
+  const banner = document.createElement('div');
+  banner.className = 'detour-banner';
+  banner.innerHTML = `<strong>Umweg-Optionen:</strong> Auf dieser Strecke gibt es zu wenig Raum für einen klassischen Zwischenstopp. Diese Orte liegen seitlich der Route und machen die Reise abwechslungsreicher — von dort ist das Ziel weiterhin erreichbar.`;
+  container.prepend(banner);
+}
+
 function onRouteOptionsDone(data) {
   // All options arrived via SSE — init the map now that we have all coords
   const container = document.getElementById('route-options-container');
@@ -112,6 +121,8 @@ function onRouteOptionsDone(data) {
 
   const anchors = _streamingMeta || data.map_anchors || {};
   const opts = data.options || _streamingOptions;
+  const allDetour = opts.length > 0 && opts.every(o => o.is_detour);
+  if (allDetour) { _insertDetourBanner(); }
   _initMap(anchors, opts);
   closeRouteSSE();
 }
@@ -272,6 +283,7 @@ function renderOptions(options, meta) {
   }
 
   const allOverLimit = options.length > 0 && options.every(o => o.drives_over_limit);
+  const allDetour = options.length > 0 && options.every(o => o.is_detour);
 
   container.innerHTML = options.map((opt, i) => {
     const flag = FLAGS[opt.country] || '';
@@ -314,6 +326,13 @@ function renderOptions(options, meta) {
       <p>⚠ Alle vorgeschlagenen Etappen überschreiten die maximale Fahrzeit von ${routeMeta.max_drive_hours || ''}h.</p>
       <button class="btn btn-secondary" onclick="openRouteAdjustModal()">Route anpassen…</button>
     `;
+    container.prepend(banner);
+  }
+
+  if (allDetour) {
+    const banner = document.createElement('div');
+    banner.className = 'detour-banner';
+    banner.innerHTML = `<strong>Umweg-Optionen:</strong> Auf dieser Strecke gibt es zu wenig Raum für einen klassischen Zwischenstopp. Diese Orte liegen seitlich der Route und machen die Reise abwechslungsreicher — von dort ist das Ziel weiterhin erreichbar.`;
     container.prepend(banner);
   }
 

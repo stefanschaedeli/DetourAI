@@ -602,6 +602,43 @@ async def _find_and_stream_options(
             if len(enriched_options) >= 3:
                 break
 
+    # Fallback: wenn nach beiden Passes immer noch 0 Optionen → DetourOptionsAgent
+    if len(enriched_options) == 0:
+        from agents.detour_options_agent import DetourOptionsAgent
+        await debug_logger.log(
+            LogLevel.WARNING,
+            f"0 gültige Optionen nach Retry — starte DetourOptionsAgent",
+            job_id=job_id, agent="DetourOptions",
+        )
+        detour_agent = DetourOptionsAgent(agent.request, job_id)
+        detour_opts = await detour_agent.find_detour_options(
+            prev_location=prev_location,
+            segment_target=segment_target,
+            route_geometry=route_geometry,
+        )
+        for opt in detour_opts:
+            place = f"{opt.get('region', '')}, {opt.get('country', '')}"
+            nom_coords = await geocode_nominatim(place)
+            await asyncio.sleep(0.08)
+            agent_lat = opt.get("lat")
+            agent_lon = opt.get("lon")
+            agent_coords = (agent_lat, agent_lon) if agent_lat and agent_lon else None
+            coords = nom_coords or agent_coords
+            if not coords:
+                continue
+            opt["lat"] = coords[0]
+            opt["lon"] = coords[1]
+            opt["maps_url"] = build_maps_url([prev_location, place])
+            opt["is_detour"] = True
+            if prev_coords:
+                hours, km = await osrm_route([prev_coords, coords])
+                if hours > 0:
+                    opt["drive_hours"] = hours
+                    opt["drive_km"] = km
+            if max_drive_hours > 0:
+                opt["drives_over_limit"] = opt.get("drive_hours", 0) > max_drive_hours
+            enriched_options.append(opt)
+
     # Emit SSE events for all valid options
     for option_index, opt in enumerate(enriched_options):
         await debug_logger.push_event(
