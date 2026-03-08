@@ -150,17 +150,18 @@ function _insertDetourBanner() {
 }
 
 function onRouteOptionsDone(data) {
-  // All options arrived via SSE — init the map now that we have all coords
-  const container = document.getElementById('route-options-container');
-  if (!container) return;
-
-  const anchors = _streamingMeta || data.map_anchors || {};
+  // All options arrived via SSE — close overlay first, then init map
   const opts = data.options || _streamingOptions;
   const count = opts.length;
   progressOverlay.completeLine('route_options', `${count} Optionen gefunden`);
   progressOverlay.completeLine('route_options_retry', `${count} Optionen gefunden`);
   progressOverlay.completeLine('route_detour', 'Umwege gefunden');
   progressOverlay.close();
+
+  const container = document.getElementById('route-options-container');
+  if (!container) return;
+
+  const anchors = _streamingMeta || data.map_anchors || {};
 
   const allDetour = opts.length > 0 && opts.every(o => o.is_detour);
   if (allDetour) { _insertDetourBanner(); }
