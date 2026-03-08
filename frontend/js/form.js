@@ -420,6 +420,7 @@ async function submitTrip() {
     // 2. Show route-builder section with skeleton cards, then open SSE
     showSection('route-builder');
     _showSkeletonCards();
+    progressOverlay.open('Zwischenstopps werden gesucht…');
     openRouteSSE(preJobId);
 
     // 3. Trigger actual planning (Claude + OSRM); SSE delivers options progressively

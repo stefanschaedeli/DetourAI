@@ -18,6 +18,7 @@ function openRouteSSE(jobId) {
   _routeSSE = openSSE(jobId, {
     route_option_ready: onRouteOptionReady,
     route_options_done: onRouteOptionsDone,
+    debug_log:          _onRouteBuildDebugLog,
     onerror: () => {},  // silently ignore — HTTP response is the fallback
   });
 }
@@ -38,6 +39,23 @@ function _showSkeletonCards() {
 
 function closeRouteSSE() {
   if (_routeSSE) { _routeSSE.close(); _routeSSE = null; }
+}
+
+function _onRouteBuildDebugLog(data) {
+  const msg = data.message || '';
+  if (msg.startsWith('Neue Reise:')) {
+    progressOverlay.addLine('trip_init', 'Reisedaten werden analysiert…');
+    progressOverlay.completeLine('trip_init', '');
+  } else if (msg.startsWith('Route-Optionen:')) {
+    const m = msg.match(/Route-Optionen:\s*(.+?)\s*\(/);
+    const label = m ? m[1] : 'Route';
+    progressOverlay.addLine('route_options', `Suche Zwischenstopps von ${label}…`);
+  } else if (msg.includes('Retry mit Abstandshinweis')) {
+    progressOverlay.completeLine('route_options', '');
+    progressOverlay.addLine('route_options_retry', 'Suche Zwischenstopps — zweiter Versuch…');
+  } else if (msg.includes('DetourOptionsAgent')) {
+    progressOverlay.addLine('route_detour', 'Suche Umweg-Optionen seitlich der Route…');
+  }
 }
 
 function showRundreiseModal(meta) {
@@ -67,6 +85,7 @@ async function activateRundreise() { _closeRundreiseModal(); await _applyRundrei
 async function declineRundreise()  { _closeRundreiseModal(); await _applyRundreiseChoice(false); }
 
 async function _applyRundreiseChoice(activate) {
+  progressOverlay.open('Alternativen werden gesucht…');
   openRouteSSE(S.jobId);
   _showSkeletonCards();
   try {
@@ -103,6 +122,10 @@ function onRouteOptionReady(data) {
     // No skeleton (e.g. first load before skeleton was shown) — append
     appendOptionCard(opt, optIndex);
   }
+
+  const regionName = opt.region || '';
+  progressOverlay.addLine(`option_${optIndex}`, `Option ${optIndex + 1} gefunden: ${regionName}`);
+  progressOverlay.completeLine(`option_${optIndex}`, '');
 }
 
 function _insertDetourBanner() {
@@ -121,6 +144,12 @@ function onRouteOptionsDone(data) {
 
   const anchors = _streamingMeta || data.map_anchors || {};
   const opts = data.options || _streamingOptions;
+  const count = opts.length;
+  progressOverlay.completeLine('route_options', `${count} Optionen gefunden`);
+  progressOverlay.completeLine('route_options_retry', `${count} Optionen gefunden`);
+  progressOverlay.completeLine('route_detour', 'Umwege gefunden');
+  progressOverlay.close();
+
   const allDetour = opts.length > 0 && opts.every(o => o.is_detour);
   if (allDetour) { _insertDetourBanner(); }
   _initMap(anchors, opts);
@@ -553,6 +582,7 @@ async function confirmRoute() {
     // so no accommodation_loaded events are missed.
     showSection('accommodation');
     startAccommodationPhase(data);
+    progressOverlay.open('Unterkunftsoptionen werden gesucht…');
 
     // Wait for the EventSource connection to be established before triggering
     // the prefetch task — otherwise early SSE events may be lost.
@@ -589,7 +619,10 @@ async function recomputeOptions() {
 
   const extra = input.value.trim();
   _clearMap();
-  if (S.jobId) openRouteSSE(S.jobId);
+  if (S.jobId) {
+    progressOverlay.open('Neu berechnung…');
+    openRouteSSE(S.jobId);
+  }
   _showSkeletonCards();
 
   try {

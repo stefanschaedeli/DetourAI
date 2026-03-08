@@ -7,15 +7,16 @@ function connectSSE(jobId) {
   if (progressSSE) { progressSSE.close(); progressSSE = null; }
 
   progressSSE = openSSE(jobId, {
-    route_ready:         onRouteReady,
-    activities_loaded:   onActivitiesLoaded,
-    restaurants_loaded:  onRestaurantsLoaded,
-    stop_done:           onStopDone,
-    agent_start:         onAgentStart,
-    agent_done:          onAgentDone,
-    job_complete:        onJobComplete,
-    job_error:           onJobError,
-    debug_log:           onProgressDebugLog,
+    route_ready:            onRouteReady,
+    activities_loaded:      onActivitiesLoaded,
+    restaurants_loaded:     onRestaurantsLoaded,
+    stop_done:              onStopDone,
+    stop_research_started:  onStopResearchStarted,
+    agent_start:            onAgentStart,
+    agent_done:             onAgentDone,
+    job_complete:           onJobComplete,
+    job_error:              onJobError,
+    debug_log:              onProgressDebugLog,
     ping: () => {},
     onerror: () => { console.warn('Progress SSE error'); },
   });
@@ -24,10 +25,34 @@ function connectSSE(jobId) {
 function onProgressDebugLog(data) {
   S.logs.push(data);
   updateDebugLog();
+  // Overlay-Zeilen aus bekannten Log-Nachrichten
+  const msg = data.message || '';
+  if (msg.includes('Orchestrator startet')) {
+    progressOverlay.addLine('orchestrator', 'Planung wird gestartet…');
+    progressOverlay.completeLine('orchestrator', '');
+  } else if (msg.includes('RouteArchitect startet')) {
+    progressOverlay.addLine('route_arch', 'Analysiere die Gesamtroute…');
+  } else if (msg.match(/Forschungsphase:\s*(\d+)/)) {
+    const n = msg.match(/Forschungsphase:\s*(\d+)/)[1];
+    progressOverlay.addLine('research_phase', `Recherchiere Aktivitäten und Restaurants für ${n} Orte…`);
+    progressOverlay.completeLine('research_phase', '');
+  } else if (msg.includes('Tagesplaner startet')) {
+    progressOverlay.addLine('day_planner', 'Erstelle den Tagesplan…');
+  }
+}
+
+function onStopResearchStarted(data) {
+  const region = data.region || '';
+  if (data.section === 'activities') {
+    progressOverlay.addLine('act_' + data.stop_id, `Aktivitäten für ${region}…`);
+  } else if (data.section === 'restaurants') {
+    progressOverlay.addLine('rest_' + data.stop_id, `Restaurants für ${region}…`);
+  }
 }
 
 function onRouteReady(data) {
   const stops = data.stops || [];
+  progressOverlay.completeLine('route_arch', 'Route festgelegt');
   buildStopsTimeline(stops);
 }
 
@@ -59,6 +84,7 @@ function onActivitiesLoaded(data) {
   const stopId = data.stop_id;
   const region = data.region || '';
   const activities = data.activities || [];
+  progressOverlay.completeLine('act_' + stopId, `${activities.length} Aktivitäten`);
 
   if (stopProgress[stopId]) stopProgress[stopId].activities = true;
 
@@ -82,6 +108,7 @@ function onActivitiesLoaded(data) {
 function onRestaurantsLoaded(data) {
   const stopId = data.stop_id;
   const restaurants = data.restaurants || [];
+  progressOverlay.completeLine('rest_' + stopId, `${restaurants.length} Restaurants`);
 
   if (stopProgress[stopId]) stopProgress[stopId].restaurants = true;
 
@@ -125,6 +152,9 @@ function onAgentDone(data) {
 function onJobComplete(data) {
   if (progressSSE) { progressSSE.close(); progressSSE = null; }
 
+  progressOverlay.completeLine('day_planner', 'Tagesplan fertig');
+  setTimeout(() => progressOverlay.close(), 600);
+
   S.result = data;
 
   // Save to localStorage
@@ -145,6 +175,8 @@ function onJobComplete(data) {
 
 function onJobError(data) {
   if (progressSSE) { progressSSE.close(); progressSSE = null; }
+
+  progressOverlay.close();
 
   const el = document.getElementById('progress-error');
   if (el) {

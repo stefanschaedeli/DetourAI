@@ -423,6 +423,20 @@
   </button>
 </div>
 
+<!-- ================================================= SSE Progress Overlay -->
+<div id="sse-progress-overlay" class="spo-overlay" style="display:none" aria-live="polite">
+  <div class="spo-card">
+    <div class="spo-progress-bar">
+      <div class="spo-progress-fill spo-progress-indeterminate"></div>
+    </div>
+    <div class="spo-header">
+      <span class="spo-logo">Travelman</span>
+      <span class="spo-phase" id="spo-phase">Bitte warten…</span>
+    </div>
+    <div class="spo-lines" id="spo-lines"></div>
+  </div>
+</div>
+
 <!-- ======================================================== Loading overlay -->
 <div id="loading-overlay" class="loading-overlay" aria-live="polite" aria-busy="false" style="display:none">
   <div class="loading-overlay-inner">
@@ -469,6 +483,7 @@
 
 <!-- ======================================================== JS modules -->
 <script src="js/loading.js"></script>
+<script src="js/sse-overlay.js"></script>
 <script src="js/state.js"></script>
 <script src="js/api.js"></script>
 <script src="js/form.js"></script>

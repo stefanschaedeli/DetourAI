@@ -79,6 +79,7 @@ function onAccommodationLoading(data) {
   if (grid) {
     grid.innerHTML = '<div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div>';
   }
+  progressOverlay.addLine('acc_' + stopId, `Suche Unterkunftsoptionen für ${esc(data.region || '')}…`);
 }
 
 function renderAccCards(stopId, options, mustHaves) {
@@ -152,6 +153,9 @@ function onAccommodationLoaded(data) {
   if (!grid) return;
 
   grid.innerHTML = renderAccCards(stopId, options, []);
+
+  const count = options.length;
+  progressOverlay.completeLine('acc_' + stopId, `${count} Optionen gefunden`);
 }
 
 function onAccommodationsAllLoaded(data) {
@@ -161,6 +165,7 @@ function onAccommodationsAllLoaded(data) {
     btn.disabled = Object.keys(S.pendingSelections).length < S.allStops.length;
   }
   updateBudgetFromSelections();
+  progressOverlay.close();
 }
 
 function selectAccommodationInPanel(stopId, optionIdx) {
@@ -275,6 +280,7 @@ async function startPlanningWithAllSelections() {
     await apiConfirmAccommodations(S.jobId, selections);
     await apiStartPlanning(S.jobId);
 
+    progressOverlay.open('Reiseplan wird erstellt…');
     showSection('progress');
     connectSSE(S.jobId);
 
