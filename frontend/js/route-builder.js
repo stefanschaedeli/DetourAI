@@ -417,6 +417,13 @@ function _initMap(anchors, options) {
     _mapLines = [];
   }
 
+  // Always use the last confirmed stop's coordinates as S-marker — more
+  // reliable than re-geocoding prev_location on the backend.
+  const lastStop = S.selectedStops.length > 0 ? S.selectedStops[S.selectedStops.length - 1] : null;
+  if (lastStop && lastStop.lat && lastStop.lon) {
+    anchors = { ...anchors, prev_lat: lastStop.lat, prev_lon: lastStop.lon, prev_label: lastStop.region };
+  }
+
   const bounds = [];
 
   // Start pin (green)
