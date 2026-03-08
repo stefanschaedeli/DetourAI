@@ -165,13 +165,17 @@ def _calc_route_status(request: TravelRequest, segment_stops: list, segment_budg
 
 
 def _detect_rundreise(route_geo: dict, days_remaining: int, max_drive_hours: float) -> tuple:
-    """Returns (suggest: bool, ratio: float). Suggest Rundreise when available time ≥ 2× direct route."""
+    """Returns (suggest: bool, ratio: float). Suggest Rundreise when available time ≥ 2× direct route
+    and the direct route is at least 200 km (short trips don't need detour mode)."""
     if not route_geo or not route_geo.get("segment_total_hours"):
+        return False, 0.0
+    direct_km = route_geo.get("segment_total_km", 0)
+    if direct_km < 200:
         return False, 0.0
     direct_hours = route_geo["segment_total_hours"]
     available_km = days_remaining * max_drive_hours * 80 * 0.5
     ratio = (days_remaining * max_drive_hours) / max(direct_hours, 0.01)
-    suggest = ratio >= 2.0 and route_geo.get("segment_total_km", 0) < available_km
+    suggest = ratio >= 2.0 and direct_km < available_km
     return suggest, round(ratio, 2)
 
 
@@ -695,6 +699,11 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
 
     rundreise_suggest, rundreise_ratio = _detect_rundreise(
         route_geo, job["segment_budget"], request.max_drive_hours_per_day
+    )
+    await debug_logger.log(
+        LogLevel.DEBUG,
+        f"Rundreise-Check: suggest={rundreise_suggest}, ratio={rundreise_ratio}, segment_budget={job['segment_budget']}d, max_drive={request.max_drive_hours_per_day}h",
+        job_id=job_id,
     )
     if rundreise_suggest:
         job["pending_rundreise_geo"] = route_geo
