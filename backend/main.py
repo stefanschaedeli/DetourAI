@@ -615,6 +615,8 @@ async def _find_and_stream_options(
             prev_location=prev_location,
             segment_target=segment_target,
             route_geometry=route_geometry,
+            prev_coords=prev_coords,
+            target_coords=target_coords,
         )
         for opt in detour_opts:
             place = f"{opt.get('region', '')}, {opt.get('country', '')}"

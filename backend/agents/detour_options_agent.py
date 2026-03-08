@@ -3,6 +3,7 @@
 Schlage 3 Umweg-Ziele vor, die seitlich der Direktstrecke liegen und die Reise bereichern.
 Keine Proximity-Filter — Umwege dürfen nah am Startpunkt sein.
 """
+from typing import Optional
 from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
@@ -29,6 +30,8 @@ class DetourOptionsAgent:
         prev_location: str,
         segment_target: str,
         route_geometry: dict,
+        prev_coords: Optional[tuple] = None,
+        target_coords: Optional[tuple] = None,
     ) -> str:
         req = self.request
         geo = route_geometry or {}
@@ -38,14 +41,28 @@ class DetourOptionsAgent:
         has_children = bool(req.children)
         family_field = '"family_friendly": true,' if has_children else ""
 
+        # Build a geographic bounding box from the two endpoints so Claude
+        # stays in the same region. Pad by ~1.5° (~120 km) in each direction.
+        bbox_hint = ""
+        if prev_coords and target_coords:
+            lat_min = min(prev_coords[0], target_coords[0]) - 1.5
+            lat_max = max(prev_coords[0], target_coords[0]) + 1.5
+            lon_min = min(prev_coords[1], target_coords[1]) - 1.5
+            lon_max = max(prev_coords[1], target_coords[1]) + 1.5
+            bbox_hint = (
+                f"\nGEOGRAFISCHE GRENZE (zwingend): Alle Orte müssen innerhalb dieser Bounding-Box liegen:\n"
+                f"  Lat {lat_min:.2f}–{lat_max:.2f}, Lon {lon_min:.2f}–{lon_max:.2f}\n"
+                f"Orte ausserhalb dieser Box sind NICHT erlaubt.\n"
+            )
+
         return f"""Direkte Strecke von {prev_location} nach {segment_target}: ~{km} km / ~{hours}h Fahrzeit.
 Diese Strecke ist zu kurz für klassische Zwischenstopps.
 
 Schlage 3 attraktive Umwegziele vor — Orte die SEITLICH der Direktstrecke liegen:
 - option_type "umweg_1": Umweg links/westlich der Direktroute
 - option_type "umweg_2": Umweg rechts/östlich der Direktroute
-- option_type "umweg_3": überraschende dritte Richtung, maximaler Kontrast
-
+- option_type "umweg_3": weitere seitliche Richtung (nord oder süd der Strecke)
+{bbox_hint}
 REGELN (alle einhalten):
 1. Jeder Umweg-Ort muss von {prev_location} in ≤ {max_h}h erreichbar sein
 2. Von dort muss {segment_target} ebenfalls in ≤ {max_h}h erreichbar sein
@@ -70,9 +87,11 @@ Gib exakt dieses JSON zurück (lat/lon = WGS84-Koordinaten, PFLICHT):
         prev_location: str,
         segment_target: str,
         route_geometry: dict = None,
+        prev_coords: Optional[tuple] = None,
+        target_coords: Optional[tuple] = None,
     ) -> list:
         """Findet 3 Umweg-Optionen. Gibt Liste von Option-Dicts zurück."""
-        prompt = self._build_prompt(prev_location, segment_target, route_geometry)
+        prompt = self._build_prompt(prev_location, segment_target, route_geometry, prev_coords, target_coords)
 
         await debug_logger.log(
             LogLevel.API,
