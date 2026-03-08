@@ -58,3 +58,10 @@ async def call_with_retry(fn, *, job_id: str = None, agent_name: str = None,
                 job_id=job_id, agent=agent_name,
             )
             await asyncio.sleep(delay)
+        except Exception as exc:
+            await debug_logger.log(
+                LogLevel.ERROR,
+                f"Exception in {agent_name or 'agent'} (attempt {attempt}/{max_attempts}): {type(exc).__name__}: {exc}",
+                job_id=job_id, agent=agent_name,
+            )
+            raise

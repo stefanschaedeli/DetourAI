@@ -471,6 +471,11 @@ async def _find_and_stream_options(
         f"Route-Optionen: {prev_location} → {segment_target} (Stop #{stop_number}, {days_remaining} Tage)",
         job_id=job_id, agent="StopOptionsFinder",
     )
+    await debug_logger.log(
+        LogLevel.DEBUG,
+        f"  Geocoding: prev={prev_location} → {prev_coords}, target={segment_target} → {target_coords}",
+        job_id=job_id, agent="StopOptionsFinder",
+    )
 
     map_anchors = {
         "prev_lat": prev_coords[0] if prev_coords else None,
@@ -675,6 +680,19 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
         origin_location=request.start_location,
     )
 
+    if not route_geo:
+        await debug_logger.log(
+            LogLevel.WARNING,
+            f"route_geo leer — Geocoding/OSRM fehlgeschlagen für {request.start_location} → {segment_target}",
+            job_id=job_id,
+        )
+    else:
+        await debug_logger.log(
+            LogLevel.DEBUG,
+            f"route_geo: {route_geo.get('segment_total_km', '?')} km / {route_geo.get('segment_total_hours', '?')}h, ideal/etappe: {route_geo.get('ideal_km_from_prev', '?')} km",
+            job_id=job_id,
+        )
+
     rundreise_suggest, rundreise_ratio = _detect_rundreise(
         route_geo, job["segment_budget"], request.max_drive_hours_per_day
     )
@@ -703,21 +721,30 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
         }
 
     agent = StopOptionsFinderAgent(request, job_id)
-    options, map_anchors, estimated_total_stops, route_could_be_complete = \
-        await _find_and_stream_options(
-            agent=agent,
+    try:
+        options, map_anchors, estimated_total_stops, route_could_be_complete = \
+            await _find_and_stream_options(
+                agent=agent,
+                job_id=job_id,
+                selected_stops=[],
+                stop_number=1,
+                days_remaining=job["segment_budget"],
+                route_could_be_complete=False,
+                segment_target=segment_target,
+                segment_index=0,
+                segment_count=len(request.via_points) + 1,
+                prev_location=request.start_location,
+                max_drive_hours=request.max_drive_hours_per_day,
+                route_geometry=route_geo,
+            )
+    except Exception as exc:
+        import traceback
+        await debug_logger.log(
+            LogLevel.ERROR,
+            f"Fehler in plan_trip/_find_and_stream_options: {type(exc).__name__}: {exc}\n{traceback.format_exc()}",
             job_id=job_id,
-            selected_stops=[],
-            stop_number=1,
-            days_remaining=job["segment_budget"],
-            route_could_be_complete=False,
-            segment_target=segment_target,
-            segment_index=0,
-            segment_count=len(request.via_points) + 1,
-            prev_location=request.start_location,
-            max_drive_hours=request.max_drive_hours_per_day,
-            route_geometry=route_geo,
         )
+        raise
 
     job["current_options"] = options
     job["route_could_be_complete"] = route_could_be_complete

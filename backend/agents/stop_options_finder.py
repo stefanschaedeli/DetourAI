@@ -299,7 +299,16 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
 
         import time as _time
         t0 = _time.monotonic()
-        partial_results, final_text = await asyncio.to_thread(_do_stream)
+        try:
+            partial_results, final_text = await asyncio.to_thread(_do_stream)
+        except Exception as exc:
+            import traceback
+            await debug_logger.log(
+                LogLevel.ERROR,
+                f"Stream-Fehler: {type(exc).__name__}: {exc}\n{traceback.format_exc()}",
+                job_id=self.job_id, agent="StopOptionsFinder",
+            )
+            raise
         elapsed = _time.monotonic() - t0
 
         await debug_logger.log(
