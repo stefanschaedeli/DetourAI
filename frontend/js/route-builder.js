@@ -50,9 +50,20 @@ function _onRouteBuildDebugLog(data) {
     const m = msg.match(/Route-Optionen:\s*(.+?)\s*\(/);
     const label = m ? m[1] : 'Route';
     progressOverlay.addLine('route_options', `Suche Zwischenstopps von ${label}…`);
-  } else if (msg.includes('Retry mit Abstandshinweis')) {
+  } else if (msg.includes('Verworfen (zu nahe am Startpunkt')) {
+    // Extract place name — format: "  Verworfen (zu nahe am Startpunkt X: N km < M km): PLACE"
+    const place = msg.match(/:\s*([^)]+)\s*$/)?.[1]?.trim() || '';
+    progressOverlay.addLine('rejected_' + place, `${place} — zu nahe am Startpunkt, wird übersprungen`);
+    progressOverlay.completeLine('rejected_' + place, '');
+  } else if (msg.includes('Verworfen (zu nahe am Ziel')) {
+    const place = msg.match(/:\s*([^)]+)\s*$/)?.[1]?.trim() || '';
+    progressOverlay.addLine('rejected_z_' + place, `${place} — zu nahe am Ziel, wird übersprungen`);
+    progressOverlay.completeLine('rejected_z_' + place, '');
+  } else if (msg.match(/Nur \d+ gültige Option/)) {
+    const n = msg.match(/Nur (\d+)/)?.[1] || '0';
     progressOverlay.completeLine('route_options', '');
-    progressOverlay.addLine('route_options_retry', 'Suche Zwischenstopps — zweiter Versuch…');
+    progressOverlay.addLine('route_options_retry',
+      `Nur ${n} brauchbare Option${n === '1' ? '' : 'en'} — suche weiter…`);
   } else if (msg.includes('DetourOptionsAgent')) {
     progressOverlay.addLine('route_detour', 'Suche Umweg-Optionen seitlich der Route…');
   }
@@ -94,6 +105,7 @@ async function _applyRundreiseChoice(activate) {
   } catch (err) {
     const container = document.getElementById('route-options-container');
     if (container) container.innerHTML = `<div class="error-msg">Fehler: ${esc(err.message)}</div>`;
+    progressOverlay.close();
     S.loadingOptions = false;
   }
 }
@@ -221,6 +233,7 @@ function startRouteBuilding(data) {
   if ((data.meta || {}).rundreise_suggestion) {
     const container = document.getElementById('route-options-container');
     if (container) container.innerHTML = '';
+    progressOverlay.close();
     closeRouteSSE();
     showRundreiseModal(data.meta);
     return;
@@ -519,7 +532,10 @@ async function selectOption(idx) {
   _clearMap();
 
   // Open SSE + show skeletons before HTTP call — options stream in progressively
-  if (S.jobId) openRouteSSE(S.jobId);
+  if (S.jobId) {
+    progressOverlay.open('Nächsten Stopp suchen…');
+    openRouteSSE(S.jobId);
+  }
   _showSkeletonCards();
 
   try {
@@ -534,6 +550,7 @@ async function selectOption(idx) {
 
     if (options.length === 0 && meta.route_could_be_complete) {
       // Route done — close SSE and show confirm
+      progressOverlay.close();
       closeRouteSSE();
       _streamingOptions = [];
       renderOptions([], meta);
@@ -541,6 +558,7 @@ async function selectOption(idx) {
       // Streaming already delivered all cards — just update state/map/status
       S.currentOptions = options;
       S.loadingOptions = false;
+      progressOverlay.close();
       closeRouteSSE();
       _updateRouteStatus(meta);
       renderBuiltStops();
@@ -551,6 +569,7 @@ async function selectOption(idx) {
       _streamingMeta = null;
     } else {
       // Streaming didn't finish yet or SSE unavailable — render from HTTP response
+      progressOverlay.close();
       closeRouteSSE();
       _streamingOptions = [];
       renderOptions(options, meta);
@@ -559,6 +578,7 @@ async function selectOption(idx) {
   } catch (err) {
     const container = document.getElementById('route-options-container');
     if (container) container.innerHTML = `<div class="error-msg">Fehler: ${esc(err.message)}</div>`;
+    progressOverlay.close();
     closeRouteSSE();
     S.loadingOptions = false;
   }
@@ -633,6 +653,7 @@ async function recomputeOptions() {
     if (_streamingOptions.filter(Boolean).length >= options.length && options.length > 0) {
       S.currentOptions = options;
       S.loadingOptions = false;
+      progressOverlay.close();
       closeRouteSSE();
       _updateRouteStatus(meta);
       renderBuiltStops();
@@ -640,6 +661,7 @@ async function recomputeOptions() {
       _streamingOptions = [];
       _streamingMeta = null;
     } else {
+      progressOverlay.close();
       closeRouteSSE();
       _streamingOptions = [];
       renderOptions(options, meta);
@@ -647,6 +669,7 @@ async function recomputeOptions() {
   } catch (err) {
     const container = document.getElementById('route-options-container');
     if (container) container.innerHTML = `<div class="error-msg">Fehler: ${esc(err.message)}</div>`;
+    progressOverlay.close();
     closeRouteSSE();
     S.loadingOptions = false;
   }
@@ -757,7 +780,10 @@ async function applyRouteAdjust() {
   S.loadingOptions = true;
 
   _clearMap();
-  if (S.jobId) openRouteSSE(S.jobId);
+  if (S.jobId) {
+    progressOverlay.open('Route wird angepasst…');
+    openRouteSSE(S.jobId);
+  }
   _showSkeletonCards();
 
   try {
@@ -767,6 +793,7 @@ async function applyRouteAdjust() {
     if (_streamingOptions.filter(Boolean).length >= options.length && options.length > 0) {
       S.currentOptions = options;
       S.loadingOptions = false;
+      progressOverlay.close();
       closeRouteSSE();
       _updateRouteStatus(meta);
       renderBuiltStops();
@@ -774,6 +801,7 @@ async function applyRouteAdjust() {
       _streamingOptions = [];
       _streamingMeta = null;
     } else {
+      progressOverlay.close();
       closeRouteSSE();
       _streamingOptions = [];
       renderOptions(options, meta);
@@ -781,6 +809,7 @@ async function applyRouteAdjust() {
   } catch (err) {
     const container = document.getElementById('route-options-container');
     if (container) container.innerHTML = `<div class="error-msg">Fehler beim Anpassen: ${esc(err.message)}</div>`;
+    progressOverlay.close();
     closeRouteSSE();
     S.loadingOptions = false;
   }
