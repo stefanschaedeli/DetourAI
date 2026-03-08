@@ -28,9 +28,11 @@ Day-by-day travel guide  ·  PDF export  ·  PPTX export
 - **Interactive route building** — Claude suggests stops segment by segment; you tap the ones you want
 - **Geometry-aware stop placement** — before each agent call, OSRM measures the full remaining distance and tells the agent the ideal per-etappe distance; stops are placed evenly along the route, never bunched at start or end
 - **Detour fallback** — when a route segment is too short for classic in-between stops (proximity filter removes all candidates), DetourOptionsAgent automatically proposes scenic side-trip options with a blue info banner in the UI
+- **"Direkt weiterfahren" option** — every route step also offers a skip card; choosing it skips the intermediate stop and adds the freed nights to the next destination
 - **Only real towns** — StopOptionsFinder is instructed to always return concrete towns/cities, never regions, mountain ranges or country names
 - **Drive-limit enforcement** — every option gets an OSRM-verified drive time; options that exceed your limit are flagged with an orange warning badge
 - **Route-adjust modal** — when *all* options exceed the limit a banner appears; one click opens a modal to either add extra days or insert a new via-point, re-running the agent automatically
+- **Configurable proximity filter** — sliders in Step 1 let you set the minimum distance an option must keep from the trip start and from the segment target (as % of segment length); prevents stops bunching at either end
 - **Rundreise (round-trip) mode** — when you have much more time than the direct route needs, the app offers a Rundreise modal; in this mode StopOptionsFinder proposes deliberate detours (left, right, adventure) instead of stepping toward the target
 - **Leaflet map in route builder** — live map with start pin, segment-target pin, and numbered option pins; dashed branch lines visualise each alternative; marker click scrolls to the option card
 - **"Neu berechnen" bar** — free-text field to steer the next suggestion (e.g. "lieber Meeresküste") and re-run the agent with a custom instruction
@@ -39,6 +41,7 @@ Day-by-day travel guide  ·  PDF export  ·  PPTX export
 - **Seven specialised AI agents** — route architect, stop finder, detour finder, accommodation researcher, activities, restaurants, day planner
 - **Real driving times** — OSRM replaces AI estimates with actual road distances and kilometres
 - **Agent-supplied coordinates** — StopOptionsFinder provides WGS84 lat/lon for every option; Nominatim result takes priority, agent coords serve as guaranteed fallback so all pins always appear
+- **Live progress overlay** — a semi-transparent overlay with a spinner log appears during all three wait phases (route building, accommodation search, trip planning); each step gets its own status line that flips to a green checkmark when done
 - **Real-time progress** — Server-Sent Events stream every agent action to the browser
 - **Configurable budget split** — set the exact % allocation for accommodation, food, and activities via sliders with live CHF preview; validated to sum to 100 %
 - **Min/max nights per stop** — control how long the agent stays at each location
@@ -501,6 +504,38 @@ travelman3/
 ---
 
 ## Changelog
+
+### v5.0.0 (2026-03-08)
+
+**Live-Fortschritts-Overlay — sichtbares Feedback während aller Wartephasen**
+
+Ein semitransparentes Overlay erscheint während der drei langen Ladephasen (Routenbau, Unterkunftssuche, Reiseplanung). Jeder Schritt erscheint als eigene Zeile mit Spinner, die beim Abschluss auf ein grünes Häkchen wechselt. Der Overlay schliesst sich automatisch wenn die Phase abgeschlossen ist.
+
+- Routenbau: Zeigt welcher Streckenabschnitt berechnet wird, warum ein Retry nötig war (z.B. "zu nahe am Startpunkt"), und welche Optionen gefunden wurden
+- Unterkunftssuche: Pro Stop eine Zeile mit Anzahl gefundener Optionen
+- Reiseplanung: Route → Aktivitäten/Restaurants pro Stop → Tagesplan, alles live
+
+**«Direkt weiterfahren» — Zwischenstopp überspringen**
+
+Bei jedem Routenschritt gibt es jetzt eine zusätzliche Karte "Direkt weiterfahren". Wählt man sie, wird der Stopp übersprungen und die freiwerdenden Nächte werden ans nächste Ziel (Zwischenziel oder Endziel) weitergegeben. Die Karte zeigt einen Badge mit der Anzahl Bonus-Nächte.
+
+**Proximity-Filter im GUI einstellbar**
+
+Zwei neue Schieberegler in Schritt 1 (Route) steuern, wie nah eine Option dem Startpunkt oder dem Segmentziel sein darf, bevor sie ausgefiltert wird. Standard: 10 % vom Start, 15 % vom Ziel. Auf 0 gesetzt wird der Filter komplett deaktiviert.
+
+**Geo-Begrenzung für Umweg-Optionen**
+
+DetourOptionsAgent erhält jetzt explizite Koordinaten des Streckenabschnitts und berechnet daraus eine Bounding-Box (±1.5°). Der Claude-Prompt enthält diese Box als harte Vorgabe — Umweg-Optionen bleiben geografisch im Rahmen der Reise.
+
+**Retry-Optimierung**
+
+Wenn der erste Durchlauf 0 gültige Stopps nach dem Proximity-Filter ergibt, wird der Retry-Durchlauf übersprungen und sofort DetourOptionsAgent aktiviert (statt zwei Fehlversuche zu machen).
+
+**Korrekte Kartenmarkierung bei wiederholten Berechnungen**
+
+Der "S"-Marker auf der Karte zeigt jetzt immer den zuletzt bestätigten Stop (aus `S.selectedStops`), nicht mehr den ursprünglichen Startpunkt der Reise.
+
+---
 
 ### v4.0.8 (2026-03-08)
 
