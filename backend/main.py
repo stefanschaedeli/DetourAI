@@ -164,6 +164,13 @@ def _calc_route_status(request: TravelRequest, segment_stops: list, segment_budg
     }
 
 
+def _calc_skip_bonus(days_remaining: int, request: "TravelRequest") -> int:
+    """How many extra nights the target gets when skipping all remaining intermediate stops.
+    days_remaining - 1 drive day, bounded by max_nights_per_stop."""
+    bonus = max(0, days_remaining - 1)
+    return min(bonus, request.max_nights_per_stop)
+
+
 def _detect_rundreise(route_geo: dict, days_remaining: int, max_drive_hours: float) -> tuple:
     """Returns (suggest: bool, ratio: float). Suggest Rundreise when available time ≥ 2× direct route
     and the direct route is at least 200 km (short trips don't need detour mode)."""
@@ -824,6 +831,7 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
             "segment_count": len(request.via_points) + 1,
             "segment_target": segment_target,
             "map_anchors": map_anchors,
+            "skip_nights_bonus": _calc_skip_bonus(route_status["days_remaining"], request),
         },
     }
 
@@ -904,6 +912,7 @@ async def set_rundreise_mode(job_id: str, body: SetRundreiseModeRequest):
             "segment_count": n_segments,
             "segment_target": segment_target,
             "map_anchors": map_anchors,
+            "skip_nights_bonus": _calc_skip_bonus(new_status["days_remaining"], request),
             "rundreise_mode": body.activate,
         },
     }
@@ -1021,6 +1030,7 @@ async def select_stop(job_id: str, body: StopSelectRequest):
                 "segment_count": n_segments,
                 "segment_target": segment_target,
                 "map_anchors": map_anchors,
+                "skip_nights_bonus": _calc_skip_bonus(new_status["days_remaining"], request),
             },
         }
 
@@ -1100,6 +1110,7 @@ async def select_stop(job_id: str, body: StopSelectRequest):
                 "segment_count": n_segments,
                 "segment_target": segment_target,
                 "map_anchors": map_anchors,
+                "skip_nights_bonus": _calc_skip_bonus(new_status["days_remaining"], request),
             },
         }
 
@@ -1175,6 +1186,7 @@ async def recompute_options(job_id: str, body: RecomputeRequest):
             "segment_count": n_segments,
             "segment_target": segment_target,
             "map_anchors": map_anchors,
+            "skip_nights_bonus": _calc_skip_bonus(route_status["days_remaining"], request),
         },
     }
 
@@ -1298,6 +1310,7 @@ async def patch_job(job_id: str, body: PatchJobRequest):
             "segment_count": n_segments,
             "segment_target": segment_target,
             "map_anchors": map_anchors,
+            "skip_nights_bonus": _calc_skip_bonus(new_status["days_remaining"], request),
             "total_days": request.total_days,
         },
     }

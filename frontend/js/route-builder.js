@@ -254,6 +254,7 @@ function startRouteBuilding(data) {
     _updateRouteStatus(data.meta || {});
     renderBuiltStops();
     _initMap(data.meta?.map_anchors || _streamingMeta || {}, S.currentOptions);
+    _appendSkipCardFromMeta();
     const confirmBtn = document.getElementById('confirm-route-btn');
     if (confirmBtn) confirmBtn.style.display = (data.meta || {}).route_could_be_complete ? 'block' : 'none';
     _streamingOptions = [];
@@ -279,6 +280,26 @@ function _updateRouteStatus(meta) {
     <div class="route-status-info">
       <strong>Stop #${stopNum}</strong>${segInfo}
       <span class="badge">${daysRem} Tage verbleibend</span>
+    </div>
+  `;
+}
+
+function _renderSkipCard(target, skipBonus) {
+  const label = skipBonus > 0
+    ? `+${skipBonus} Nacht${skipBonus !== 1 ? 'e' : ''} am Ziel`
+    : '';
+  return `
+    <div class="option-card skip-card" id="option-card-skip" onclick="skipStop()">
+      <div class="option-card-header">
+        <span class="option-card-number skip-icon">→</span>
+        <div class="option-type-badge type-direct">Direkt</div>
+      </div>
+      <h3>Direkt nach ${esc(target)} fahren</h3>
+      <div class="option-meta">
+        <span>Kein Zwischenstopp</span>
+        ${label ? `<span class="skip-bonus-badge">${esc(label)}</span>` : ''}
+      </div>
+      <p class="option-teaser">Übrige Reisetage werden am Ziel verbracht — mehr Zeit vor Ort statt auf der Durchreise.</p>
     </div>
   `;
 }
@@ -377,6 +398,12 @@ function renderOptions(options, meta) {
     banner.className = 'detour-banner';
     banner.innerHTML = `<strong>Umweg-Optionen:</strong> Auf dieser Strecke gibt es zu wenig Raum für einen klassischen Zwischenstopp. Diese Orte liegen seitlich der Route und machen die Reise abwechslungsreicher — von dort ist das Ziel weiterhin erreichbar.`;
     container.prepend(banner);
+  }
+
+  // Skip card — always shown when there are option cards (options.length > 0)
+  if (options.length > 0) {
+    container.insertAdjacentHTML('beforeend',
+      _renderSkipCard(meta.segment_target || '', meta.skip_nights_bonus || 0));
   }
 
   // Init Leaflet map
@@ -568,9 +595,11 @@ async function selectOption(idx) {
       S.loadingOptions = false;
       progressOverlay.close();
       closeRouteSSE();
+      routeMeta = { ...routeMeta, ...meta };
       _updateRouteStatus(meta);
       renderBuiltStops();
       _initMap(meta.map_anchors || _streamingMeta || {}, options);
+      _appendSkipCardFromMeta();
       const confirmBtn = document.getElementById('confirm-route-btn');
       if (confirmBtn) confirmBtn.style.display = meta.route_could_be_complete ? 'block' : 'none';
       _streamingOptions = [];
@@ -595,6 +624,18 @@ async function selectOption(idx) {
 function addBuiltStop(stop) {
   if (!stop) return;
   S.selectedStops.push(stop);
+}
+
+function _appendSkipCardFromMeta() {
+  const container = document.getElementById('route-options-container');
+  if (!container || !S.currentOptions.length) return;
+  if (container.querySelector('#option-card-skip')) return; // already there
+  container.insertAdjacentHTML('beforeend',
+    _renderSkipCard(routeMeta.segment_target || '', routeMeta.skip_nights_bonus || 0));
+}
+
+function skipStop() {
+  confirmRoute();
 }
 
 async function confirmRoute() {
@@ -663,9 +704,11 @@ async function recomputeOptions() {
       S.loadingOptions = false;
       progressOverlay.close();
       closeRouteSSE();
+      routeMeta = { ...routeMeta, ...meta };
       _updateRouteStatus(meta);
       renderBuiltStops();
       _initMap(meta.map_anchors || _streamingMeta || {}, options);
+      _appendSkipCardFromMeta();
       _streamingOptions = [];
       _streamingMeta = null;
     } else {
@@ -803,9 +846,11 @@ async function applyRouteAdjust() {
       S.loadingOptions = false;
       progressOverlay.close();
       closeRouteSSE();
+      routeMeta = { ...routeMeta, ...meta };
       _updateRouteStatus(meta);
       renderBuiltStops();
       _initMap(meta.map_anchors || _streamingMeta || {}, options);
+      _appendSkipCardFromMeta();
       _streamingOptions = [];
       _streamingMeta = null;
     } else {

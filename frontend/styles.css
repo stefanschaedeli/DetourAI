@@ -865,3 +865,17 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .spo-line-text   { font-size: 14px; color: var(--text); line-height: 1.4; flex: 1; }
 .spo-line-detail { font-size: 13px; color: var(--text-sub); margin-left: 4px; }
 .spo-line.done .spo-line-text { color: var(--text-sub); }
+
+/* ============================================================ Skip card */
+.skip-card {
+  border: 2px dashed var(--border);
+  background: var(--bg-light);
+  opacity: .88;
+}
+.skip-card:hover { border-color: var(--accent); opacity: 1; }
+.skip-icon { background: var(--bg); border: 2px solid var(--border); color: var(--text-sub); font-size: 16px; }
+.skip-bonus-badge {
+  background: #e6f4ea; color: #1a7a1a;
+  font-size: 12px; font-weight: 600;
+  padding: 2px 8px; border-radius: 99px;
+}
