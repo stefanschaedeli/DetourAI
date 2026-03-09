@@ -71,13 +71,16 @@ class DebugLogger:
         else:
             del self._subscribers[job_id]
 
-    def _local_push(self, job_id: str, event: dict):
-        """Push to all in-process queues registered for this job."""
-        for q in list(self._subscribers.get(job_id, [])):
+    def _local_push(self, job_id: str, event: dict) -> bool:
+        """Push to all in-process queues registered for this job.
+        Returns True if at least one local subscriber received the event."""
+        queues = list(self._subscribers.get(job_id, []))
+        for q in queues:
             try:
                 q.put_nowait(event)
             except asyncio.QueueFull:
                 pass
+        return len(queues) > 0
 
     async def log(self, level: LogLevel, message: str, *,
                   job_id: str = None, agent: str = None, data: dict = None):
@@ -105,8 +108,9 @@ class DebugLogger:
                 "data": data,
                 "ts": datetime.now().isoformat(),
             }
-            self._local_push(job_id, event)
-            self._redis_push(job_id, event)
+            delivered = self._local_push(job_id, event)
+            if not delivered:
+                self._redis_push(job_id, event)
 
     async def log_prompt(self, agent: str, model: str, prompt: str, *,
                          job_id: str = None):
@@ -121,8 +125,9 @@ class DebugLogger:
             "data": data,
             "percent": percent,
         }
-        self._local_push(job_id, event)
-        self._redis_push(job_id, event)
+        delivered = self._local_push(job_id, event)
+        if not delivered:
+            self._redis_push(job_id, event)
 
 
 debug_logger = DebugLogger()   # module-level singleton

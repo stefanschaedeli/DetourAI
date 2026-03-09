@@ -239,6 +239,7 @@ function startRouteBuilding(data) {
     showRundreiseModal(data.meta);
     return;
   }
+  progressOverlay.close();  // immer schliessen — idempotent
   S.selectedStops = [];
   routeMeta = data.meta || {};
   // Persist max_drive_hours from payload for use in all-over-limit banner
@@ -264,6 +265,7 @@ function startRouteBuilding(data) {
   }
   _streamingOptions = [];
   _streamingMeta = null;
+  progressOverlay.close();
   closeRouteSSE();
   renderOptions(data.options || [], data.meta || {});
 }
