@@ -88,59 +88,148 @@ function renderOverview(plan) {
 
       <div id="guide-map"></div>
 
-      ${renderTripAnalysis(plan.trip_analysis)}
+      ${renderTripAnalysis(plan.trip_analysis, plan.request)}
     </div>
   `;
 }
 
-function renderTripAnalysis(analysis) {
+// Highlight requirement keywords (from plan.request) in an already-escaped string
+function _highlightReqKeywords(escapedText, keywords) {
+  let t = escapedText;
+  keywords.forEach(kw => {
+    if (!kw) return;
+    const safe = esc(kw);
+    const re = new RegExp(safe.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    t = t.replace(re, m => `<strong class="req-keyword">${m}</strong>`);
+  });
+  return t;
+}
+
+// Build a flat list of keywords from plan.request that the user explicitly set
+function _extractReqKeywords(req) {
+  if (!req) return [];
+  const kws = [];
+  (req.travel_styles || []).forEach(s => {
+    const label = (TRAVEL_STYLES.find(t => t.id === s) || {}).label;
+    if (label) kws.push(label);
+  });
+  (req.accommodation_must_haves || req.must_haves || []).forEach(k => kws.push(k));
+  (req.accommodation_styles || []).forEach(k => kws.push(k));
+  (req.mandatory_activities || []).forEach(a => kws.push(typeof a === 'string' ? a : a.name));
+  (req.preferred_activities || []).forEach(k => kws.push(k));
+  if (req.main_destination) kws.push(req.main_destination);
+  if (req.destination)      kws.push(req.destination);
+  return kws.filter(Boolean);
+}
+
+// Render inline requirement tags from the original request
+function _renderReqTags(req) {
+  if (!req) return '';
+  const tags = [];
+
+  // Route
+  if (req.start_location) tags.push({ label: req.start_location, cls: 'req-tag-route' });
+  const dest = req.main_destination || req.destination;
+  if (dest) tags.push({ label: dest, cls: 'req-tag-route' });
+
+  // Dates & duration
+  const days = req.total_days || req.duration_days;
+  if (days) tags.push({ label: `${days} Tage`, cls: 'req-tag-meta' });
+  if (req.adults) {
+    const children = (req.children || []).length;
+    const pax = children > 0
+      ? `${req.adults} Erw. + ${children} Kind${children > 1 ? 'er' : ''}`
+      : `${req.adults} Erwachsene`;
+    tags.push({ label: pax, cls: 'req-tag-meta' });
+  }
+  if (req.budget_chf) tags.push({ label: `CHF ${Number(req.budget_chf).toLocaleString('de-CH')}`, cls: 'req-tag-budget' });
+  if (req.max_drive_hours_per_day) tags.push({ label: `Max. ${req.max_drive_hours_per_day}h Fahrt/Tag`, cls: 'req-tag-meta' });
+
+  // Styles
+  (req.travel_styles || []).forEach(s => {
+    const label = (TRAVEL_STYLES.find(t => t.id === s) || {}).label || s;
+    tags.push({ label, cls: 'req-tag-style' });
+  });
+
+  // Must-haves / accommodation
+  (req.accommodation_must_haves || req.must_haves || []).forEach(k => tags.push({ label: k, cls: 'req-tag-must' }));
+  (req.accommodation_styles || []).forEach(k => tags.push({ label: k, cls: 'req-tag-acc' }));
+
+  // Mandatory activities
+  (req.mandatory_activities || []).forEach(a => {
+    const name = typeof a === 'string' ? a : a.name;
+    tags.push({ label: name, cls: 'req-tag-activity' });
+  });
+
+  if (!tags.length) return '';
+  return `<div class="req-tags">${tags.map(t => `<span class="req-tag ${t.cls}">${esc(t.label)}</span>`).join('')}</div>`;
+}
+
+function renderTripAnalysis(analysis, req) {
   if (!analysis) return '';
 
   const score = analysis.requirements_match_score || 0;
   const scoreColor = score >= 8 ? '#34c759' : score >= 5 ? '#ff9f0a' : '#ff3b30';
+  const scoreLabel = score >= 8 ? 'Sehr gut' : score >= 6 ? 'Gut' : score >= 4 ? 'Befriedigend' : 'Verbesserungsbedarf';
   const pct = Math.round(score / 10 * 100);
+
+  const keywords = _extractReqKeywords(req);
 
   const impactLabel = { high: 'Hoch', medium: 'Mittel', low: 'Niedrig' };
   const impactClass = { high: 'impact-high', medium: 'impact-medium', low: 'impact-low' };
 
-  const strengths = (analysis.strengths || []).map(s => `<li>${esc(s)}</li>`).join('');
-  const weaknesses = (analysis.weaknesses || []).map(w => `<li>${esc(w)}</li>`).join('');
+  // Use keyword-highlighting instead of plain esc for prose fields
+  const summaryHtml    = _highlightReqKeywords(esc(analysis.settings_summary || ''), keywords);
+  const analysisHtml   = _highlightReqKeywords(esc(analysis.requirements_analysis || ''), keywords);
+
+  const strengths  = (analysis.strengths || []).map(s =>
+    `<li>${_highlightReqKeywords(esc(s), keywords)}</li>`).join('');
+  const weaknesses = (analysis.weaknesses || []).map(w =>
+    `<li>${_highlightReqKeywords(esc(w), keywords)}</li>`).join('');
+
   const suggestions = (analysis.improvement_suggestions || []).map(s => `
     <div class="suggestion-item">
       <div class="suggestion-header">
         <strong>${esc(s.title)}</strong>
         <span class="impact-badge ${impactClass[s.impact] || ''}">${impactLabel[s.impact] || esc(s.impact)}</span>
       </div>
-      <p>${esc(s.description)}</p>
+      <p>${_highlightReqKeywords(esc(s.description), keywords)}</p>
     </div>
   `).join('');
 
   return `
     <div class="trip-analysis">
-      <h3 class="trip-analysis-title">Reise-Analyse</h3>
-
-      <div class="trip-analysis-card">
-        <h4>Einstellungen</h4>
-        <p class="trip-analysis-text">${esc(analysis.settings_summary)}</p>
+      <div class="trip-analysis-header">
+        <h3 class="trip-analysis-title">Reise-Analyse</h3>
+        <div class="ta-score-chip" style="background:${scoreColor}22; color:${scoreColor}; border-color:${scoreColor}55">
+          <span class="ta-score-num">${score}</span><span class="ta-score-denom">/10</span>
+          <span class="ta-score-label">${scoreLabel}</span>
+        </div>
       </div>
 
       <div class="trip-analysis-card">
+        <h4>Ihre Reiseanforderungen</h4>
+        ${_renderReqTags(req)}
+        ${analysis.settings_summary ? `<p class="trip-analysis-text ta-summary">${summaryHtml}</p>` : ''}
+      </div>
+
+      <div class="trip-analysis-card ta-card-score">
         <h4>Anforderungserfüllung</h4>
         <div class="score-bar-wrap">
           <div class="score-bar-track">
-            <div class="score-bar-fill" style="width: ${pct}%; background: ${scoreColor}"></div>
+            <div class="score-bar-fill" style="width:${pct}%; background:${scoreColor}"></div>
           </div>
-          <span class="score-label" style="color: ${scoreColor}">${score}/10</span>
+          <span class="score-label" style="color:${scoreColor}">${score}/10</span>
         </div>
-        <p class="trip-analysis-text">${esc(analysis.requirements_analysis)}</p>
+        <p class="trip-analysis-text">${analysisHtml}</p>
       </div>
 
       ${(strengths || weaknesses) ? `
       <div class="trip-analysis-card">
-        <h4>Stärken & Schwächen</h4>
+        <h4>Stärken &amp; Schwächen</h4>
         <div class="trip-analysis-swot">
-          ${strengths ? `<div><strong>Stärken</strong><ul class="swot-list strengths-list">${strengths}</ul></div>` : ''}
-          ${weaknesses ? `<div><strong>Schwächen</strong><ul class="swot-list weaknesses-list">${weaknesses}</ul></div>` : ''}
+          ${strengths  ? `<div><p class="swot-col-title strengths-title">Stärken</p><ul class="swot-list strengths-list">${strengths}</ul></div>`  : ''}
+          ${weaknesses ? `<div><p class="swot-col-title weaknesses-title">Schwächen</p><ul class="swot-list weaknesses-list">${weaknesses}</ul></div>` : ''}
         </div>
       </div>
       ` : ''}

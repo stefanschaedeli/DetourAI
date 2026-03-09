@@ -1070,35 +1070,95 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .time-block.type-check_in { background: #f5f0ff; }
 
 /* ── Reise-Analyse ─────────────────────────────────────── */
+/* ── Reise-Analyse ─────────────────────────────────────── */
 .trip-analysis {
-  margin-top: 32px;
-  padding-top: 24px;
+  margin-top: 36px;
+  padding-top: 28px;
   border-top: 2px solid #e5e5ea;
+}
+.trip-analysis-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 .trip-analysis-title {
   font-size: 1.4rem;
   font-weight: 700;
-  margin-bottom: 16px;
+  margin: 0;
   color: #1d1d1f;
 }
+
+/* Score chip next to title */
+.ta-score-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ta-score-num  { font-size: 1.4rem; line-height: 1; }
+.ta-score-denom { font-size: 0.85rem; opacity: 0.7; }
+.ta-score-label { font-size: 0.85rem; font-weight: 600; margin-left: 4px; }
+
+/* Cards */
 .trip-analysis-card {
   background: #f9f9fb;
   border: 1px solid #e5e5ea;
   border-radius: 12px;
   padding: 20px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 .trip-analysis-card h4 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 12px;
-  color: #1d1d1f;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 14px;
+  color: #6e6e73;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .trip-analysis-text {
   color: #3a3a3c;
-  line-height: 1.6;
+  line-height: 1.65;
   margin: 0;
+  font-size: 0.95rem;
 }
+.ta-summary { margin-top: 12px; }
+
+/* Requirement keyword highlight */
+strong.req-keyword {
+  font-weight: 700;
+  color: #0071e3;
+}
+
+/* Requirement tags row */
+.req-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.req-tag {
+  display: inline-block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+.req-tag-route    { background: #e8f0fe; color: #1a56db; }
+.req-tag-meta     { background: #f0f0f5; color: #3a3a3c; }
+.req-tag-budget   { background: #e8faf0; color: #1a7a2e; }
+.req-tag-style    { background: #fff4e0; color: #b36000; }
+.req-tag-must     { background: #fff0f0; color: #cc0000; }
+.req-tag-acc      { background: #f5f0ff; color: #5856d6; }
+.req-tag-activity { background: #e8f8ff; color: #0a74b9; }
+
+/* Score bar */
 .score-bar-wrap {
   display: flex;
   align-items: center;
@@ -1115,7 +1175,7 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .score-bar-fill {
   height: 100%;
   border-radius: 5px;
-  transition: width 0.6s ease;
+  transition: width 0.7s ease;
 }
 .score-label {
   font-size: 1rem;
@@ -1123,6 +1183,8 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
   min-width: 36px;
   text-align: right;
 }
+
+/* SWOT */
 .trip-analysis-swot {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1131,16 +1193,26 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 @media (max-width: 600px) {
   .trip-analysis-swot { grid-template-columns: 1fr; }
 }
+.swot-col-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+}
+.strengths-title  { color: #1a7a2e; }
+.weaknesses-title { color: #b36000; }
 .swot-list {
   list-style: none;
   padding: 0;
-  margin: 8px 0 0;
+  margin: 0;
 }
 .swot-list li {
-  padding: 4px 0 4px 20px;
+  padding: 5px 0 5px 22px;
   position: relative;
   color: #3a3a3c;
   line-height: 1.5;
+  font-size: 0.93rem;
 }
 .strengths-list li::before {
   content: '✓';
@@ -1156,10 +1228,12 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
   color: #ff9f0a;
   font-weight: 700;
 }
+
+/* Improvement suggestions */
 .suggestions-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .suggestion-item {
   background: #fff;
@@ -1182,12 +1256,12 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
   margin: 0;
   color: #3a3a3c;
   font-size: 0.9rem;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 .impact-badge {
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 2px 8px;
+  padding: 2px 9px;
   border-radius: 10px;
   white-space: nowrap;
   flex-shrink: 0;
