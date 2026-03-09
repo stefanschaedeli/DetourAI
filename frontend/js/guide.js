@@ -507,19 +507,39 @@ async function replanCurrentTravel() {
   const plan = S.result;
   if (!plan) return;
 
-  // Find the saved travel ID from the plan's job_id in travel DB
-  // We pass the plan directly to the replan endpoint via a helper
   const savedId = plan._saved_travel_id || null;
+  const btn = document.getElementById('replan-current-btn');
 
   if (!savedId) {
-    alert('Diese Reise ist nicht in «Meine Reisen» gespeichert. Bitte erst speichern.');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = 'Zuerst in «Meine Reisen» speichern';
+      setTimeout(() => { btn.textContent = orig; }, 3000);
+    }
     return;
   }
 
-  if (!confirm('Reiseführer und stündliche Tagespläne neu generieren?\n\nRoute und Unterkünfte bleiben erhalten.')) return;
+  // Inline two-click confirmation
+  if (btn && btn.dataset.confirmPending !== '1') {
+    btn.dataset.confirmPending = '1';
+    btn.textContent = 'Bestätigen?';
+    btn.classList.add('btn-warning');
+    setTimeout(() => {
+      if (btn && btn.dataset.confirmPending === '1') {
+        btn.dataset.confirmPending = '';
+        btn.textContent = 'Neu berechnen';
+        btn.classList.remove('btn-warning');
+      }
+    }, 3000);
+    return;
+  }
 
-  const btn = document.getElementById('replan-current-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Wird gestartet…'; }
+  if (btn) {
+    btn.dataset.confirmPending = '';
+    btn.disabled = true;
+    btn.textContent = 'Wird gestartet…';
+    btn.classList.remove('btn-warning');
+  }
 
   try {
     const { job_id } = await apiReplanTravel(savedId);
@@ -549,7 +569,11 @@ async function replanCurrentTravel() {
       },
     });
   } catch (err) {
-    alert('Fehler: ' + err.message);
-    if (btn) { btn.disabled = false; btn.textContent = 'Neu berechnen'; }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Fehler — nochmals versuchen';
+      setTimeout(() => { if (btn) btn.textContent = 'Neu berechnen'; }, 4000);
+    }
+    console.error('Replan-Fehler:', err);
   }
 }

@@ -92,33 +92,57 @@ async function deleteSavedTravel(id, btn) {
 }
 
 async function replanSavedTravel(id, btn) {
-  if (!confirm('Reiseführer und stündliche Tagespläne für diese Reise neu generieren?\n\nRoute und Unterkünfte bleiben erhalten. Die KI berechnet Reiseführer, Aktivitäten, Restaurants und Tagespläne neu.')) return;
+  // Inline confirmation — avoids browser popup blocking
+  if (btn.dataset.confirmPending !== '1') {
+    btn.dataset.confirmPending = '1';
+    btn.textContent = 'Bestätigen?';
+    btn.classList.add('btn-warning');
+    setTimeout(() => {
+      if (btn.dataset.confirmPending === '1') {
+        btn.dataset.confirmPending = '';
+        btn.textContent = 'Neu berechnen';
+        btn.classList.remove('btn-warning');
+      }
+    }, 3000);
+    return;
+  }
 
+  // Confirmed — proceed
+  btn.dataset.confirmPending = '';
   btn.disabled = true;
   btn.textContent = 'Wird gestartet…';
+  btn.classList.remove('btn-warning');
 
   try {
     const { job_id } = await apiReplanTravel(id);
     closeTravelsDrawer();
 
-    // Show progress section and open SSE
     showSection('progress');
     document.getElementById('progress-error').style.display = 'none';
+    const statusEl = document.getElementById('progress-agent-status');
+    const timelineEl = document.getElementById('progress-timeline');
+    if (statusEl)  statusEl.textContent = 'Reiseführer und Tagespläne werden neu berechnet…';
+    if (timelineEl) timelineEl.innerHTML = '<div class="shimmer-line"></div><div class="shimmer-line short"></div>';
     S.jobId = job_id;
 
     _startReplanSSE(job_id, id);
   } catch (err) {
-    alert('Fehler beim Starten: ' + err.message);
     btn.disabled = false;
     btn.textContent = 'Neu berechnen';
+    // Show error inline in the card instead of alert
+    const card = btn.closest('.travel-card');
+    if (card) {
+      const errDiv = document.createElement('div');
+      errDiv.className = 'travel-card-error';
+      errDiv.textContent = 'Fehler: ' + err.message;
+      card.appendChild(errDiv);
+      setTimeout(() => errDiv.remove(), 5000);
+    }
   }
 }
 
 function _startReplanSSE(jobId, sourceTravelId) {
-  const statusEl  = document.getElementById('progress-agent-status');
-  const timelineEl = document.getElementById('progress-timeline');
-  if (statusEl)  statusEl.textContent = 'Reiseführer und Tagespläne werden neu berechnet…';
-  if (timelineEl) timelineEl.innerHTML = '<div class="shimmer-line"></div><div class="shimmer-line short"></div>';
+  const statusEl = document.getElementById('progress-agent-status');
 
   const source = openSSE(jobId, {
     job_complete: async (data) => {
