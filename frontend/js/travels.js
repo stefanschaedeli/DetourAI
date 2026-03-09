@@ -1,5 +1,71 @@
 'use strict';
 
+function _renderStars(travelId, currentRating) {
+  const stars = [1,2,3,4,5].map(n => {
+    const filled = n <= currentRating;
+    return `<span class="travel-star${filled ? ' active' : ''}" data-id="${travelId}" data-val="${n}">${filled ? '★' : '☆'}</span>`;
+  }).join('');
+  return `<span class="travel-stars" data-id="${travelId}">${stars}</span>`;
+}
+
+async function _handleStarClick(starEl) {
+  const id = parseInt(starEl.dataset.id, 10);
+  const clickedVal = parseInt(starEl.dataset.val, 10);
+  const container = starEl.closest('.travel-stars');
+  const currentRating = container.querySelectorAll('.travel-star.active').length;
+  const newRating = (clickedVal === currentRating) ? 0 : clickedVal;
+  container.querySelectorAll('.travel-star').forEach(s => {
+    const v = parseInt(s.dataset.val, 10);
+    const active = v <= newRating;
+    s.classList.toggle('active', active);
+    s.textContent = active ? '★' : '☆';
+  });
+  try {
+    await apiUpdateTravel(id, { rating: newRating });
+  } catch (err) {
+    console.error('Bewertung fehlgeschlagen:', err.message);
+    loadTravelsList();
+  }
+}
+
+function _startRename(titleEl) {
+  const id = parseInt(titleEl.dataset.id, 10);
+  const currentText = titleEl.dataset.current;
+  const badge = titleEl.querySelector('.travel-card-badge');
+  titleEl.innerHTML = '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentText;
+  input.className = 'travel-card-rename-input';
+  input.maxLength = 120;
+  titleEl.appendChild(input);
+  if (badge) titleEl.appendChild(badge);
+  input.focus();
+  input.select();
+
+  async function _commit() {
+    const newName = input.value.trim();
+    const displayName = newName || titleEl.dataset.title;
+    titleEl.innerHTML = esc(displayName) + (badge ? ' ' + badge.outerHTML : '');
+    titleEl.dataset.current = displayName;
+    if (newName !== currentText) {
+      try {
+        await apiUpdateTravel(id, { custom_name: newName || null });
+      } catch (err) {
+        titleEl.innerHTML = esc(currentText) + (badge ? ' ' + badge.outerHTML : '');
+        titleEl.dataset.current = currentText;
+        console.error('Umbenennen fehlgeschlagen:', err.message);
+      }
+    }
+  }
+
+  input.addEventListener('blur', _commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = currentText; input.blur(); }
+  });
+}
+
 function openTravelsDrawer() {
   document.getElementById('travels-drawer-overlay').classList.add('open');
   document.getElementById('travels-drawer').classList.add('open');
@@ -28,10 +94,13 @@ async function loadTravelsList() {
       const cost = typeof t.total_cost_chf === 'number'
         ? `CHF ${t.total_cost_chf.toLocaleString('de-CH')}` : '–';
       const hasGuide = t.has_travel_guide ? '<span class="travel-card-badge">Reiseführer</span>' : '';
+      const displayName = t.custom_name || t.title;
+      const starsHtml = _renderStars(t.id, t.rating || 0);
       return `
         <div class="travel-card" data-id="${t.id}">
           <div class="travel-card-body">
-            <div class="travel-card-title">${esc(t.title)} ${hasGuide}</div>
+            <div class="travel-card-title" data-id="${t.id}" data-title="${esc(t.title)}" data-current="${esc(displayName)}" title="Klicken zum Umbenennen">${esc(displayName)} ${hasGuide}</div>
+            <div class="travel-card-rating">${starsHtml}</div>
             <div class="travel-card-meta">
               <span>${esc(date)}</span>
               <span>${t.num_stops} Stops · ${t.total_days} Tage</span>
@@ -168,6 +237,14 @@ function _startReplanSSE(jobId, sourceTravelId) {
     },
   });
 }
+
+// Star + rename delegation
+document.getElementById('travels-list').addEventListener('click', e => {
+  const star = e.target.closest('.travel-star');
+  if (star) { _handleStarClick(star); return; }
+  const titleEl = e.target.closest('.travel-card-title');
+  if (titleEl && !titleEl.querySelector('input')) { _startRename(titleEl); }
+});
 
 // Close on backdrop click
 document.addEventListener('click', e => {

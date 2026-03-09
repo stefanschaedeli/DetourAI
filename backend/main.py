@@ -98,14 +98,14 @@ _CORS_ORIGINS = os.getenv(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_CORS_ORIGINS,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 
 OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", str(Path(__file__).parent.parent / "outputs")))
 OUTPUTS_DIR.mkdir(exist_ok=True)
 
-from utils.travel_db import _init_db, save_travel, list_travels, get_travel, delete_travel
+from utils.travel_db import _init_db, save_travel, list_travels, get_travel, delete_travel, update_travel
 _init_db()
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
@@ -1710,6 +1710,11 @@ class SaveTravelRequest(BaseModel):
     plan: dict
 
 
+class UpdateTravelRequest(BaseModel):
+    custom_name: Optional[str] = None
+    rating: Optional[int] = None
+
+
 @app.get("/api/travels")
 async def api_list_travels():
     return {"travels": await list_travels()}
@@ -1721,6 +1726,14 @@ async def api_save_travel(body: SaveTravelRequest):
     if travel_id is None:
         return {"saved": False, "id": None}
     return {"saved": True, "id": travel_id}
+
+
+@app.patch("/api/travels/{travel_id}")
+async def api_update_travel(travel_id: int, body: UpdateTravelRequest):
+    updated = await update_travel(travel_id, body.custom_name, body.rating)
+    if not updated:
+        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+    return {"updated": True, "id": travel_id}
 
 
 @app.get("/api/travels/{travel_id}")

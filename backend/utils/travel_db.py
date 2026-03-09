@@ -40,6 +40,14 @@ def _init_db() -> None:
             conn.execute("ALTER TABLE travels ADD COLUMN has_travel_guide INTEGER NOT NULL DEFAULT 0")
         except Exception:
             pass  # column already exists
+        try:
+            conn.execute("ALTER TABLE travels ADD COLUMN custom_name TEXT")
+        except Exception:
+            pass
+        try:
+            conn.execute("ALTER TABLE travels ADD COLUMN rating INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass
 
 
 def _build_title(plan: dict) -> str:
@@ -74,7 +82,8 @@ def _sync_list() -> list:
     with _get_conn() as conn:
         rows = conn.execute(
             "SELECT id,job_id,title,created_at,start_location,"
-            "destination,total_days,num_stops,total_cost_chf,has_travel_guide "
+            "destination,total_days,num_stops,total_cost_chf,has_travel_guide,"
+            "custom_name,rating "
             "FROM travels ORDER BY id DESC"
         ).fetchall()
     return [dict(r) for r in rows]
@@ -94,6 +103,22 @@ def _sync_delete(travel_id: int) -> bool:
     return cur.rowcount > 0
 
 
+def _sync_update(travel_id: int, custom_name: Optional[str], rating: Optional[int]) -> bool:
+    fields, values = [], []
+    if custom_name is not None:
+        fields.append("custom_name = ?")
+        values.append(custom_name.strip() or None)
+    if rating is not None:
+        fields.append("rating = ?")
+        values.append(max(0, min(5, rating)))
+    if not fields:
+        return True
+    values.append(travel_id)
+    with _get_conn() as conn:
+        cur = conn.execute(f"UPDATE travels SET {', '.join(fields)} WHERE id=?", values)
+    return cur.rowcount > 0
+
+
 # Async wrappers (matches existing asyncio.to_thread pattern in retry_helper.py)
 async def save_travel(plan: dict) -> Optional[int]:
     return await asyncio.to_thread(_sync_save, plan)
@@ -109,3 +134,7 @@ async def get_travel(travel_id: int) -> Optional[dict]:
 
 async def delete_travel(travel_id: int) -> bool:
     return await asyncio.to_thread(_sync_delete, travel_id)
+
+
+async def update_travel(travel_id: int, custom_name: Optional[str] = None, rating: Optional[int] = None) -> bool:
+    return await asyncio.to_thread(_sync_update, travel_id, custom_name, rating)

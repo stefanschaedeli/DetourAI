@@ -168,6 +168,13 @@ async function apiReplanTravel(id) {
   return (await _fetchQuiet(`${API}/travels/${id}/replan`, { method: 'POST' })).json();
 }
 
+async function apiUpdateTravel(id, data) {
+  return (await _fetchQuiet(`${API}/travels/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })).json();
+}
+
 /**
  * Open SSE connection for a job.
  * @param {string} jobId
