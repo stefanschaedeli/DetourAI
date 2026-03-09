@@ -73,12 +73,31 @@ async def _fetch_one(
             timeout=aiohttp.ClientTimeout(total=8),
         ) as resp:
             if resp.status != 200:
+                body = await resp.text()
+                await debug_logger.log(
+                    LogLevel.WARNING,
+                    f"Unsplash API Fehler {resp.status} für '{query}': {body[:200]}",
+                )
                 return None
             data = await resp.json()
             results = data.get("results", [])
             if not results:
+                await debug_logger.log(
+                    LogLevel.WARNING,
+                    f"Unsplash: keine Ergebnisse für '{query}'",
+                )
                 return None
             raw_url = results[0].get("urls", {}).get("regular")
-            return _validate_unsplash_url(raw_url)
-    except Exception:
+            validated = _validate_unsplash_url(raw_url)
+            if not validated:
+                await debug_logger.log(
+                    LogLevel.WARNING,
+                    f"Unsplash: URL-Validierung fehlgeschlagen für '{raw_url}'",
+                )
+            return validated
+    except Exception as e:
+        await debug_logger.log(
+            LogLevel.WARNING,
+            f"Unsplash: Exception für '{query}': {e}",
+        )
         return None
