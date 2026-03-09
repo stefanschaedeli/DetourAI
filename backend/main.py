@@ -1572,16 +1572,34 @@ async def progress(job_id: str):
     get_job(job_id)
 
     queue = debug_logger.subscribe(job_id)
+    redis_key = f"sse:{job_id}"
+
+    async def _drain_redis():
+        """Move any events queued in Redis (by Celery workers) into the local queue."""
+        r = debug_logger._r()
+        if not r:
+            return
+        try:
+            while True:
+                raw = await asyncio.to_thread(r.lpop, redis_key)
+                if raw is None:
+                    break
+                event = json.loads(raw)
+                try:
+                    queue.put_nowait(event)
+                except asyncio.QueueFull:
+                    break
+        except Exception:
+            pass
 
     async def event_generator():
         try:
             while True:
+                # First drain any events published by Celery workers via Redis
+                await _drain_redis()
                 try:
-                    event = await asyncio.wait_for(queue.get(), timeout=45.0)
+                    event = await asyncio.wait_for(queue.get(), timeout=1.0)
                     event_type = event.pop("type", "debug_log")
-                    # push_event() wraps the payload under "data"; debug_logger.log() puts
-                    # fields (level, message, agent, ts) at the top level.  Flatten only
-                    # events that came through push_event so the frontend receives plain dicts.
                     if event_type != "debug_log" and "data" in event:
                         payload = event["data"] or {}
                     else:
@@ -1593,9 +1611,19 @@ async def progress(job_id: str):
                     if event_type in ("job_complete", "job_error"):
                         break
                 except asyncio.TimeoutError:
-                    yield {"event": "ping", "data": "{}"}
+                    # Drain Redis again before sending ping
+                    await _drain_redis()
+                    if queue.empty():
+                        yield {"event": "ping", "data": "{}"}
         finally:
-            debug_logger.unsubscribe(job_id)
+            debug_logger.unsubscribe(job_id, queue)
+            # Clean up Redis list
+            r = debug_logger._r()
+            if r:
+                try:
+                    await asyncio.to_thread(r.delete, redis_key)
+                except Exception:
+                    pass
 
     return EventSourceResponse(event_generator())
 
