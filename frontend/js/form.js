@@ -251,23 +251,13 @@ function changeAdults(delta) {
 }
 
 // ---------------------------------------------------------------------------
-// Accommodation styles + must-haves
+// Accommodation preferences
 // ---------------------------------------------------------------------------
 
-function toggleAccStyle(el) {
-  el.classList.toggle('selected');
-}
-
-function toggleMustHave(el) {
-  el.classList.toggle('selected');
-}
-
-function getSelectedAccStyles() {
-  return Array.from(document.querySelectorAll('.acc-style.selected')).map(el => el.dataset.id);
-}
-
-function getSelectedMustHaves() {
-  return Array.from(document.querySelectorAll('.must-have.selected')).map(el => el.dataset.id);
+function getAccPreferences() {
+  return ['acc-pref-0', 'acc-pref-1', 'acc-pref-2']
+    .map(id => document.getElementById(id)?.value.trim() || '')
+    .filter(v => v.length > 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -359,8 +349,7 @@ function buildPayload() {
     proximity_target_pct: parseInt(document.getElementById('proximity-target')?.value) ?? 15,
     min_nights_per_stop: parseInt(document.getElementById('min-nights')?.value) || 1,
     max_nights_per_stop: parseInt(document.getElementById('max-nights')?.value) || 5,
-    accommodation_styles:    getSelectedAccStyles(),
-    accommodation_must_haves: getSelectedMustHaves(),
+    accommodation_preferences: getAccPreferences(),
     hotel_radius_km: parseInt(document.getElementById('hotel-radius')?.value) || 10,
     budget_chf: parseFloat(document.getElementById('budget-chf')?.value) || 3000,
     budget_accommodation_pct: parseInt(document.getElementById('budget-acc-pct')?.value)  || 60,
@@ -477,6 +466,10 @@ function restoreFormFromCache() {
   setVal('budget-act-pct',  cached.budget_activities_pct);
   setVal('max-activities',  cached.max_activities_per_stop);
   setVal('max-restaurants', cached.max_restaurants_per_stop);
+
+  if (cached.accommodation_preferences) {
+    cached.accommodation_preferences.forEach((val, i) => setVal(`acc-pref-${i}`, val));
+  }
 
   if (cached.travelStyles) {
     S.travelStyles = cached.travelStyles;

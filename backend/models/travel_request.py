@@ -57,8 +57,7 @@ class TravelRequest(BaseModel):
     proximity_target_pct: int = Field(default=15, ge=0, le=30)   # % of segment km — min distance from segment target
 
     # Accommodation
-    accommodation_styles: List[str] = Field(default=[], max_length=5)   # hotel, apartment, camping, hostel, airbnb
-    accommodation_must_haves: List[str] = Field(default=[], max_length=10)  # pool, wifi, parking, kitchen, breakfast
+    accommodation_preferences: List[str] = Field(default=[], max_length=3)
     hotel_radius_km: int = Field(default=10, ge=1, le=100)
 
     # Budget

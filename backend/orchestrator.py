@@ -19,7 +19,7 @@ class TravelPlannerOrchestrator:
     async def progress(self, event_type: str, agent_id, data: dict, percent: int = 0):
         await debug_logger.push_event(self.job_id, event_type, agent_id, data, percent)
 
-    async def run(self, pre_built_stops=None, pre_selected_accommodations=None) -> dict:
+    async def run(self, pre_built_stops=None, pre_selected_accommodations=None, pre_all_accommodation_options=None) -> dict:
         req = self.request
         job_id = self.job_id
 
@@ -111,6 +111,7 @@ class TravelPlannerOrchestrator:
                 "stop_id": sid,
                 "region": stop.get("region"),
                 "accommodation": acc,
+                "all_accommodation_options": (pre_all_accommodation_options or {}).get(str(sid), []),
                 "top_activities": act_map.get(sid, {}).get("top_activities", [])[:3],
                 "restaurants": rest_map.get(sid, {}).get("restaurants", [])[:3],
             })
@@ -143,6 +144,11 @@ class TravelPlannerOrchestrator:
             accommodations=all_accommodations,
             activities=all_research,
         )
+
+        # Merge all accommodation options into each stop
+        for stop_dict in plan.get("stops", []):
+            sid = stop_dict.get("id")
+            stop_dict["all_accommodation_options"] = (pre_all_accommodation_options or {}).get(str(sid), [])
 
         await debug_logger.log(LogLevel.SUCCESS, "Reiseplan fertig!", job_id=job_id)
 

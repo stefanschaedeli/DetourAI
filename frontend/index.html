@@ -216,25 +216,11 @@
       <h2 class="form-section-title">Unterkunft</h2>
 
       <div class="form-group">
-        <label>Unterkunftsart (Mehrfachauswahl)</label>
-        <div class="acc-style-grid">
-          <div class="acc-style" data-id="hotel" onclick="toggleAccStyle(this)">Hotel</div>
-          <div class="acc-style" data-id="apartment" onclick="toggleAccStyle(this)">Apartment</div>
-          <div class="acc-style" data-id="camping" onclick="toggleAccStyle(this)">Camping</div>
-          <div class="acc-style" data-id="hostel" onclick="toggleAccStyle(this)">Hostel</div>
-          <div class="acc-style" data-id="airbnb" onclick="toggleAccStyle(this)">Airbnb</div>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Ausstattung (Mehrfachauswahl)</label>
-        <div class="must-have-grid">
-          <div class="must-have" data-id="pool" onclick="toggleMustHave(this)">Pool</div>
-          <div class="must-have" data-id="wifi" onclick="toggleMustHave(this)">WiFi</div>
-          <div class="must-have" data-id="parking" onclick="toggleMustHave(this)">Parkplatz</div>
-          <div class="must-have" data-id="kitchen" onclick="toggleMustHave(this)">Küche</div>
-          <div class="must-have" data-id="breakfast" onclick="toggleMustHave(this)">Frühstück</div>
-        </div>
+        <label>Was für Unterkünfte möchtest du? (bis zu 3 Wünsche)</label>
+        <input type="text" id="acc-pref-0" placeholder="z.B. romantisches B&B am See mit Frühstück" oninput="saveFormToCache()">
+        <input type="text" id="acc-pref-1" placeholder="z.B. zentral gelegenes Boutique-Hotel" oninput="saveFormToCache()" style="margin-top:8px">
+        <input type="text" id="acc-pref-2" placeholder="z.B. Familien-Apartment mit Küche und Parkplatz" oninput="saveFormToCache()" style="margin-top:8px">
+        <p class="form-hint">Eine 4. Option (Geheimtipp) wird automatisch gesucht.</p>
       </div>
 
       <div class="form-group">

@@ -31,7 +31,32 @@ def sample_request():
         "children": [],
         "budget_chf": 5000,
         "travel_styles": ["culture", "culinary"],
+        "accommodation_preferences": ["romantisches Hotel", "Camping mit Aussicht"],
     }
+
+
+def test_travel_request_accommodation_preferences():
+    req = TravelRequest(
+        start_location="Liestal",
+        main_destination="Paris",
+        start_date="2026-06-01",
+        end_date="2026-06-10",
+        total_days=10,
+        accommodation_preferences=["romantisches Hotel", "Camping mit Aussicht"],
+    )
+    assert req.accommodation_preferences == ["romantisches Hotel", "Camping mit Aussicht"]
+
+
+def test_travel_request_accommodation_preferences_too_many():
+    with pytest.raises(Exception):
+        TravelRequest(
+            start_location="Liestal",
+            main_destination="Paris",
+            start_date="2026-06-01",
+            end_date="2026-06-10",
+            total_days=10,
+            accommodation_preferences=["a", "b", "c", "d"],
+        )
 
 
 def test_travel_request_defaults():
@@ -185,6 +210,30 @@ def test_accommodation_geheimtipp_fields():
     assert opt.is_geheimtipp is True
     assert opt.geheimtipp_hinweis is not None
     assert opt.booking_search_url is not None
+
+
+def test_accommodation_option_preference_index():
+    opt = AccommodationOption(
+        id="acc_1_1",
+        name="Test Hotel",
+        type="hotel",
+        price_per_night_chf=100.0,
+        total_price_chf=200.0,
+        teaser="Test",
+        preference_index=0,
+    )
+    assert opt.preference_index == 0
+
+    opt_geheimtipp = AccommodationOption(
+        id="acc_1_4",
+        name="Geheimtipp",
+        type="bauernhof",
+        price_per_night_chf=100.0,
+        total_price_chf=200.0,
+        teaser="Geheimtipp",
+        is_geheimtipp=True,
+    )
+    assert opt_geheimtipp.preference_index is None
 
 
 def test_accommodation_option_defaults():
@@ -365,6 +414,16 @@ def test_travel_stop_new_fields_default():
     )
     assert stop.travel_guide is None
     assert stop.further_activities == []
+    assert stop.all_accommodation_options == []
+
+
+def test_travel_stop_all_accommodation_options():
+    stop = TravelStop(
+        id=1, region="Annecy", country="FR",
+        arrival_day=2, nights=2,
+        all_accommodation_options=[{"name": "Hotel A"}, {"name": "Hotel B"}],
+    )
+    assert len(stop.all_accommodation_options) == 2
 
 
 def test_travel_stop_with_travel_guide():

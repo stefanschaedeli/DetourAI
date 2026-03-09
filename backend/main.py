@@ -238,6 +238,7 @@ def _new_job(request: TravelRequest) -> dict:
         "current_acc_options": [],
         "accommodation_index": 0,
         "prefetched_accommodations": {},
+        "all_accommodation_options": {},
         "all_accommodations_loaded": False,
         "route_geometry_cache": {},  # key: "{from}|{to}|{stops}" → dict
         "rundreise_mode": False,
@@ -1424,7 +1425,13 @@ async def confirm_accommodations(job_id: str, body: dict):
                 "option": options[option_idx],
             })
 
+    all_options_by_stop = {
+        str(sid): prefetched.get(str(sid), [])
+        for sid in selections.keys()
+    }
+
     job["selected_accommodations"] = selected_accommodations
+    job["all_accommodation_options"] = all_options_by_stop
     job["status"] = "accommodations_confirmed"
     save_job(job_id, job)
 
@@ -1464,7 +1471,11 @@ async def select_accommodation(job_id: str, body: AccommodationSelectRequest):
             "option": options[body.option_index],
         })
 
+    all_options_by_stop = job.get("all_accommodation_options", {})
+    all_options_by_stop[str(stop_id)] = prefetched.get(str(stop_id), [])
+
     job["selected_accommodations"] = selected_accommodations
+    job["all_accommodation_options"] = all_options_by_stop
     job["accommodation_index"] = acc_idx + 1
     all_complete = len(selected_accommodations) >= len(selected_stops)
 

@@ -64,8 +64,10 @@ class AccommodationResearcherAgent:
         country = stop.get("country", "")
 
         children_count = len(req.children)
-        styles_str = ", ".join(req.accommodation_styles) if req.accommodation_styles else "hotel, apartment"
-        must_haves_str = ", ".join(req.accommodation_must_haves) if req.accommodation_must_haves else "WiFi"
+        preferences = req.accommodation_preferences
+        pref0 = preferences[0] if len(preferences) > 0 else "komfortables Hotel"
+        pref1 = preferences[1] if len(preferences) > 1 else "gemütliches Apartment"
+        pref2 = preferences[2] if len(preferences) > 2 else "naturnahe Unterkunft"
 
         budget_min = round(budget_per_night * 0.75, 0)
         budget_max = round(budget_per_night * 1.30, 0)
@@ -78,23 +80,22 @@ class AccommodationResearcherAgent:
         if self.extra_instructions:
             extra_hint = f"\nZusätzliche Wünsche des Gastes: {self.extra_instructions}"
 
-        prompt = f"""Finde genau 3 Unterkunftsoptionen in {region}, {country}.
+        prompt = f"""Finde genau 4 Unterkunftsoptionen in {region}, {country}.
 
 Reisende: {req.adults} Erwachsene{f', {children_count} Kinder' if children_count else ''}
 Nächte: {nights}
-Gewünschte Unterkunftstypen: {styles_str}
-Pflichtausstattung (must-haves): {must_haves_str}
 Suchradius: {req.hotel_radius_km} km
 Preisrahmen pro Nacht: CHF {budget_min:.0f} – CHF {budget_max:.0f}{children_hint}{extra_hint}
 
 REGELN:
-1. Alle 3 Optionen müssen vom Typ in [{styles_str}] sein — keine anderen Typen.
-2. Versuche, alle must-haves zu erfüllen. Falls nicht möglich, erkläre es kurz im Teaser.
-3. Die dritte Option (is_geheimtipp: true) soll etwas Besonderes/Ungewöhnliches für die Region sein (Glamping, Baumhaus, Boutique-Hotel, Weingut, Bauernhof, etc.) — aber ebenfalls vom erlaubten Typ.
-4. Verwende realistische, tatsächlich existierende Hotelnamen für {region}.
-5. Beschreibung: 1-2 Absätze auf Deutsch mit Zimmerausstattung, Hotelaktivitäten und spezifischen Services.
-6. matched_must_haves: Array mit den must-haves, die diese Unterkunft konkret erfüllt.
-7. hotel_website_url: Echte Hotelwebseite falls bekannt, sonst null.
+1. Option 1 (preference_index: 0): Entspricht diesem Wunsch des Gastes: "{pref0}"
+2. Option 2 (preference_index: 1): Entspricht diesem Wunsch des Gastes: "{pref1}"
+3. Option 3 (preference_index: 2): Entspricht diesem Wunsch des Gastes: "{pref2}"
+4. Option 4 (is_geheimtipp: true, preference_index: null): Ein echter Geheimtipp — etwas Besonderes/Ungewöhnliches für die Region (Glamping, Baumhaus, Boutique-Hotel, Weingut, Bauernhof, etc.)
+5. Verwende realistische, tatsächlich existierende Unterkunftsnamen für {region}.
+6. Beschreibung: 1-2 Absätze auf Deutsch mit Zimmerausstattung, Aktivitäten und spezifischen Services.
+7. matched_must_haves: Immer leeres Array [].
+8. hotel_website_url: Echte Hotelwebseite falls bekannt, sonst null.
 
 Gib exakt dieses JSON zurück:
 {{
@@ -115,7 +116,8 @@ Gib exakt dieses JSON zurück:
       "description": "...",
       "suitable_for_children": true,
       "is_geheimtipp": false,
-      "matched_must_haves": ["WiFi"],
+      "preference_index": 0,
+      "matched_must_haves": [],
       "hotel_website_url": null
     }},
     {{
@@ -132,7 +134,8 @@ Gib exakt dieses JSON zurück:
       "description": "...",
       "suitable_for_children": true,
       "is_geheimtipp": false,
-      "matched_must_haves": ["WiFi", "Frühstück"],
+      "preference_index": 1,
+      "matched_must_haves": [],
       "hotel_website_url": null
     }},
     {{
@@ -143,12 +146,31 @@ Gib exakt dieses JSON zurück:
       "total_price_chf": {budget_per_night * nights:.0f},
       "separate_rooms_available": true,
       "max_persons": 4,
+      "rating": 8.8,
+      "features": ["Natur", "Ruhig"],
+      "teaser": "...",
+      "description": "...",
+      "suitable_for_children": true,
+      "is_geheimtipp": false,
+      "preference_index": 2,
+      "matched_must_haves": [],
+      "hotel_website_url": null
+    }},
+    {{
+      "id": "acc_{stop_id}_4",
+      "name": "...",
+      "type": "...",
+      "price_per_night_chf": {budget_per_night:.0f},
+      "total_price_chf": {budget_per_night * nights:.0f},
+      "separate_rooms_available": true,
+      "max_persons": 4,
       "rating": 9.0,
-      "features": ["Natur", "Authentisch", "Ruhig"],
+      "features": ["Einzigartig", "Authentisch", "Ruhig"],
       "teaser": "...",
       "description": "...",
       "suitable_for_children": true,
       "is_geheimtipp": true,
+      "preference_index": null,
       "matched_must_haves": [],
       "hotel_website_url": null,
       "geheimtipp_hinweis": "Buche direkt beim Betrieb oder über lokales Tourismusbüro."
@@ -168,7 +190,7 @@ Gib exakt dieses JSON zurück:
                     def call():
                         return self.client.messages.create(
                             model=self.model,
-                            max_tokens=2500,
+                            max_tokens=3500,
                             system=SYSTEM_PROMPT,
                             messages=[{"role": "user", "content": prompt}],
                         )
@@ -177,7 +199,7 @@ Gib exakt dieses JSON zurück:
                 def call():
                     return self.client.messages.create(
                         model=self.model,
-                        max_tokens=2500,
+                        max_tokens=3500,
                         system=SYSTEM_PROMPT,
                         messages=[{"role": "user", "content": prompt}],
                     )
@@ -216,7 +238,7 @@ Gib exakt dieses JSON zurück:
                     children=children_count,
                 )
 
-            actual_type = opt.get("type") or (req.accommodation_styles[0] if req.accommodation_styles else "hotel")
+            actual_type = opt.get("type") or "unterkunft"
             images = await fetch_unsplash_images(f"{region} {actual_type}", actual_type)
             opt.update(images)
             return opt

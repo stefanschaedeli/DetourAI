@@ -18,6 +18,7 @@ class AccommodationOption(BaseModel):
     geheimtipp_hinweis: Optional[str] = None
     is_geheimtipp: bool = False
     matched_must_haves: List[str] = []
+    preference_index: Optional[int] = None
     booking_url: Optional[str] = None        # Booking.com deeplink (mit Hotelname)
     hotel_website_url: Optional[str] = None  # Direkte Hotelwebseite
     booking_search_url: Optional[str] = None  # Booking.com Suchlink (nur Stadt, für Geheimtipp)

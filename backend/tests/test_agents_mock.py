@@ -158,7 +158,8 @@ def test_accommodation_find_options_structure(mocker):
             "description": "Das Hotel Seeblick bietet komfortable Zimmer mit WiFi und Parkplatz.",
             "suitable_for_children": True,
             "is_geheimtipp": False,
-            "matched_must_haves": ["WiFi"],
+            "preference_index": 0,
+            "matched_must_haves": [],
             "hotel_website_url": None,
         },
         {
@@ -175,11 +176,30 @@ def test_accommodation_find_options_structure(mocker):
             "description": "Moderne Ferienwohnung mit vollausgestatteter Küche und WiFi.",
             "suitable_for_children": True,
             "is_geheimtipp": False,
-            "matched_must_haves": ["WiFi", "Küche"],
+            "preference_index": 1,
+            "matched_must_haves": [],
             "hotel_website_url": "https://example.com",
         },
         {
             "id": "acc_1_3",
+            "name": "Naturhotel Alpental",
+            "type": "hotel",
+            "price_per_night_chf": 130,
+            "total_price_chf": 260,
+            "separate_rooms_available": True,
+            "max_persons": 4,
+            "rating": 8.8,
+            "features": ["Natur", "Ruhig"],
+            "teaser": "Naturnahes Hotel",
+            "description": "Naturhotel mit Bergblick und ruhiger Lage.",
+            "suitable_for_children": True,
+            "is_geheimtipp": False,
+            "preference_index": 2,
+            "matched_must_haves": [],
+            "hotel_website_url": None,
+        },
+        {
+            "id": "acc_1_4",
             "name": "Bergbauernhof Sonnenschein",
             "type": "bauernhof",
             "price_per_night_chf": 100,
@@ -192,6 +212,7 @@ def test_accommodation_find_options_structure(mocker):
             "description": "Authentischer Bergbauernhof mit Direktkontakt zu Tieren.",
             "suitable_for_children": True,
             "is_geheimtipp": True,
+            "preference_index": None,
             "matched_must_haves": [],
             "hotel_website_url": None,
             "geheimtipp_hinweis": "Direkt beim Hof buchen.",
@@ -221,8 +242,7 @@ def test_accommodation_find_options_structure(mocker):
         end_date="2026-06-10",
         total_days=10,
         budget_chf=5000,
-        accommodation_styles=["hotel", "apartment"],
-        accommodation_must_haves=["WiFi"],
+        accommodation_preferences=["romantisches Hotel am See", "gemütliches Apartment"],
     )
     agent = AccommodationResearcherAgent(request, "test_job")
 
@@ -234,21 +254,28 @@ def test_accommodation_find_options_structure(mocker):
     result = asyncio.run(_run())
 
     options = result.get("options", [])
-    assert len(options) == 3
+    assert len(options) == 4
 
     # Check new fields present, old fields absent
     for opt in options:
         assert "description" in opt
         assert "matched_must_haves" in opt
         assert "is_geheimtipp" in opt
+        assert "preference_index" in opt
         assert "option_type" not in opt
         assert "price_range" not in opt
         assert "price_source" not in opt
         assert "booking_hint" not in opt
 
-    # Geheimtipp is option 3
-    geheimtipp = options[2]
+    # First 3 options have preference_index set
+    assert options[0]["preference_index"] == 0
+    assert options[1]["preference_index"] == 1
+    assert options[2]["preference_index"] == 2
+
+    # Geheimtipp is option 4
+    geheimtipp = options[3]
     assert geheimtipp["is_geheimtipp"] is True
+    assert geheimtipp["preference_index"] is None
     assert "booking_search_url" in geheimtipp
     assert geheimtipp.get("booking_url") is None
 

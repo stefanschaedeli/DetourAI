@@ -61,6 +61,7 @@ function buildAllStopPanels(stops) {
           <div class="shimmer-card"></div>
           <div class="shimmer-card"></div>
           <div class="shimmer-card"></div>
+          <div class="shimmer-card"></div>
         </div>
         <div class="acc-resarch-row" id="acc-resarch-row-${stop.id}">
           <input class="acc-resarch-input" id="acc-resarch-input-${stop.id}"

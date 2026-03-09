@@ -113,8 +113,7 @@ function _extractReqKeywords(req) {
     const label = (TRAVEL_STYLES.find(t => t.id === s) || {}).label;
     if (label) kws.push(label);
   });
-  (req.accommodation_must_haves || req.must_haves || []).forEach(k => kws.push(k));
-  (req.accommodation_styles || []).forEach(k => kws.push(k));
+  (req.accommodation_preferences || []).forEach(k => kws.push(k));
   (req.mandatory_activities || []).forEach(a => kws.push(typeof a === 'string' ? a : a.name));
   (req.preferred_activities || []).forEach(k => kws.push(k));
   if (req.main_destination) kws.push(req.main_destination);
@@ -151,9 +150,8 @@ function _renderReqTags(req) {
     tags.push({ label, cls: 'req-tag-style' });
   });
 
-  // Must-haves / accommodation
-  (req.accommodation_must_haves || req.must_haves || []).forEach(k => tags.push({ label: k, cls: 'req-tag-must' }));
-  (req.accommodation_styles || []).forEach(k => tags.push({ label: k, cls: 'req-tag-acc' }));
+  // Accommodation preferences
+  (req.accommodation_preferences || []).forEach(k => tags.push({ label: k, cls: 'req-tag-acc' }));
 
   // Mandatory activities
   (req.mandatory_activities || []).forEach(a => {
@@ -372,24 +370,51 @@ function renderStops(plan) {
 
             ${renderTravelGuide(stop.travel_guide)}
 
-            ${acc.name ? `
+            ${acc.name ? (() => {
+              const allOpts = stop.all_accommodation_options || [];
+              const altOpts = allOpts.filter(o => o.name !== acc.name);
+              return `
               <div class="stop-accommodation">
                 <h4>Unterkunft</h4>
                 ${buildImageGallery(acc.image_overview, acc.image_mood, acc.image_customer, esc(acc.name))}
                 <div class="acc-summary">
                   <strong>${esc(acc.name)}</strong>
+                  <span class="acc-selected-badge">Gewählt</span>
                   ${acc.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
                   <span class="acc-type-tag">${esc(acc.type || '')}</span>
                   <span class="acc-price-tag">ca. CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>
                 </div>
-                ${acc.description ? `<div class="acc-guide-description">${highlightMustHaves(acc.description, acc.matched_must_haves || [])}</div>` : ''}
+                ${acc.description ? `<div class="acc-guide-description">${esc(acc.description)}</div>` : ''}
                 <div class="acc-guide-links">
                   ${acc.booking_url ? `<a href="${safeUrl(acc.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com anschauen →</a>` : ''}
                   ${acc.booking_search_url ? `<a href="${safeUrl(acc.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Bei Booking.com suchen →</a>` : ''}
                   ${acc.hotel_website_url ? `<a href="${safeUrl(acc.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite →</a>` : ''}
                 </div>
+                ${altOpts.length ? `
+                <details class="acc-alt-options">
+                  <summary>Weitere Optionen (${altOpts.length})</summary>
+                  <div class="acc-alt-list">
+                    ${altOpts.map(o => `
+                      <div class="acc-alt-item">
+                        <div class="acc-alt-summary">
+                          <strong>${esc(o.name)}</strong>
+                          ${o.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
+                          <span class="acc-type-tag">${esc(o.type || '')}</span>
+                          <span class="acc-price-tag">ca. CHF ${(o.total_price_chf || 0).toLocaleString('de-CH')}</span>
+                        </div>
+                        <div class="acc-guide-links">
+                          ${o.booking_url ? `<a href="${safeUrl(o.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com →</a>` : ''}
+                          ${o.booking_search_url ? `<a href="${safeUrl(o.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Booking.com suchen →</a>` : ''}
+                          ${o.hotel_website_url ? `<a href="${safeUrl(o.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite →</a>` : ''}
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </details>
+                ` : ''}
               </div>
-            ` : ''}
+              `;
+            })() : ''}
 
             ${acts.length ? `
               <div class="stop-activities">

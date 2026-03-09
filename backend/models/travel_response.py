@@ -33,6 +33,7 @@ class StopAccommodation(BaseModel):
     description: Optional[str] = None
     is_geheimtipp: bool = False
     matched_must_haves: List[str] = []
+    preference_index: Optional[int] = None
     booking_url: Optional[str] = None
     hotel_website_url: Optional[str] = None
     booking_search_url: Optional[str] = None
@@ -77,6 +78,7 @@ class TravelStop(BaseModel):
     lat: Optional[float] = None
     lng: Optional[float] = None
     accommodation: Optional[StopAccommodation] = None
+    all_accommodation_options: List[dict] = []
     top_activities: List[StopActivity] = []
     restaurants: List[Restaurant] = []
     travel_guide: Optional[TravelGuide] = None
