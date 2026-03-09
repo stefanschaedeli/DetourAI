@@ -525,9 +525,9 @@ function _initGuideMap(plan) {
     const infoWin = new google.maps.InfoWindow({ content: `<b>Start: ${esc(plan.start_location)}</b>` });
     const m = GoogleMaps.createDivMarker(map, pos,
       `<div class="map-marker-anchor start-pin">S</div>`,
-      () => infoWin.open(map)
+      () => infoWin.open({ map, position: pos })
     );
-    _guideMarkers.push({ marker: m, infoWin });
+    _guideMarkers.push(m);
     bounds.extend(pos);
     hasBounds = true;
     routePoints.push(new google.maps.LatLng(pos.lat, pos.lng));
@@ -547,10 +547,10 @@ function _initGuideMap(plan) {
       : `<div class="map-marker-num">${stop.id}</div>`;
     const stopId = stop.id;
     const m = GoogleMaps.createDivMarker(map, pos, markerHtml, () => {
-      infoWin.open(map);
+      infoWin.open({ map, position: pos });
       _scrollToGuideStop(stopId);
     });
-    _guideMarkers.push({ marker: m, infoWin });
+    _guideMarkers.push(m);
     bounds.extend(pos);
     hasBounds = true;
     routePoints.push(new google.maps.LatLng(sLat, sLng));
@@ -596,7 +596,12 @@ async function _lazyLoadEntityImages(containerEl, placeName, lat, lng) {
       tmp.innerHTML = newGallery;
       containerEl.insertBefore(tmp.firstChild, containerEl.firstChild);
     }
-  } catch (e) { /* silent */ }
+  } catch (e) {
+    if (typeof S !== 'undefined') {
+      S.logs.push({ level: 'WARNING', agent: 'GoogleMaps', message: `_lazyLoadEntityImages fehlgeschlagen für «${placeName}»: ${e.message}` });
+      if (typeof updateDebugLog === 'function') updateDebugLog();
+    }
+  }
 }
 
 /** Walk the rendered stops section and lazy-load images for all entities. */

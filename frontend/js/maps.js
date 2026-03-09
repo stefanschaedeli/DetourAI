@@ -81,50 +81,39 @@ const GoogleMaps = (() => {
   }
 
   /**
-   * Create a div-based marker using AdvancedMarkerElement if available,
-   * falling back to google.maps.Marker.
+   * Create a div-based marker via OverlayView (no mapId required).
+   * Returns an object with setMap(null) for cleanup.
    */
   function createDivMarker(map, pos, html, onClick) {
-    if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
-      const container = document.createElement('div');
-      container.innerHTML = html;
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        map,
-        position: pos,
-        content: container.firstChild || container,
-      });
-      if (onClick) marker.addListener('click', onClick);
-      return marker;
-    }
-    // Fallback: standard Marker + OverlayView for custom HTML
-    _log('INFO', 'AdvancedMarkerElement nicht verfügbar — Fallback auf OverlayView');
-    const marker = new google.maps.Marker({
-      map,
-      position: pos,
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
-      label: '',
-    });
+    const latLng = new google.maps.LatLng(pos.lat, pos.lng);
     const overlay = new google.maps.OverlayView();
+
     overlay.onAdd = function () {
       const div = document.createElement('div');
       div.style.position = 'absolute';
-      div.innerHTML = html;
       div.style.cursor = 'pointer';
+      div.innerHTML = html;
       if (onClick) div.addEventListener('click', onClick);
       this.getPanes().overlayMouseTarget.appendChild(div);
       this._div = div;
     };
+
     overlay.draw = function () {
       const proj = this.getProjection();
-      if (!proj) return;
-      const pt = proj.fromLatLngToDivPixel(marker.getPosition());
-      if (pt && this._div) {
+      if (!proj || !this._div) return;
+      const pt = proj.fromLatLngToDivPixel(latLng);
+      if (pt) {
         this._div.style.left = (pt.x - 14) + 'px';
         this._div.style.top  = (pt.y - 14) + 'px';
       }
     };
+
+    overlay.onRemove = function () {
+      if (this._div) { this._div.parentNode && this._div.parentNode.removeChild(this._div); this._div = null; }
+    };
+
     overlay.setMap(map);
-    return marker;
+    return overlay;
   }
 
   /**

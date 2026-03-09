@@ -459,9 +459,9 @@ function _initMap(anchors, options) {
     const infoWin = new google.maps.InfoWindow({ content: `<b>Start: ${esc(anchors.prev_label || '')}</b>` });
     const m = GoogleMaps.createDivMarker(map, pos,
       `<div class="map-marker-anchor start-pin">S</div>`,
-      () => infoWin.open({ map, anchor: { getPosition: () => new google.maps.LatLng(pos.lat, pos.lng) } })
+      () => infoWin.open({ map, position: pos })
     );
-    _rbMarkers.push({ marker: m, infoWin });
+    _rbMarkers.push(m);
     bounds.extend(pos);
     hasBounds = true;
   }
@@ -472,9 +472,9 @@ function _initMap(anchors, options) {
     const infoWin = new google.maps.InfoWindow({ content: `<b>Ziel: ${esc(anchors.target_label || '')}</b>` });
     const m = GoogleMaps.createDivMarker(map, pos,
       `<div class="map-marker-anchor target-pin">Z</div>`,
-      () => infoWin.open({ map, anchor: { getPosition: () => new google.maps.LatLng(pos.lat, pos.lng) } })
+      () => infoWin.open({ map, position: pos })
     );
-    _rbMarkers.push({ marker: m, infoWin });
+    _rbMarkers.push(m);
     bounds.extend(pos);
     hasBounds = true;
   }
@@ -503,9 +503,9 @@ function _initMap(anchors, options) {
     const infoWin = new google.maps.InfoWindow({ content: tooltipContent });
     const m = GoogleMaps.createDivMarker(map, pos,
       `<div class="map-marker-num">${i + 1}</div>`,
-      () => { infoWin.open(map); selectOption(i); }
+      () => { infoWin.open({ map, position: pos }); selectOption(i); }
     );
-    _rbMarkers.push({ marker: m, infoWin });
+    _rbMarkers.push(m);
     bounds.extend(pos);
     hasBounds = true;
 
@@ -545,11 +545,8 @@ function _initMap(anchors, options) {
 }
 
 function _clearMap() {
-  _rbMarkers.forEach(({ marker }) => {
-    if (marker && marker.map !== undefined) marker.map = null;
-    else if (marker && typeof marker.setMap === 'function') marker.setMap(null);
-  });
-  _rbPolylines.forEach(l => l.setMap(null));
+  _rbMarkers.forEach(m => { if (m && typeof m.setMap === 'function') m.setMap(null); });
+  _rbPolylines.forEach(l => { if (l && typeof l.setMap === 'function') l.setMap(null); });
   _rbMarkers = [];
   _rbPolylines = [];
 }
