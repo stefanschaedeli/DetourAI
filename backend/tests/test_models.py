@@ -3,7 +3,7 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from models.travel_request import TravelRequest, Child, ViaPoint, MandatoryActivity
-from models.travel_response import TravelPlan, TravelStop, DayPlan, CostEstimate, StopAccommodation, StopActivity, Restaurant
+from models.travel_response import TravelPlan, TravelStop, DayPlan, CostEstimate, StopAccommodation, StopActivity, Restaurant, TravelGuide, TimeBlock
 from models.stop_option import StopOption, StopOptionsResponse, StopSelectRequest
 from models.accommodation_option import AccommodationOption, BudgetState, AccommodationSelectRequest, AccommodationResearchRequest
 
@@ -297,3 +297,117 @@ def test_cost_estimate():
     )
     assert cost.ferries_chf == 0.0
     assert cost.total_chf == 3100
+
+
+# ---------------------------------------------------------------------------
+# TravelGuide
+# ---------------------------------------------------------------------------
+
+def test_travel_guide_valid():
+    guide = TravelGuide(
+        intro_narrative="Annecy ist eine wunderschöne Stadt.",
+        history_culture="Lange Geschichte aus dem Mittelalter.",
+        food_specialties="Tartiflette und Reblochon-Käse.",
+        local_tips="Am frühen Morgen die Altstadt erkunden.",
+        insider_gems="Der Gorge du Fier ist weniger bekannt.",
+        best_time_to_visit="Mai bis September ist ideal.",
+    )
+    assert guide.intro_narrative.startswith("Annecy")
+    assert guide.history_culture != ""
+    assert guide.best_time_to_visit != ""
+
+
+# ---------------------------------------------------------------------------
+# TimeBlock
+# ---------------------------------------------------------------------------
+
+def test_time_block_required_fields():
+    tb = TimeBlock(
+        time="09:00",
+        activity_type="drive",
+        title="Abfahrt nach Annecy",
+        location="Autoroute A40",
+        duration_minutes=150,
+        description="Fahrt durch die Alpen",
+    )
+    assert tb.time == "09:00"
+    assert tb.activity_type == "drive"
+    assert tb.duration_minutes == 150
+    assert tb.google_search_url is None
+    assert tb.google_maps_url is None
+    assert tb.price_chf is None
+
+
+def test_time_block_meal_with_search_url():
+    tb = TimeBlock(
+        time="12:30",
+        activity_type="meal",
+        title="Mittagessen",
+        location="Annecy Altstadt",
+        duration_minutes=60,
+        description="Lokale Spezialitäten",
+        google_search_url="https://www.google.com/search?q=restaurant+annecy",
+        price_chf=35.0,
+    )
+    assert tb.google_search_url is not None
+    assert "google.com" in tb.google_search_url
+    assert tb.price_chf == 35.0
+
+
+# ---------------------------------------------------------------------------
+# TravelStop with new fields
+# ---------------------------------------------------------------------------
+
+def test_travel_stop_new_fields_default():
+    stop = TravelStop(
+        id=1, region="Annecy", country="FR",
+        arrival_day=2, nights=2,
+    )
+    assert stop.travel_guide is None
+    assert stop.further_activities == []
+
+
+def test_travel_stop_with_travel_guide():
+    guide = TravelGuide(
+        intro_narrative="Intro",
+        history_culture="History",
+        food_specialties="Food",
+        local_tips="Tips",
+        insider_gems="Gems",
+        best_time_to_visit="Summer",
+    )
+    stop = TravelStop(
+        id=1, region="Annecy", country="FR",
+        arrival_day=2, nights=2,
+        travel_guide=guide,
+    )
+    assert stop.travel_guide is not None
+    assert stop.travel_guide.intro_narrative == "Intro"
+
+
+# ---------------------------------------------------------------------------
+# DayPlan with time_blocks
+# ---------------------------------------------------------------------------
+
+def test_day_plan_time_blocks_default():
+    dp = DayPlan(
+        day=1, type="drive", title="Abreise", description="Erster Tag"
+    )
+    assert dp.time_blocks == []
+
+
+def test_day_plan_with_time_blocks():
+    tb = TimeBlock(
+        time="08:00",
+        activity_type="drive",
+        title="Abfahrt",
+        location="Liestal",
+        duration_minutes=180,
+        description="Fahrt nach Annecy",
+    )
+    dp = DayPlan(
+        day=1, type="drive", title="Abreise", description="Erster Tag",
+        time_blocks=[tb],
+    )
+    assert len(dp.time_blocks) == 1
+    assert dp.time_blocks[0].activity_type == "drive"

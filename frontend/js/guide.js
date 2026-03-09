@@ -27,7 +27,6 @@ function renderGuide(plan, tab) {
       _initGuideMap(plan);
       break;
     case 'stops':      content.innerHTML = renderStops(plan);     break;
-    case 'dayplan':    content.innerHTML = renderDayPlan(plan);   break;
     case 'budget':     content.innerHTML = renderBudget(plan);    break;
     default:
       content.innerHTML = renderOverview(plan);
@@ -92,8 +91,103 @@ function renderOverview(plan) {
   `;
 }
 
+function renderProse(text) {
+  if (!text) return '';
+  return text.split(/\n\n+/).map(p => `<p>${esc(p.trim())}</p>`).join('');
+}
+
+function renderTravelGuide(guide) {
+  if (!guide) return '';
+  const sections = [
+    { key: 'history_culture',  label: 'Geschichte & Kultur' },
+    { key: 'food_specialties', label: 'Lokale Spezialitäten' },
+    { key: 'local_tips',       label: 'Praktische Tipps' },
+    { key: 'insider_gems',     label: 'Insider-Tipps' },
+    { key: 'best_time_to_visit', label: 'Beste Reisezeit' },
+  ];
+  return `
+    <div class="reisefuehrer-section">
+      <h4 class="reisefuehrer-title">Reiseführer</h4>
+      <div class="guide-intro">${renderProse(guide.intro_narrative)}</div>
+      ${sections.map(s => guide[s.key] ? `
+        <details class="guide-collapse">
+          <summary>${esc(s.label)}</summary>
+          <div class="guide-collapse-body">${renderProse(guide[s.key])}</div>
+        </details>
+      ` : '').join('')}
+    </div>
+  `;
+}
+
+function renderFurtherActivities(activities) {
+  if (!activities || !activities.length) return '';
+  return `
+    <div class="further-activities-section">
+      <h4>Weitere Empfehlungen im Umkreis</h4>
+      <div class="further-activities-list">
+        ${activities.map(act => `
+          <div class="further-activity-item">
+            <div class="further-activity-content">
+              <strong>${esc(act.name)}</strong>
+              <p>${esc(act.description)}</p>
+              <div class="activity-meta">
+                ${act.duration_hours}h
+                ${act.price_chf > 0 ? ` · CHF ${act.price_chf}` : ' · kostenlos'}
+                ${act.suitable_for_children ? ' · familienfreundlich' : ''}
+              </div>
+              ${act.google_maps_url ? `<a href="${safeUrl(act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderDayTimeBlocks(dayPlan) {
+  const blocks = dayPlan.time_blocks || [];
+  if (!blocks.length) return '';
+
+  const typeIcon = {
+    drive:    '🚗',
+    activity: '🎭',
+    meal:     '🍽️',
+    break:    '☕',
+    check_in: '🏨',
+  };
+
+  return `
+    <div class="day-timeblocks">
+      <div class="timeblocks-timeline">
+        ${blocks.map(tb => `
+          <div class="time-block type-${esc(tb.activity_type)}">
+            <div class="time-block-time">${esc(tb.time)}</div>
+            <div class="time-block-dot"></div>
+            <div class="time-block-content">
+              <div class="time-block-header">
+                <span class="time-block-icon">${typeIcon[tb.activity_type] || '📍'}</span>
+                <strong>${esc(tb.title)}</strong>
+                <span class="time-block-duration">${tb.duration_minutes} min</span>
+              </div>
+              ${tb.location ? `<div class="time-block-location">📍 ${esc(tb.location)}</div>` : ''}
+              ${tb.description ? `<p class="time-block-desc">${esc(tb.description)}</p>` : ''}
+              ${tb.price_chf ? `<span class="time-block-price">CHF ${tb.price_chf}</span>` : ''}
+              <div class="time-block-links">
+                ${tb.google_search_url ? `<a href="${safeUrl(tb.google_search_url)}" target="_blank" class="tb-link">Google Suche</a>` : ''}
+                ${tb.google_maps_url ? `<a href="${safeUrl(tb.google_maps_url)}" target="_blank" class="tb-link maps-link">Maps</a>` : ''}
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
 function renderStops(plan) {
   const stops = plan.stops || [];
+  const dayPlans = plan.day_plans || [];
+
   return `
     <div class="stops-section">
       ${stops.map(stop => {
@@ -101,6 +195,13 @@ function renderStops(plan) {
         const acc  = stop.accommodation || {};
         const acts = stop.top_activities || [];
         const rests = stop.restaurants || [];
+        const further = stop.further_activities || [];
+
+        // Day plans that fall within this stop's nights
+        const arrivalDay = stop.arrival_day || 1;
+        const stopDays = dayPlans.filter(d =>
+          d.day >= arrivalDay && d.day < arrivalDay + (stop.nights || 1)
+        );
 
         return `
           <div class="stop-card" id="guide-stop-${stop.id}">
@@ -115,6 +216,8 @@ function renderStops(plan) {
               ${stop.google_maps_url ? `<a href="${safeUrl(stop.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
             </div>
             ${buildImageGallery(stop.image_overview, stop.image_mood, stop.image_customer, esc(stop.region))}
+
+            ${renderTravelGuide(stop.travel_guide)}
 
             ${acc.name ? `
               <div class="stop-accommodation">
@@ -158,6 +261,8 @@ function renderStops(plan) {
               </div>
             ` : ''}
 
+            ${renderFurtherActivities(further)}
+
             ${rests.length ? `
               <div class="stop-restaurants">
                 <h4>Restaurants</h4>
@@ -175,6 +280,24 @@ function renderStops(plan) {
                     </div>
                   `).join('')}
                 </div>
+              </div>
+            ` : ''}
+
+            ${stopDays.length ? `
+              <div class="stop-day-examples">
+                <h4>Tagesbeispiele</h4>
+                ${stopDays.map(dp => `
+                  <details class="day-example-collapse" open>
+                    <summary>
+                      <span class="day-example-label">Tag ${dp.day}${dp.date ? ' · ' + esc(dp.date) : ''}</span>
+                      <span class="day-example-title">${esc(dp.title)}</span>
+                    </summary>
+                    <div class="day-example-body">
+                      <p class="day-example-desc">${esc(dp.description)}</p>
+                      ${renderDayTimeBlocks(dp)}
+                    </div>
+                  </details>
+                `).join('')}
               </div>
             ` : ''}
           </div>

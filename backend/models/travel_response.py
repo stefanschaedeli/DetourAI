@@ -2,6 +2,27 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
+class TravelGuide(BaseModel):
+    intro_narrative: str
+    history_culture: str
+    food_specialties: str
+    local_tips: str
+    insider_gems: str
+    best_time_to_visit: str
+
+
+class TimeBlock(BaseModel):
+    time: str                          # "09:00"
+    activity_type: str                 # drive, activity, meal, break, check_in
+    title: str
+    location: str
+    duration_minutes: int
+    description: str
+    google_search_url: Optional[str] = None
+    google_maps_url: Optional[str] = None
+    price_chf: Optional[float] = None
+
+
 class StopAccommodation(BaseModel):
     name: str
     type: str                        # hotel, apartment, camping, hostel, airbnb
@@ -58,6 +79,8 @@ class TravelStop(BaseModel):
     accommodation: Optional[StopAccommodation] = None
     top_activities: List[StopActivity] = []
     restaurants: List[Restaurant] = []
+    travel_guide: Optional[TravelGuide] = None
+    further_activities: List[StopActivity] = []
     google_maps_url: Optional[str] = None
     notes: Optional[str] = None
     image_overview: Optional[str] = None
@@ -73,6 +96,7 @@ class DayPlan(BaseModel):
     description: str
     stops_on_route: List[str] = []
     google_maps_route_url: Optional[str] = None
+    time_blocks: List[TimeBlock] = []
 
 
 class CostEstimate(BaseModel):

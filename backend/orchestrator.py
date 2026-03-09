@@ -4,6 +4,7 @@ from agents.route_architect import RouteArchitectAgent
 from agents.activities_agent import ActivitiesAgent
 from agents.restaurants_agent import RestaurantsAgent
 from agents.day_planner import DayPlannerAgent
+from agents.travel_guide_agent import TravelGuideAgent
 from utils.debug_logger import debug_logger, LogLevel
 from utils.image_fetcher import fetch_unsplash_images
 
@@ -112,6 +113,25 @@ class TravelPlannerOrchestrator:
                 "top_activities": act_map.get(sid, {}).get("top_activities", [])[:3],
                 "restaurants": rest_map.get(sid, {}).get("restaurants", [])[:3],
             })
+
+        # Phase 2b: Travel Guide pro Stop (parallel)
+        await debug_logger.log(LogLevel.INFO, f"Reiseführer-Recherche für {len(stops)} Stops gestartet", job_id=job_id)
+        guide_map: dict = {}
+
+        async def research_travel_guide(stop):
+            sid = stop.get("id")
+            existing_acts = [a["name"] for a in act_map.get(sid, {}).get("top_activities", [])]
+            result = await TravelGuideAgent(req, job_id).run_stop(stop, existing_acts)
+            guide_map[sid] = result
+
+        await asyncio.gather(*[research_travel_guide(s) for s in stops])
+
+        # Merge travel guide results into stops
+        for stop in stops:
+            sid = stop.get("id")
+            guide_result = guide_map.get(sid, {})
+            stop["travel_guide"] = guide_result.get("travel_guide")
+            stop["further_activities"] = guide_result.get("further_activities", [])
 
         await debug_logger.log(LogLevel.INFO, "Tagesplaner startet", job_id=job_id)
 

@@ -382,3 +382,86 @@ def test_debug_logger_subscribe_unsubscribe():
         assert "test_job_123" not in debug_logger._subscribers
 
     asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# TravelGuideAgent — instantiation + JSON parsing
+# ---------------------------------------------------------------------------
+
+def test_travel_guide_agent_instantiation(mocker):
+    from models.travel_request import TravelRequest
+    from agents.travel_guide_agent import TravelGuideAgent
+
+    mock_client = MagicMock()
+    mocker.patch('anthropic.Anthropic', return_value=mock_client)
+    mocker.patch('agents.travel_guide_agent.get_client', return_value=mock_client)
+
+    request = TravelRequest(
+        start_location="Liestal",
+        main_destination="Paris",
+        start_date="2026-06-01",
+        end_date="2026-06-10",
+        total_days=10,
+    )
+    agent = TravelGuideAgent(request, "test_job")
+    assert agent is not None
+    assert hasattr(agent, 'model')
+    assert hasattr(agent, 'client')
+
+
+def test_travel_guide_agent_json_parsing(mocker):
+    import asyncio
+    from models.travel_request import TravelRequest
+    from agents.travel_guide_agent import TravelGuideAgent
+
+    mock_guide_response = {
+        "stop_id": 1,
+        "travel_guide": {
+            "intro_narrative": "Annecy ist eine bezaubernde Stadt.",
+            "history_culture": "Die Stadt hat eine reiche Geschichte.",
+            "food_specialties": "Tartiflette ist ein Muss.",
+            "local_tips": "Früh aufstehen lohnt sich.",
+            "insider_gems": "Der Gorge du Fier ist weniger bekannt.",
+            "best_time_to_visit": "Mai bis September.",
+        },
+        "further_activities": [
+            {
+                "name": "Vélo-Tour am Lac d'Annecy",
+                "description": "Rundfahrt am See",
+                "duration_hours": 3.0,
+                "price_chf": 20.0,
+                "suitable_for_children": True,
+                "notes": "Fahrradverleih vor Ort",
+                "address": "Annecy",
+                "google_maps_url": "https://maps.google.com/?q=Annecy",
+            }
+        ],
+    }
+
+    mock_api_response = MagicMock()
+    mock_api_response.content = [MagicMock(text=json.dumps(mock_guide_response))]
+
+    mock_client = MagicMock()
+    mocker.patch('agents.travel_guide_agent.get_client', return_value=mock_client)
+    mocker.patch('utils.retry_helper.asyncio.to_thread', new=AsyncMock(return_value=mock_api_response))
+
+    request = TravelRequest(
+        start_location="Liestal",
+        main_destination="Paris",
+        start_date="2026-06-01",
+        end_date="2026-06-10",
+        total_days=10,
+    )
+    agent = TravelGuideAgent(request, "test_job")
+    stop = {"id": 1, "region": "Annecy", "country": "FR", "nights": 2, "arrival_day": 3}
+
+    async def _run():
+        return await agent.run_stop(stop, ["Bootsfahrt", "Schloss Annecy"])
+
+    result = asyncio.run(_run())
+
+    assert "travel_guide" in result
+    assert result["travel_guide"]["intro_narrative"].startswith("Annecy")
+    assert "further_activities" in result
+    assert len(result["further_activities"]) == 1
+    assert result["further_activities"][0]["name"] == "Vélo-Tour am Lac d'Annecy"

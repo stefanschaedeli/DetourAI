@@ -128,6 +128,99 @@ class DayPlannerAgent:
             "budget_remaining_chf": round(req.budget_chf - total, 2),
         }
 
+    async def _plan_single_day(self, day_ctx: dict) -> dict:
+        """Plan one day with a stündlicher Zeitstrahl via one Claude call."""
+        day_num = day_ctx["day"]
+        date_str = day_ctx["date"]
+        region = day_ctx.get("region", "")
+        drive_hours = day_ctx.get("drive_hours", 0)
+        activities = day_ctx.get("activities", [])
+        restaurants = day_ctx.get("restaurants", [])
+        prev_region = day_ctx.get("prev_region", self.request.start_location)
+
+        acts_str = ", ".join(f"{a['name']} ({a.get('duration_hours', 2)}h)" for a in activities[:4])
+        rests_str = ", ".join(f"{r['name']} ({r.get('cuisine', '')})" for r in restaurants[:3])
+
+        prompt = f"""Erstelle einen stündlichen Tagesplan für Tag {day_num} ({date_str}):
+
+Region: {region}
+Abfahrt von: {prev_region}
+Fahrtzeit: {drive_hours:.1f}h
+Aktivitäten: {acts_str or 'keine spezifischen'}
+Restaurants: {rests_str or 'keine spezifischen'}
+Reisende: {self.request.adults} Erwachsene{f', {len(self.request.children)} Kinder' if self.request.children else ''}
+
+Starte um 08:00 Uhr. Erstelle einen realistischen Zeitplan.
+
+Gib exakt dieses JSON zurück:
+{{
+  "day": {day_num},
+  "date": "{date_str}",
+  "type": "mixed",
+  "title": "Kurzer Tages-Titel",
+  "description": "2-3 Sätze Beschreibung des Tages",
+  "stops_on_route": ["{prev_region}", "{region}"],
+  "time_blocks": [
+    {{
+      "time": "08:00",
+      "activity_type": "drive",
+      "title": "Abfahrt nach {region}",
+      "location": "Autoroute / Hauptstrasse",
+      "duration_minutes": {int(drive_hours * 60) if drive_hours > 0 else 0},
+      "description": "Fahrt von {prev_region} nach {region}",
+      "google_maps_url": null,
+      "google_search_url": null,
+      "price_chf": null
+    }},
+    {{
+      "time": "12:30",
+      "activity_type": "meal",
+      "title": "Mittagessen",
+      "location": "{region}",
+      "duration_minutes": 60,
+      "description": "Lokale Küche geniessen",
+      "google_search_url": "https://www.google.com/search?q=restaurant+{region.replace(' ', '+').lower()}",
+      "google_maps_url": null,
+      "price_chf": 35.0
+    }}
+  ]
+}}
+
+Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive, activity, meal, break, check_in."""
+
+        await debug_logger.log(
+            LogLevel.API, f"→ Anthropic API call: {self.model} (Tagesplan Tag {day_num}: {region})",
+            job_id=self.job_id, agent="DayPlanner",
+        )
+
+        def call():
+            return self.client.messages.create(
+                model=self.model,
+                max_tokens=2048,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": prompt}],
+            )
+
+        try:
+            response = await call_with_retry(call, job_id=self.job_id, agent_name="DayPlanner")
+            text = response.content[0].text
+            day_data = parse_agent_json(text)
+            # Ensure time_blocks is always a list
+            if "time_blocks" not in day_data:
+                day_data["time_blocks"] = []
+            return day_data
+        except Exception as e:
+            await debug_logger.log(LogLevel.WARN, f"DayPlanner Tag {day_num} Fehler: {e}", job_id=self.job_id)
+            return {
+                "day": day_num,
+                "date": date_str,
+                "type": "mixed",
+                "title": f"Tag {day_num}: {region}",
+                "description": f"Aufenthalt in {region}",
+                "stops_on_route": [region],
+                "time_blocks": [],
+            }
+
     async def run(self, route, accommodations: list, activities: list) -> dict:
         req = self.request
 
@@ -142,83 +235,64 @@ class DayPlannerAgent:
         all_locations = [req.start_location] + [s.get("region", "") for s in stops]
         overview_url = build_maps_url(all_locations)
 
-        # Prepare compact stops summary for Claude
-        stops_summary = []
-        for stop in stops:
-            s = {
-                "id": stop.get("id"),
-                "region": stop.get("region"),
-                "country": stop.get("country"),
-                "arrival_day": stop.get("arrival_day"),
-                "nights": stop.get("nights"),
-                "drive_hours": stop.get("drive_hours_from_prev", 0),
-                "accommodation": stop.get("accommodation", {}).get("name", "unbekannt") if stop.get("accommodation") else "unbekannt",
-                "activities": [a.get("name") for a in stop.get("top_activities", [])[:3]],
-            }
-            stops_summary.append(s)
-
+        # Prepare per-day contexts for parallel Claude calls
         start_date = req.start_date
         if isinstance(start_date, str):
             from datetime import date as date_cls
             start_date = date_cls.fromisoformat(start_date)
 
-        prompt = f"""Erstelle einen Tagesplan für diese Reise:
+        day_contexts = []
+        for stop in stops:
+            arrival_day = stop.get("arrival_day", 1)
+            nights = stop.get("nights", 1)
+            region = stop.get("region", "")
+            drive_hours = stop.get("drive_hours_from_prev", 0)
 
-Start: {req.start_location} am {start_date}
-Stops: {stops_summary}
-Gesamtbudget: CHF {req.budget_chf:,.0f}
-Reisende: {req.adults} Erwachsene{', ' + str(len(req.children)) + ' Kinder' if req.children else ''}
+            # Find previous stop region
+            stop_idx = stops.index(stop)
+            prev_region = stops[stop_idx - 1].get("region", req.start_location) if stop_idx > 0 else req.start_location
 
-Gib exakt dieses JSON zurück:
-{{
-  "day_plans": [
-    {{
-      "day": 1,
-      "date": "{start_date.strftime('%d.%m.%Y')}",
-      "type": "drive",
-      "title": "Abreise nach ...",
-      "description": "...",
-      "stops_on_route": ["...", "..."],
-      "google_maps_route_url": null
-    }}
-  ],
-  "cost_estimate": {{
-    "accommodations_chf": 0,
-    "ferries_chf": 0,
-    "activities_chf": 0,
-    "food_chf": 0,
-    "fuel_chf": 0,
-    "total_chf": 0,
-    "budget_remaining_chf": 0
-  }}
-}}"""
+            acts = stop.get("top_activities", [])
+            rests = stop.get("restaurants", [])
 
-        await debug_logger.log(LogLevel.API, f"→ Anthropic API call: {self.model}", job_id=self.job_id, agent="DayPlanner")
-        await debug_logger.log_prompt("DayPlanner", self.model, prompt, job_id=self.job_id)
+            # Arrival day (drive day)
+            arrival_date = start_date + timedelta(days=arrival_day - 1)
+            day_contexts.append({
+                "day": arrival_day,
+                "date": arrival_date.strftime("%d.%m.%Y"),
+                "region": region,
+                "drive_hours": drive_hours,
+                "activities": acts,
+                "restaurants": rests,
+                "prev_region": prev_region,
+            })
 
-        def call():
-            return self.client.messages.create(
-                model=self.model,
-                max_tokens=4096,
-                system=SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": prompt}],
-            )
+            # Rest/activity days at this stop
+            for night_offset in range(1, nights):
+                rest_day = arrival_day + night_offset
+                rest_date = start_date + timedelta(days=rest_day - 1)
+                day_contexts.append({
+                    "day": rest_day,
+                    "date": rest_date.strftime("%d.%m.%Y"),
+                    "region": region,
+                    "drive_hours": 0,
+                    "activities": acts,
+                    "restaurants": rests,
+                    "prev_region": region,
+                })
 
-        response = await call_with_retry(call, job_id=self.job_id, agent_name="DayPlanner")
-        text = response.content[0].text
-        plan_data = parse_agent_json(text)
+        # Plan all days in parallel
+        await debug_logger.log(LogLevel.INFO, f"Erstelle {len(day_contexts)} Tagespläne parallel", job_id=self.job_id, agent="DayPlanner")
+        day_plan_results = await asyncio.gather(*[self._plan_single_day(ctx) for ctx in day_contexts])
 
-        day_plans = plan_data.get("day_plans", [])
-        cost_estimate = plan_data.get("cost_estimate")
-
-        # Add Google Maps route URLs to day plans
+        # Sort by day number and add Google Maps route URLs
+        day_plans = sorted(day_plan_results, key=lambda d: d.get("day", 0))
         for dp in day_plans:
             route_stops = dp.get("stops_on_route", [])
             if route_stops:
                 dp["google_maps_route_url"] = build_maps_url(route_stops)
 
-        if not cost_estimate or cost_estimate.get("total_chf", 0) == 0:
-            cost_estimate = self._fallback_cost_estimate(stops)
+        cost_estimate = self._fallback_cost_estimate(stops)
 
         await debug_logger.log(LogLevel.SUCCESS, "DayPlanner abgeschlossen", job_id=self.job_id, agent="DayPlanner")
 

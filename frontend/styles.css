@@ -879,3 +879,166 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
   font-size: 12px; font-weight: 600;
   padding: 2px 8px; border-radius: 99px;
 }
+
+/* ============================================================ Reiseführer */
+.reisefuehrer-section {
+  margin: 20px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #f0f7ff 0%, #fafafa 100%);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+}
+.reisefuehrer-title {
+  font-size: 16px; font-weight: 700; color: var(--accent);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+}
+.reisefuehrer-title::before { content: '📖'; }
+.guide-intro {
+  margin-bottom: 16px;
+}
+.guide-intro p {
+  font-size: 15px; line-height: 1.7; color: var(--text);
+  margin-bottom: 8px;
+}
+.guide-collapse {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: var(--card);
+  overflow: hidden;
+}
+.guide-collapse summary {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 600; font-size: 14px;
+  list-style: none;
+  display: flex; align-items: center; gap: 8px;
+  color: var(--text);
+  user-select: none;
+}
+.guide-collapse summary::-webkit-details-marker { display: none; }
+.guide-collapse summary::before {
+  content: '▶'; font-size: 10px; color: var(--accent);
+  transition: transform .2s;
+}
+.guide-collapse[open] summary::before { transform: rotate(90deg); }
+.guide-collapse-body {
+  padding: 0 16px 14px;
+}
+.guide-collapse-body p {
+  font-size: 14px; line-height: 1.65; color: var(--text);
+  margin-bottom: 6px;
+}
+
+/* ============================================================ Weitere Empfehlungen */
+.further-activities-section {
+  margin: 20px 0;
+}
+.further-activities-section h4 {
+  font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text);
+}
+.further-activities-list {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.further-activity-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.further-activity-content strong { font-size: 14px; display: block; margin-bottom: 4px; }
+.further-activity-content p { font-size: 13px; color: var(--text-sub); margin-bottom: 6px; }
+
+/* ============================================================ Tagesbeispiele */
+.stop-day-examples { margin: 20px 0; }
+.stop-day-examples > h4 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.day-example-collapse {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  background: var(--card);
+  overflow: hidden;
+}
+.day-example-collapse summary {
+  padding: 14px 16px;
+  cursor: pointer; list-style: none;
+  display: flex; align-items: center; gap: 10px;
+  user-select: none;
+}
+.day-example-collapse summary::-webkit-details-marker { display: none; }
+.day-example-label {
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  background: #e8f0fe; padding: 2px 8px; border-radius: 99px; white-space: nowrap;
+}
+.day-example-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.day-example-body { padding: 0 16px 16px; }
+.day-example-desc { font-size: 14px; color: var(--text-sub); margin-bottom: 14px; line-height: 1.55; }
+
+/* ============================================================ Zeitstrahl */
+.day-timeblocks { padding: 4px 0; }
+.timeblocks-timeline {
+  position: relative;
+  padding-left: 80px;
+  border-left: 2px solid var(--border);
+  margin-left: 40px;
+  display: flex; flex-direction: column; gap: 0;
+}
+.time-block {
+  position: relative;
+  padding: 10px 0 10px 16px;
+  border-bottom: 1px solid #f0f0f2;
+}
+.time-block:last-child { border-bottom: none; }
+.time-block-time {
+  position: absolute;
+  left: -96px; top: 12px;
+  font-size: 12px; font-weight: 700; color: var(--text-sub);
+  width: 50px; text-align: right;
+}
+.time-block-dot {
+  position: absolute;
+  left: -5px; top: 14px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--card);
+  background: var(--accent);
+}
+.time-block.type-drive .time-block-dot   { background: #0071e3; }
+.time-block.type-meal .time-block-dot    { background: var(--warning); }
+.time-block.type-activity .time-block-dot { background: var(--success); }
+.time-block.type-break .time-block-dot  { background: var(--text-sub); }
+.time-block.type-check_in .time-block-dot { background: #5856d6; }
+
+.time-block-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+}
+.time-block-icon { font-size: 14px; }
+.time-block-header strong { font-size: 14px; flex: 1; }
+.time-block-duration {
+  font-size: 11px; color: var(--text-sub);
+  background: var(--bg); padding: 1px 6px; border-radius: 99px;
+  white-space: nowrap;
+}
+.time-block-location {
+  font-size: 12px; color: var(--text-sub); margin-bottom: 4px;
+}
+.time-block-desc {
+  font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 4px;
+}
+.time-block-price {
+  font-size: 12px; font-weight: 600; color: var(--text-sub);
+  margin-right: 8px;
+}
+.time-block-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.tb-link {
+  font-size: 12px; color: var(--accent); text-decoration: none;
+  border: 1px solid var(--accent); border-radius: 4px; padding: 1px 6px;
+  transition: background .15s, color .15s;
+}
+.tb-link:hover { background: var(--accent); color: #fff; }
+
+.time-block.type-drive   { background: #f0f7ff; }
+.time-block.type-meal    { background: #fff8f0; }
+.time-block.type-activity { background: #f0fff4; }
+.time-block.type-break   { background: #fafafa; }
+.time-block.type-check_in { background: #f5f0ff; }
