@@ -1695,6 +1695,11 @@ async def get_maps_config():
     return {"api_key": os.getenv("GOOGLE_MAPS_API_KEY", "")}
 
 
+@app.get("/.well-known/appspecific/com.chrome.devtools.json")
+async def chrome_devtools():
+    return {}
+
+
 @app.get("/health")
 async def health():
     try:
