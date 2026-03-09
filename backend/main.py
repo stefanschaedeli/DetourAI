@@ -1700,6 +1700,74 @@ async def api_delete_travel(travel_id: int):
 
 
 # ---------------------------------------------------------------------------
+# POST /api/travels/{travel_id}/replan
+# Re-runs the full orchestrator (all agents, incl. TravelGuide + stündliche
+# Tagespläne) for a saved trip, reusing the existing route + accommodations.
+# ---------------------------------------------------------------------------
+
+@app.post("/api/travels/{travel_id}/replan")
+async def api_replan_travel(travel_id: int):
+    plan = await get_travel(travel_id)
+    if plan is None:
+        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+
+    # Reconstruct TravelRequest from the saved plan
+    # The plan must contain a "request" snapshot; fall back to deriving minimal fields.
+    req_data = plan.get("request")
+    if not req_data:
+        # Build a minimal request from the plan itself
+        stops = plan.get("stops", [])
+        first_stop = stops[0] if stops else {}
+        last_stop  = stops[-1] if stops else {}
+        day_plans  = plan.get("day_plans", [])
+        req_data = {
+            "start_location":  plan.get("start_location", "Unbekannt"),
+            "main_destination": last_stop.get("region", "Unbekannt"),
+            "start_date":      "2026-01-01",
+            "end_date":        "2026-01-10",
+            "total_days":      len(day_plans) or 10,
+            "adults":          2,
+            "budget_chf":      plan.get("cost_estimate", {}).get("total_chf", 3000),
+        }
+
+    request_obj = TravelRequest(**req_data)
+
+    # Rebuild pre_built_stops and pre_selected_accommodations from the saved plan
+    pre_built_stops = []
+    for stop in plan.get("stops", []):
+        s = {k: v for k, v in stop.items()
+             if k not in ("travel_guide", "further_activities", "top_activities",
+                          "restaurants", "accommodation", "image_overview",
+                          "image_mood", "image_customer")}
+        pre_built_stops.append(s)
+
+    pre_selected_accommodations = []
+    for stop in plan.get("stops", []):
+        if stop.get("accommodation"):
+            pre_selected_accommodations.append({
+                "stop_id": stop["id"],
+                "option": stop["accommodation"],
+            })
+
+    # Create a new ephemeral job
+    job_id = uuid.uuid4().hex
+    job = {
+        "status": "pending",
+        "request": request_obj.model_dump(mode="json"),
+        "selected_stops": pre_built_stops,
+        "selected_accommodations": pre_selected_accommodations,
+        "replan_source_id": travel_id,
+    }
+    save_job(job_id, job)
+
+    _fire_task("run_planning_job", job_id,
+               pre_built_stops=pre_built_stops,
+               pre_selected_accommodations=pre_selected_accommodations)
+
+    return {"job_id": job_id, "status": "planning_started", "source_travel_id": travel_id}
+
+
+# ---------------------------------------------------------------------------
 # Serve frontend static files
 # Must be registered AFTER all /api/* routes so they take priority.
 # ---------------------------------------------------------------------------

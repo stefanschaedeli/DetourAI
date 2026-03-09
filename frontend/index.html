@@ -411,7 +411,14 @@
 
   <!-- ============================================================ Travel guide -->
   <section class="section" id="travel-guide">
-    <h2 style="margin-bottom:24px">Ihr Reiseplan</h2>
+    <div class="guide-header-row">
+      <h2>Ihr Reiseplan</h2>
+      <button class="btn btn-secondary btn-sm replan-btn" id="replan-current-btn"
+              onclick="replanCurrentTravel()"
+              title="Reiseführer, Aktivitäten, Restaurants und stündliche Tagespläne mit KI neu generieren — Route und Unterkünfte bleiben erhalten">
+        Neu berechnen
+      </button>
+    </div>
 
     <div class="guide-tabs">
       <button class="guide-tab active" data-tab="overview" onclick="switchGuideTab('overview')">Übersicht</button>

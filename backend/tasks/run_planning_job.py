@@ -43,6 +43,9 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
             pre_selected_accommodations=pre_selected_accommodations or job.get("selected_accommodations"),
         )
 
+        # Embed request snapshot in result so replan can reconstruct TravelRequest
+        result["request"] = job["request"]
+
         # Save result
         raw2 = redis_client.get(f"job:{job_id}")
         job2 = json.loads(raw2) if raw2 else job

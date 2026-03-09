@@ -880,6 +880,25 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
   padding: 2px 8px; border-radius: 99px;
 }
 
+/* ============================================================ Guide header row */
+.guide-header-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px; gap: 12px;
+}
+.guide-header-row h2 { margin-bottom: 0; }
+.replan-btn {
+  white-space: nowrap; flex-shrink: 0;
+}
+
+/* Travel card badge */
+.travel-card-badge {
+  display: inline-block;
+  font-size: 11px; font-weight: 600;
+  background: #e8f5e9; color: #2e7d32;
+  padding: 1px 7px; border-radius: 99px;
+  vertical-align: middle; margin-left: 4px;
+}
+
 /* ============================================================ Reiseführer */
 .reisefuehrer-section {
   margin: 20px 0;

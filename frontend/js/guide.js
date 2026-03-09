@@ -502,3 +502,54 @@ function loadGuideFromCache() {
     showSection('travel-guide');
   }
 }
+
+async function replanCurrentTravel() {
+  const plan = S.result;
+  if (!plan) return;
+
+  // Find the saved travel ID from the plan's job_id in travel DB
+  // We pass the plan directly to the replan endpoint via a helper
+  const savedId = plan._saved_travel_id || null;
+
+  if (!savedId) {
+    alert('Diese Reise ist nicht in «Meine Reisen» gespeichert. Bitte erst speichern.');
+    return;
+  }
+
+  if (!confirm('Reiseführer und stündliche Tagespläne neu generieren?\n\nRoute und Unterkünfte bleiben erhalten.')) return;
+
+  const btn = document.getElementById('replan-current-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Wird gestartet…'; }
+
+  try {
+    const { job_id } = await apiReplanTravel(savedId);
+    S.jobId = job_id;
+    showSection('progress');
+    document.getElementById('progress-error').style.display = 'none';
+    const statusEl = document.getElementById('progress-agent-status');
+    if (statusEl) statusEl.textContent = 'Reiseführer und Tagespläne werden neu berechnet…';
+
+    const source = openSSE(job_id, {
+      job_complete: (data) => {
+        source.close();
+        S.result = data;
+        lsSet(LS_RESULT, { jobId: data.job_id || job_id, savedAt: new Date().toISOString(), plan: data });
+        showTravelGuide(data);
+        showSection('travel-guide');
+      },
+      job_error: (data) => {
+        source.close();
+        const errEl = document.getElementById('progress-error');
+        if (errEl) { errEl.textContent = 'Fehler: ' + (data.error || 'Unbekannter Fehler'); errEl.style.display = ''; }
+        showSection('progress');
+      },
+      debug_log: (data) => {
+        if (statusEl && data.message) statusEl.textContent = data.message;
+        if (typeof appendProgressLine === 'function') appendProgressLine(data);
+      },
+    });
+  } catch (err) {
+    alert('Fehler: ' + err.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Neu berechnen'; }
+  }
+}

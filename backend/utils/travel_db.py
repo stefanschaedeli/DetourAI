@@ -31,9 +31,15 @@ def _init_db() -> None:
                 num_stops      INTEGER NOT NULL,
                 total_cost_chf REAL    NOT NULL,
                 plan_json      TEXT    NOT NULL,
+                has_travel_guide INTEGER NOT NULL DEFAULT 0,
                 UNIQUE(job_id)
             )
         """)
+        # Migration: add column if it doesn't exist yet (for existing DBs)
+        try:
+            conn.execute("ALTER TABLE travels ADD COLUMN has_travel_guide INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass  # column already exists
 
 
 def _build_title(plan: dict) -> str:
@@ -47,18 +53,19 @@ def _sync_save(plan: dict) -> Optional[int]:
     """INSERT OR IGNORE — duplicate job_ids silently skipped."""
     stops = plan.get("stops", [])
     cost  = plan.get("cost_estimate", {})
+    has_guide = int(any(s.get("travel_guide") for s in stops))
     with _get_conn() as conn:
         cur = conn.execute(
             """INSERT OR IGNORE INTO travels
                (job_id,title,created_at,start_location,destination,
-                total_days,num_stops,total_cost_chf,plan_json)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+                total_days,num_stops,total_cost_chf,plan_json,has_travel_guide)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (plan.get("job_id", ""), _build_title(plan),
              datetime.utcnow().isoformat(),
              plan.get("start_location", ""),
              stops[-1]["region"] if stops else "",
              len(plan.get("day_plans", [])), len(stops),
-             cost.get("total_chf", 0.0), json.dumps(plan)),
+             cost.get("total_chf", 0.0), json.dumps(plan), has_guide),
         )
         return cur.lastrowid if cur.rowcount else None
 
@@ -67,7 +74,7 @@ def _sync_list() -> list:
     with _get_conn() as conn:
         rows = conn.execute(
             "SELECT id,job_id,title,created_at,start_location,"
-            "destination,total_days,num_stops,total_cost_chf "
+            "destination,total_days,num_stops,total_cost_chf,has_travel_guide "
             "FROM travels ORDER BY id DESC"
         ).fetchall()
     return [dict(r) for r in rows]

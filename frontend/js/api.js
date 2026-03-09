@@ -164,6 +164,10 @@ async function apiDeleteTravel(id) {
   return (await _fetchQuiet(`${API}/travels/${id}`, { method: 'DELETE' })).json();
 }
 
+async function apiReplanTravel(id) {
+  return (await _fetchQuiet(`${API}/travels/${id}/replan`, { method: 'POST' })).json();
+}
+
 /**
  * Open SSE connection for a job.
  * @param {string} jobId
