@@ -348,6 +348,20 @@ For each stop, three options are loaded in parallel. The accommodation type matc
 
 ---
 
+### Saving and managing trips
+
+After a trip is generated, click **"Reise speichern"** to persist it to the local SQLite database. Previously saved trips are accessible via the **"Meine Reisen"** drawer (top-right icon).
+
+From the drawer you can:
+
+- **Rename** a trip — click the title, type a new name, press Enter (or Escape to cancel)
+- **Rate** a trip — click any of the five stars; clicking the same star again resets to 0
+- **Open** — loads the full plan back into the travel guide
+- **Replan** — re-runs the activities, restaurant, day-planner, and travel-guide agents against the same route and accommodations (useful after changing preferences)
+- **Delete** — removes the row from the database
+
+---
+
 ### Travel guide
 
 The finished plan is presented in four tabs:
@@ -428,6 +442,8 @@ python3 -m pytest tests/test_agents_mock.py        # agents (no API key needed)
 
 ## API endpoints
 
+**Planning flow**
+
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/api/plan-trip` | Submit form, receive first stop options (with OSRM + map anchors) |
@@ -444,6 +460,17 @@ python3 -m pytest tests/test_agents_mock.py        # agents (no API key needed)
 | `POST` | `/api/generate-output/{job_id}/{type}` | Generate PDF or PPTX (`type` = `pdf`/`pptx`) |
 | `GET` | `/health` | Health check + active job count |
 
+**Travel history (SQLite)**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/travels` | List all saved trips (metadata only, no plan JSON) |
+| `POST` | `/api/travels` | Save a completed plan |
+| `GET` | `/api/travels/{id}` | Load full plan JSON |
+| `PATCH` | `/api/travels/{id}` | Update `custom_name` and/or `rating` |
+| `DELETE` | `/api/travels/{id}` | Delete a saved trip |
+| `POST` | `/api/travels/{id}/replan` | Re-run agents against saved route + accommodations |
+
 ---
 
 ## Project structure
@@ -451,7 +478,7 @@ python3 -m pytest tests/test_agents_mock.py        # agents (no API key needed)
 ```
 travelman3/
 ├── backend/
-│   ├── main.py                      # FastAPI app — 12 endpoints
+│   ├── main.py                      # FastAPI app — 17 endpoints
 │   ├── orchestrator.py              # TravelPlannerOrchestrator
 │   ├── agents/
 │   │   ├── _client.py               # shared Anthropic client + model selector
@@ -464,8 +491,17 @@ travelman3/
 │   │   ├── day_planner.py           # DayPlannerAgent (opus)
 │   │   └── output_generator.py      # PDF + PPTX
 │   ├── models/                      # Pydantic models
+│   │   ├── travel_request.py        # TravelRequest (form input)
+│   │   ├── travel_response.py       # TravelPlan, TravelStop, DayPlan, …
+│   │   ├── stop_option.py           # StopOption, StopOptionsResponse
+│   │   └── accommodation_option.py  # AccommodationOption, BudgetState
 │   ├── tasks/                       # Celery tasks
-│   ├── utils/                       # retry, geocoding, SSE logger, JSON parser
+│   ├── utils/
+│   │   ├── travel_db.py             # SQLite travel history (save/list/get/update/delete)
+│   │   ├── debug_logger.py          # singleton DebugLogger + SSE subscriber manager
+│   │   ├── maps_helper.py           # geocode_nominatim(), osrm_route(), build_maps_url()
+│   │   ├── retry_helper.py          # call_with_retry() with exponential back-off
+│   │   └── json_parser.py           # parse_agent_json() strips markdown fences
 │   ├── tests/
 │   ├── .env.example
 │   └── requirements.txt
@@ -479,16 +515,52 @@ travelman3/
 │       ├── route-builder.js         # route builder + detour banner + route-adjust modal
 │       ├── accommodation.js
 │       ├── progress.js              # SSE event handlers
+│       ├── travels.js               # saved trips drawer — rename, stars, replan
 │       └── guide.js                 # 4 output tabs
+├── docs/
+│   └── database.md                  # detailed DB schema + API reference
 ├── infra/
 │   ├── Dockerfile.backend
 │   ├── Dockerfile.frontend
 │   └── nginx.conf
 ├── scripts/
 │   └── generate-types.sh            # OpenAPI → TypeScript types
+├── data/
+│   └── travels.db                   # SQLite travel history (auto-created)
 ├── docker-compose.yml
 └── outputs/                         # generated PDF / PPTX files
 ```
+
+---
+
+## Data & persistence
+
+Travelman uses two stores:
+
+| Store | Technology | Lifetime | What's in it |
+|-------|-----------|----------|--------------|
+| **Job state** | Redis | 24 h TTL | Live planning sessions, SSE queues, agent results |
+| **Travel history** | SQLite (`data/travels.db`) | Permanent | Trips the user has saved |
+
+### Travel history database
+
+Saved trips are stored in a local SQLite file. Each row holds metadata for the list view plus the full `TravelPlan` JSON for loading/replanning.
+
+Key columns in the `travels` table:
+
+| Column | Description |
+|--------|-------------|
+| `id` | Auto-increment primary key |
+| `job_id` | UUID of the originating planning job (unique — duplicate saves ignored) |
+| `title` | Auto-generated: `"Start → Destination (N Tage)"` |
+| `custom_name` | User-defined display name; overrides `title` in the UI |
+| `rating` | Star rating set by the user (`0–5`) |
+| `has_travel_guide` | `1` if any stop includes a narrative travel guide |
+| `plan_json` | Full `TravelPlan` object as JSON |
+
+The schema is forwards-compatible via idempotent `ALTER TABLE` migrations — existing databases gain new columns automatically on the next start.
+
+**→ [Full database documentation](docs/database.md)**
 
 ---
 
@@ -504,6 +576,18 @@ travelman3/
 ---
 
 ## Changelog
+
+### v5.1.4 (2026-03-09)
+
+**Rename + star rating for saved trips**
+
+- Click any trip title in "Meine Reisen" to rename it inline (Enter to confirm, Escape to cancel); custom name persists across page loads
+- New 0–5 star widget per trip card; clicking the active star resets to 0
+- `PATCH /api/travels/{id}` endpoint with `custom_name` and `rating` fields
+- SQLite schema extended with `custom_name TEXT` and `rating INTEGER DEFAULT 0` (auto-migrated)
+- Docs: new `docs/database.md` with full schema, migration, data flow, and API reference
+
+---
 
 ### v5.0.0 (2026-03-08)
 
