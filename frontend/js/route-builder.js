@@ -431,7 +431,13 @@ function _buildExtraFields(opt) {
 }
 
 function _initMap(anchors, options) {
-  if (typeof GoogleMaps === 'undefined' || !window.google) return;
+  if (typeof GoogleMaps === 'undefined' || !window.google) {
+    if (typeof S !== 'undefined') {
+      S.logs.push({ level: 'WARNING', agent: 'GoogleMaps', message: 'Karte nicht geladen — Google Maps API nicht verfügbar' });
+      if (typeof updateDebugLog === 'function') updateDebugLog();
+    }
+    return;
+  }
 
   const map = GoogleMaps.initRouteMap('route-map', { center: { lat: 47, lng: 8 }, zoom: 6 });
   if (!map) return;

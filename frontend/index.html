@@ -514,19 +514,31 @@
 
 <script>
   // Dynamically load Google Maps API after fetching key from backend
+  function _gmDebugLog(level, message) {
+    if (typeof S !== 'undefined' && Array.isArray(S.logs)) {
+      S.logs.push({ level, agent: 'GoogleMaps', message });
+      if (typeof updateDebugLog === 'function') updateDebugLog();
+    }
+    if (level === 'WARNING' || level === 'ERROR') console.warn('[GoogleMaps]', message);
+  }
+
   fetch('/api/maps-config')
     .then(r => r.json())
     .then(d => {
-      if (!d.api_key) return;
+      if (!d.api_key) {
+        _gmDebugLog('WARNING', 'GOOGLE_MAPS_API_KEY nicht konfiguriert — Karte wird nicht geladen');
+        return;
+      }
       window._GM_KEY = d.api_key;
       GoogleMaps._setApiKey(d.api_key);
       const s = document.createElement('script');
       s.src = `https://maps.googleapis.com/maps/api/js?key=${d.api_key}&libraries=places,marker&callback=GoogleMaps._onApiReady&loading=async`;
       s.async = true;
       s.defer = true;
+      s.onerror = () => _gmDebugLog('ERROR', 'Google Maps SDK konnte nicht geladen werden — API-Key prüfen');
       document.head.appendChild(s);
     })
-    .catch(() => {}); // no key configured — maps won't load
+    .catch(err => _gmDebugLog('ERROR', `maps-config Fehler: ${err.message}`));
 </script>
 
 </body>

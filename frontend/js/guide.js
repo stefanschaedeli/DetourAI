@@ -498,7 +498,13 @@ function _scrollToGuideStop(stopId) {
 }
 
 function _initGuideMap(plan) {
-  if (typeof GoogleMaps === 'undefined' || !window.google) return;
+  if (typeof GoogleMaps === 'undefined' || !window.google) {
+    if (typeof S !== 'undefined') {
+      S.logs.push({ level: 'WARNING', agent: 'GoogleMaps', message: 'Reiseführer-Karte nicht geladen — Google Maps API nicht verfügbar' });
+      if (typeof updateDebugLog === 'function') updateDebugLog();
+    }
+    return;
+  }
 
   const stops = plan.stops || [];
 

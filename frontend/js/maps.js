@@ -16,12 +16,24 @@ const GoogleMaps = (() => {
   // Cache: place name → place_id string
   const _placeIdCache = new Map();
 
+  /** Push a message to the frontend debug log panel. */
+  function _log(level, message) {
+    if (typeof S !== 'undefined' && Array.isArray(S.logs)) {
+      S.logs.push({ level, agent: 'GoogleMaps', message });
+      if (typeof updateDebugLog === 'function') updateDebugLog();
+    }
+    if (level === 'WARNING' || level === 'ERROR') {
+      console.warn('[GoogleMaps]', message);
+    }
+  }
+
   /** Called by Maps SDK as callback= parameter. */
   function _onApiReady() {
     // Create a hidden div for PlacesService (requires a map or element)
     const el = document.createElement('div');
     document.body.appendChild(el);
     _placesService = new google.maps.places.PlacesService(el);
+    _log('INFO', 'Google Maps API bereit');
     document.dispatchEvent(new CustomEvent('google-maps-ready'));
   }
 
@@ -32,14 +44,19 @@ const GoogleMaps = (() => {
    */
   function initRouteMap(elId, opts) {
     const el = document.getElementById(elId);
-    if (!el) return null;
+    if (!el) { _log('WARNING', `initRouteMap: Element #${elId} nicht gefunden`); return null; }
     if (_routeMap) return _routeMap;
-    _routeMap = new google.maps.Map(el, {
-      center: (opts && opts.center) || { lat: 47, lng: 8 },
-      zoom:   (opts && opts.zoom)   || 6,
-      mapTypeControl: false,
-      streetViewControl: false,
-    });
+    try {
+      _routeMap = new google.maps.Map(el, {
+        center: (opts && opts.center) || { lat: 47, lng: 8 },
+        zoom:   (opts && opts.zoom)   || 6,
+        mapTypeControl: false,
+        streetViewControl: false,
+      });
+    } catch (e) {
+      _log('ERROR', `initRouteMap fehlgeschlagen: ${e.message}`);
+      return null;
+    }
     return _routeMap;
   }
 
@@ -48,13 +65,18 @@ const GoogleMaps = (() => {
    */
   function initGuideMap(elId, opts) {
     const el = document.getElementById(elId);
-    if (!el) return null;
-    _guideMap = new google.maps.Map(el, {
-      center: (opts && opts.center) || { lat: 47, lng: 8 },
-      zoom:   (opts && opts.zoom)   || 6,
-      mapTypeControl: false,
-      streetViewControl: false,
-    });
+    if (!el) { _log('WARNING', `initGuideMap: Element #${elId} nicht gefunden`); return null; }
+    try {
+      _guideMap = new google.maps.Map(el, {
+        center: (opts && opts.center) || { lat: 47, lng: 8 },
+        zoom:   (opts && opts.zoom)   || 6,
+        mapTypeControl: false,
+        streetViewControl: false,
+      });
+    } catch (e) {
+      _log('ERROR', `initGuideMap fehlgeschlagen: ${e.message}`);
+      return null;
+    }
     return _guideMap;
   }
 
@@ -74,14 +96,12 @@ const GoogleMaps = (() => {
       if (onClick) marker.addListener('click', onClick);
       return marker;
     }
-    // Fallback: standard Marker with DivIcon equivalent via label
+    // Fallback: standard Marker + OverlayView for custom HTML
+    _log('INFO', 'AdvancedMarkerElement nicht verfügbar — Fallback auf OverlayView');
     const marker = new google.maps.Marker({
       map,
       position: pos,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 0,
-      },
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
       label: '',
     });
     const overlay = new google.maps.OverlayView();
@@ -112,7 +132,8 @@ const GoogleMaps = (() => {
    */
   function attachAutocomplete(inputId, opts) {
     const el = document.getElementById(inputId);
-    if (!el || !google.maps.places) return null;
+    if (!el) { _log('WARNING', `attachAutocomplete: #${inputId} nicht gefunden`); return null; }
+    if (!google.maps.places) { _log('WARNING', 'Places-Bibliothek nicht geladen'); return null; }
     const ac = new google.maps.places.Autocomplete(el, Object.assign(
       { types: ['(cities)'], fields: ['formatted_address', 'place_id', 'geometry'] },
       opts || {}
@@ -126,7 +147,10 @@ const GoogleMaps = (() => {
    */
   function findPlaceId(name) {
     if (_placeIdCache.has(name)) return Promise.resolve(_placeIdCache.get(name));
-    if (!_placesService) return Promise.resolve(null);
+    if (!_placesService) {
+      _log('WARNING', `findPlaceId: PlacesService nicht bereit (${name})`);
+      return Promise.resolve(null);
+    }
     return new Promise(resolve => {
       _placesService.findPlaceFromQuery(
         { query: name, fields: ['place_id'] },
@@ -136,6 +160,9 @@ const GoogleMaps = (() => {
             _placeIdCache.set(name, id);
             resolve(id);
           } else {
+            if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+              _log('WARNING', `findPlaceId fehlgeschlagen für «${name}»: ${status}`);
+            }
             resolve(null);
           }
         }
@@ -166,40 +193,45 @@ const GoogleMaps = (() => {
     try {
       const placeId = await findPlaceId(name);
       if (placeId && _placesService) {
-        const photos = await _getPlacePhotos(placeId);
+        const photos = await _getPlacePhotos(placeId, name);
         if (photos.length >= 1) {
           const urls = [
             photos[0] || null,
             photos[1] || null,
             photos[2] || null,
           ];
-          // Fill empty slots with tier-2/3
+          // Fill empty slots with lower tiers
           for (let i = 0; i < 3; i++) {
             if (!urls[i]) urls[i] = await _wikiImage(name) || _staticMapUrl(lat, lng) || _svgPlaceholder(name);
           }
           return urls;
         }
       }
-    } catch (e) { /* fall through */ }
+    } catch (e) {
+      _log('WARNING', `Bilder Tier-1 fehlgeschlagen für «${name}»: ${e.message}`);
+    }
 
     // Tier 2: Wikipedia
     const wikiUrl = await _wikiImage(name);
     if (wikiUrl) {
+      _log('INFO', `Bild Tier-2 (Wikipedia) verwendet für «${name}»`);
       return [wikiUrl, _staticMapUrl(lat, lng) || _svgPlaceholder(name), _svgPlaceholder(name)];
     }
 
     // Tier 3: Static Maps satellite
     const staticUrl = _staticMapUrl(lat, lng);
     if (staticUrl) {
+      _log('INFO', `Bild Tier-3 (Static Maps) verwendet für «${name}»`);
       return [staticUrl, _svgPlaceholder(name), _svgPlaceholder(name)];
     }
 
     // Tier 4: SVG placeholder
+    _log('INFO', `Bild Tier-4 (SVG Platzhalter) verwendet für «${name}»`);
     const svg = _svgPlaceholder(name);
     return [svg, svg, svg];
   }
 
-  function _getPlacePhotos(placeId) {
+  function _getPlacePhotos(placeId, name) {
     return new Promise(resolve => {
       _placesService.getDetails(
         { placeId, fields: ['photos'] },
@@ -210,6 +242,9 @@ const GoogleMaps = (() => {
             );
             resolve(urls);
           } else {
+            if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+              _log('WARNING', `getDetails fehlgeschlagen für «${name}» (${placeId}): ${status}`);
+            }
             resolve([]);
           }
         }
@@ -224,10 +259,14 @@ const GoogleMaps = (() => {
         `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(city)}`,
         { headers: { Accept: 'application/json' } }
       );
-      if (!resp.ok) return null;
+      if (!resp.ok) {
+        _log('WARNING', `Wikipedia-Bild: HTTP ${resp.status} für «${city}»`);
+        return null;
+      }
       const data = await resp.json();
       return (data.thumbnail && data.thumbnail.source) || null;
     } catch (e) {
+      _log('WARNING', `Wikipedia-Bild fehlgeschlagen für «${name}»: ${e.message}`);
       return null;
     }
   }
