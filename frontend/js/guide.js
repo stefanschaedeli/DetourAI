@@ -87,6 +87,70 @@ function renderOverview(plan) {
       </div>
 
       <div id="guide-map"></div>
+
+      ${renderTripAnalysis(plan.trip_analysis)}
+    </div>
+  `;
+}
+
+function renderTripAnalysis(analysis) {
+  if (!analysis) return '';
+
+  const score = analysis.requirements_match_score || 0;
+  const scoreColor = score >= 8 ? '#34c759' : score >= 5 ? '#ff9f0a' : '#ff3b30';
+  const pct = Math.round(score / 10 * 100);
+
+  const impactLabel = { high: 'Hoch', medium: 'Mittel', low: 'Niedrig' };
+  const impactClass = { high: 'impact-high', medium: 'impact-medium', low: 'impact-low' };
+
+  const strengths = (analysis.strengths || []).map(s => `<li>${esc(s)}</li>`).join('');
+  const weaknesses = (analysis.weaknesses || []).map(w => `<li>${esc(w)}</li>`).join('');
+  const suggestions = (analysis.improvement_suggestions || []).map(s => `
+    <div class="suggestion-item">
+      <div class="suggestion-header">
+        <strong>${esc(s.title)}</strong>
+        <span class="impact-badge ${impactClass[s.impact] || ''}">${impactLabel[s.impact] || esc(s.impact)}</span>
+      </div>
+      <p>${esc(s.description)}</p>
+    </div>
+  `).join('');
+
+  return `
+    <div class="trip-analysis">
+      <h3 class="trip-analysis-title">Reise-Analyse</h3>
+
+      <div class="trip-analysis-card">
+        <h4>Einstellungen</h4>
+        <p class="trip-analysis-text">${esc(analysis.settings_summary)}</p>
+      </div>
+
+      <div class="trip-analysis-card">
+        <h4>Anforderungserfüllung</h4>
+        <div class="score-bar-wrap">
+          <div class="score-bar-track">
+            <div class="score-bar-fill" style="width: ${pct}%; background: ${scoreColor}"></div>
+          </div>
+          <span class="score-label" style="color: ${scoreColor}">${score}/10</span>
+        </div>
+        <p class="trip-analysis-text">${esc(analysis.requirements_analysis)}</p>
+      </div>
+
+      ${(strengths || weaknesses) ? `
+      <div class="trip-analysis-card">
+        <h4>Stärken & Schwächen</h4>
+        <div class="trip-analysis-swot">
+          ${strengths ? `<div><strong>Stärken</strong><ul class="swot-list strengths-list">${strengths}</ul></div>` : ''}
+          ${weaknesses ? `<div><strong>Schwächen</strong><ul class="swot-list weaknesses-list">${weaknesses}</ul></div>` : ''}
+        </div>
+      </div>
+      ` : ''}
+
+      ${suggestions ? `
+      <div class="trip-analysis-card">
+        <h4>Verbesserungsvorschläge</h4>
+        <div class="suggestions-list">${suggestions}</div>
+      </div>
+      ` : ''}
     </div>
   `;
 }

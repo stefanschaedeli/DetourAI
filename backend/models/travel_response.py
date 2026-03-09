@@ -109,6 +109,21 @@ class CostEstimate(BaseModel):
     budget_remaining_chf: float
 
 
+class ImprovementSuggestion(BaseModel):
+    title: str
+    description: str
+    impact: str  # "high", "medium", "low"
+
+
+class TripAnalysis(BaseModel):
+    settings_summary: str
+    requirements_match_score: int       # 1–10
+    requirements_analysis: str
+    strengths: List[str] = []
+    weaknesses: List[str] = []
+    improvement_suggestions: List[ImprovementSuggestion] = []
+
+
 class TravelPlan(BaseModel):
     job_id: str
     start_location: str
@@ -119,3 +134,4 @@ class TravelPlan(BaseModel):
     cost_estimate: CostEstimate
     google_maps_overview_url: Optional[str] = None
     outputs: dict = {}
+    trip_analysis: Optional[TripAnalysis] = None

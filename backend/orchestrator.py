@@ -5,6 +5,7 @@ from agents.activities_agent import ActivitiesAgent
 from agents.restaurants_agent import RestaurantsAgent
 from agents.day_planner import DayPlannerAgent
 from agents.travel_guide_agent import TravelGuideAgent
+from agents.trip_analysis_agent import TripAnalysisAgent
 from utils.debug_logger import debug_logger, LogLevel
 from utils.image_fetcher import fetch_unsplash_images
 
@@ -144,6 +145,16 @@ class TravelPlannerOrchestrator:
         )
 
         await debug_logger.log(LogLevel.SUCCESS, "Reiseplan fertig!", job_id=job_id)
+
+        # Phase 4: Reise-Analyse
+        await debug_logger.log(LogLevel.INFO, "Reise-Analyse wird erstellt…", job_id=job_id)
+        try:
+            analysis_result = await TripAnalysisAgent(req, job_id).run(plan, req)
+            plan["trip_analysis"] = analysis_result
+        except Exception as exc:
+            await debug_logger.log(LogLevel.WARNING,
+                f"Reise-Analyse fehlgeschlagen (nicht kritisch): {exc}", job_id=job_id)
+            plan["trip_analysis"] = None
 
         # Send job_complete
         await self.progress("job_complete", None, plan, 100)

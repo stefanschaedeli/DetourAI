@@ -1068,3 +1068,130 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .time-block.type-activity { background: #f0fff4; }
 .time-block.type-break   { background: #fafafa; }
 .time-block.type-check_in { background: #f5f0ff; }
+
+/* ── Reise-Analyse ─────────────────────────────────────── */
+.trip-analysis {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 2px solid #e5e5ea;
+}
+.trip-analysis-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #1d1d1f;
+}
+.trip-analysis-card {
+  background: #f9f9fb;
+  border: 1px solid #e5e5ea;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.trip-analysis-card h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: #1d1d1f;
+}
+.trip-analysis-text {
+  color: #3a3a3c;
+  line-height: 1.6;
+  margin: 0;
+}
+.score-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.score-bar-track {
+  flex: 1;
+  height: 10px;
+  background: #e5e5ea;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.score-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.6s ease;
+}
+.score-label {
+  font-size: 1rem;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+}
+.trip-analysis-swot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .trip-analysis-swot { grid-template-columns: 1fr; }
+}
+.swot-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.swot-list li {
+  padding: 4px 0 4px 20px;
+  position: relative;
+  color: #3a3a3c;
+  line-height: 1.5;
+}
+.strengths-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #34c759;
+  font-weight: 700;
+}
+.weaknesses-list li::before {
+  content: '!';
+  position: absolute;
+  left: 0;
+  color: #ff9f0a;
+  font-weight: 700;
+}
+.suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.suggestion-item {
+  background: #fff;
+  border: 1px solid #e5e5ea;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.suggestion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+.suggestion-header strong {
+  font-size: 0.95rem;
+  color: #1d1d1f;
+}
+.suggestion-item p {
+  margin: 0;
+  color: #3a3a3c;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.impact-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.impact-high   { background: #ffeeee; color: #cc0000; }
+.impact-medium { background: #fff4e0; color: #b36000; }
+.impact-low    { background: #eefff2; color: #1a7a2e; }
