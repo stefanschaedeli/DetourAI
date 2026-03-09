@@ -163,10 +163,13 @@ function onAgentDone(data) {
 function onJobComplete(data) {
   if (progressSSE) { progressSSE.close(); progressSSE = null; }
 
+  // Complete any still-open overlay lines before closing
   progressOverlay.completeLine('trip_analysis', 'Analyse fertig');
-  progressOverlay.completeLine('day_planner', 'Tagesplan fertig');  // fallback
+  progressOverlay.completeLine('day_planner', 'Tagesplan fertig');
+  progressOverlay.completeLine('guide_phase', 'Reiseführer fertig');
+  progressOverlay.completeLine('route_arch', 'Route festgelegt');
   _completeAnalysisTimelineRow();
-  setTimeout(() => progressOverlay.close(), 600);
+  progressOverlay.close();
 
   S.result = data;
 
