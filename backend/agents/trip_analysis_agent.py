@@ -37,21 +37,23 @@ class TripAnalysisAgent:
         stops_summary = "\n".join(stop_lines) if stop_lines else "Keine Stops"
 
         travel_styles_str = ", ".join(req.travel_styles) if req.travel_styles else "allgemein"
-        children_str = f", {len(req.children)} Kinder (Alter: {', '.join(str(a) for a in req.children)})" if req.children else ""
-        must_haves_str = ", ".join(req.must_haves) if req.must_haves else "keine"
-        avoid_str = ", ".join(req.avoid) if req.avoid else "keine"
+        children_str = f", {len(req.children)} Kinder (Alter: {', '.join(str(c.age) for c in req.children)})" if req.children else ""
+        must_haves_str = ", ".join(req.accommodation_must_haves) if req.accommodation_must_haves else "keine"
+        acc_styles_str = ", ".join(req.accommodation_styles) if req.accommodation_styles else "keine"
+        mandatory_acts = ", ".join(a.name for a in req.mandatory_activities) if req.mandatory_activities else "keine"
 
         prompt = f"""Analysiere diesen Reiseplan kritisch und bewerte, wie gut er die Anforderungen des Benutzers erfüllt.
 
 ## Benutzeranforderungen
 - Startort: {req.start_location}
-- Ziel: {req.destination}
-- Dauer: {req.duration_days} Tage
+- Ziel: {req.main_destination}
+- Dauer: {req.total_days} Tage ({req.start_date} – {req.end_date})
 - Budget: CHF {req.budget_chf}
 - Reisende: {req.adults} Erwachsene{children_str}
 - Reisestile: {travel_styles_str}
-- Must-Haves: {must_haves_str}
-- Zu vermeiden: {avoid_str}
+- Unterkunftsarten: {acc_styles_str}
+- Unterkunfts-Must-Haves: {must_haves_str}
+- Pflichtaktivitäten: {mandatory_acts}
 - Max. Fahrtzeit/Tag: {req.max_drive_hours_per_day}h
 - Min. Nächte pro Stop: {req.min_nights_per_stop}
 
