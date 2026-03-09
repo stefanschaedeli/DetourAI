@@ -278,6 +278,7 @@ function renderFurtherActivities(activities) {
       <div class="further-activities-list">
         ${activities.map(act => `
           <div class="further-activity-item">
+            ${buildImageGallery(act.image_overview, act.image_mood, act.image_customer, esc(act.name))}
             <div class="further-activity-content">
               <strong>${esc(act.name)}</strong>
               <p>${esc(act.description)}</p>
@@ -396,6 +397,7 @@ function renderStops(plan) {
                   <div class="acc-alt-list">
                     ${altOpts.map(o => `
                       <div class="acc-alt-item">
+                        ${buildImageGallery(o.image_overview, o.image_mood, o.image_customer, esc(o.name))}
                         <div class="acc-alt-summary">
                           <strong>${esc(o.name)}</strong>
                           ${o.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
