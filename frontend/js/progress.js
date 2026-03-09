@@ -36,8 +36,19 @@ function onProgressDebugLog(data) {
     const n = msg.match(/Forschungsphase:\s*(\d+)/)[1];
     progressOverlay.addLine('research_phase', `Recherchiere Aktivitäten und Restaurants für ${n} Orte…`);
     progressOverlay.completeLine('research_phase', '');
+  } else if (msg.match(/Reiseführer-Recherche für (\d+)/)) {
+    const n = msg.match(/Reiseführer-Recherche für (\d+)/)[1];
+    progressOverlay.addLine('guide_phase', `Schreibe Reiseführer für ${n} Orte…`);
   } else if (msg.includes('Tagesplaner startet')) {
+    progressOverlay.completeLine('guide_phase', 'Reiseführer fertig');
     progressOverlay.addLine('day_planner', 'Erstelle den Tagesplan…');
+  } else if (msg.includes('Reise-Analyse wird erstellt')) {
+    progressOverlay.completeLine('day_planner', 'Tagesplan fertig');
+    progressOverlay.addLine('trip_analysis', 'Reise-Analyse wird erstellt…');
+    _addAnalysisTimelineRow();
+  } else if (msg.includes('Reise-Analyse fehlgeschlagen')) {
+    progressOverlay.completeLine('trip_analysis', 'übersprungen');
+    _completeAnalysisTimelineRow();
   }
 }
 
@@ -152,7 +163,9 @@ function onAgentDone(data) {
 function onJobComplete(data) {
   if (progressSSE) { progressSSE.close(); progressSSE = null; }
 
-  progressOverlay.completeLine('day_planner', 'Tagesplan fertig');
+  progressOverlay.completeLine('trip_analysis', 'Analyse fertig');
+  progressOverlay.completeLine('day_planner', 'Tagesplan fertig');  // fallback
+  _completeAnalysisTimelineRow();
   setTimeout(() => progressOverlay.close(), 600);
 
   S.result = data;
@@ -187,6 +200,38 @@ function onJobError(data) {
 
 function markAllStopsDone() {
   document.querySelectorAll('.timeline-stop').forEach(el => el.classList.add('done'));
+}
+
+function _addAnalysisTimelineRow() {
+  const timeline = document.getElementById('progress-timeline');
+  if (!timeline || timeline.querySelector('#timeline-analysis')) return;
+  timeline.insertAdjacentHTML('beforeend', `
+    <div class="timeline-stop" id="timeline-analysis">
+      <div class="timeline-dot"></div>
+      <div class="timeline-content">
+        <h4>Reise-Analyse</h4>
+        <div class="timeline-status" id="timeline-status-analysis">
+          <div class="shimmer-line short"></div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function _completeAnalysisTimelineRow() {
+  const stopEl = document.getElementById('timeline-analysis');
+  if (stopEl) stopEl.classList.add('done');
+  const status = document.getElementById('timeline-status-analysis');
+  if (status) {
+    status.innerHTML = `
+      <div class="timeline-item done">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        <span>Analyse abgeschlossen</span>
+      </div>
+    `;
+  }
 }
 
 function updateDebugLog() {
