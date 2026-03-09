@@ -470,3 +470,35 @@ def test_day_plan_with_time_blocks():
     )
     assert len(dp.time_blocks) == 1
     assert dp.time_blocks[0].activity_type == "drive"
+
+
+# ---------------------------------------------------------------------------
+# place_id field coverage
+# ---------------------------------------------------------------------------
+
+def test_place_id_defaults_to_none():
+    from models.travel_response import StopActivity, Restaurant, StopAccommodation, TravelStop
+    from models.accommodation_option import AccommodationOption
+
+    act = StopActivity(name="Eiffelturm", description="Test", duration_hours=2.0)
+    assert act.place_id is None
+
+    rest = Restaurant(name="Café Test", cuisine="French", price_range="€€")
+    assert rest.place_id is None
+
+    acc = StopAccommodation(name="Hotel Test", type="hotel", price_per_night_chf=100, total_price_chf=200)
+    assert acc.place_id is None
+
+    stop = TravelStop(id=1, region="Paris", country="FR", arrival_day=1, nights=2)
+    assert stop.place_id is None
+
+    opt = AccommodationOption(id="acc_1", name="Test", type="hotel", price_per_night_chf=100,
+                              total_price_chf=200, teaser="Nice")
+    assert opt.place_id is None
+
+
+def test_place_id_can_be_set():
+    from models.travel_response import StopActivity
+    act = StopActivity(name="Louvre", description="Museum", duration_hours=3.0,
+                       place_id="ChIJD7fiBh9u5kcRYJSMaMOCCwQ")
+    assert act.place_id == "ChIJD7fiBh9u5kcRYJSMaMOCCwQ"

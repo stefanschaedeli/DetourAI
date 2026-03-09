@@ -40,6 +40,7 @@ class StopAccommodation(BaseModel):
     image_overview: Optional[str] = None
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None
+    place_id: Optional[str] = None
 
 
 class StopActivity(BaseModel):
@@ -54,6 +55,7 @@ class StopActivity(BaseModel):
     image_overview: Optional[str] = None
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None
+    place_id: Optional[str] = None
 
 
 class Restaurant(BaseModel):
@@ -65,6 +67,7 @@ class Restaurant(BaseModel):
     image_overview: Optional[str] = None
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None
+    place_id: Optional[str] = None
 
 
 class TravelStop(BaseModel):
@@ -88,6 +91,7 @@ class TravelStop(BaseModel):
     image_overview: Optional[str] = None
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None
+    place_id: Optional[str] = None
 
 
 class DayPlan(BaseModel):

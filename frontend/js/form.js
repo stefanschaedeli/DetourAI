@@ -11,12 +11,36 @@ function initForm() {
   restoreFormFromCache();
   updateQuickSubmitBar();
 
+  // Attach Google Places autocomplete when Maps API is ready
+  if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+    _initLocationAutocomplete();
+  } else {
+    document.addEventListener('google-maps-ready', _initLocationAutocomplete);
+  }
+
   // Close settings menu on click outside
   document.addEventListener('click', e => {
     if (!e.target.closest('.header-settings')) {
       const m = document.getElementById('settings-menu');
       if (m) m.style.display = 'none';
     }
+  });
+}
+
+function _initLocationAutocomplete() {
+  const acOpts = { types: ['(cities)'], fields: ['formatted_address', 'place_id', 'geometry'] };
+
+  ['start-location', 'main-destination'].forEach(id => {
+    const ac = GoogleMaps.attachAutocomplete(id, acOpts);
+    if (!ac) return;
+    ac.addListener('place_changed', () => {
+      const place = ac.getPlace();
+      if (place && place.formatted_address) {
+        document.getElementById(id).value = place.formatted_address;
+      }
+      saveFormToCache();
+      updateQuickSubmitBar();
+    });
   });
 }
 
@@ -137,7 +161,7 @@ function renderViaPoints() {
   container.innerHTML = viaPoints.map((vp, i) => `
     <div class="via-point">
       <div class="via-point-row">
-        <input type="text" placeholder="Ort (z.B. Annecy)" value="${esc(vp.location)}"
+        <input type="text" id="via-input-${i}" placeholder="Ort (z.B. Annecy)" value="${esc(vp.location)}"
           oninput="viaPoints[${i}].location = this.value; saveFormToCache()">
         <button class="btn-icon" onclick="toggleViaDate(${i})" title="Datum festlegen">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -155,6 +179,23 @@ function renderViaPoints() {
         oninput="viaPoints[${i}].date = this.value; saveFormToCache()">` : ''}
     </div>
   `).join('');
+
+  // Attach autocomplete to each via-point input if Maps API is ready
+  if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+    viaPoints.forEach((vp, i) => {
+      const ac = GoogleMaps.attachAutocomplete(`via-input-${i}`, { types: ['(cities)'], fields: ['formatted_address'] });
+      if (!ac) return;
+      ac.addListener('place_changed', () => {
+        const place = ac.getPlace();
+        if (place && place.formatted_address) {
+          viaPoints[i].location = place.formatted_address;
+          const el = document.getElementById(`via-input-${i}`);
+          if (el) el.value = place.formatted_address;
+        }
+        saveFormToCache();
+      });
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

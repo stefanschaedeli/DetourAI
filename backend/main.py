@@ -1690,6 +1690,11 @@ async def generate_output(job_id: str, file_type: str):
 # GET /health
 # ---------------------------------------------------------------------------
 
+@app.get("/api/maps-config")
+async def get_maps_config():
+    return {"api_key": os.getenv("GOOGLE_MAPS_API_KEY", "")}
+
+
 @app.get("/health")
 async def health():
     try:

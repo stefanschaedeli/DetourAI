@@ -128,13 +128,9 @@ function buildImageGallery(overview, mood, customer, altText) {
   </div>`;
 }
 
-/** Open lightbox for a validated Unsplash URL. */
+/** Open lightbox for any https:// URL. */
 function openLightbox(url, caption) {
-  const valid = url && (
-    url.startsWith('https://images.unsplash.com/') ||
-    url.startsWith('https://plus.unsplash.com/')
-  );
-  if (!valid) return;
+  if (!url || !url.startsWith('https://')) return;
   document.getElementById('lightbox-img').src = url;
   document.getElementById('lightbox-caption').textContent = caption || '';
   const overlay = document.getElementById('lightbox-overlay');

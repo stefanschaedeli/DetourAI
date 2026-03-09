@@ -312,13 +312,8 @@ def test_activities_agent_no_enricher(mocker):
 # image_fetcher — no key returns all None
 # ---------------------------------------------------------------------------
 
-def test_fetch_unsplash_images_no_key(mocker):
+def test_image_fetcher_stub():
     import asyncio
-    mocker.patch.dict('os.environ', {}, clear=True)
-    # Remove UNSPLASH_ACCESS_KEY if present
-    import os
-    os.environ.pop('UNSPLASH_ACCESS_KEY', None)
-
     from utils.image_fetcher import fetch_unsplash_images
 
     async def _run():
@@ -326,22 +321,6 @@ def test_fetch_unsplash_images_no_key(mocker):
 
     result = asyncio.run(_run())
     assert result == {"image_overview": None, "image_mood": None, "image_customer": None}
-
-
-# ---------------------------------------------------------------------------
-# image_fetcher — URL validator
-# ---------------------------------------------------------------------------
-
-def test_fetch_unsplash_url_validator():
-    from utils.image_fetcher import _validate_unsplash_url
-    # Valid URLs
-    assert _validate_unsplash_url("https://images.unsplash.com/photo-123") == "https://images.unsplash.com/photo-123"
-    assert _validate_unsplash_url("https://plus.unsplash.com/photo-456") == "https://plus.unsplash.com/photo-456"
-    # Invalid URLs
-    assert _validate_unsplash_url("https://source.unsplash.com/featured") is None
-    assert _validate_unsplash_url("https://example.com/image.jpg") is None
-    assert _validate_unsplash_url(None) is None
-    assert _validate_unsplash_url("") is None
 
 
 # ---------------------------------------------------------------------------

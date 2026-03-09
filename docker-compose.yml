@@ -12,6 +12,7 @@ services:
       dockerfile: infra/Dockerfile.backend
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
       - TEST_MODE=${TEST_MODE:-true}
       - REDIS_URL=redis://redis:6379
       - OUTPUTS_DIR=/app/outputs
@@ -29,6 +30,7 @@ services:
     command: celery -A tasks worker --loglevel=info
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
       - TEST_MODE=${TEST_MODE:-true}
       - REDIS_URL=redis://redis:6379
       - DATA_DIR=/app/data

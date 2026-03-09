@@ -1,9 +1,8 @@
 'use strict';
 
 let activeTab = 'overview';
-let _guideMap = null;
-let _guideMapMarkers = [];
-let _guideMapLine = null;
+let _guideMarkers = [];
+let _guidePolyline = null;
 
 function showTravelGuide(plan) {
   S.result = plan;
@@ -26,7 +25,10 @@ function renderGuide(plan, tab) {
       content.innerHTML = renderOverview(plan);
       _initGuideMap(plan);
       break;
-    case 'stops':      content.innerHTML = renderStops(plan);     break;
+    case 'stops':
+      content.innerHTML = renderStops(plan);
+      requestAnimationFrame(() => _lazyLoadStopImages(plan));
+      break;
     case 'budget':     content.innerHTML = renderBudget(plan);    break;
     default:
       content.innerHTML = renderOverview(plan);
@@ -496,44 +498,33 @@ function _scrollToGuideStop(stopId) {
 }
 
 function _initGuideMap(plan) {
-  const mapEl = document.getElementById('guide-map');
-  if (!mapEl) return;
+  if (typeof GoogleMaps === 'undefined' || !window.google) return;
 
   const stops = plan.stops || [];
 
-  // Destroy old map instance if the element was replaced by innerHTML
-  if (_guideMap) {
-    _guideMap.remove();
-    _guideMap = null;
-    _guideMapMarkers = [];
-    _guideMapLine = null;
-  }
+  // initGuideMap always creates a fresh instance (element replaced by innerHTML)
+  const map = GoogleMaps.initGuideMap('guide-map', { center: { lat: 47, lng: 8 }, zoom: 6 });
+  if (!map) return;
 
-  _guideMap = L.map('guide-map').setView([47, 8], 6);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-  }).addTo(_guideMap);
+  _guideMarkers = [];
+  _guidePolyline = null;
 
-  const bounds = [];
+  const bounds = new google.maps.LatLngBounds();
+  let hasBounds = false;
+  const routePoints = [];
 
   // Start pin (green S)
   if (plan.start_lat && plan.start_lng) {
-    const icon = L.divIcon({
-      className: '',
-      html: `<div class="map-marker-anchor start-pin">S</div>`,
-      iconSize: [28, 28], iconAnchor: [14, 14],
-    });
-    L.marker([plan.start_lat, plan.start_lng], { icon })
-      .bindPopup(`<b>Start: ${esc(plan.start_location)}</b>`)
-      .addTo(_guideMap);
-    bounds.push([plan.start_lat, plan.start_lng]);
-  }
-
-  // Stop pins — last stop gets red Z, others blue numbered
-  // Collect ordered route points for polyline: start → stops in sequence
-  const routePoints = [];
-  if (plan.start_lat && plan.start_lng) {
-    routePoints.push([plan.start_lat, plan.start_lng]);
+    const pos = { lat: plan.start_lat, lng: plan.start_lng };
+    const infoWin = new google.maps.InfoWindow({ content: `<b>Start: ${esc(plan.start_location)}</b>` });
+    const m = GoogleMaps.createDivMarker(map, pos,
+      `<div class="map-marker-anchor start-pin">S</div>`,
+      () => infoWin.open(map)
+    );
+    _guideMarkers.push({ marker: m, infoWin });
+    bounds.extend(pos);
+    hasBounds = true;
+    routePoints.push(new google.maps.LatLng(pos.lat, pos.lng));
   }
 
   stops.forEach((stop, i) => {
@@ -542,32 +533,102 @@ function _initGuideMap(plan) {
     if (!sLat || !sLng) return;
 
     const isLast = i === stops.length - 1;
-    const icon = L.divIcon({
-      className: '',
-      html: isLast
-        ? `<div class="map-marker-anchor target-pin">Z</div>`
-        : `<div class="map-marker-num">${stop.id}</div>`,
-      iconSize: [28, 28], iconAnchor: [14, 14],
+    const pos = { lat: sLat, lng: sLng };
+    const infoContent = `<b>${FLAGS[stop.country] || ''} ${esc(stop.region)}</b><br>${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}`;
+    const infoWin = new google.maps.InfoWindow({ content: infoContent });
+    const markerHtml = isLast
+      ? `<div class="map-marker-anchor target-pin">Z</div>`
+      : `<div class="map-marker-num">${stop.id}</div>`;
+    const stopId = stop.id;
+    const m = GoogleMaps.createDivMarker(map, pos, markerHtml, () => {
+      infoWin.open(map);
+      _scrollToGuideStop(stopId);
     });
-    const marker = L.marker([sLat, sLng], { icon })
-      .bindPopup(`<b>${FLAGS[stop.country] || ''} ${stop.region}</b><br>${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}`)
-      .addTo(_guideMap);
-    marker.on('click', () => _scrollToGuideStop(stop.id));
-    _guideMapMarkers.push(marker);
-    bounds.push([sLat, sLng]);
-    routePoints.push([sLat, sLng]);
+    _guideMarkers.push({ marker: m, infoWin });
+    bounds.extend(pos);
+    hasBounds = true;
+    routePoints.push(new google.maps.LatLng(sLat, sLng));
   });
 
-  // Draw solid route polyline through all points in order
+  // Solid polyline through all route points
   if (routePoints.length >= 2) {
-    _guideMapLine = L.polyline(routePoints, { color: '#0071e3', weight: 3, opacity: 0.8 }).addTo(_guideMap);
+    _guidePolyline = new google.maps.Polyline({
+      map,
+      path: routePoints,
+      strokeColor: '#0071e3',
+      strokeOpacity: 0.8,
+      strokeWeight: 3,
+    });
   }
 
-  if (bounds.length > 0) {
-    _guideMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });
+  if (hasBounds) {
+    map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+    google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+      if (map.getZoom() > 9) map.setZoom(9);
+    });
   }
+}
 
-  setTimeout(() => { if (_guideMap) _guideMap.invalidateSize(); }, 100);
+/**
+ * Lazily load images for an entity (stop, activity, restaurant, accommodation)
+ * via Google Places and fill the .img-gallery container.
+ */
+async function _lazyLoadEntityImages(containerEl, placeName, lat, lng) {
+  if (!containerEl || typeof GoogleMaps === 'undefined') return;
+  try {
+    const urls = await GoogleMaps.getPlaceImages(placeName, lat, lng);
+    const gallery = containerEl.querySelector('.img-gallery');
+    const newGallery = buildImageGallery(urls[0], urls[1], urls[2], placeName);
+    if (!newGallery) return;
+    if (gallery) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = newGallery;
+      gallery.replaceWith(tmp.firstChild);
+    } else {
+      // Prepend to container if no gallery exists yet
+      const tmp = document.createElement('div');
+      tmp.innerHTML = newGallery;
+      containerEl.insertBefore(tmp.firstChild, containerEl.firstChild);
+    }
+  } catch (e) { /* silent */ }
+}
+
+/** Walk the rendered stops section and lazy-load images for all entities. */
+function _lazyLoadStopImages(plan) {
+  const stops = plan.stops || [];
+  stops.forEach(stop => {
+    const stopEl = document.getElementById(`guide-stop-${stop.id}`);
+    if (!stopEl) return;
+    const lat = stop.lat;
+    const lng = stop.lng;
+
+    // Stop overview images
+    _lazyLoadEntityImages(stopEl.querySelector('.stop-header')?.parentElement || stopEl, stop.region, lat, lng);
+
+    // Accommodation
+    const accEl = stopEl.querySelector('.stop-accommodation');
+    if (accEl && stop.accommodation) {
+      _lazyLoadEntityImages(accEl, stop.accommodation.name, lat, lng);
+    }
+
+    // Top activities
+    stopEl.querySelectorAll('.activity-card').forEach((el, i) => {
+      const act = (stop.top_activities || [])[i];
+      if (act) _lazyLoadEntityImages(el, act.name, lat, lng);
+    });
+
+    // Further activities
+    stopEl.querySelectorAll('.further-activity-item').forEach((el, i) => {
+      const act = (stop.further_activities || [])[i];
+      if (act) _lazyLoadEntityImages(el, act.name, lat, lng);
+    });
+
+    // Restaurants
+    stopEl.querySelectorAll('.restaurant-item').forEach((el, i) => {
+      const rest = (stop.restaurants || [])[i];
+      if (rest) _lazyLoadEntityImages(el, rest.name, lat, lng);
+    });
+  });
 }
 
 function renderDayPlan(plan) {

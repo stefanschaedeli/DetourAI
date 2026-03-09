@@ -1,9 +1,8 @@
 'use strict';
 
 let routeMeta = {};
-let _map = null;
-let _mapMarkers = [];
-let _mapLines = [];
+let _rbMarkers = [];
+let _rbPolylines = [];
 
 // SSE connection for route-building phase (progressive option streaming)
 let _routeSSE = null;
@@ -432,111 +431,121 @@ function _buildExtraFields(opt) {
 }
 
 function _initMap(anchors, options) {
-  const mapEl = document.getElementById('route-map');
-  if (!mapEl) return;
+  if (typeof GoogleMaps === 'undefined' || !window.google) return;
 
-  if (!_map) {
-    _map = L.map('route-map').setView([47, 8], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(_map);
-  } else {
-    _mapMarkers.forEach(m => _map.removeLayer(m));
-    _mapLines.forEach(l => _map.removeLayer(l));
-    _mapMarkers = [];
-    _mapLines = [];
-  }
+  const map = GoogleMaps.initRouteMap('route-map', { center: { lat: 47, lng: 8 }, zoom: 6 });
+  if (!map) return;
 
-  // Always use the last confirmed stop's coordinates as S-marker — more
-  // reliable than re-geocoding prev_location on the backend.
+  _clearMap();
+
+  // Always use the last confirmed stop's coordinates as S-marker
   const lastStop = S.selectedStops.length > 0 ? S.selectedStops[S.selectedStops.length - 1] : null;
   if (lastStop && lastStop.lat && lastStop.lon) {
     anchors = { ...anchors, prev_lat: lastStop.lat, prev_lon: lastStop.lon, prev_label: lastStop.region };
   }
 
-  const bounds = [];
+  const bounds = new google.maps.LatLngBounds();
+  let hasBounds = false;
 
-  // Start pin (green)
+  // Start pin (green S)
   if (anchors.prev_lat && anchors.prev_lon) {
-    const icon = L.divIcon({
-      className: '',
-      html: `<div class="map-marker-anchor start-pin">S</div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
-    });
-    const m = L.marker([anchors.prev_lat, anchors.prev_lon], { icon })
-      .bindPopup(`<b>Start: ${anchors.prev_label || ''}</b>`)
-      .addTo(_map);
-    _mapMarkers.push(m);
-    bounds.push([anchors.prev_lat, anchors.prev_lon]);
+    const pos = { lat: anchors.prev_lat, lng: anchors.prev_lon };
+    const infoWin = new google.maps.InfoWindow({ content: `<b>Start: ${esc(anchors.prev_label || '')}</b>` });
+    const m = GoogleMaps.createDivMarker(map, pos,
+      `<div class="map-marker-anchor start-pin">S</div>`,
+      () => infoWin.open({ map, anchor: { getPosition: () => new google.maps.LatLng(pos.lat, pos.lng) } })
+    );
+    _rbMarkers.push({ marker: m, infoWin });
+    bounds.extend(pos);
+    hasBounds = true;
   }
 
-  // Segment target pin (red)
+  // Segment target pin (red Z)
   if (anchors.target_lat && anchors.target_lon) {
-    const icon = L.divIcon({
-      className: '',
-      html: `<div class="map-marker-anchor target-pin">Z</div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
-    });
-    const m = L.marker([anchors.target_lat, anchors.target_lon], { icon })
-      .bindPopup(`<b>Ziel: ${anchors.target_label || ''}</b>`)
-      .addTo(_map);
-    _mapMarkers.push(m);
-    bounds.push([anchors.target_lat, anchors.target_lon]);
+    const pos = { lat: anchors.target_lat, lng: anchors.target_lon };
+    const infoWin = new google.maps.InfoWindow({ content: `<b>Ziel: ${esc(anchors.target_label || '')}</b>` });
+    const m = GoogleMaps.createDivMarker(map, pos,
+      `<div class="map-marker-anchor target-pin">Z</div>`,
+      () => infoWin.open({ map, anchor: { getPosition: () => new google.maps.LatLng(pos.lat, pos.lng) } })
+    );
+    _rbMarkers.push({ marker: m, infoWin });
+    bounds.extend(pos);
+    hasBounds = true;
   }
 
-  // Option pins (blue, numbered) + branch lines from start → option → target
-  const startPt = (anchors.prev_lat && anchors.prev_lon) ? [anchors.prev_lat, anchors.prev_lon] : null;
-  const targetPt = (anchors.target_lat && anchors.target_lon) ? [anchors.target_lat, anchors.target_lon] : null;
+  // Option pins (numbered) + dashed branch lines
+  const startPt = (anchors.prev_lat && anchors.prev_lon)
+    ? new google.maps.LatLng(anchors.prev_lat, anchors.prev_lon) : null;
+  const targetPt = (anchors.target_lat && anchors.target_lon)
+    ? new google.maps.LatLng(anchors.target_lat, anchors.target_lon) : null;
   const branchColors = ['#0071e3', '#1a7a1a', '#b36000'];
 
+  const dashedIcon = {
+    path: 'M 0,-1 0,1',
+    strokeOpacity: 1,
+    scale: 3,
+  };
+
   options.filter(o => o.lat && o.lon).forEach((opt, i) => {
-    const icon = L.divIcon({
-      className: '',
-      html: `<div class="map-marker-num">${i + 1}</div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
-    });
-    const tooltipHtml = `<div class="map-marker-tooltip">` +
+    const pos = { lat: opt.lat, lng: opt.lon };
+    const tooltipContent = `<div class="map-marker-tooltip">` +
       `<strong>${i + 1}. ${esc(opt.region)}</strong>` +
       `<div>${opt.drive_hours}h Fahrt · ${opt.drive_km || '?'} km</div>` +
       `<div>${opt.nights} Nacht${opt.nights !== 1 ? 'e' : ''}</div>` +
       (opt.teaser ? `<div class="tooltip-teaser">${esc(opt.teaser)}</div>` : '') +
       `</div>`;
-    const marker = L.marker([opt.lat, opt.lon], { icon })
-      .bindTooltip(tooltipHtml, { className: 'map-marker-tooltip-wrap', direction: 'top', offset: [0, -14] })
-      .addTo(_map);
-    marker.on('click', () => selectOption(i));
-    _mapMarkers.push(marker);
-    bounds.push([opt.lat, opt.lon]);
+    const infoWin = new google.maps.InfoWindow({ content: tooltipContent });
+    const m = GoogleMaps.createDivMarker(map, pos,
+      `<div class="map-marker-num">${i + 1}</div>`,
+      () => { infoWin.open(map); selectOption(i); }
+    );
+    _rbMarkers.push({ marker: m, infoWin });
+    bounds.extend(pos);
+    hasBounds = true;
 
     const color = branchColors[i] || '#888';
-    const optPt = [opt.lat, opt.lon];
+    const optLatLng = new google.maps.LatLng(opt.lat, opt.lon);
+
     if (startPt) {
-      const line = L.polyline([startPt, optPt], { color, weight: 2.5, dashArray: '6 5', opacity: 0.75 }).addTo(_map);
-      _mapLines.push(line);
+      const line = new google.maps.Polyline({
+        map,
+        path: [startPt, optLatLng],
+        strokeColor: color,
+        strokeOpacity: 0,
+        strokeWeight: 2,
+        icons: [{ icon: { ...dashedIcon, strokeColor: color, strokeOpacity: 0.8 }, offset: '0', repeat: '10px' }],
+      });
+      _rbPolylines.push(line);
     }
     if (targetPt) {
-      const line = L.polyline([optPt, targetPt], { color, weight: 2.5, dashArray: '6 5', opacity: 0.5 }).addTo(_map);
-      _mapLines.push(line);
+      const line = new google.maps.Polyline({
+        map,
+        path: [optLatLng, targetPt],
+        strokeColor: color,
+        strokeOpacity: 0,
+        strokeWeight: 2,
+        icons: [{ icon: { ...dashedIcon, strokeColor: color, strokeOpacity: 0.5 }, offset: '0', repeat: '10px' }],
+      });
+      _rbPolylines.push(line);
     }
   });
 
-  if (bounds.length > 0) {
-    _map.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });
+  if (hasBounds) {
+    map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+    google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+      if (map.getZoom() > 9) map.setZoom(9);
+    });
   }
-
-  setTimeout(() => { if (_map) _map.invalidateSize(); }, 100);
 }
 
 function _clearMap() {
-  if (_map) {
-    _mapMarkers.forEach(m => _map.removeLayer(m));
-    _mapLines.forEach(l => _map.removeLayer(l));
-    _mapMarkers = [];
-    _mapLines = [];
-  }
+  _rbMarkers.forEach(({ marker }) => {
+    if (marker && marker.map !== undefined) marker.map = null;
+    else if (marker && typeof marker.setMap === 'function') marker.setMap(null);
+  });
+  _rbPolylines.forEach(l => l.setMap(null));
+  _rbMarkers = [];
+  _rbPolylines = [];
 }
 
 function scrollToOption(i) {

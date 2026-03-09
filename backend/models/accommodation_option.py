@@ -25,6 +25,7 @@ class AccommodationOption(BaseModel):
     image_overview: Optional[str] = None
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None
+    place_id: Optional[str] = None
 
 
 class BudgetState(BaseModel):

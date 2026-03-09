@@ -155,6 +155,16 @@ function onAccommodationLoaded(data) {
 
   grid.innerHTML = renderAccCards(stopId, options, []);
 
+  // Lazy-load images for each card
+  requestAnimationFrame(() => {
+    grid.querySelectorAll('.acc-option-card').forEach((card, i) => {
+      const opt = options[i];
+      if (opt && typeof _lazyLoadEntityImages === 'function') {
+        _lazyLoadEntityImages(card, opt.name, stop.lat, stop.lng);
+      }
+    });
+  });
+
   const count = options.length;
   progressOverlay.completeLine('acc_' + stopId, `${count} Optionen gefunden`);
 }
@@ -249,6 +259,14 @@ async function researchAccommodation(stopId) {
 
     if (grid) {
       grid.innerHTML = renderAccCards(stopId, options, []);
+      requestAnimationFrame(() => {
+        grid.querySelectorAll('.acc-option-card').forEach((card, i) => {
+          const opt = options[i];
+          if (opt && typeof _lazyLoadEntityImages === 'function') {
+            _lazyLoadEntityImages(card, opt.name, stop.lat, stop.lng);
+          }
+        });
+      });
     }
 
     updateBudgetFromSelections();

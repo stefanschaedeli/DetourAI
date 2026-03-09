@@ -8,10 +8,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-          integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -492,6 +488,7 @@
 <!-- ======================================================== JS modules -->
 <script src="js/loading.js"></script>
 <script src="js/sse-overlay.js"></script>
+<script src="js/maps.js"></script>
 <script src="js/state.js"></script>
 <script src="js/api.js"></script>
 <script src="js/form.js"></script>
@@ -513,6 +510,23 @@
       if (s && d) { d.textContent = s.value; s.oninput = () => { d.textContent = s.value; saveFormToCache(); }; }
     });
   });
+</script>
+
+<script>
+  // Dynamically load Google Maps API after fetching key from backend
+  fetch('/api/maps-config')
+    .then(r => r.json())
+    .then(d => {
+      if (!d.api_key) return;
+      window._GM_KEY = d.api_key;
+      GoogleMaps._setApiKey(d.api_key);
+      const s = document.createElement('script');
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${d.api_key}&libraries=places,marker&callback=GoogleMaps._onApiReady&loading=async`;
+      s.async = true;
+      s.defer = true;
+      document.head.appendChild(s);
+    })
+    .catch(() => {}); // no key configured — maps won't load
 </script>
 
 </body>
