@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import sys
+import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -69,8 +70,9 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
         )
 
     except Exception as e:
+        tb = traceback.format_exc()
         await debug_logger.log(
-            LogLevel.ERROR, f"Planungsauftrag fehlgeschlagen: {e}",
+            LogLevel.ERROR, f"Planungsauftrag fehlgeschlagen: {type(e).__name__}: {e}\n{tb}",
             job_id=job_id, agent="RunPlanningJob",
         )
         raw3 = redis_client.get(f"job:{job_id}")

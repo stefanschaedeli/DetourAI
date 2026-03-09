@@ -74,7 +74,8 @@ class DayPlannerAgent:
             if prev and curr:
                 osrm_tasks.append(osrm_route([prev, curr]))
             else:
-                osrm_tasks.append(asyncio.coroutine(lambda: (0.0, 0.0))())
+                async def _zero(): return (0.0, 0.0)
+                osrm_tasks.append(_zero())
 
         results = await asyncio.gather(*[t if asyncio.iscoroutine(t) else t for t in osrm_tasks],
                                        return_exceptions=True)
@@ -210,7 +211,7 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
                 day_data["time_blocks"] = []
             return day_data
         except Exception as e:
-            await debug_logger.log(LogLevel.WARN, f"DayPlanner Tag {day_num} Fehler: {e}", job_id=self.job_id)
+            await debug_logger.log(LogLevel.WARNING, f"DayPlanner Tag {day_num} Fehler: {e}", job_id=self.job_id)
             return {
                 "day": day_num,
                 "date": date_str,
