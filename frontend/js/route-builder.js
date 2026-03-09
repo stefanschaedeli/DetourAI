@@ -250,6 +250,7 @@ function startRouteBuilding(data) {
   if (_streamingOptions.length >= (data.options || []).length && _streamingOptions.length > 0) {
     S.currentOptions = data.options || _streamingOptions;
     S.loadingOptions = false;
+    progressOverlay.close();
     closeRouteSSE();
     _updateRouteStatus(data.meta || {});
     renderBuiltStops();
