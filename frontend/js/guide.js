@@ -27,7 +27,14 @@ function renderGuide(plan, tab) {
       break;
     case 'stops':
       content.innerHTML = renderStops(plan);
-      requestAnimationFrame(() => _lazyLoadStopImages(plan));
+      requestAnimationFrame(() => {
+        _lazyLoadStopImages(plan);
+        _initStopsSidebar();
+      });
+      break;
+    case 'calendar':
+      content.innerHTML = renderCalendar(plan);
+      _initCalendarClicks(plan);
       break;
     case 'budget':     content.innerHTML = renderBudget(plan);    break;
     default:
@@ -342,157 +349,328 @@ function renderStops(plan) {
   const stops = plan.stops || [];
   const dayPlans = plan.day_plans || [];
 
-  return `
-    <div class="stops-section">
-      ${stops.map(stop => {
-        const flag = FLAGS[stop.country] || '';
-        const acc  = stop.accommodation || {};
-        const acts = stop.top_activities || [];
-        const rests = stop.restaurants || [];
-        const further = stop.further_activities || [];
+  // Sidebar items
+  const sidebarItems = stops.map((stop, i) => {
+    const flag = FLAGS[stop.country] || '';
+    return `
+      <div class="stops-sidebar-item${i === 0 ? ' active' : ''}" data-target="guide-stop-${stop.id}">
+        <span class="sidebar-stop-num">${stop.id}</span>
+        <span class="sidebar-stop-label">${flag} ${esc(stop.region)}</span>
+      </div>
+    `;
+  }).join('');
 
-        // Day plans that fall within this stop's nights
-        const arrivalDay = stop.arrival_day || 1;
-        const stopDays = dayPlans.filter(d =>
-          d.day >= arrivalDay && d.day < arrivalDay + (stop.nights || 1)
-        );
+  // Stop cards
+  const stopCards = stops.map((stop, i) => {
+    const flag = FLAGS[stop.country] || '';
+    const acc  = stop.accommodation || {};
+    const acts = stop.top_activities || [];
+    const rests = stop.restaurants || [];
+    const further = stop.further_activities || [];
+    const isFirst = i === 0;
 
-        return `
-          <div class="stop-card" id="guide-stop-${stop.id}">
-            <div class="stop-header">
-              <div class="stop-number">Stop ${stop.id}</div>
-              <h3>${flag} ${esc(stop.region)}, ${esc(stop.country)}</h3>
-              <div class="stop-meta">
-                Tag ${stop.arrival_day} · ${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}
-                ${stop.drive_hours_from_prev > 0 ? ` · ${stop.drive_hours_from_prev}h Fahrt` : ''}
-                ${stop.drive_km_from_prev > 0 ? ` · ${stop.drive_km_from_prev} km` : ''}
-              </div>
-              ${stop.google_maps_url ? `<a href="${safeUrl(stop.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
-            </div>
-            <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+    // Day plans that fall within this stop's nights
+    const arrivalDay = stop.arrival_day || 1;
+    const stopDays = dayPlans.filter(d =>
+      d.day >= arrivalDay && d.day < arrivalDay + (stop.nights || 1)
+    );
 
-            ${renderTravelGuide(stop.travel_guide)}
-
-            ${acc.name ? (() => {
-              const allOpts = stop.all_accommodation_options || [];
-              const altOpts = allOpts.filter(o => o.name !== acc.name);
-              return `
-              <div class="stop-accommodation">
-                <h4>Unterkunft</h4>
+    const accHtml = acc.name ? (() => {
+      const allOpts = stop.all_accommodation_options || [];
+      const altOpts = allOpts.filter(o => o.name !== acc.name);
+      return `
+      <div class="stop-accommodation">
+        <h4>Unterkunft</h4>
+        <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+        <div class="acc-summary">
+          <strong>${esc(acc.name)}</strong>
+          <span class="acc-selected-badge">Gewählt</span>
+          ${acc.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
+          <span class="acc-type-tag">${esc(acc.type || '')}</span>
+          <span class="acc-price-tag">ca. CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>
+        </div>
+        ${acc.description ? `<div class="acc-guide-description">${esc(acc.description)}</div>` : ''}
+        <div class="acc-guide-links">
+          ${acc.booking_url ? `<a href="${safeUrl(acc.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com anschauen →</a>` : ''}
+          ${acc.booking_search_url ? `<a href="${safeUrl(acc.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Bei Booking.com suchen →</a>` : ''}
+          ${acc.hotel_website_url ? `<a href="${safeUrl(acc.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite →</a>` : ''}
+        </div>
+        ${altOpts.length ? `
+        <details class="acc-alt-options">
+          <summary>Weitere Optionen (${altOpts.length})</summary>
+          <div class="acc-alt-list">
+            ${altOpts.map(o => `
+              <div class="acc-alt-item">
                 <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
-                <div class="acc-summary">
-                  <strong>${esc(acc.name)}</strong>
-                  <span class="acc-selected-badge">Gewählt</span>
-                  ${acc.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
-                  <span class="acc-type-tag">${esc(acc.type || '')}</span>
-                  <span class="acc-price-tag">ca. CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>
+                <div class="acc-alt-summary">
+                  <strong>${esc(o.name)}</strong>
+                  ${o.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
+                  <span class="acc-type-tag">${esc(o.type || '')}</span>
+                  <span class="acc-price-tag">ca. CHF ${(o.total_price_chf || 0).toLocaleString('de-CH')}</span>
                 </div>
-                ${acc.description ? `<div class="acc-guide-description">${esc(acc.description)}</div>` : ''}
                 <div class="acc-guide-links">
-                  ${acc.booking_url ? `<a href="${safeUrl(acc.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com anschauen →</a>` : ''}
-                  ${acc.booking_search_url ? `<a href="${safeUrl(acc.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Bei Booking.com suchen →</a>` : ''}
-                  ${acc.hotel_website_url ? `<a href="${safeUrl(acc.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite →</a>` : ''}
-                </div>
-                ${altOpts.length ? `
-                <details class="acc-alt-options">
-                  <summary>Weitere Optionen (${altOpts.length})</summary>
-                  <div class="acc-alt-list">
-                    ${altOpts.map(o => `
-                      <div class="acc-alt-item">
-                        <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
-                        <div class="acc-alt-summary">
-                          <strong>${esc(o.name)}</strong>
-                          ${o.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
-                          <span class="acc-type-tag">${esc(o.type || '')}</span>
-                          <span class="acc-price-tag">ca. CHF ${(o.total_price_chf || 0).toLocaleString('de-CH')}</span>
-                        </div>
-                        <div class="acc-guide-links">
-                          ${o.booking_url ? `<a href="${safeUrl(o.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com →</a>` : ''}
-                          ${o.booking_search_url ? `<a href="${safeUrl(o.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Booking.com suchen →</a>` : ''}
-                          ${o.hotel_website_url ? `<a href="${safeUrl(o.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite →</a>` : ''}
-                        </div>
-                      </div>
-                    `).join('')}
-                  </div>
-                </details>
-                ` : ''}
-              </div>
-              `;
-            })() : ''}
-
-            ${acts.length ? `
-              <div class="stop-activities">
-                <h4>Aktivitäten</h4>
-                <div class="activities-grid">
-                  ${acts.map(act => `
-                    <div class="activity-card">
-                      <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
-                      <div class="activity-content">
-                        <strong>${esc(act.name)}</strong>
-                        <p>${esc(act.description)}</p>
-                        <div class="activity-meta">
-                          ${act.duration_hours}h
-                          ${act.price_chf > 0 ? ` · CHF ${act.price_chf}` : ' · kostenlos'}
-                          ${act.suitable_for_children ? ' · familienfreundlich' : ''}
-                        </div>
-                        ${act.google_maps_url ? `<a href="${safeUrl(act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
-                      </div>
-                    </div>
-                  `).join('')}
+                  ${o.booking_url ? `<a href="${safeUrl(o.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com →</a>` : ''}
+                  ${o.booking_search_url ? `<a href="${safeUrl(o.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Booking.com suchen →</a>` : ''}
+                  ${o.hotel_website_url ? `<a href="${safeUrl(o.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite →</a>` : ''}
                 </div>
               </div>
-            ` : ''}
-
-            ${renderFurtherActivities(further)}
-
-            ${rests.length ? `
-              <div class="stop-restaurants">
-                <h4>Restaurants</h4>
-                <div class="restaurants-list">
-                  ${rests.map(r => `
-                    <div class="restaurant-item">
-                      <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
-                      <div style="padding: 10px">
-                        <strong>${esc(r.name)}</strong>
-                        <span class="cuisine-tag">${esc(r.cuisine)}</span>
-                        <span class="price-range">${esc(r.price_range)}</span>
-                        ${r.family_friendly ? '<span class="family-tag">Familienfreundlich</span>' : ''}
-                        ${r.notes ? `<p class="rest-notes">${esc(r.notes)}</p>` : ''}
-                      </div>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            ` : ''}
-
-            ${stopDays.length ? `
-              <div class="stop-day-examples">
-                <h4>Tagesbeispiele</h4>
-                ${stopDays.map(dp => `
-                  <details class="day-example-collapse" open>
-                    <summary>
-                      <span class="day-example-label">Tag ${dp.day}${dp.date ? ' · ' + esc(dp.date) : ''}</span>
-                      <span class="day-example-title">${esc(dp.title)}</span>
-                    </summary>
-                    <div class="day-example-body">
-                      <p class="day-example-desc">${esc(dp.description)}</p>
-                      ${renderDayTimeBlocks(dp)}
-                    </div>
-                  </details>
-                `).join('')}
-              </div>
-            ` : ''}
+            `).join('')}
           </div>
-        `;
-      }).join('')}
+        </details>
+        ` : ''}
+      </div>
+      `;
+    })() : '';
+
+    const actsHtml = acts.length ? `
+      <details class="stop-section-collapse" open>
+        <summary class="stop-section-summary">Aktivitäten (${acts.length})</summary>
+        <div class="stop-activities">
+          <div class="activities-grid">
+            ${acts.map(act => `
+              <div class="activity-card">
+                <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+                <div class="activity-content">
+                  <strong>${esc(act.name)}</strong>
+                  <p>${esc(act.description)}</p>
+                  <div class="activity-meta">
+                    ${act.duration_hours}h
+                    ${act.price_chf > 0 ? ` · CHF ${act.price_chf}` : ' · kostenlos'}
+                    ${act.suitable_for_children ? ' · familienfreundlich' : ''}
+                  </div>
+                  ${act.google_maps_url ? `<a href="${safeUrl(act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </details>
+    ` : '';
+
+    const restsHtml = rests.length ? `
+      <details class="stop-section-collapse" open>
+        <summary class="stop-section-summary">Restaurants (${rests.length})</summary>
+        <div class="stop-restaurants">
+          <div class="restaurants-list">
+            ${rests.map(r => `
+              <div class="restaurant-item">
+                <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+                <div style="padding: 10px">
+                  <strong>${esc(r.name)}</strong>
+                  <span class="cuisine-tag">${esc(r.cuisine)}</span>
+                  <span class="price-range">${esc(r.price_range)}</span>
+                  ${r.family_friendly ? '<span class="family-tag">Familienfreundlich</span>' : ''}
+                  ${r.notes ? `<p class="rest-notes">${esc(r.notes)}</p>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </details>
+    ` : '';
+
+    const daysHtml = stopDays.length ? `
+      <div class="stop-day-examples">
+        <h4>Tagesbeispiele</h4>
+        ${stopDays.map(dp => `
+          <details class="day-example-collapse" open>
+            <summary>
+              <span class="day-example-label">Tag ${dp.day}${dp.date ? ' · ' + esc(dp.date) : ''}</span>
+              <span class="day-example-title">${esc(dp.title)}</span>
+            </summary>
+            <div class="day-example-body">
+              <p class="day-example-desc">${esc(dp.description)}</p>
+              ${renderDayTimeBlocks(dp)}
+            </div>
+          </details>
+        `).join('')}
+      </div>
+    ` : '';
+
+    return `
+      <div class="stop-card" id="guide-stop-${stop.id}" data-stop-id="${stop.id}">
+        <button class="stop-header stop-toggle" aria-expanded="${isFirst}" data-stop-id="${stop.id}">
+          <div class="stop-header-left">
+            <div class="stop-number">Stop ${stop.id}</div>
+            <h3>${flag} ${esc(stop.region)}, ${esc(stop.country)}</h3>
+            <div class="stop-meta">
+              Tag ${stop.arrival_day} · ${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}
+              ${stop.drive_hours_from_prev > 0 ? ` · ${stop.drive_hours_from_prev}h Fahrt` : ''}
+              ${stop.drive_km_from_prev > 0 ? ` · ${stop.drive_km_from_prev} km` : ''}
+            </div>
+          </div>
+          <div class="stop-header-right">
+            ${stop.google_maps_url ? `<a href="${safeUrl(stop.google_maps_url)}" target="_blank" class="maps-link" onclick="event.stopPropagation()">Maps</a>` : ''}
+            <span class="stop-toggle-arrow">${isFirst ? '▼' : '▶'}</span>
+          </div>
+        </button>
+
+        <div class="stop-body"${isFirst ? '' : ' style="display:none"'}>
+          <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+          ${renderTravelGuide(stop.travel_guide)}
+          ${accHtml}
+          ${actsHtml}
+          ${renderFurtherActivities(further)}
+          ${restsHtml}
+          ${daysHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="stops-layout">
+      <aside class="stops-sidebar">
+        <div class="stops-sidebar-inner">
+          ${sidebarItems}
+        </div>
+      </aside>
+      <div class="stops-main">
+        ${stopCards}
+      </div>
     </div>
   `;
+}
+
+function _initStopsSidebar() {
+  // Toggle stop cards on header click
+  document.querySelectorAll('.stop-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const stopId = btn.dataset.stopId;
+      _toggleStop(stopId, true);
+    });
+  });
+
+  // Sidebar item click: expand target, collapse others
+  document.querySelectorAll('.stops-sidebar-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const targetId = item.dataset.target;
+      const stopId = targetId.replace('guide-stop-', '');
+      _expandOnlyStop(stopId);
+      const el = document.getElementById(targetId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // IntersectionObserver to highlight active stop in sidebar
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const stopId = entry.target.dataset.stopId;
+        document.querySelectorAll('.stops-sidebar-item').forEach(item => {
+          item.classList.toggle('active', item.dataset.target === `guide-stop-${stopId}`);
+        });
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '-80px 0px -60% 0px' });
+
+  document.querySelectorAll('.stop-card').forEach(card => observer.observe(card));
+}
+
+function _toggleStop(stopId, scrollIntoView) {
+  const card = document.getElementById(`guide-stop-${stopId}`);
+  if (!card) return;
+  const body = card.querySelector('.stop-body');
+  const btn  = card.querySelector('.stop-toggle');
+  const arrow = btn?.querySelector('.stop-toggle-arrow');
+  const isOpen = body.style.display !== 'none';
+
+  body.style.display = isOpen ? 'none' : 'block';
+  if (btn)   btn.setAttribute('aria-expanded', String(!isOpen));
+  if (arrow) arrow.textContent = isOpen ? '▶' : '▼';
+}
+
+function _expandOnlyStop(stopId) {
+  document.querySelectorAll('.stop-card').forEach(card => {
+    const id = card.dataset.stopId;
+    const body  = card.querySelector('.stop-body');
+    const btn   = card.querySelector('.stop-toggle');
+    const arrow = btn?.querySelector('.stop-toggle-arrow');
+    const open  = String(id) === String(stopId);
+    body.style.display = open ? 'block' : 'none';
+    if (btn)   btn.setAttribute('aria-expanded', String(open));
+    if (arrow) arrow.textContent = open ? '▼' : '▶';
+  });
+}
+
+function renderCalendar(plan) {
+  const stops = plan.stops || [];
+  const dayPlans = plan.day_plans || [];
+
+  const typeIcon  = { drive: '🚗', checkin: '🏨', activity: '🎯', rest: '🌟', mixed: '🔀' };
+  const typeLabel = { drive: 'Fahrt', checkin: 'Ankunft', activity: 'Erlebnis', rest: 'Entspannen', mixed: 'Gemischt' };
+
+  // Build a cell per day_plan entry
+  const cells = dayPlans.map(dp => {
+    // Determine type based on day plan type field
+    const raw = (dp.type || 'mixed').toLowerCase();
+    const type = raw === 'drive' ? 'drive'
+               : raw === 'rest'  ? 'rest'
+               : raw === 'activity' ? 'activity'
+               : raw === 'mixed'   ? 'mixed'
+               : 'mixed';
+
+    // Find which stop this day belongs to
+    const stop = stops.find(s => {
+      const arr = s.arrival_day || 1;
+      return dp.day >= arr && dp.day < arr + (s.nights || 1);
+    });
+    const flag = stop ? (FLAGS[stop.country] || '') : '';
+    const stopName = stop ? stop.region : '';
+    const stopId = stop ? stop.id : null;
+
+    return `
+      <div class="cal-day-cell" data-type="${esc(type)}" data-stop-id="${stopId || ''}"
+           title="${esc(dp.title)}" tabindex="0" role="button">
+        <div class="cal-day-num">${dp.day}</div>
+        <div class="cal-day-icon">${typeIcon[type] || '📍'}</div>
+        <div class="cal-day-label">${esc(dp.title || typeLabel[type])}</div>
+        ${stopName ? `<div class="cal-day-stop">${flag} ${esc(stopName)}</div>` : ''}
+        ${dp.date ? `<div class="cal-day-date">${esc(dp.date)}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="calendar-section">
+      <h3 class="calendar-title">Reise-Kalender</h3>
+      <p class="calendar-hint">Klick auf einen Tag öffnet den Stop im Reiseführer.</p>
+      <div class="calendar-scroll-wrap">
+        <div class="calendar-timeline">
+          ${cells}
+        </div>
+      </div>
+      <div class="calendar-legend">
+        ${Object.entries(typeIcon).map(([t, icon]) =>
+          `<span class="cal-legend-item" data-type="${t}">${icon} ${typeLabel[t]}</span>`
+        ).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function _initCalendarClicks(plan) {
+  document.querySelectorAll('.cal-day-cell[data-stop-id]').forEach(cell => {
+    const stopId = cell.dataset.stopId;
+    if (!stopId) return;
+    cell.addEventListener('click', () => {
+      switchGuideTab('stops');
+      requestAnimationFrame(() => {
+        _expandOnlyStop(stopId);
+        document.getElementById(`guide-stop-${stopId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    cell.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cell.click(); }
+    });
+  });
 }
 
 function _scrollToGuideStop(stopId) {
   switchGuideTab('stops');
   // After tab switch the DOM is re-rendered; use rAF to wait one frame
   requestAnimationFrame(() => {
+    _expandOnlyStop(stopId);
     document.getElementById(`guide-stop-${stopId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 }
