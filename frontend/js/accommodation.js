@@ -120,21 +120,23 @@ function renderAccCards(stopId, options, mustHaves) {
       <div class="${cardClass} ${selectedClass}" onclick="selectAccommodationInPanel(${stopId}, ${i})"
            data-stop="${stopId}" data-idx="${i}">
         ${imgHtml}
-        ${geheimtippBadge}
-        <h4>${esc(opt.name)}</h4>
-        <div class="acc-type-badge">${esc(opt.type)}</div>
-        ${stars ? `<div class="acc-stars">${stars}</div>` : ''}
-        <div class="acc-price">
-          <strong>ca. CHF ${(opt.price_per_night_chf || 0).toLocaleString('de-CH')}</strong>
-          <span>/Nacht</span>
-        </div>
-        <div class="acc-total">Total: ca. CHF ${(opt.total_price_chf || 0).toLocaleString('de-CH')}</div>
-        <p class="acc-teaser">${esc(opt.teaser)}</p>
-        ${descHtml}
-        <div class="acc-features">${features}</div>
-        ${geheimtippHint}
-        <div class="acc-links-row">
-          ${bookingDeepLink}${bookingSearchLink}${websiteLink}
+        <div class="acc-card-body">
+          ${geheimtippBadge}
+          <h4>${esc(opt.name)}</h4>
+          <div class="acc-type-badge">${esc(opt.type)}</div>
+          ${stars ? `<div class="acc-stars">${stars}</div>` : ''}
+          <div class="acc-price">
+            <strong>ca. CHF ${(opt.price_per_night_chf || 0).toLocaleString('de-CH')}</strong>
+            <span>/Nacht</span>
+          </div>
+          <div class="acc-total">Total: ca. CHF ${(opt.total_price_chf || 0).toLocaleString('de-CH')}</div>
+          <p class="acc-teaser">${esc(opt.teaser)}</p>
+          ${descHtml}
+          <div class="acc-features">${features}</div>
+          ${geheimtippHint}
+          <div class="acc-links-row">
+            ${bookingDeepLink}${bookingSearchLink}${websiteLink}
+          </div>
         </div>
       </div>
     `;
