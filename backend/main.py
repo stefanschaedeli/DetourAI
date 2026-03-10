@@ -531,7 +531,7 @@ async def _find_and_stream_options(
             raw_options.append(item)
 
         # Enrich options in parallel (geocode + OSRM + proximity filter)
-        async def _enrich_one(i: int, opt: dict) -> dict | None:
+        async def _enrich_one(i: int, opt: dict) -> Optional[dict]:
             await asyncio.sleep(i * 0.35)  # stagger Nominatim calls (350ms apart)
             place = f"{opt.get('region', '')}, {opt.get('country', '')}"
             nom_coords = await geocode_nominatim(place)
