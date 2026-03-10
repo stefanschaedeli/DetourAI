@@ -137,9 +137,11 @@ async function quickSubmitTrip() {
 
 function toggleSettings() {
   const menu = document.getElementById('settings-menu');
+  const btn  = document.querySelector('.settings-btn');
   if (!menu) return;
   const open = menu.style.display !== 'none';
   menu.style.display = open ? 'none' : 'block';
+  if (btn) btn.setAttribute('aria-expanded', String(!open));
 }
 
 // ---------------------------------------------------------------------------
@@ -356,12 +358,21 @@ function updateBudgetPreview() {
   const checkEl = document.getElementById('budget-total-check');
   if (sumEl) sumEl.textContent = sum;
   if (checkEl) {
-    checkEl.classList.toggle('invalid', sum !== 100);
-    // Replace the text node after the <strong>
-    const strong = checkEl.querySelector('strong');
-    if (strong && strong.nextSibling) {
-      strong.nextSibling.textContent = sum === 100 ? '% ✓' : '% ✗ (muss 100% sein)';
+    const valid = sum === 100;
+    checkEl.classList.toggle('invalid', !valid);
+    const icon = document.getElementById('budget-check-icon');
+    if (icon) {
+      icon.style.display = valid ? '' : 'none';
     }
+    // Show/hide error hint after the sum
+    let errSpan = checkEl.querySelector('.budget-sum-error');
+    if (!errSpan) {
+      errSpan = document.createElement('span');
+      errSpan.className = 'budget-sum-error';
+      errSpan.style.cssText = 'margin-left:6px;font-size:13px;color:var(--danger)';
+      checkEl.appendChild(errSpan);
+    }
+    errSpan.textContent = valid ? '' : '— muss 100% sein';
   }
 
   const fmt = v => Math.round(total * v / 100).toLocaleString('de-CH');

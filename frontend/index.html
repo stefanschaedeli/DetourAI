@@ -19,7 +19,7 @@
   <button class="btn-my-travels" onclick="openTravelsDrawer()">Meine Reisen</button>
   <button class="btn-clear-data" onclick="clearAppData()" title="Daten löschen und neu starten">Neu starten</button>
   <div class="header-settings">
-    <button class="btn-icon settings-btn" onclick="toggleSettings()" title="Einstellungen" aria-label="Einstellungen">
+    <button class="btn-icon settings-btn" onclick="toggleSettings()" title="Einstellungen" aria-label="Einstellungen" aria-expanded="false" aria-controls="settings-menu">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
         <circle cx="12" cy="12" r="3"/>
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -267,28 +267,39 @@
         <p class="form-hint">Die Prozentsätze müssen zusammen 100% ergeben.</p>
 
         <div class="budget-slider-row">
-          <span class="budget-slider-label">🏨 Unterkunft</span>
-          <input type="range" id="budget-acc-pct" min="10" max="80" value="60" step="5">
+          <span class="budget-slider-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="vertical-align:-3px;margin-right:4px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Unterkunft
+          </span>
+          <input type="range" id="budget-acc-pct" min="10" max="80" value="60" step="5" aria-label="Unterkunft Prozent">
           <strong id="budget-acc-pct-display">60</strong>%
         </div>
         <div class="budget-slider-row">
-          <span class="budget-slider-label">🍽️ Verpflegung</span>
-          <input type="range" id="budget-food-pct" min="5" max="50" value="20" step="5">
+          <span class="budget-slider-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="vertical-align:-3px;margin-right:4px"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>Verpflegung
+          </span>
+          <input type="range" id="budget-food-pct" min="5" max="50" value="20" step="5" aria-label="Verpflegung Prozent">
           <strong id="budget-food-pct-display">20</strong>%
         </div>
         <div class="budget-slider-row">
-          <span class="budget-slider-label">🎭 Aktivitäten</span>
-          <input type="range" id="budget-act-pct" min="5" max="50" value="20" step="5">
+          <span class="budget-slider-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="vertical-align:-3px;margin-right:4px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Aktivitäten
+          </span>
+          <input type="range" id="budget-act-pct" min="5" max="50" value="20" step="5" aria-label="Aktivitäten Prozent">
           <strong id="budget-act-pct-display">20</strong>%
         </div>
 
-        <div class="budget-total-check" id="budget-total-check">
-          Summe: <strong id="budget-pct-sum">100</strong>% ✓
+        <div class="budget-total-check" id="budget-total-check" role="status" aria-live="polite">
+          Summe: <strong id="budget-pct-sum">100</strong>%
+          <svg id="budget-check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" style="vertical-align:-2px;color:var(--success)" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div class="budget-preview">
-          Verfügbar: 🏨 CHF <strong id="bp-acc">1'800</strong> ·
-                     🍽️ CHF <strong id="bp-food">600</strong> ·
-                     🎭 CHF <strong id="bp-act">600</strong>
+          Verfügbar:
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          CHF <strong id="bp-acc">1'800</strong> ·
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          CHF <strong id="bp-food">600</strong> ·
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          CHF <strong id="bp-act">600</strong>
         </div>
         <div class="budget-visual-bar" id="budget-visual-bar" aria-hidden="true">
           <div class="bvb-segment bvb-acc" id="bvb-acc"></div>
@@ -430,7 +441,8 @@
 <div class="quick-submit-bar" id="quick-submit-bar">
   <span class="quick-submit-hint">Alle Einstellungen konfiguriert?</span>
   <button class="btn btn-cta quick-submit-btn" onclick="quickSubmitTrip()">
-    ✈ Reise jetzt planen
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+    Reise jetzt planen
   </button>
 </div>
 
@@ -462,7 +474,9 @@
 
 <!-- ======================================================== Lightbox -->
 <div id="lightbox-overlay" class="lightbox-overlay" style="display:none">
-  <button class="lightbox-close" onclick="closeLightbox()" aria-label="Lightbox schliessen">×</button>
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="Lightbox schliessen">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
   <button class="lightbox-prev" id="lightbox-prev" onclick="lightboxNav(-1)" aria-label="Vorheriges Bild">&#8249;</button>
   <button class="lightbox-next" id="lightbox-next" onclick="lightboxNav(1)" aria-label="Nächstes Bild">&#8250;</button>
   <img id="lightbox-img" src="" alt="" class="lightbox-img">
@@ -511,6 +525,10 @@
 <script>
   // Initialize on DOM ready
   document.addEventListener('DOMContentLoaded', () => {
+    // Enable debug toggle only when ?debug=1 is in the URL
+    if (new URLSearchParams(window.location.search).get('debug') === '1') {
+      document.body.classList.add('debug-mode');
+    }
     initForm();
     document.addEventListener('keydown', e => {
       if (document.getElementById('lightbox-overlay')?.style.display === 'flex') {
