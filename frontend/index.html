@@ -6,7 +6,8 @@
   <title>Travelman — KI-Reiseplaner</title>
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -152,9 +153,9 @@
       <div class="form-group">
         <label>Erwachsene</label>
         <div class="adults-counter">
-          <button onclick="changeAdults(-1)">−</button>
+          <button onclick="changeAdults(-1)" aria-label="Erwachsene reduzieren">−</button>
           <span class="adults-count" id="adults-count">2</span>
-          <button onclick="changeAdults(1)">+</button>
+          <button onclick="changeAdults(1)" aria-label="Erwachsene erhöhen">+</button>
         </div>
       </div>
 
@@ -289,6 +290,11 @@
                      🍽️ CHF <strong id="bp-food">600</strong> ·
                      🎭 CHF <strong id="bp-act">600</strong>
         </div>
+        <div class="budget-visual-bar" id="budget-visual-bar" aria-hidden="true">
+          <div class="bvb-segment bvb-acc" id="bvb-acc"></div>
+          <div class="bvb-segment bvb-food" id="bvb-food"></div>
+          <div class="bvb-segment bvb-act" id="bvb-act"></div>
+        </div>
       </div>
 
       <div class="form-nav">
@@ -304,7 +310,7 @@
 
       <div class="form-nav">
         <button class="btn btn-secondary" onclick="prevStep()">← Zurück</button>
-        <button class="btn btn-primary" id="submit-btn" onclick="submitTrip()">Reise planen</button>
+        <button class="btn btn-cta" id="submit-btn" onclick="submitTrip()">Reise planen</button>
       </div>
     </div>
 
@@ -343,7 +349,7 @@
     </div>
 
     <div class="confirm-route-area">
-      <button class="btn btn-primary" id="confirm-route-btn" style="display:none" onclick="confirmRoute()">
+      <button class="btn btn-cta" id="confirm-route-btn" style="display:none" onclick="confirmRoute()">
         Route bestätigen →
       </button>
     </div>
@@ -369,7 +375,7 @@
 
     <div class="accommodation-actions">
       <div></div>
-      <button class="btn btn-primary" id="start-planning-btn" disabled onclick="startPlanningWithAllSelections()">
+      <button class="btn btn-cta" id="start-planning-btn" disabled onclick="startPlanningWithAllSelections()">
         Planung starten →
       </button>
     </div>
@@ -423,7 +429,7 @@
 <!-- ======================================================== Quick-submit bar -->
 <div class="quick-submit-bar" id="quick-submit-bar">
   <span class="quick-submit-hint">Alle Einstellungen konfiguriert?</span>
-  <button class="btn btn-primary quick-submit-btn" onclick="quickSubmitTrip()">
+  <button class="btn btn-cta quick-submit-btn" onclick="quickSubmitTrip()">
     ✈ Reise jetzt planen
   </button>
 </div>
@@ -456,7 +462,7 @@
 
 <!-- ======================================================== Lightbox -->
 <div id="lightbox-overlay" class="lightbox-overlay" style="display:none">
-  <button class="lightbox-close" onclick="closeLightbox()">×</button>
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="Lightbox schliessen">×</button>
   <button class="lightbox-prev" id="lightbox-prev" onclick="lightboxNav(-1)" aria-label="Vorheriges Bild">&#8249;</button>
   <button class="lightbox-next" id="lightbox-next" onclick="lightboxNav(1)" aria-label="Nächstes Bild">&#8250;</button>
   <img id="lightbox-img" src="" alt="" class="lightbox-img">

@@ -53,8 +53,14 @@ function goToStep(n) {
   document.querySelectorAll('.form-step').forEach((el, i) => {
     el.classList.toggle('active', i + 1 === n);
   });
-  document.querySelectorAll('.step-indicator .step').forEach((el, i) => {
+  const steps = document.querySelectorAll('.step-indicator .step');
+  steps.forEach((el, i) => {
+    const isDone = i + 1 < n;
     el.classList.toggle('active', i + 1 === n);
+    el.classList.toggle('done', isDone);
+    el.textContent = isDone ? '✓' : String(i + 1);
+  });
+  document.querySelectorAll('.step-connector').forEach((el, i) => {
     el.classList.toggle('done', i + 1 < n);
   });
   window.scrollTo(0, 0);
@@ -163,13 +169,13 @@ function renderViaPoints() {
       <div class="via-point-row">
         <input type="text" id="via-input-${i}" placeholder="Ort (z.B. Annecy)" value="${esc(vp.location)}"
           oninput="viaPoints[${i}].location = this.value; saveFormToCache()">
-        <button class="btn-icon" onclick="toggleViaDate(${i})" title="Datum festlegen">
+        <button class="btn-icon" onclick="toggleViaDate(${i})" title="Datum festlegen" aria-label="Datum festlegen">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
             <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
         </button>
-        <button class="btn-icon btn-danger" onclick="removeViaPoint(${i})" title="Entfernen">
+        <button class="btn-icon btn-danger" onclick="removeViaPoint(${i})" title="Entfernen" aria-label="Via-Punkt entfernen">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
           </svg>
@@ -206,7 +212,8 @@ function initTravelStyles() {
   const grid = document.getElementById('travel-style-grid');
   if (!grid) return;
   grid.innerHTML = TRAVEL_STYLES.map(style => `
-    <div class="style-card" data-id="${esc(style.id)}" onclick="toggleStyle(this)">
+    <div class="style-card" data-id="${esc(style.id)}" onclick="toggleStyle(this)"
+         tabindex="0" role="button" aria-pressed="false">
       <div class="style-icon">${style.icon}</div>
       <div class="style-label">${esc(style.label)}</div>
     </div>
@@ -216,7 +223,9 @@ function initTravelStyles() {
 function toggleStyle(card) {
   const id = card.dataset.id;
   card.classList.toggle('selected');
-  if (card.classList.contains('selected')) {
+  const isSelected = card.classList.contains('selected');
+  card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+  if (isSelected) {
     if (!S.travelStyles.includes(id)) S.travelStyles.push(id);
   } else {
     S.travelStyles = S.travelStyles.filter(s => s !== id);
@@ -251,6 +260,7 @@ function renderTags() {
     const btn = document.createElement('button');
     btn.textContent = '×';
     btn.title = 'Entfernen';
+    btn.setAttribute('aria-label', `Tag '${tag}' entfernen`);
     btn.addEventListener('click', () => removeTag(i));
     span.appendChild(btn);
     container.appendChild(span);
@@ -285,7 +295,7 @@ function renderChildren() {
       <label>Kind ${i + 1}, Alter:</label>
       <input type="number" min="0" max="17" value="${child.age}"
         oninput="S.children[${i}].age = parseInt(this.value) || 0; saveFormToCache()">
-      <button class="btn-icon btn-danger" onclick="removeChild(${i})">×</button>
+      <button class="btn-icon btn-danger" onclick="removeChild(${i})" aria-label="Kind ${i + 1} entfernen">×</button>
     </div>
   `).join('');
   document.getElementById('adults-count').textContent = S.adults;
@@ -362,6 +372,11 @@ function updateBudgetPreview() {
   if (el('bp-acc'))  el('bp-acc').textContent  = fmt(acc);
   if (el('bp-food')) el('bp-food').textContent = fmt(food);
   if (el('bp-act'))  el('bp-act').textContent  = fmt(act);
+
+  // Update visual budget bar
+  if (el('bvb-acc'))  el('bvb-acc').style.width  = acc  + '%';
+  if (el('bvb-food')) el('bvb-food').style.width = food + '%';
+  if (el('bvb-act'))  el('bvb-act').style.width  = act  + '%';
 }
 
 // ---------------------------------------------------------------------------
@@ -442,7 +457,7 @@ function renderSummary() {
 async function submitTrip() {
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
-  btn.textContent = 'Plane Reise…';
+  btn.innerHTML = '<span class="btn-spinner"></span> Plane Reise…';
 
   try {
     const payload = buildPayload();

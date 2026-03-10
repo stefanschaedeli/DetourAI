@@ -41,6 +41,15 @@ function renderGuide(plan, tab) {
       content.innerHTML = renderOverview(plan);
       _initGuideMap(plan);
   }
+
+  // Fade-in animation on tab switch
+  content.style.opacity = '0';
+  content.style.transform = 'translateY(6px)';
+  requestAnimationFrame(() => {
+    content.style.transition = 'opacity .2s ease, transform .2s ease';
+    content.style.opacity = '1';
+    content.style.transform = 'translateY(0)';
+  });
 }
 
 function switchGuideTab(tab) {
@@ -176,7 +185,7 @@ function renderTripAnalysis(analysis, req) {
   if (!analysis) return '';
 
   const score = analysis.requirements_match_score || 0;
-  const scoreColor = score >= 8 ? '#34c759' : score >= 5 ? '#ff9f0a' : '#ff3b30';
+  const scoreColor = score >= 8 ? '#22C55E' : score >= 5 ? '#F59E0B' : '#EF4444';
   const scoreLabel = score >= 8 ? 'Sehr gut' : score >= 6 ? 'Gut' : score >= 4 ? 'Befriedigend' : 'Verbesserungsbedarf';
   const pct = Math.round(score / 10 * 100);
 
@@ -739,7 +748,7 @@ function _initGuideMap(plan) {
     _guidePolyline = new google.maps.Polyline({
       map,
       path: routePoints,
-      strokeColor: '#0071e3',
+      strokeColor: '#0EA5E9',
       strokeOpacity: 0.8,
       strokeWeight: 3,
     });
@@ -863,10 +872,10 @@ function renderBudget(plan) {
   const rem   = typeof cost.budget_remaining_chf === 'number' ? cost.budget_remaining_chf : 0;
 
   const items = [
-    { label: 'Unterkunft',  value: acc,   color: '#0071e3' },
-    { label: 'Aktivitäten', value: act,   color: '#34c759' },
-    { label: 'Verpflegung', value: food,  color: '#ff9f0a' },
-    { label: 'Treibstoff',  value: fuel,  color: '#ff3b30' },
+    { label: 'Unterkunft',  value: acc,   color: '#0EA5E9' },
+    { label: 'Aktivitäten', value: act,   color: '#22C55E' },
+    { label: 'Verpflegung', value: food,  color: '#F59E0B' },
+    { label: 'Treibstoff',  value: fuel,  color: '#EF4444' },
     { label: 'Fähren',      value: ferry, color: '#5856d6' },
   ];
 
