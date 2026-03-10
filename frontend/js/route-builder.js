@@ -183,22 +183,25 @@ function _buildOptionCardHTML(opt, i) {
     classes: `option-card${overLimit ? ' over-limit' : ''}`,
     id: `option-card-${i}`,
     html: `
-      <div class="option-card-header">
-        <span class="option-card-number">${i + 1}</span>
-        <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
+      <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+      <div class="option-card-body">
+        <div class="option-card-header">
+          <span class="option-card-number">${i + 1}</span>
+          <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
+        </div>
+        <h3>${flag} ${esc(opt.region)}, ${esc(opt.country)}</h3>
+        <div class="option-meta">
+          <span class="${overLimit ? 'drive-hours-over' : ''}">${opt.drive_hours}h Fahrt${driveKm}</span>
+          <span>${opt.nights} Nacht${opt.nights !== 1 ? 'e' : ''}</span>
+        </div>
+        ${driveWarning}
+        <p class="option-teaser">${esc(opt.teaser)}</p>
+        <ul class="option-highlights">
+          ${(opt.highlights || []).map(h => `<li>${esc(h)}</li>`).join('')}
+        </ul>
+        ${extraFields}
+        ${mapsLink}
       </div>
-      <h3>${flag} ${esc(opt.region)}, ${esc(opt.country)}</h3>
-      <div class="option-meta">
-        <span class="${overLimit ? 'drive-hours-over' : ''}">${opt.drive_hours}h Fahrt${driveKm}</span>
-        <span>${opt.nights} Nacht${opt.nights !== 1 ? 'e' : ''}</span>
-      </div>
-      ${driveWarning}
-      <p class="option-teaser">${esc(opt.teaser)}</p>
-      <ul class="option-highlights">
-        ${(opt.highlights || []).map(h => `<li>${esc(h)}</li>`).join('')}
-      </ul>
-      ${extraFields}
-      ${mapsLink}
     `,
   };
 }
@@ -209,7 +212,12 @@ function _replaceSkeletonWithCard(slotEl, opt, i) {
   slotEl.id = id;
   slotEl.setAttribute('onclick', `selectOption(${i})`);
   slotEl.innerHTML = html;
-  requestAnimationFrame(() => requestAnimationFrame(() => slotEl.classList.add('visible')));
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    slotEl.classList.add('visible');
+    if (opt.lat && opt.lon && typeof _lazyLoadEntityImages === 'function') {
+      _lazyLoadEntityImages(slotEl, opt.region, opt.lat, opt.lon, 'city');
+    }
+  }));
 }
 
 function appendOptionCard(opt, i) {
@@ -225,7 +233,12 @@ function appendOptionCard(opt, i) {
 
   requestAnimationFrame(() => {
     container.appendChild(card);
-    requestAnimationFrame(() => card.classList.add('visible'));
+    requestAnimationFrame(() => {
+      card.classList.add('visible');
+      if (opt.lat && opt.lon && typeof _lazyLoadEntityImages === 'function') {
+        _lazyLoadEntityImages(card, opt.region, opt.lat, opt.lon, 'city');
+      }
+    });
   });
 }
 
@@ -352,37 +365,19 @@ function renderOptions(options, meta) {
   const allDetour = options.length > 0 && options.every(o => o.is_detour);
 
   container.innerHTML = options.map((opt, i) => {
-    const flag = FLAGS[opt.country] || '';
-    const driveKm = opt.drive_km ? ` · ${opt.drive_km} km` : '';
-    const overLimit = opt.drives_over_limit;
-    const driveWarning = overLimit
-      ? `<span class="drive-over-limit-badge">⚠ Fahrzeit überschreitet Limit</span>`
-      : '';
-    const mapsLink = opt.maps_url
-      ? `<a class="option-maps-link" href="${safeUrl(opt.maps_url)}" target="_blank" rel="noopener">&#x1F5FA; Google Maps</a>`
-      : '';
-    const extraFields = _buildExtraFields(opt);
-    return `
-      <div class="option-card${overLimit ? ' over-limit' : ''}" id="option-card-${i}" onclick="selectOption(${i})">
-        <div class="option-card-header">
-          <span class="option-card-number">${i + 1}</span>
-          <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
-        </div>
-        <h3>${flag} ${esc(opt.region)}, ${esc(opt.country)}</h3>
-        <div class="option-meta">
-          <span class="${overLimit ? 'drive-hours-over' : ''}">${opt.drive_hours}h Fahrt${driveKm}</span>
-          <span>${opt.nights} Nacht${opt.nights !== 1 ? 'e' : ''}</span>
-        </div>
-        ${driveWarning}
-        <p class="option-teaser">${esc(opt.teaser)}</p>
-        <ul class="option-highlights">
-          ${(opt.highlights || []).map(h => `<li>${esc(h)}</li>`).join('')}
-        </ul>
-        ${extraFields}
-        ${mapsLink}
-      </div>
-    `;
+    const { classes, id, html } = _buildOptionCardHTML(opt, i);
+    return `<div class="${classes}" id="${id}" onclick="selectOption(${i})">${html}</div>`;
   }).join('');
+
+  // Lazy-load photos for all rendered option cards
+  requestAnimationFrame(() => {
+    options.forEach((opt, i) => {
+      if (opt.lat && opt.lon && typeof _lazyLoadEntityImages === 'function') {
+        const cardEl = document.getElementById(`option-card-${i}`);
+        if (cardEl) _lazyLoadEntityImages(cardEl, opt.region, opt.lat, opt.lon, 'city');
+      }
+    });
+  });
 
   // Banner when ALL options exceed limit
   if (allOverLimit) {

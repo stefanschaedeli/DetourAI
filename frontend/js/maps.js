@@ -11,7 +11,7 @@ const GoogleMaps = (() => {
   let _placesService = null;
   let _apiKey = '';
 
-  // Cache: place name → [url, url, url]
+  // Cache: place name|lat|lng|context → [url, ...]
   const _imageCache = new Map();
   // Cache: place name → place_id string
   const _placeIdCache = new Map();
@@ -160,16 +160,16 @@ const GoogleMaps = (() => {
   }
 
   /**
-   * Fetch up to 3 images for a place using a tiered fallback:
-   * 1. Google Places photos
+   * Fetch up to 5 images for a place using a tiered fallback:
+   * 1. Google Places photos (up to 5)
    * 2. Wikipedia summary thumbnail
    * 3. Google Static Maps satellite
    * 4. SVG gradient placeholder
    *
-   * Returns Promise<[overview_url, mood_url, customer_url]> — always 3 items.
+   * Returns Promise<url[]> — 1–5 items (never padded with duplicates).
    */
-  async function getPlaceImages(name, lat, lng) {
-    const cacheKey = name + '|' + lat + '|' + lng;
+  async function getPlaceImages(name, lat, lng, context) {
+    const cacheKey = name + '|' + (lat || '') + '|' + (lng || '') + '|' + (context || '');
     if (_imageCache.has(cacheKey)) return _imageCache.get(cacheKey);
 
     const urls = await _fetchImagesWithFallback(name, lat, lng);
@@ -184,16 +184,7 @@ const GoogleMaps = (() => {
       if (placeId && _placesService) {
         const photos = await _getPlacePhotos(placeId, name);
         if (photos.length >= 1) {
-          const urls = [
-            photos[0] || null,
-            photos[1] || null,
-            photos[2] || null,
-          ];
-          // Fill empty slots with lower tiers
-          for (let i = 0; i < 3; i++) {
-            if (!urls[i]) urls[i] = await _wikiImage(name) || _staticMapUrl(lat, lng) || _svgPlaceholder(name);
-          }
-          return urls;
+          return photos;  // Return real photos as-is (1–5 items)
         }
       }
     } catch (e) {
@@ -204,20 +195,19 @@ const GoogleMaps = (() => {
     const wikiUrl = await _wikiImage(name);
     if (wikiUrl) {
       _log('INFO', `Bild Tier-2 (Wikipedia) verwendet für «${name}»`);
-      return [wikiUrl, _staticMapUrl(lat, lng) || _svgPlaceholder(name), _svgPlaceholder(name)];
+      return [wikiUrl];
     }
 
     // Tier 3: Static Maps satellite
     const staticUrl = _staticMapUrl(lat, lng);
     if (staticUrl) {
       _log('INFO', `Bild Tier-3 (Static Maps) verwendet für «${name}»`);
-      return [staticUrl, _svgPlaceholder(name), _svgPlaceholder(name)];
+      return [staticUrl];
     }
 
     // Tier 4: SVG placeholder
     _log('INFO', `Bild Tier-4 (SVG Platzhalter) verwendet für «${name}»`);
-    const svg = _svgPlaceholder(name);
-    return [svg, svg, svg];
+    return [_svgPlaceholder(name)];
   }
 
   function _getPlacePhotos(placeId, name) {
@@ -226,8 +216,8 @@ const GoogleMaps = (() => {
         { placeId, fields: ['photos'] },
         (place, status) => {
           if (status === google.maps.places.PlacesServiceStatus.OK && place && place.photos) {
-            const urls = place.photos.slice(0, 3).map(p =>
-              p.getUrl({ maxWidth: 800, maxHeight: 400 })
+            const urls = place.photos.slice(0, 5).map(p =>
+              p.getUrl({ maxWidth: 800, maxHeight: 600 })
             );
             resolve(urls);
           } else {

@@ -92,9 +92,7 @@ function renderAccCards(stopId, options, mustHaves) {
       const isMH = (opt.matched_must_haves || []).some(m => m.toLowerCase() === f.toLowerCase());
       return `<span class="feature-tag${isMH ? ' must-have' : ''}">${esc(f)}</span>`;
     }).slice(0, 5).join('');
-    const imgHtml = buildImageGallery(
-      opt.image_overview, opt.image_mood, opt.image_customer, esc(opt.name)
-    );
+    const imgHtml = `<div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>`;
     const isGeheimtipp = opt.is_geheimtipp === true;
     const cardClass = isGeheimtipp ? 'acc-option-card acc-geheimtipp-card' : 'acc-option-card';
     const geheimtippBadge = isGeheimtipp
@@ -160,7 +158,7 @@ function onAccommodationLoaded(data) {
     grid.querySelectorAll('.acc-option-card').forEach((card, i) => {
       const opt = options[i];
       if (opt && typeof _lazyLoadEntityImages === 'function') {
-        _lazyLoadEntityImages(card, opt.name, stop.lat, stop.lng);
+        _lazyLoadEntityImages(card, opt.name, stop.lat, stop.lng, 'hotel');
       }
     });
   });
@@ -263,7 +261,7 @@ async function researchAccommodation(stopId) {
         grid.querySelectorAll('.acc-option-card').forEach((card, i) => {
           const opt = options[i];
           if (opt && typeof _lazyLoadEntityImages === 'function') {
-            _lazyLoadEntityImages(card, opt.name, stop.lat, stop.lng);
+            _lazyLoadEntityImages(card, opt.name, stop.lat, stop.lng, 'hotel');
           }
         });
       });

@@ -112,20 +112,25 @@ function showSection(id) {
   if (typeof updateQuickSubmitBar === 'function') updateQuickSubmitBar();
 }
 
-/** Build a 3-image gallery strip (overview + mood + customer). Returns '' if all null. */
-function buildImageGallery(overview, mood, customer, altText) {
-  if (!overview && !mood && !customer) return '';
+/** Build a horizontal photo strip from an array of URLs. Returns '' if empty. */
+function buildPhotoGallery(urls, altText) {
+  if (!urls || !urls.length) return '';
   const alt = esc(altText || '');
-  const img = (url, cls, caption) => url
-    ? `<div class="${cls}"><img src="${esc(url)}" alt="${alt}" loading="lazy"
-         data-lightbox-url="${esc(url)}" data-lightbox-caption="${esc(caption || altText || '')}"
-         onerror="this.style.display='none'"></div>`
-    : `<div class="${cls}"></div>`;
-  return `<div class="img-gallery">
-    ${img(overview, 'img-gallery-overview', altText + ' — Übersicht')}
-    ${img(mood,     'img-gallery-mood',     altText + ' — Atmosphäre')}
-    ${img(customer, 'img-gallery-customer', altText + ' — Besucher')}
-  </div>`;
+  const items = urls.map((url, i) =>
+    `<div class="photo-strip-item">
+       <img src="${esc(url)}" alt="${alt}" loading="lazy"
+            data-lightbox-url="${esc(url)}"
+            data-lightbox-caption="${esc(altText || '')} — ${i + 1}/${urls.length}"
+            onerror="this.parentElement.style.display='none'">
+     </div>`
+  ).join('');
+  return `<div class="photo-strip">${items}</div>`;
+}
+
+/** @deprecated Use buildPhotoGallery() instead */
+function buildImageGallery(overview, mood, customer, altText) {
+  const urls = [overview, mood, customer].filter(Boolean);
+  return buildPhotoGallery(urls, altText);
 }
 
 /** Open lightbox for any https:// URL. */

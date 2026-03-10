@@ -269,8 +269,9 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 }
 .option-card {
   background: var(--card); border: 2px solid var(--border); border-radius: var(--radius);
-  padding: 20px; cursor: pointer; transition: all .15s;
+  padding: 0; overflow: hidden; cursor: pointer; transition: all .15s;
 }
+.option-card-body { padding: 20px; }
 /* Progressive streaming: cards fade in one by one */
 .option-card-streaming {
   opacity: 0; transform: translateY(12px);
@@ -449,7 +450,7 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .acc-option-card:last-child { border-right: none; }
 .acc-option-card:hover { background: #f5f8ff; }
 .acc-option-card.selected { background: #e8f0ff; }
-.acc-option-card > *:not(.acc-card-img):not(.acc-description):not(.acc-links-row) { padding-left: 20px; padding-right: 20px; }
+.acc-option-card > *:not(.photo-strip):not(.photo-strip-loading):not(.acc-description):not(.acc-links-row) { padding-left: 20px; padding-right: 20px; }
 .acc-option-card > .geheimtipp-badge { margin-top: 14px; }
 .acc-option-card h4 { font-size: 15px; margin-bottom: 4px; padding-top: 14px; }
 .acc-type-badge { display: inline-block; background: var(--border); padding: 2px 8px; border-radius: 999px; font-size: 11px; margin-bottom: 8px; }
@@ -661,20 +662,42 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 .log-api     { color: #80d0ff; }
 .log-debug   { color: #a0a0a0; }
 
-/* ============================================================ Image gallery */
-.img-gallery {
-  display: grid;
-  grid-template-areas: "overview overview" "mood customer";
-  grid-template-columns: 1fr 1fr;
-  gap: 4px; border-radius: var(--radius) var(--radius) 0 0;
-  overflow: hidden; background: var(--border);
+/* ============================================================ Photo strip (5-photo horizontal gallery) */
+.photo-strip {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  min-height: 160px;
+  background: var(--border);
 }
-.img-gallery-overview { grid-area: overview; height: 160px; }
-.img-gallery-mood     { grid-area: mood;     height: 100px; }
-.img-gallery-customer { grid-area: customer; height: 100px; }
-.img-gallery img { width: 100%; height: 100%; object-fit: cover; display: block;
-  cursor: zoom-in; transition: transform .25s, opacity .15s; }
-.img-gallery img:hover { transform: scale(1.04); opacity: .9; }
+.photo-strip::-webkit-scrollbar { display: none; }
+
+.photo-strip-item {
+  flex: 0 0 auto;
+  width: 220px;
+  height: 160px;
+  scroll-snap-align: start;
+}
+.photo-strip-item img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: zoom-in;
+  transition: opacity .15s;
+}
+.photo-strip-item img:hover { opacity: .85; }
+
+/* Single photo: expand to full width */
+.photo-strip:has(.photo-strip-item:only-child) .photo-strip-item { width: 100%; }
+
+/* Loading skeleton */
+.photo-strip-loading { border-radius: var(--radius) var(--radius) 0 0; min-height: 160px; overflow: hidden; }
+.photo-strip-shimmer { width: 100%; height: 160px; }
 
 /* ============================================================ Lightbox */
 .lightbox-overlay {

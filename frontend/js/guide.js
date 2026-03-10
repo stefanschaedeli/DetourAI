@@ -280,7 +280,7 @@ function renderFurtherActivities(activities) {
       <div class="further-activities-list">
         ${activities.map(act => `
           <div class="further-activity-item">
-            ${buildImageGallery(act.image_overview, act.image_mood, act.image_customer, esc(act.name))}
+            <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
             <div class="further-activity-content">
               <strong>${esc(act.name)}</strong>
               <p>${esc(act.description)}</p>
@@ -369,7 +369,7 @@ function renderStops(plan) {
               </div>
               ${stop.google_maps_url ? `<a href="${safeUrl(stop.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
             </div>
-            ${buildImageGallery(stop.image_overview, stop.image_mood, stop.image_customer, esc(stop.region))}
+            <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
 
             ${renderTravelGuide(stop.travel_guide)}
 
@@ -379,7 +379,7 @@ function renderStops(plan) {
               return `
               <div class="stop-accommodation">
                 <h4>Unterkunft</h4>
-                ${buildImageGallery(acc.image_overview, acc.image_mood, acc.image_customer, esc(acc.name))}
+                <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
                 <div class="acc-summary">
                   <strong>${esc(acc.name)}</strong>
                   <span class="acc-selected-badge">Gewählt</span>
@@ -399,7 +399,7 @@ function renderStops(plan) {
                   <div class="acc-alt-list">
                     ${altOpts.map(o => `
                       <div class="acc-alt-item">
-                        ${buildImageGallery(o.image_overview, o.image_mood, o.image_customer, esc(o.name))}
+                        <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
                         <div class="acc-alt-summary">
                           <strong>${esc(o.name)}</strong>
                           ${o.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
@@ -426,7 +426,7 @@ function renderStops(plan) {
                 <div class="activities-grid">
                   ${acts.map(act => `
                     <div class="activity-card">
-                      ${buildImageGallery(act.image_overview, act.image_mood, act.image_customer, esc(act.name))}
+                      <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
                       <div class="activity-content">
                         <strong>${esc(act.name)}</strong>
                         <p>${esc(act.description)}</p>
@@ -451,7 +451,7 @@ function renderStops(plan) {
                 <div class="restaurants-list">
                   ${rests.map(r => `
                     <div class="restaurant-item">
-                      ${buildImageGallery(r.image_overview, r.image_mood, r.image_customer, esc(r.name))}
+                      <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
                       <div style="padding: 10px">
                         <strong>${esc(r.name)}</strong>
                         <span class="cuisine-tag">${esc(r.cuisine)}</span>
@@ -577,23 +577,22 @@ function _initGuideMap(plan) {
 
 /**
  * Lazily load images for an entity (stop, activity, restaurant, accommodation)
- * via Google Places and fill the .img-gallery container.
+ * via Google Places and fill the .photo-strip skeleton container.
  */
-async function _lazyLoadEntityImages(containerEl, placeName, lat, lng) {
+async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context) {
   if (!containerEl || typeof GoogleMaps === 'undefined') return;
   try {
-    const urls = await GoogleMaps.getPlaceImages(placeName, lat, lng);
-    const gallery = containerEl.querySelector('.img-gallery');
-    const newGallery = buildImageGallery(urls[0], urls[1], urls[2], placeName);
-    if (!newGallery) return;
-    if (gallery) {
+    const urls = await GoogleMaps.getPlaceImages(placeName, lat, lng, context);
+    const strip = containerEl.querySelector('.photo-strip, .photo-strip-loading');
+    const newStrip = buildPhotoGallery(urls, placeName);
+    if (!newStrip) return;
+    if (strip) {
       const tmp = document.createElement('div');
-      tmp.innerHTML = newGallery;
-      gallery.replaceWith(tmp.firstChild);
+      tmp.innerHTML = newStrip;
+      strip.replaceWith(tmp.firstChild);
     } else {
-      // Prepend to container if no gallery exists yet
       const tmp = document.createElement('div');
-      tmp.innerHTML = newGallery;
+      tmp.innerHTML = newStrip;
       containerEl.insertBefore(tmp.firstChild, containerEl.firstChild);
     }
   } catch (e) {
@@ -614,30 +613,36 @@ function _lazyLoadStopImages(plan) {
     const lng = stop.lng;
 
     // Stop overview images
-    _lazyLoadEntityImages(stopEl.querySelector('.stop-header')?.parentElement || stopEl, stop.region, lat, lng);
+    _lazyLoadEntityImages(stopEl.querySelector('.stop-header')?.parentElement || stopEl, stop.region, lat, lng, 'city');
 
     // Accommodation
     const accEl = stopEl.querySelector('.stop-accommodation');
     if (accEl && stop.accommodation) {
-      _lazyLoadEntityImages(accEl, stop.accommodation.name, lat, lng);
+      _lazyLoadEntityImages(accEl, stop.accommodation.name, lat, lng, 'hotel');
+      // Alt options
+      accEl.querySelectorAll('.acc-alt-item').forEach((el, i) => {
+        const altOpts = (stop.all_accommodation_options || []).filter(o => o.name !== stop.accommodation.name);
+        const o = altOpts[i];
+        if (o) _lazyLoadEntityImages(el, o.name, lat, lng, 'hotel');
+      });
     }
 
     // Top activities
     stopEl.querySelectorAll('.activity-card').forEach((el, i) => {
       const act = (stop.top_activities || [])[i];
-      if (act) _lazyLoadEntityImages(el, act.name, lat, lng);
+      if (act) _lazyLoadEntityImages(el, act.name, lat, lng, 'activity');
     });
 
     // Further activities
     stopEl.querySelectorAll('.further-activity-item').forEach((el, i) => {
       const act = (stop.further_activities || [])[i];
-      if (act) _lazyLoadEntityImages(el, act.name, lat, lng);
+      if (act) _lazyLoadEntityImages(el, act.name, lat, lng, 'activity');
     });
 
     // Restaurants
     stopEl.querySelectorAll('.restaurant-item').forEach((el, i) => {
       const rest = (stop.restaurants || [])[i];
-      if (rest) _lazyLoadEntityImages(el, rest.name, lat, lng);
+      if (rest) _lazyLoadEntityImages(el, rest.name, lat, lng, 'restaurant');
     });
   });
 }
