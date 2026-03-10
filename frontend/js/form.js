@@ -243,12 +243,18 @@ function addTagFromInput() {
 function renderTags() {
   const container = document.getElementById('mandatory-tags');
   if (!container) return;
-  container.innerHTML = S.mandatoryTags.map((tag, i) => `
-    <span class="tag">
-      ${esc(tag)}
-      <button onclick="removeTag(${i})" title="Entfernen">×</button>
-    </span>
-  `).join('');
+  container.innerHTML = '';
+  S.mandatoryTags.forEach((tag, i) => {
+    const span = document.createElement('span');
+    span.className = 'tag';
+    span.textContent = tag;
+    const btn = document.createElement('button');
+    btn.textContent = '×';
+    btn.title = 'Entfernen';
+    btn.addEventListener('click', () => removeTag(i));
+    span.appendChild(btn);
+    container.appendChild(span);
+  });
 }
 
 function removeTag(idx) {
