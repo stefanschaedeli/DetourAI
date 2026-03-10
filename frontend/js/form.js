@@ -240,21 +240,21 @@ function addTagFromInput() {
   }
 }
 
-function removeTag(name) {
-  S.mandatoryTags = S.mandatoryTags.filter(t => t !== name);
-  renderTags();
-  saveFormToCache();
-}
-
 function renderTags() {
   const container = document.getElementById('mandatory-tags');
   if (!container) return;
-  container.innerHTML = S.mandatoryTags.map(tag => `
+  container.innerHTML = S.mandatoryTags.map((tag, i) => `
     <span class="tag">
       ${esc(tag)}
-      <button onclick="removeTag(${JSON.stringify(tag)})" title="Entfernen">×</button>
+      <button onclick="removeTag(${i})" title="Entfernen">×</button>
     </span>
   `).join('');
+}
+
+function removeTag(idx) {
+  S.mandatoryTags.splice(idx, 1);
+  renderTags();
+  saveFormToCache();
 }
 
 // ---------------------------------------------------------------------------
@@ -481,6 +481,11 @@ function saveFormToCache() {
 function setupFormAutoSave() {
   document.querySelectorAll('#form-section input, #form-section select, #form-section textarea')
     .forEach(el => { el.addEventListener('change', saveFormToCache); });
+  // Settings menu lives outside #form-section — attach separately
+  ['max-activities', 'max-restaurants'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', saveFormToCache);
+  });
 }
 
 function restoreFormFromCache() {
@@ -507,6 +512,16 @@ function restoreFormFromCache() {
   setVal('budget-act-pct',  cached.budget_activities_pct);
   setVal('max-activities',  cached.max_activities_per_stop);
   setVal('max-restaurants', cached.max_restaurants_per_stop);
+  setVal('proximity-origin', cached.proximity_origin_pct);
+  setVal('proximity-target', cached.proximity_target_pct);
+  setVal('travel-description', cached.travel_description);
+
+  // Sync slider display labels
+  ['hotel-radius', 'activities-radius', 'max-drive-hours', 'proximity-origin', 'proximity-target'].forEach(id => {
+    const s = document.getElementById(id);
+    const d = document.getElementById(id + '-display');
+    if (s && d) d.textContent = s.value;
+  });
 
   if (cached.accommodation_preferences) {
     cached.accommodation_preferences.forEach((val, i) => setVal(`acc-pref-${i}`, val));
