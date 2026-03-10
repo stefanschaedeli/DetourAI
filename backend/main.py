@@ -530,19 +530,18 @@ async def _find_and_stream_options(
                 continue
             raw_options.append(item)
 
-        # Enrich + proximity-filter
-        valid: list = []
-        for i, opt in enumerate(raw_options):
+        # Enrich options in parallel (geocode + OSRM + proximity filter)
+        async def _enrich_one(i: int, opt: dict) -> dict | None:
+            await asyncio.sleep(i * 0.35)  # stagger Nominatim calls (350ms apart)
             place = f"{opt.get('region', '')}, {opt.get('country', '')}"
             nom_coords = await geocode_nominatim(place)
-            await asyncio.sleep(0.08)
             agent_lat = opt.get("lat")
             agent_lon = opt.get("lon")
             agent_coords = (agent_lat, agent_lon) if agent_lat and agent_lon else None
             coords = nom_coords or agent_coords
 
             if not coords:
-                continue
+                return None
 
             opt["lat"] = coords[0]
             opt["lon"] = coords[1]
@@ -566,7 +565,7 @@ async def _find_and_stream_options(
                         f"  Verworfen (zu nahe am Startpunkt {origin_location}: {d_origin:.0f} km < {min_km_from_origin:.0f} km): {place}",
                         job_id=job_id, agent="StopOptionsFinder",
                     )
-                    continue
+                    return None
 
             # Proximity check: too close to segment target?
             if target_coords and min_km_from_target > 0:
@@ -577,16 +576,23 @@ async def _find_and_stream_options(
                         f"  Verworfen (zu nahe am Ziel {segment_target}: {d_target:.0f} km < {min_km_from_target:.0f} km): {place}",
                         job_id=job_id, agent="StopOptionsFinder",
                     )
-                    continue
+                    return None
 
-            limit_flag = " ⚠ LIMIT" if opt.get("drives_over_limit") else ""
-            await debug_logger.log(
-                LogLevel.SUCCESS,
-                f"  [{len(valid) + 1}/3] {opt.get('option_type', '?'):8} {place}: "
-                f"{opt.get('drive_hours', '?')}h / {opt.get('drive_km', '?')} km{limit_flag}",
-                job_id=job_id, agent="StopOptionsFinder",
-            )
-            valid.append(opt)
+            return opt
+
+        results = await asyncio.gather(*[_enrich_one(i, opt) for i, opt in enumerate(raw_options)])
+        valid: list = []
+        for opt in results:
+            if opt is not None:
+                limit_flag = " ⚠ LIMIT" if opt.get("drives_over_limit") else ""
+                place = f"{opt.get('region', '')}, {opt.get('country', '')}"
+                await debug_logger.log(
+                    LogLevel.SUCCESS,
+                    f"  [{len(valid) + 1}/3] {opt.get('option_type', '?'):8} {place}: "
+                    f"{opt.get('drive_hours', '?')}h / {opt.get('drive_km', '?')} km{limit_flag}",
+                    job_id=job_id, agent="StopOptionsFinder",
+                )
+                valid.append(opt)
 
         return valid, estimated, r_complete
 
