@@ -317,6 +317,9 @@ async def _calc_route_geometry(
         "min_km_from_origin": max(50.0, total_km * proximity_origin_pct / 100) if proximity_origin_pct > 0 else 0.0,
         "min_km_from_target": max(50.0, total_km * proximity_target_pct / 100) if proximity_target_pct > 0 else 0.0,
         "origin_location": origin_location or from_location,
+        # Cache coords so _find_and_stream_options can skip re-geocoding
+        "_from_coords": from_coords,
+        "_to_coords": to_coords,
     }
 
 
@@ -462,7 +465,10 @@ async def _find_and_stream_options(
     min_km_from_target: float = geo.get("min_km_from_target", 0.0)
     origin_location: str = geo.get("origin_location", "")
 
-    # Pre-geocode prev + target in parallel (reuse for all option OSRM calls)
+    # Reuse coords from route_geometry if available, otherwise geocode
+    cached_from = geo.get("_from_coords")
+    cached_to = geo.get("_to_coords")
+
     async def _geocode_delayed(place: str, delay: float):
         if delay > 0:
             await asyncio.sleep(delay)
@@ -471,19 +477,25 @@ async def _find_and_stream_options(
     async def _none_coro():
         return None
 
-    if origin_location and origin_location != prev_location and min_km_from_origin > 0:
+    if cached_from and cached_to:
+        # Coords already computed by _calc_route_geometry — skip re-geocoding
+        prev_coords = cached_from
+        target_coords = cached_to
+        origin_coords = cached_from
+    elif origin_location and origin_location != prev_location and min_km_from_origin > 0:
         prev_coords, target_coords, origin_coords = await asyncio.gather(
             _geocode_delayed(prev_location, 0.0),
             _geocode_delayed(segment_target, 0.1) if segment_target else _none_coro(),
             _geocode_delayed(origin_location, 0.2),
         )
+        await asyncio.sleep(0.2)
     else:
         prev_coords, target_coords = await asyncio.gather(
             _geocode_delayed(prev_location, 0.0),
             _geocode_delayed(segment_target, 0.1) if segment_target else _none_coro(),
         )
         origin_coords = prev_coords  # origin == prev for first stop or no-origin case
-    await asyncio.sleep(0.2)
+        await asyncio.sleep(0.2)
 
     await debug_logger.log(
         LogLevel.INFO,

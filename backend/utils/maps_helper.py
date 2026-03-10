@@ -15,7 +15,7 @@ async def geocode_nominatim(place: str, country_code: str = "") -> Optional[tupl
                 "https://nominatim.openstreetmap.org/search",
                 params=params,
                 headers={"User-Agent": "Travelman2/1.0"},
-                timeout=aiohttp.ClientTimeout(total=10),
+                timeout=aiohttp.ClientTimeout(total=4),
             ) as r:
                 data = await r.json()
                 if data:
@@ -31,7 +31,7 @@ async def osrm_route(coords: list[tuple[float, float]]) -> tuple[float, float]:
     url = f"http://router.project-osrm.org/route/v1/driving/{points}?overview=false"
     try:
         async with aiohttp.ClientSession() as s:
-            async with s.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
+            async with s.get(url, timeout=aiohttp.ClientTimeout(total=6)) as r:
                 data = await r.json()
                 if data.get("routes"):
                     route = data["routes"][0]
