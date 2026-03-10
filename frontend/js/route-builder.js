@@ -184,7 +184,7 @@ function _buildOptionCardHTML(opt, i) {
     id: `option-card-${i}`,
     html: `
       <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
-      <div class="option-card-body">
+      <div class="option-card-body" onclick="selectOption(${i})">
         <div class="option-card-header">
           <span class="option-card-number">${i + 1}</span>
           <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
@@ -210,7 +210,7 @@ function _replaceSkeletonWithCard(slotEl, opt, i) {
   const { classes, id, html } = _buildOptionCardHTML(opt, i);
   slotEl.className = classes + ' option-card-streaming';
   slotEl.id = id;
-  slotEl.setAttribute('onclick', `selectOption(${i})`);
+  slotEl.removeAttribute('onclick');
   slotEl.innerHTML = html;
   requestAnimationFrame(() => requestAnimationFrame(() => {
     slotEl.classList.add('visible');
@@ -228,7 +228,6 @@ function appendOptionCard(opt, i) {
   const card = document.createElement('div');
   card.className = classes + ' option-card-streaming';
   card.id = id;
-  card.setAttribute('onclick', `selectOption(${i})`);
   card.innerHTML = html;
 
   requestAnimationFrame(() => {
@@ -366,7 +365,7 @@ function renderOptions(options, meta) {
 
   container.innerHTML = options.map((opt, i) => {
     const { classes, id, html } = _buildOptionCardHTML(opt, i);
-    return `<div class="${classes}" id="${id}" onclick="selectOption(${i})">${html}</div>`;
+    return `<div class="${classes}" id="${id}">${html}</div>`;
   }).join('');
 
   // Lazy-load photos for all rendered option cards

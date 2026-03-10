@@ -269,9 +269,9 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
 }
 .option-card {
   background: var(--card); border: 2px solid var(--border); border-radius: var(--radius);
-  padding: 0; overflow: hidden; cursor: pointer; transition: all .15s;
+  padding: 0; overflow: hidden; cursor: default; transition: all .15s;
 }
-.option-card-body { padding: 20px; }
+.option-card-body { padding: 20px; cursor: pointer; }
 /* Progressive streaming: cards fade in one by one */
 .option-card-streaming {
   opacity: 0; transform: translateY(12px);

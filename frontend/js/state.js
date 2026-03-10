@@ -133,9 +133,9 @@ function buildImageGallery(overview, mood, customer, altText) {
   return buildPhotoGallery(urls, altText);
 }
 
-/** Open lightbox for any https:// URL. */
+/** Open lightbox for any https:// or data: URL. */
 function openLightbox(url, caption) {
-  if (!url || !url.startsWith('https://')) return;
+  if (!url || (!url.startsWith('https://') && !url.startsWith('data:'))) return;
   document.getElementById('lightbox-img').src = url;
   document.getElementById('lightbox-caption').textContent = caption || '';
   const overlay = document.getElementById('lightbox-overlay');
@@ -154,6 +154,7 @@ function closeLightbox() {
 document.addEventListener('click', e => {
   const img = e.target.closest('[data-lightbox-url]');
   if (img) {
+    e.stopPropagation();
     openLightbox(img.dataset.lightboxUrl, img.dataset.lightboxCaption);
   } else if (e.target.id === 'lightbox-overlay') {
     closeLightbox();
