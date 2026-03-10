@@ -173,10 +173,10 @@ function _buildOptionCardHTML(opt, i) {
   const driveKm = opt.drive_km ? ` · ${opt.drive_km} km` : '';
   const overLimit = opt.drives_over_limit;
   const driveWarning = overLimit
-    ? `<span class="drive-over-limit-badge">⚠ Fahrzeit überschreitet Limit</span>`
+    ? `<span class="drive-over-limit-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="vertical-align:-1px;margin-right:3px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Fahrzeit überschreitet Limit</span>`
     : '';
   const mapsLink = opt.maps_url
-    ? `<a class="option-maps-link" href="${safeUrl(opt.maps_url)}" target="_blank" rel="noopener">&#x1F5FA; Google Maps</a>`
+    ? `<a class="option-maps-link" href="${safeUrl(opt.maps_url)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="vertical-align:-2px;margin-right:3px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Google Maps</a>`
     : '';
   const extraFields = _buildExtraFields(opt);
   return {
@@ -305,7 +305,7 @@ function _renderSkipCard(target, skipBonus) {
   return `
     <div class="option-card skip-card" id="option-card-skip" onclick="skipStop()">
       <div class="option-card-header">
-        <span class="option-card-number skip-icon">→</span>
+        <span class="option-card-number skip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="9 6 15 12 9 18"/></svg></span>
         <div class="option-type-badge type-direct">Direkt</div>
       </div>
       <h3>Direkt nach ${esc(target)} fahren</h3>
@@ -383,7 +383,7 @@ function renderOptions(options, meta) {
     const banner = document.createElement('div');
     banner.className = 'all-over-limit-banner';
     banner.innerHTML = `
-      <p>⚠ Alle vorgeschlagenen Etappen überschreiten die maximale Fahrzeit von ${routeMeta.max_drive_hours || ''}h.</p>
+      <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alle vorgeschlagenen Etappen überschreiten die maximale Fahrzeit von ${routeMeta.max_drive_hours || ''}h.</p>
       <button class="btn btn-secondary" onclick="openRouteAdjustModal()">Route anpassen…</button>
     `;
     container.prepend(banner);

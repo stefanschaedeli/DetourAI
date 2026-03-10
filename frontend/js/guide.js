@@ -319,12 +319,13 @@ function renderDayTimeBlocks(dayPlan) {
   if (!blocks.length) return '';
 
   const typeIcon = {
-    drive:    '🚗',
-    activity: '🎭',
-    meal:     '🍽️',
-    break:    '☕',
-    check_in: '🏨',
+    drive:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+    activity: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+    meal:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
+    break:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
+    check_in: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
   };
+  const pinIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
 
   return `
     <div class="day-timeblocks">
@@ -335,11 +336,11 @@ function renderDayTimeBlocks(dayPlan) {
             <div class="time-block-dot"></div>
             <div class="time-block-content">
               <div class="time-block-header">
-                <span class="time-block-icon">${typeIcon[tb.activity_type] || '📍'}</span>
+                <span class="time-block-icon">${typeIcon[tb.activity_type] || pinIcon}</span>
                 <strong>${esc(tb.title)}</strong>
                 <span class="time-block-duration">${tb.duration_minutes} min</span>
               </div>
-              ${tb.location ? `<div class="time-block-location">📍 ${esc(tb.location)}</div>` : ''}
+              ${tb.location ? `<div class="time-block-location">${pinIcon} ${esc(tb.location)}</div>` : ''}
               ${tb.description ? `<p class="time-block-desc">${esc(tb.description)}</p>` : ''}
               ${tb.price_chf ? `<span class="time-block-price">CHF ${tb.price_chf}</span>` : ''}
               <div class="time-block-links">
@@ -400,9 +401,9 @@ function renderStops(plan) {
         </div>
         ${acc.description ? `<div class="acc-guide-description">${esc(acc.description)}</div>` : ''}
         <div class="acc-guide-links">
-          ${acc.booking_url ? `<a href="${safeUrl(acc.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com anschauen →</a>` : ''}
-          ${acc.booking_search_url ? `<a href="${safeUrl(acc.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Bei Booking.com suchen →</a>` : ''}
-          ${acc.hotel_website_url ? `<a href="${safeUrl(acc.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite →</a>` : ''}
+          ${acc.booking_url ? `<a href="${safeUrl(acc.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com anschauen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+          ${acc.booking_search_url ? `<a href="${safeUrl(acc.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Bei Booking.com suchen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+          ${acc.hotel_website_url ? `<a href="${safeUrl(acc.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
         </div>
         ${altOpts.length ? `
         <details class="acc-alt-options">
@@ -418,9 +419,9 @@ function renderStops(plan) {
                   <span class="acc-price-tag">ca. CHF ${(o.total_price_chf || 0).toLocaleString('de-CH')}</span>
                 </div>
                 <div class="acc-guide-links">
-                  ${o.booking_url ? `<a href="${safeUrl(o.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com →</a>` : ''}
-                  ${o.booking_search_url ? `<a href="${safeUrl(o.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Booking.com suchen →</a>` : ''}
-                  ${o.hotel_website_url ? `<a href="${safeUrl(o.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite →</a>` : ''}
+                  ${o.booking_url ? `<a href="${safeUrl(o.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+                  ${o.booking_search_url ? `<a href="${safeUrl(o.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Booking.com suchen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+                  ${o.hotel_website_url ? `<a href="${safeUrl(o.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
                 </div>
               </div>
             `).join('')}
@@ -510,7 +511,9 @@ function renderStops(plan) {
           </div>
           <div class="stop-header-right">
             ${stop.google_maps_url ? `<a href="${safeUrl(stop.google_maps_url)}" target="_blank" class="maps-link" onclick="event.stopPropagation()">Maps</a>` : ''}
-            <span class="stop-toggle-arrow">${isFirst ? '▼' : '▶'}</span>
+            <span class="stop-toggle-arrow">${isFirst
+              ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>`
+              : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="9 6 15 12 9 18"/></svg>`}</span>
           </div>
         </button>
 
@@ -586,7 +589,9 @@ function _toggleStop(stopId, scrollIntoView) {
 
   body.style.display = isOpen ? 'none' : 'block';
   if (btn)   btn.setAttribute('aria-expanded', String(!isOpen));
-  if (arrow) arrow.textContent = isOpen ? '▶' : '▼';
+  if (arrow) arrow.innerHTML = isOpen
+    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="9 6 15 12 9 18"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>`;
 }
 
 function _expandOnlyStop(stopId) {
@@ -598,7 +603,9 @@ function _expandOnlyStop(stopId) {
     const open  = String(id) === String(stopId);
     body.style.display = open ? 'block' : 'none';
     if (btn)   btn.setAttribute('aria-expanded', String(open));
-    if (arrow) arrow.textContent = open ? '▼' : '▶';
+    if (arrow) arrow.innerHTML = open
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="9 6 15 12 9 18"/></svg>`;
   });
 }
 
@@ -606,7 +613,15 @@ function renderCalendar(plan) {
   const stops = plan.stops || [];
   const dayPlans = plan.day_plans || [];
 
-  const typeIcon  = { drive: '🚗', checkin: '🏨', activity: '🎯', rest: '🌟', mixed: '🔀' };
+  const _ic = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">${d}</svg>`;
+  const typeIcon = {
+    drive:    _ic('<rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>'),
+    checkin:  _ic('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'),
+    activity: _ic('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
+    rest:     _ic('<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1z"/>'),
+    mixed:    _ic('<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>'),
+  };
+  const _pinIcon = _ic('<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>');
   const typeLabel = { drive: 'Fahrt', checkin: 'Ankunft', activity: 'Erlebnis', rest: 'Entspannen', mixed: 'Gemischt' };
 
   // Build a cell per day_plan entry
@@ -632,7 +647,7 @@ function renderCalendar(plan) {
       <div class="cal-day-cell" data-type="${esc(type)}" data-stop-id="${stopId || ''}"
            title="${esc(dp.title)}" tabindex="0" role="button">
         <div class="cal-day-num">${dp.day}</div>
-        <div class="cal-day-icon">${typeIcon[type] || '📍'}</div>
+        <div class="cal-day-icon">${typeIcon[type] || _pinIcon}</div>
         <div class="cal-day-label">${esc(dp.title || typeLabel[type])}</div>
         ${stopName ? `<div class="cal-day-stop">${flag} ${esc(stopName)}</div>` : ''}
         ${dp.date ? `<div class="cal-day-date">${esc(dp.date)}</div>` : ''}

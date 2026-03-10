@@ -777,7 +777,7 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   user-select: none;
 }
 .stop-section-summary::-webkit-details-marker { display: none; }
-.stop-section-summary::before { content: '▶'; font-size: 10px; transition: transform .2s; }
+.stop-section-summary::before { content: ''; display: inline-block; width: 0; height: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 6px solid currentColor; transition: transform .2s; flex-shrink: 0; }
 details[open] > .stop-section-summary::before { transform: rotate(90deg); }
 .stop-section-collapse .stop-activities,
 .stop-section-collapse .stop-restaurants { border-bottom: none; }
@@ -1308,8 +1308,10 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
 }
 .guide-collapse summary::-webkit-details-marker { display: none; }
 .guide-collapse summary::before {
-  content: '▶'; font-size: 10px; color: var(--accent);
-  transition: transform .2s;
+  content: ''; display: inline-block; width: 0; height: 0;
+  border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+  border-left: 6px solid var(--accent);
+  transition: transform .2s; flex-shrink: 0;
 }
 .guide-collapse[open] summary::before { transform: rotate(90deg); }
 .guide-collapse-body {
@@ -1603,11 +1605,13 @@ strong.req-keyword {
   font-size: 0.93rem;
 }
 .strengths-list li::before {
-  content: '✓';
+  content: '';
   position: absolute;
-  left: 0;
-  color: var(--success);
-  font-weight: 700;
+  left: 2px; top: 9px;
+  width: 10px; height: 6px;
+  border-left: 2px solid var(--success);
+  border-bottom: 2px solid var(--success);
+  transform: rotate(-45deg);
 }
 .weaknesses-list li::before {
   content: '!';
@@ -1817,3 +1821,18 @@ strong.req-keyword {
   .loading-progress-indeterminate { animation: none !important; }
   .option-card-streaming { opacity: 1 !important; transform: none !important; }
 }
+
+/* ============================================================ Flag badges (replaces emoji flags) */
+.flag-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  background: var(--border); color: var(--text-sub);
+  border-radius: 3px; padding: 1px 4px; vertical-align: middle;
+}
+
+/* ============================================================ Star rating SVGs */
+.travel-star { display: inline-flex; align-items: center; cursor: pointer; color: var(--border); transition: color .1s, transform .1s; user-select: none; }
+.travel-star:hover, .travel-star.active { color: #f5a623; }
+.travel-star:hover { transform: scale(1.15); }
+.travel-star svg { width: 18px; height: 18px; fill: currentColor; stroke: none; }
+

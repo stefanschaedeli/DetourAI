@@ -18,9 +18,17 @@ const TRAVEL_STYLES = [
 ];
 
 const FLAGS = {
-  CH: '🇨🇭', FR: '🇫🇷', DE: '🇩🇪', IT: '🇮🇹', AT: '🇦🇹',
-  ES: '🇪🇸', NL: '🇳🇱', BE: '🇧🇪', PT: '🇵🇹', GB: '🇬🇧',
-  XX: '🌍',
+  CH: '<span class="flag-badge">CH</span>',
+  FR: '<span class="flag-badge">FR</span>',
+  DE: '<span class="flag-badge">DE</span>',
+  IT: '<span class="flag-badge">IT</span>',
+  AT: '<span class="flag-badge">AT</span>',
+  ES: '<span class="flag-badge">ES</span>',
+  NL: '<span class="flag-badge">NL</span>',
+  BE: '<span class="flag-badge">BE</span>',
+  PT: '<span class="flag-badge">PT</span>',
+  GB: '<span class="flag-badge">GB</span>',
+  XX: '<span class="flag-badge">??</span>',
 };
 
 const S = {

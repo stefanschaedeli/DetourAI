@@ -1,9 +1,11 @@
 'use strict';
 
+const _STAR_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+
 function _renderStars(travelId, currentRating) {
   const stars = [1,2,3,4,5].map(n => {
     const filled = n <= currentRating;
-    return `<span class="travel-star${filled ? ' active' : ''}" data-id="${travelId}" data-val="${n}">${filled ? '★' : '☆'}</span>`;
+    return `<span class="travel-star${filled ? ' active' : ''}" data-id="${travelId}" data-val="${n}" role="button" aria-label="${n} Stern${n !== 1 ? 'e' : ''}" tabindex="0">${_STAR_SVG}</span>`;
   }).join('');
   return `<span class="travel-stars" data-id="${travelId}">${stars}</span>`;
 }
@@ -18,7 +20,7 @@ async function _handleStarClick(starEl) {
     const v = parseInt(s.dataset.val, 10);
     const active = v <= newRating;
     s.classList.toggle('active', active);
-    s.textContent = active ? '★' : '☆';
+    // SVG content is static; only the active class drives fill color via CSS
   });
   try {
     await apiUpdateTravel(id, { rating: newRating });

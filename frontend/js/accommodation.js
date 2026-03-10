@@ -87,7 +87,10 @@ function renderAccCards(stopId, options, mustHaves) {
   const mh = mustHaves || (S.allStops.find(s => s.id == stopId) ? [] : []);
   return options.map((opt, i) => {
     const selectedClass = S.pendingSelections[stopId] === i ? 'selected' : '';
-    const stars = opt.rating ? '★'.repeat(Math.round(opt.rating / 2)) : '';
+    const starCount = opt.rating ? Math.round(opt.rating / 2) : 0;
+    const stars = starCount > 0
+      ? Array.from({length: starCount}, () => `<svg viewBox="0 0 24 24" width="13" height="13" style="fill:#f5a623;stroke:none;vertical-align:-1px" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`).join('')
+      : '';
     const features = (opt.features || []).map(f => {
       const isMH = (opt.matched_must_haves || []).some(m => m.toLowerCase() === f.toLowerCase());
       return `<span class="feature-tag${isMH ? ' must-have' : ''}">${esc(f)}</span>`;
@@ -107,13 +110,13 @@ function renderAccCards(stopId, options, mustHaves) {
 
     // Booking links
     const bookingDeepLink = (!isGeheimtipp && opt.booking_url)
-      ? `<a class="acc-booking-link" href="${safeUrl(opt.booking_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Bei Booking.com anschauen →</a>`
+      ? `<a class="acc-booking-link" href="${safeUrl(opt.booking_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Bei Booking.com anschauen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>`
       : '';
     const bookingSearchLink = (isGeheimtipp && opt.booking_search_url)
-      ? `<a class="acc-booking-link acc-booking-search" href="${safeUrl(opt.booking_search_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Bei Booking.com suchen →</a>`
+      ? `<a class="acc-booking-link acc-booking-search" href="${safeUrl(opt.booking_search_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Bei Booking.com suchen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>`
       : '';
     const websiteLink = opt.hotel_website_url
-      ? `<a class="acc-website-link" href="${safeUrl(opt.hotel_website_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Hotelwebseite →</a>`
+      ? `<a class="acc-website-link" href="${safeUrl(opt.hotel_website_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Hotelwebseite <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>`
       : '';
 
     return `

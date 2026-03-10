@@ -58,7 +58,11 @@ function goToStep(n) {
     const isDone = i + 1 < n;
     el.classList.toggle('active', i + 1 === n);
     el.classList.toggle('done', isDone);
-    el.textContent = isDone ? '✓' : String(i + 1);
+    if (isDone) {
+      el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>`;
+    } else {
+      el.textContent = String(i + 1);
+    }
   });
   document.querySelectorAll('.step-connector').forEach((el, i) => {
     el.classList.toggle('done', i + 1 < n);
