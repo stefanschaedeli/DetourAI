@@ -8,13 +8,10 @@
 const GoogleMaps = (() => {
   let _routeMap = null;
   let _guideMap = null;
-  let _placesService = null;
   let _apiKey = '';
 
   // Cache: place name|lat|lng|context → [url, ...]
   const _imageCache = new Map();
-  // Cache: place name → place_id string
-  const _placeIdCache = new Map();
 
   /** Push a message to the frontend debug log panel. */
   function _log(level, message) {
@@ -29,18 +26,12 @@ const GoogleMaps = (() => {
 
   /** Called by Maps SDK as callback= parameter. */
   function _onApiReady() {
-    // Create a hidden div for PlacesService (requires a map or element)
-    const el = document.createElement('div');
-    document.body.appendChild(el);
-    _placesService = new google.maps.places.PlacesService(el);
     _log('INFO', 'Google Maps API bereit');
     document.dispatchEvent(new CustomEvent('google-maps-ready'));
   }
 
   /**
    * Create (or reuse) the route-builder map.
-   * @param {string} elId  — DOM element id
-   * @param {object} opts  — {center:{lat,lng}, zoom}
    */
   function initRouteMap(elId, opts) {
     const el = document.getElementById(elId);
@@ -82,7 +73,6 @@ const GoogleMaps = (() => {
 
   /**
    * Create a div-based marker via OverlayView (no mapId required).
-   * Returns an object with setMap(null) for cleanup.
    */
   function createDivMarker(map, pos, html, onClick) {
     const latLng = new google.maps.LatLng(pos.lat, pos.lng);
@@ -117,56 +107,95 @@ const GoogleMaps = (() => {
   }
 
   /**
-   * Attach Google Places Autocomplete to an input element.
+   * Attach Places Autocomplete to an input element using the new
+   * PlaceAutocompleteElement API. The web component is overlaid on top of
+   * the existing <input>; when a place is selected the input value is updated
+   * and a 'place_changed' custom event is dispatched on the input so that
+   * existing form.js listeners keep working unchanged.
+   *
+   * Returns the PlaceAutocompleteElement instance (or null on failure).
    */
   function attachAutocomplete(inputId, opts) {
-    const el = document.getElementById(inputId);
-    if (!el) { _log('WARNING', `attachAutocomplete: #${inputId} nicht gefunden`); return null; }
-    if (!google.maps.places) { _log('WARNING', 'Places-Bibliothek nicht geladen'); return null; }
-    const ac = new google.maps.places.Autocomplete(el, Object.assign(
-      { types: ['(cities)'], fields: ['formatted_address', 'place_id', 'geometry'] },
-      opts || {}
-    ));
-    return ac;
-  }
-
-  /**
-   * Find or fetch a Google place_id for a named place.
-   * Returns null on failure.
-   */
-  function findPlaceId(name) {
-    if (_placeIdCache.has(name)) return Promise.resolve(_placeIdCache.get(name));
-    if (!_placesService) {
-      _log('WARNING', `findPlaceId: PlacesService nicht bereit (${name})`);
-      return Promise.resolve(null);
+    const inputEl = document.getElementById(inputId);
+    if (!inputEl) { _log('WARNING', `attachAutocomplete: #${inputId} nicht gefunden`); return null; }
+    if (!google.maps.places || !google.maps.places.PlaceAutocompleteElement) {
+      _log('WARNING', 'PlaceAutocompleteElement nicht verfügbar');
+      return null;
     }
-    return new Promise(resolve => {
-      _placesService.findPlaceFromQuery(
-        { query: name, fields: ['place_id'] },
-        (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results && results[0]) {
-            const id = results[0].place_id;
-            _placeIdCache.set(name, id);
-            resolve(id);
-          } else {
-            if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-              _log('WARNING', `findPlaceId fehlgeschlagen für «${name}»: ${status}`);
-            }
-            resolve(null);
-          }
-        }
-      );
+
+    // Wrap the input in a relative-positioned container so the autocomplete
+    // element can sit directly on top.
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:relative; display:contents;';
+    inputEl.parentNode.insertBefore(wrapper, inputEl);
+    wrapper.appendChild(inputEl);
+
+    const acEl = new google.maps.places.PlaceAutocompleteElement({
+      includedPrimaryTypes: (opts && opts.types) ? opts.types : ['(cities)'],
     });
+
+    // Style the autocomplete element to match the original input visually
+    acEl.style.cssText = inputEl.style.cssText;
+    acEl.className = inputEl.className;
+
+    // Insert right after the input
+    inputEl.parentNode.insertBefore(acEl, inputEl.nextSibling);
+
+    // Hide original input — the autocomplete element handles text entry
+    inputEl.style.display = 'none';
+
+    acEl.addEventListener('gmp-select', async ({ placePrediction }) => {
+      try {
+        const place = placePrediction.toPlace();
+        await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location'] });
+
+        const addr = place.formattedAddress || place.displayName || '';
+        // Restore original input with the resolved address so form.js can read it
+        inputEl.style.display = '';
+        inputEl.value = addr;
+        inputEl.style.display = 'none';
+
+        // Dispatch synthetic event so existing ac.addListener('place_changed') equivalents fire
+        inputEl.dispatchEvent(new CustomEvent('place_changed', {
+          detail: { formatted_address: addr, place },
+          bubbles: true,
+        }));
+      } catch (e) {
+        _log('WARNING', `Autocomplete place fetch fehlgeschlagen: ${e.message}`);
+      }
+    });
+
+    // Return a compatibility shim so form.js addListener('place_changed', cb) works
+    return {
+      _acEl: acEl,
+      _inputEl: inputEl,
+      addListener(event, cb) {
+        if (event === 'place_changed') {
+          inputEl.addEventListener('place_changed', (e) => {
+            // Provide getPlace() compatible with legacy form.js code
+            this._lastPlace = e.detail;
+            cb();
+          });
+        }
+      },
+      getPlace() {
+        return this._lastPlace || {};
+      },
+    };
   }
 
+  // ---------------------------------------------------------------------------
+  // Photo fetching — new Places API (google.maps.places.Place)
+  // ---------------------------------------------------------------------------
+
   /**
-   * Fetch up to 5 images for a place using a tiered fallback:
-   * 1. Google Places photos (up to 5)
-   * 2. Wikipedia summary thumbnail
-   * 3. Google Static Maps satellite
-   * 4. SVG gradient placeholder
+   * Fetch up to 5 images for a place. Strategy:
+   * 1a. Nearby search (tourist_attraction) by lat/lng — best for cities/regions
+   * 1b. Text search by name + location bias — best for specific POIs
+   * 2.  Google Static Maps satellite — always available with API key
+   * 3.  SVG gradient placeholder
    *
-   * Returns Promise<url[]> — 1–5 items (never padded with duplicates).
+   * Returns Promise<string[]> — 1–5 URLs.
    */
   async function getPlaceImages(name, lat, lng, context) {
     const cacheKey = name + '|' + (lat || '') + '|' + (lng || '') + '|' + (context || '');
@@ -178,152 +207,88 @@ const GoogleMaps = (() => {
   }
 
   async function _fetchImagesWithFallback(name, lat, lng, context) {
-    if (!_placesService) {
-      _log('WARNING', `PlacesService nicht bereit — kein Bild für «${name}»`);
-      return [_staticMapUrl(lat, lng) || _svgPlaceholder(name)];
-    }
-
-    // Tier 1a: Nearby search by lat/lng (most reliable for real photos)
-    if (lat && lng) {
+    // Tier 1a: Nearby search by coordinates (city/region context)
+    if (lat && lng && context !== 'hotel' && context !== 'restaurant' && context !== 'activity') {
       try {
-        const photos = await _nearbyPhotos(lat, lng, name, context);
+        const photos = await _nearbyPhotosByLatLng(lat, lng);
         if (photos.length >= 1) return photos;
       } catch (e) {
-        _log('WARNING', `Bilder Nearby fehlgeschlagen für «${name}»: ${e.message}`);
+        _log('WARNING', `Nearby-Suche fehlgeschlagen für «${name}»: ${e.message}`);
       }
     }
 
-    // Tier 1b: Text search fallback (name may be a city)
-    try {
-      const placeId = await findPlaceId(name);
-      if (placeId) {
-        const photos = await _getPlacePhotos(placeId, name);
+    // Tier 1b: Text search by name (specific POIs or fallback for cities)
+    if (name) {
+      try {
+        const photos = await _photosByTextSearch(name, lat, lng, context);
         if (photos.length >= 1) return photos;
+      } catch (e) {
+        _log('WARNING', `Text-Suche fehlgeschlagen für «${name}»: ${e.message}`);
       }
-    } catch (e) {
-      _log('WARNING', `Bilder Text-Suche fehlgeschlagen für «${name}»: ${e.message}`);
     }
 
-    // Tier 2: Static Maps satellite (reliable, shows the actual location)
+    // Tier 2: Static Maps satellite
     const staticUrl = _staticMapUrl(lat, lng);
     if (staticUrl) {
-      _log('INFO', `Bild Tier-2 (Static Maps) verwendet für «${name}»`);
+      _log('INFO', `Static Maps verwendet für «${name}»`);
       return [staticUrl];
     }
 
     // Tier 3: SVG placeholder
-    _log('INFO', `Bild Tier-3 (SVG Platzhalter) verwendet für «${name}»`);
+    _log('INFO', `SVG Platzhalter verwendet für «${name}»`);
     return [_svgPlaceholder(name)];
   }
 
-  /**
-   * Find the best nearby place with photos using lat/lng coordinates.
-   * For cities/regions: searches for tourist attractions near the point.
-   * For specific POIs (hotels, restaurants): searches by name near the point.
-   */
-  function _nearbyPhotos(lat, lng, name, context) {
-    return new Promise(resolve => {
-      const location = new google.maps.LatLng(lat, lng);
+  /** Nearby search for tourist attractions at lat/lng — returns photo URLs. */
+  async function _nearbyPhotosByLatLng(lat, lng) {
+    const { Place, SearchNearbyRankPreference } = await google.maps.importLibrary('places');
+    const center = new google.maps.LatLng(lat, lng);
 
-      // For specific POIs, do a text search with name + location bias
-      if (context === 'hotel' || context === 'restaurant' || context === 'activity') {
-        _placesService.findPlaceFromQuery(
-          {
-            query: name,
-            fields: ['place_id', 'photos'],
-            locationBias: new google.maps.Circle({ center: location, radius: 5000 }),
-          },
-          async (results, status) => {
-            if (status === google.maps.places.PlacesServiceStatus.OK && results && results[0]) {
-              const r = results[0];
-              // If photos already on the result, use them directly
-              if (r.photos && r.photos.length >= 1) {
-                resolve(r.photos.slice(0, 5).map(p => p.getUrl({ maxWidth: 800, maxHeight: 600 })));
-                return;
-              }
-              // Otherwise fetch details for photos
-              const photos = await _getPlacePhotos(r.place_id, name);
-              resolve(photos);
-            } else {
-              resolve([]);
-            }
-          }
-        );
-        return;
-      }
-
-      // For cities/regions: nearby search for tourist attractions
-      _placesService.nearbySearch(
-        {
-          location,
-          radius: 15000,
-          type: 'tourist_attraction',
-        },
-        async (results, status) => {
-          if (status !== google.maps.places.PlacesServiceStatus.OK || !results || !results.length) {
-            resolve([]);
-            return;
-          }
-
-          // Pick the first result that has photos
-          for (const place of results.slice(0, 5)) {
-            if (place.photos && place.photos.length >= 1) {
-              const photos = place.photos.slice(0, 5).map(p => p.getUrl({ maxWidth: 800, maxHeight: 600 }));
-              resolve(photos);
-              return;
-            }
-          }
-
-          // No result had inline photos — fetch details for the top result
-          try {
-            const photos = await _getPlacePhotos(results[0].place_id, name);
-            resolve(photos);
-          } catch (_) {
-            resolve([]);
-          }
-        }
-      );
+    const { places } = await Place.searchNearby({
+      fields: ['photos'],
+      locationRestriction: { center, radius: 15000 },
+      includedPrimaryTypes: ['tourist_attraction'],
+      maxResultCount: 10,
+      rankPreference: SearchNearbyRankPreference.POPULARITY,
     });
-  }
 
-  function _getPlacePhotos(placeId, name) {
-    return new Promise(resolve => {
-      _placesService.getDetails(
-        { placeId, fields: ['photos'] },
-        (place, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && place && place.photos) {
-            const urls = place.photos.slice(0, 5).map(p =>
-              p.getUrl({ maxWidth: 800, maxHeight: 600 })
-            );
-            resolve(urls);
-          } else {
-            if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-              _log('WARNING', `getDetails fehlgeschlagen für «${name}» (${placeId}): ${status}`);
-            }
-            resolve([]);
-          }
-        }
-      );
-    });
-  }
-
-  async function _wikiImage(name) {
-    try {
-      const city = name.split(',')[0].trim();
-      const resp = await fetch(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(city)}`,
-        { headers: { Accept: 'application/json' } }
-      );
-      if (!resp.ok) {
-        _log('WARNING', `Wikipedia-Bild: HTTP ${resp.status} für «${city}»`);
-        return null;
+    // Return photos from the first result that has them
+    for (const place of (places || [])) {
+      if (place.photos && place.photos.length >= 1) {
+        return place.photos.slice(0, 5).map(p => p.getURI({ maxWidth: 800, maxHeight: 600 }));
       }
-      const data = await resp.json();
-      return (data.thumbnail && data.thumbnail.source) || null;
-    } catch (e) {
-      _log('WARNING', `Wikipedia-Bild fehlgeschlagen für «${name}»: ${e.message}`);
-      return null;
     }
+    return [];
+  }
+
+  /** Text search for a named place — returns photo URLs. */
+  async function _photosByTextSearch(name, lat, lng, context) {
+    const { Place } = await google.maps.importLibrary('places');
+
+    const searchOpts = {
+      textQuery: name,
+      fields: ['photos'],
+      maxResultCount: 5,
+    };
+
+    // Add type filter for specific contexts
+    if (context === 'hotel')      searchOpts.includedType = 'lodging';
+    if (context === 'restaurant') searchOpts.includedType = 'restaurant';
+    if (context === 'activity')   searchOpts.includedType = 'tourist_attraction';
+
+    // Location bias if coordinates are available
+    if (lat && lng) {
+      searchOpts.locationBias = new google.maps.LatLng(lat, lng);
+    }
+
+    const { places } = await Place.searchByText(searchOpts);
+
+    for (const place of (places || [])) {
+      if (place.photos && place.photos.length >= 1) {
+        return place.photos.slice(0, 5).map(p => p.getURI({ maxWidth: 800, maxHeight: 600 }));
+      }
+    }
+    return [];
   }
 
   function _staticMapUrl(lat, lng) {
@@ -361,7 +326,6 @@ const GoogleMaps = (() => {
     createDivMarker,
     attachAutocomplete,
     getPlaceImages,
-    findPlaceId,
     get routeMap() { return _routeMap; },
     get guideMap()  { return _guideMap; },
   };
