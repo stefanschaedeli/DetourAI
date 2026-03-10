@@ -172,42 +172,118 @@ const GoogleMaps = (() => {
     const cacheKey = name + '|' + (lat || '') + '|' + (lng || '') + '|' + (context || '');
     if (_imageCache.has(cacheKey)) return _imageCache.get(cacheKey);
 
-    const urls = await _fetchImagesWithFallback(name, lat, lng);
+    const urls = await _fetchImagesWithFallback(name, lat, lng, context);
     _imageCache.set(cacheKey, urls);
     return urls;
   }
 
-  async function _fetchImagesWithFallback(name, lat, lng) {
-    // Tier 1: Google Places photos
+  async function _fetchImagesWithFallback(name, lat, lng, context) {
+    if (!_placesService) {
+      _log('WARNING', `PlacesService nicht bereit — kein Bild für «${name}»`);
+      return [_staticMapUrl(lat, lng) || _svgPlaceholder(name)];
+    }
+
+    // Tier 1a: Nearby search by lat/lng (most reliable for real photos)
+    if (lat && lng) {
+      try {
+        const photos = await _nearbyPhotos(lat, lng, name, context);
+        if (photos.length >= 1) return photos;
+      } catch (e) {
+        _log('WARNING', `Bilder Nearby fehlgeschlagen für «${name}»: ${e.message}`);
+      }
+    }
+
+    // Tier 1b: Text search fallback (name may be a city)
     try {
       const placeId = await findPlaceId(name);
-      if (placeId && _placesService) {
+      if (placeId) {
         const photos = await _getPlacePhotos(placeId, name);
-        if (photos.length >= 1) {
-          return photos;  // Return real photos as-is (1–5 items)
-        }
+        if (photos.length >= 1) return photos;
       }
     } catch (e) {
-      _log('WARNING', `Bilder Tier-1 fehlgeschlagen für «${name}»: ${e.message}`);
+      _log('WARNING', `Bilder Text-Suche fehlgeschlagen für «${name}»: ${e.message}`);
     }
 
-    // Tier 2: Wikipedia
-    const wikiUrl = await _wikiImage(name);
-    if (wikiUrl) {
-      _log('INFO', `Bild Tier-2 (Wikipedia) verwendet für «${name}»`);
-      return [wikiUrl];
-    }
-
-    // Tier 3: Static Maps satellite
+    // Tier 2: Static Maps satellite (reliable, shows the actual location)
     const staticUrl = _staticMapUrl(lat, lng);
     if (staticUrl) {
-      _log('INFO', `Bild Tier-3 (Static Maps) verwendet für «${name}»`);
+      _log('INFO', `Bild Tier-2 (Static Maps) verwendet für «${name}»`);
       return [staticUrl];
     }
 
-    // Tier 4: SVG placeholder
-    _log('INFO', `Bild Tier-4 (SVG Platzhalter) verwendet für «${name}»`);
+    // Tier 3: SVG placeholder
+    _log('INFO', `Bild Tier-3 (SVG Platzhalter) verwendet für «${name}»`);
     return [_svgPlaceholder(name)];
+  }
+
+  /**
+   * Find the best nearby place with photos using lat/lng coordinates.
+   * For cities/regions: searches for tourist attractions near the point.
+   * For specific POIs (hotels, restaurants): searches by name near the point.
+   */
+  function _nearbyPhotos(lat, lng, name, context) {
+    return new Promise(resolve => {
+      const location = new google.maps.LatLng(lat, lng);
+
+      // For specific POIs, do a text search with name + location bias
+      if (context === 'hotel' || context === 'restaurant' || context === 'activity') {
+        _placesService.findPlaceFromQuery(
+          {
+            query: name,
+            fields: ['place_id', 'photos'],
+            locationBias: new google.maps.Circle({ center: location, radius: 5000 }),
+          },
+          async (results, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && results && results[0]) {
+              const r = results[0];
+              // If photos already on the result, use them directly
+              if (r.photos && r.photos.length >= 1) {
+                resolve(r.photos.slice(0, 5).map(p => p.getUrl({ maxWidth: 800, maxHeight: 600 })));
+                return;
+              }
+              // Otherwise fetch details for photos
+              const photos = await _getPlacePhotos(r.place_id, name);
+              resolve(photos);
+            } else {
+              resolve([]);
+            }
+          }
+        );
+        return;
+      }
+
+      // For cities/regions: nearby search for tourist attractions
+      _placesService.nearbySearch(
+        {
+          location,
+          radius: 15000,
+          type: 'tourist_attraction',
+        },
+        async (results, status) => {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !results || !results.length) {
+            resolve([]);
+            return;
+          }
+
+          // Pick the first result that has photos
+          for (const place of results.slice(0, 5)) {
+            if (place.photos && place.photos.length >= 1) {
+              const photos = place.photos.slice(0, 5).map(p => p.getUrl({ maxWidth: 800, maxHeight: 600 }));
+              resolve(photos);
+              return;
+            }
+          }
+
+          // No result had inline photos — fetch details for the top result
+          try {
+            const photos = await _getPlacePhotos(results[0].place_id, name);
+            resolve(photos);
+          } catch (_) {
+            resolve([]);
+          }
+        }
+      );
+    });
   }
 
   function _getPlacePhotos(placeId, name) {
