@@ -133,14 +133,36 @@ function buildImageGallery(overview, mood, customer, altText) {
   return buildPhotoGallery(urls, altText);
 }
 
+// Lightbox gallery state
+let _lbUrls = [];
+let _lbIndex = 0;
+
 /** Open lightbox for any https:// or data: URL. */
 function openLightbox(url, caption) {
   if (!url || (!url.startsWith('https://') && !url.startsWith('data:'))) return;
   document.getElementById('lightbox-img').src = url;
   document.getElementById('lightbox-caption').textContent = caption || '';
+  const counter = document.getElementById('lightbox-counter');
+  if (counter) counter.textContent = _lbUrls.length > 1
+    ? `${_lbIndex + 1} / ${_lbUrls.length}` : '';
   const overlay = document.getElementById('lightbox-overlay');
+  overlay.dataset.single = _lbUrls.length === 1 ? 'true' : 'false';
   overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+}
+
+/** Navigate lightbox to prev (-1) or next (+1) image. */
+function lightboxNav(dir) {
+  if (_lbUrls.length < 2) return;
+  _lbIndex = (_lbIndex + dir + _lbUrls.length) % _lbUrls.length;
+  const url = _lbUrls[_lbIndex];
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox-caption').textContent =
+    `${_lbIndex + 1}/${_lbUrls.length}`;
+  const counter = document.getElementById('lightbox-counter');
+  if (counter) counter.textContent = `${_lbIndex + 1} / ${_lbUrls.length}`;
+  const overlay = document.getElementById('lightbox-overlay');
+  overlay.dataset.single = _lbUrls.length === 1 ? 'true' : 'false';
 }
 
 /** Close the lightbox overlay. */
@@ -155,6 +177,16 @@ document.addEventListener('click', e => {
   const img = e.target.closest('[data-lightbox-url]');
   if (img) {
     e.stopPropagation();
+    const strip = img.closest('.photo-strip');
+    if (strip) {
+      _lbUrls = [...strip.querySelectorAll('[data-lightbox-url]')]
+        .map(el => el.dataset.lightboxUrl);
+      _lbIndex = _lbUrls.indexOf(img.dataset.lightboxUrl);
+      if (_lbIndex < 0) _lbIndex = 0;
+    } else {
+      _lbUrls = [img.dataset.lightboxUrl];
+      _lbIndex = 0;
+    }
     openLightbox(img.dataset.lightboxUrl, img.dataset.lightboxCaption);
   } else if (e.target.id === 'lightbox-overlay') {
     closeLightbox();

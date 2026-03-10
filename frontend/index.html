@@ -457,8 +457,11 @@
 <!-- ======================================================== Lightbox -->
 <div id="lightbox-overlay" class="lightbox-overlay" style="display:none">
   <button class="lightbox-close" onclick="closeLightbox()">×</button>
+  <button class="lightbox-prev" id="lightbox-prev" onclick="lightboxNav(-1)" aria-label="Vorheriges Bild">&#8249;</button>
+  <button class="lightbox-next" id="lightbox-next" onclick="lightboxNav(1)" aria-label="Nächstes Bild">&#8250;</button>
   <img id="lightbox-img" src="" alt="" class="lightbox-img">
   <div id="lightbox-caption" class="lightbox-caption"></div>
+  <div id="lightbox-counter" class="lightbox-counter"></div>
 </div>
 
 <!-- ======================================================== Travels drawer -->
@@ -503,7 +506,13 @@
   // Initialize on DOM ready
   document.addEventListener('DOMContentLoaded', () => {
     initForm();
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('lightbox-overlay')?.style.display === 'flex') {
+        if (e.key === 'ArrowLeft')  lightboxNav(-1);
+        if (e.key === 'ArrowRight') lightboxNav(1);
+        if (e.key === 'Escape')     closeLightbox();
+      }
+    });
     // Sync slider displays
     ['hotel-radius', 'activities-radius', 'max-drive-hours', 'proximity-origin', 'proximity-target'].forEach(id => {
       const s = document.getElementById(id);
