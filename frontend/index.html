@@ -531,8 +531,9 @@
       }
       window._GM_KEY = d.api_key;
       GoogleMaps._setApiKey(d.api_key);
+      window.initGoogleMaps = () => GoogleMaps._onApiReady();
       const s = document.createElement('script');
-      s.src = `https://maps.googleapis.com/maps/api/js?key=${d.api_key}&libraries=places,marker&callback=GoogleMaps._onApiReady&loading=async`;
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${d.api_key}&libraries=places,marker&callback=initGoogleMaps&loading=async`;
       s.async = true;
       s.defer = true;
       s.onerror = () => _gmDebugLog('ERROR', 'Google Maps SDK konnte nicht geladen werden — API-Key prüfen');
