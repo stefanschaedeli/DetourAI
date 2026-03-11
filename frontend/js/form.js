@@ -84,6 +84,7 @@ function goToStep(n) {
       el.onkeydown = null;
     }
   });
+  updateQuickSubmitBar();
 }
 
 function nextStep() {
@@ -165,13 +166,14 @@ function validateStep(n) {
 function updateQuickSubmitBar() {
   const bar = document.getElementById('quick-submit-bar');
   if (!bar) return;
-  // Show only when form-section is active and step 1 required fields are filled
   const formActive = document.getElementById('form-section')?.classList.contains('active');
   const start = document.getElementById('start-location')?.value.trim();
   const dest  = document.getElementById('main-destination')?.value.trim();
   const sd    = document.getElementById('start-date')?.value;
   const ed    = document.getElementById('end-date')?.value;
-  const ready = formActive && start && dest && sd && ed && sd < ed;
+  // Hide on step 6 (summary already has main CTA)
+  const onSummaryStep = S.step === 6;
+  const ready = formActive && start && dest && sd && ed && sd < ed && !onSummaryStep;
   bar.classList.toggle('visible', !!ready);
 }
 
