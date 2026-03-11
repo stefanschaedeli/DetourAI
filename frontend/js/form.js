@@ -82,16 +82,49 @@ function prevStep() {
   if (S.step > 1) goToStep(S.step - 1);
 }
 
+function _setFieldError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('invalid');
+  let errEl = el.parentElement.querySelector('.field-error');
+  if (!errEl) {
+    errEl = document.createElement('span');
+    errEl.className = 'field-error';
+    el.after(errEl);
+  }
+  errEl.textContent = msg;
+  el.focus();
+}
+
+function _clearFieldErrors(ids) {
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('invalid');
+    const errEl = el.parentElement.querySelector('.field-error');
+    if (errEl) errEl.textContent = '';
+  });
+}
+
 function validateStep(n) {
   if (n === 1) {
+    _clearFieldErrors(['start-location', 'main-destination', 'start-date', 'end-date']);
     const start = document.getElementById('start-location').value.trim();
     const dest  = document.getElementById('main-destination').value.trim();
     const sd    = document.getElementById('start-date').value;
     const ed    = document.getElementById('end-date').value;
-    if (!start) { alert('Bitte Startort eingeben.'); return false; }
-    if (!dest)  { alert('Bitte Hauptziel eingeben.'); return false; }
-    if (!sd || !ed) { alert('Bitte Reisedaten eingeben.'); return false; }
-    if (sd >= ed) { alert('Enddatum muss nach Startdatum liegen.'); return false; }
+    let valid = true;
+    if (!start) { _setFieldError('start-location', 'Bitte Startort eingeben.'); valid = false; }
+    if (!dest)  { _setFieldError('main-destination', 'Bitte Hauptziel eingeben.'); if (valid) valid = false; }
+    if (!sd || !ed) {
+      if (!sd) _setFieldError('start-date', 'Startdatum fehlt.');
+      if (!ed) _setFieldError('end-date', 'Enddatum fehlt.');
+      valid = false;
+    } else if (sd >= ed) {
+      _setFieldError('end-date', 'Enddatum muss nach dem Startdatum liegen.');
+      valid = false;
+    }
+    return valid;
   }
   if (n === 5) {
     const acc  = parseInt(document.getElementById('budget-acc-pct')?.value)  || 0;

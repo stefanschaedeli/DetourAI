@@ -543,6 +543,15 @@
       const d = document.getElementById(id + '-display');
       if (s && d) { d.textContent = s.value; s.oninput = () => { d.textContent = s.value; saveFormToCache(); }; }
     });
+    // Clear field errors on input
+    ['start-location', 'main-destination', 'start-date', 'end-date'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', () => {
+        el.classList.remove('invalid');
+        const errEl = el.parentElement.querySelector('.field-error');
+        if (errEl) errEl.textContent = '';
+      });
+    });
   });
 </script>
 
