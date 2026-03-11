@@ -502,3 +502,120 @@ def test_place_id_can_be_set():
     act = StopActivity(name="Louvre", description="Museum", duration_hours=3.0,
                        place_id="ChIJD7fiBh9u5kcRYJSMaMOCCwQ")
     assert act.place_id == "ChIJD7fiBh9u5kcRYJSMaMOCCwQ"
+
+
+# ---------------------------------------------------------------------------
+# ZoneBBox
+# ---------------------------------------------------------------------------
+
+from models.trip_leg import ZoneBBox, ExploreStop, ExploreZoneAnalysis, ExploreAnswersRequest, TripLeg
+from models.via_point import ViaPoint
+from datetime import date
+
+
+class TestZoneBBox:
+    def test_valid_bbox(self):
+        bbox = ZoneBBox(north=42.0, south=36.0, east=28.0, west=20.0, zone_label="Griechenland")
+        assert bbox.zone_label == "Griechenland"
+
+    def test_south_must_be_less_than_north(self):
+        with pytest.raises(ValueError, match="south must be less than north"):
+            ZoneBBox(north=36.0, south=42.0, east=28.0, west=20.0, zone_label="X")
+
+    def test_lat_bounds(self):
+        with pytest.raises(ValueError):
+            ZoneBBox(north=91.0, south=36.0, east=28.0, west=20.0, zone_label="X")
+
+
+class TestExploreStop:
+    def test_valid(self):
+        s = ExploreStop(name="Athen", lat=37.97, lon=23.72,
+                        suggested_nights=3, significance="anchor")
+        assert s.significance == "anchor"
+        assert s.logistics_note == ""
+
+    def test_nights_bounds(self):
+        with pytest.raises(ValueError):
+            ExploreStop(name="X", lat=0, lon=0, suggested_nights=0, significance="anchor")
+
+    def test_invalid_significance(self):
+        with pytest.raises(ValueError):
+            ExploreStop(name="X", lat=0, lon=0, suggested_nights=1, significance="unknown")
+
+
+class TestExploreZoneAnalysis:
+    def test_valid(self):
+        a = ExploreZoneAnalysis(
+            zone_characteristics="Küstengebiet",
+            guided_questions=["Inseln einschließen?"]
+        )
+        assert len(a.guided_questions) == 1
+
+    def test_requires_at_least_one_question(self):
+        with pytest.raises(ValueError):
+            ExploreZoneAnalysis(zone_characteristics="X", guided_questions=[])
+
+
+class TestExploreAnswersRequest:
+    def test_valid(self):
+        r = ExploreAnswersRequest(answers=["Ja"])
+        assert r.answers == ["Ja"]
+
+    def test_max_3_answers(self):
+        with pytest.raises(ValueError):
+            ExploreAnswersRequest(answers=["a", "b", "c", "d"])
+
+    def test_empty_answers_rejected(self):
+        with pytest.raises(ValueError):
+            ExploreAnswersRequest(answers=[])
+
+
+class TestTripLeg:
+    def _transit_leg(self, **kwargs):
+        defaults = dict(
+            leg_id="leg-0",
+            start_location="Liestal",
+            end_location="Lyon",
+            start_date=date(2026, 6, 12),
+            end_date=date(2026, 6, 15),
+            mode="transit",
+        )
+        defaults.update(kwargs)
+        return TripLeg(**defaults)
+
+    def test_valid_transit_leg(self):
+        leg = self._transit_leg()
+        assert leg.total_days == 3
+
+    def test_end_before_start_rejected(self):
+        with pytest.raises(ValueError, match="end_date must be after start_date"):
+            self._transit_leg(end_date=date(2026, 6, 10))
+
+    def test_explore_requires_bbox(self):
+        with pytest.raises(ValueError, match="explore legs require zone_bbox"):
+            TripLeg(
+                leg_id="leg-1",
+                start_location="A", end_location="B",
+                start_date=date(2026, 6, 15), end_date=date(2026, 7, 15),
+                mode="explore",
+            )
+
+    def test_leg_id_pattern(self):
+        with pytest.raises(ValueError):
+            self._transit_leg(leg_id="bad-id")
+
+    def test_valid_explore_leg(self):
+        bbox = ZoneBBox(north=42, south=36, east=28, west=20, zone_label="Griechenland")
+        leg = TripLeg(
+            leg_id="leg-1",
+            start_location="Athen", end_location="Athen",
+            start_date=date(2026, 6, 15), end_date=date(2026, 7, 15),
+            mode="explore", zone_bbox=bbox,
+        )
+        assert leg.total_days == 30
+
+    def test_via_points_in_transit_leg(self):
+        vp = ViaPoint(location="Bern")
+        leg = self._transit_leg(via_points=[vp])
+        assert len(leg.via_points) == 1
+        assert leg.via_points[0].location == "Bern"

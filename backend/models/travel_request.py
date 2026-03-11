@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel, field_validator, model_validator, Field
 from datetime import date
+from models.via_point import ViaPoint  # noqa: F401 — re-exported for backward compat
 
 
 class Child(BaseModel):
@@ -12,12 +13,6 @@ class Child(BaseModel):
         if not 0 <= v <= 17:
             raise ValueError('age must be 0-17')
         return v
-
-
-class ViaPoint(BaseModel):
-    location: str = Field(max_length=200)
-    fixed_date: Optional[date] = None
-    notes: Optional[str] = Field(default=None, max_length=500)
 
 
 class MandatoryActivity(BaseModel):
