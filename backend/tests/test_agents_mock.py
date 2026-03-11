@@ -471,3 +471,90 @@ def test_travel_guide_agent_json_parsing(mocker):
     assert "further_activities" in result
     assert len(result["further_activities"]) == 1
     assert result["further_activities"][0]["name"] == "Vélo-Tour am Lac d'Annecy"
+
+
+# ---------------------------------------------------------------------------
+# ExploreZoneAgent — two-pass logic
+# ---------------------------------------------------------------------------
+
+from unittest.mock import MagicMock, patch
+from agents.explore_zone_agent import ExploreZoneAgent
+from models.trip_leg import ZoneBBox, ExploreZoneAnalysis, ExploreStop
+from models.travel_request import TravelRequest
+from models.trip_leg import TripLeg
+from datetime import date
+
+def _make_req_with_explore_leg():
+    bbox = ZoneBBox(north=42, south=36, east=28, west=20, zone_label="Griechenland")
+    leg = TripLeg(
+        leg_id="leg-0",
+        start_location="Athen", end_location="Athen",
+        start_date=date(2026,6,15), end_date=date(2026,7,15),
+        mode="explore", zone_bbox=bbox,
+    )
+    return TravelRequest(legs=[leg])
+
+FIRST_PASS_JSON = """{
+  "zone_characteristics": "Inselreich mit Fährverbindungen",
+  "preliminary_anchors": ["Athen", "Meteora"],
+  "guided_questions": ["Sollen Inseln eingeschlossen werden?"]
+}"""
+
+SECOND_PASS_JSON = """{
+  "circuit": [
+    {"name": "Athen", "lat": 37.97, "lon": 23.72, "suggested_nights": 3,
+     "significance": "anchor", "logistics_note": ""},
+    {"name": "Delphi", "lat": 38.48, "lon": 22.50, "suggested_nights": 1,
+     "significance": "scenic", "logistics_note": ""}
+  ],
+  "warnings": ["Fährbuchung frühzeitig empfohlen"]
+}"""
+
+class TestExploreZoneAgent:
+    def _mock_response(self, text):
+        msg = MagicMock()
+        msg.content = [MagicMock(text=text)]
+        msg.model = "claude-opus-4-5"
+        msg.usage = MagicMock(input_tokens=100, output_tokens=50)
+        return msg
+
+    @patch("agents.explore_zone_agent.get_client")
+    @patch("agents.explore_zone_agent.call_with_retry")
+    def test_first_pass_returns_zone_analysis(self, mock_retry, mock_get_client):
+        import asyncio
+        mock_get_client.return_value = MagicMock()
+        mock_retry.return_value = self._mock_response(FIRST_PASS_JSON)
+        req = _make_req_with_explore_leg()
+        agent = ExploreZoneAgent(req, "job123")
+
+        async def _run():
+            return await agent.run_first_pass(leg_index=0)
+
+        result = asyncio.run(_run())
+        assert isinstance(result, ExploreZoneAnalysis)
+        assert "Inselreich" in result.zone_characteristics
+        assert len(result.guided_questions) == 1
+
+    @patch("agents.explore_zone_agent.get_client")
+    @patch("agents.explore_zone_agent.call_with_retry")
+    def test_second_pass_returns_circuit(self, mock_retry, mock_get_client):
+        import asyncio
+        mock_get_client.return_value = MagicMock()
+        mock_retry.return_value = self._mock_response(SECOND_PASS_JSON)
+        req = _make_req_with_explore_leg()
+        agent = ExploreZoneAgent(req, "job123")
+        first_pass = ExploreZoneAnalysis(
+            zone_characteristics="Inselreich",
+            guided_questions=["Inseln?"]
+        )
+
+        async def _run():
+            return await agent.run_second_pass(
+                leg_index=0, first_pass=first_pass, guidance=["Ja"]
+            )
+
+        circuit, warnings = asyncio.run(_run())
+        assert len(circuit) == 2
+        assert circuit[0].name == "Athen"
+        assert circuit[0].significance == "anchor"
+        assert warnings == ["Fährbuchung frühzeitig empfohlen"]
