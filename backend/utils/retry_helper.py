@@ -1,7 +1,7 @@
 import asyncio
 import random
 import time
-from anthropic import RateLimitError
+from anthropic import InternalServerError, RateLimitError
 from utils.debug_logger import LogLevel, debug_logger
 
 
@@ -48,13 +48,14 @@ async def call_with_retry(fn, *, job_id: str = None, agent_name: str = None,
 
             return response
 
-        except RateLimitError:
+        except (RateLimitError, InternalServerError) as exc:
             if attempt == max_attempts:
                 raise
             delay = 2 ** (attempt - 1) + random.random()
+            label = "Rate limit" if isinstance(exc, RateLimitError) else "Überlastet (529)"
             await debug_logger.log(
                 LogLevel.WARNING,
-                f"Rate limit (attempt {attempt}/{max_attempts}) — retry in {delay:.1f}s",
+                f"{label} (attempt {attempt}/{max_attempts}) — retry in {delay:.1f}s",
                 job_id=job_id, agent=agent_name,
             )
             await asyncio.sleep(delay)
