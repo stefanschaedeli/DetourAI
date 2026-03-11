@@ -148,7 +148,9 @@ let _lbIndex = 0;
 /** Open lightbox for any https:// or data: URL. */
 function openLightbox(url, caption) {
   if (!url || (!url.startsWith('https://') && !url.startsWith('data:'))) return;
-  document.getElementById('lightbox-img').src = url;
+  const img = document.getElementById('lightbox-img');
+  img.src = url;
+  img.alt = caption || '';
   document.getElementById('lightbox-caption').textContent = caption || '';
   const counter = document.getElementById('lightbox-counter');
   if (counter) counter.textContent = _lbUrls.length > 1
