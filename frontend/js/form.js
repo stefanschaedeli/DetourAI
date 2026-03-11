@@ -68,6 +68,22 @@ function goToStep(n) {
     el.classList.toggle('done', i + 1 < n);
   });
   window.scrollTo(0, 0);
+  // Re-bind click handlers on done steps
+  document.querySelectorAll('.step-indicator .step').forEach((el, i) => {
+    const stepNum = i + 1;
+    if (el.classList.contains('done')) {
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', `Zurück zu Schritt ${stepNum}`);
+      el.onclick = () => goToStep(stepNum);
+      el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToStep(stepNum); } };
+    } else {
+      el.removeAttribute('role');
+      el.removeAttribute('tabindex');
+      el.onclick = null;
+      el.onkeydown = null;
+    }
+  });
 }
 
 function nextStep() {
