@@ -22,6 +22,7 @@ load_dotenv()
 from models.travel_request import TravelRequest
 from models.stop_option import StopSelectRequest
 from models.accommodation_option import AccommodationSelectRequest, BudgetState, AccommodationResearchRequest
+from models.trip_leg import ExploreAnswersRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.maps_helper import geocode_nominatim, osrm_route, build_maps_url
 
@@ -1739,6 +1740,34 @@ async def api_replan_travel(travel_id: int):
                pre_selected_accommodations=pre_selected_accommodations)
 
     return {"job_id": job_id, "status": "planning_started", "source_travel_id": travel_id}
+
+
+# ---------------------------------------------------------------------------
+# Answer explore zone questions
+# ---------------------------------------------------------------------------
+
+@app.post("/api/answer-explore-questions/{job_id}")
+async def answer_explore_questions(job_id: str, body: ExploreAnswersRequest):
+    job = get_job(job_id)
+    if job.get("explore_phase") != "awaiting_guidance":
+        raise HTTPException(status_code=409,
+            detail="Job wartet nicht auf Zonenführungs-Antworten")
+
+    # Store answers into the leg's zone_guidance
+    leg_index = job.get("leg_index", 0)
+    req_data = job["request"]
+    req_data["legs"][leg_index]["zone_guidance"] = body.answers
+
+    # Advance explore_phase to trigger second-pass on resume
+    job["explore_phase"] = "circuit_ready"
+    job["status"] = "building_route"
+    job["request"] = req_data
+    save_job(job_id, job)
+
+    # Re-enqueue planning job
+    _fire_task("run_planning_job", job_id)
+
+    return {"status": "ok"}
 
 
 # ---------------------------------------------------------------------------

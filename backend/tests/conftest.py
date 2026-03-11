@@ -1,3 +1,5 @@
+import json
+import uuid
 import pytest
 import sys
 import os
@@ -24,6 +26,43 @@ def client(mocker):
 
     from main import app
     return TestClient(app)
+
+
+@pytest.fixture
+def mock_job(mocker):
+    """A minimal job dict stored in the mocked Redis, returns the job dict for mutation."""
+    job_id = uuid.uuid4().hex
+    leg = {
+        "leg_id": "leg-0",
+        "start_location": "Liestal",
+        "end_location": "Paris",
+        "start_date": "2026-06-01",
+        "end_date": "2026-06-14",
+        "mode": "transit",
+        "via_points": [],
+        "zone_bbox": None,
+        "zone_guidance": [],
+    }
+    job = {
+        "job_id": job_id,
+        "status": "building_route",
+        "request": {"legs": [leg], "adults": 2, "children": [],
+                    "budget_accommodation_pct": 60, "budget_food_pct": 20,
+                    "budget_activities_pct": 20},
+        "selected_stops": [],
+        "leg_index": 0,
+        "explore_phase": None,
+    }
+
+    mock_redis = mocker.patch("main.redis_client")
+    mock_redis.get.side_effect = lambda key: (
+        json.dumps(job).encode() if key == f"job:{job_id}" else None
+    )
+    mock_redis.setex.side_effect = lambda key, ttl, val: job.update(json.loads(val))
+    mock_redis.keys.return_value = []
+
+    job["job_id"] = job_id  # expose for test access
+    return job
 
 
 @pytest.fixture

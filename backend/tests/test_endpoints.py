@@ -380,3 +380,37 @@ def test_delete_travel_not_found(client, mocker):
     r = client.delete("/api/travels/9999")
     assert r.status_code == 404
     assert "9999" in r.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Answer explore questions
+# ---------------------------------------------------------------------------
+
+class TestAnswerExploreQuestions:
+    def test_404_on_missing_job(self, client):
+        resp = client.post(
+            "/api/answer-explore-questions/" + "a" * 32,
+            json={"answers": ["Ja"]}
+        )
+        assert resp.status_code == 404
+
+    def test_409_if_not_awaiting_guidance(self, client, mock_job):
+        """Job exists but explore_phase is not awaiting_guidance."""
+        mock_job["explore_phase"] = None
+        job_id = mock_job["job_id"]
+        resp = client.post(
+            f"/api/answer-explore-questions/{job_id}",
+            json={"answers": ["Ja"]}
+        )
+        assert resp.status_code == 409
+
+    def test_accepts_answers_and_re_enqueues(self, client, mock_job):
+        mock_job["explore_phase"] = "awaiting_guidance"
+        mock_job["leg_index"] = 0
+        job_id = mock_job["job_id"]
+        resp = client.post(
+            f"/api/answer-explore-questions/{job_id}",
+            json={"answers": ["Ja, Inseln"]}
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
