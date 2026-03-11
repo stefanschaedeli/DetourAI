@@ -1992,3 +1992,37 @@ strong.req-keyword {
     flex: 1;
     padding: 2px 4px;
 }
+
+/* === Explore UI === */
+.explore-guidance-form, .explore-circuit {
+    background: #fdf8e8;
+    border: 1.5px solid #e0b840;
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+.guidance-title, .circuit-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 4px;
+}
+
+.guidance-subtitle, .circuit-hint {
+    font-size: 13px;
+    color: #888;
+    margin: 0 0 14px;
+}
+
+.guidance-question { margin-bottom: 12px; }
+.guidance-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.guidance-input { width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+
+.circuit-stops { list-style: none; padding: 0; margin: 8px 0; }
+.circuit-stop { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0e090; }
+.circuit-stop-name { font-weight: 600; font-size: 14px; flex: 1; }
+.circuit-stop-nights { font-size: 12px; color: #888; }
+.circuit-logistics { font-size: 11px; color: #b07020; }
+
+.circuit-warnings { margin-bottom: 10px; }
+.circuit-warning { background: #fff8e1; border-left: 3px solid #e0b840; padding: 6px 10px; font-size: 12px; margin-bottom: 4px; border-radius: 0 4px 4px 0; }

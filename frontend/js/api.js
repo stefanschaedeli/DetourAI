@@ -145,6 +145,13 @@ async function apiSetRundreiseMode(jobId, activate) {
   return res.json();
 }
 
+async function answerExploreQuestions(jobId, answers) {
+  return await _fetchQuiet(`${API}/answer-explore-questions/${jobId}`, {
+    method: 'POST',
+    body: JSON.stringify({ answers }),
+  }).then(r => r.json());
+}
+
 async function apiSaveTravel(plan) {
   const res = await _fetchQuiet(`${API}/travels`, {
     method: 'POST', body: JSON.stringify({ plan }),
@@ -189,6 +196,7 @@ function openSSE(jobId, handlers) {
     'job_complete', 'job_error', 'accommodation_loading', 'accommodation_loaded',
     'accommodations_all_loaded', 'stop_research_started', 'activities_loaded',
     'restaurants_loaded', 'route_option_ready', 'route_options_done', 'ping',
+    'explore_zone_questions', 'explore_circuit_ready', 'leg_complete',
   ];
 
   events.forEach(evt => {

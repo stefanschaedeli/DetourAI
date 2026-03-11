@@ -15,9 +15,12 @@ function openRouteSSE(jobId) {
   _streamingMeta = null;
 
   _routeSSE = openSSE(jobId, {
-    route_option_ready: onRouteOptionReady,
-    route_options_done: onRouteOptionsDone,
-    debug_log:          _onRouteBuildDebugLog,
+    route_option_ready:     onRouteOptionReady,
+    route_options_done:     onRouteOptionsDone,
+    debug_log:              _onRouteBuildDebugLog,
+    explore_zone_questions: data => { showExploreGuidanceForm(data.questions, data.leg_id); },
+    explore_circuit_ready:  data => { showExploreCircuit(data.circuit, data.warnings); },
+    leg_complete:           data => { console.log(`Schnitt ${(data.leg_index || 0) + 1} abgeschlossen (${data.mode || ''})`); },
     onerror: () => {},  // silently ignore — HTTP response is the fallback
   });
 }
@@ -68,46 +71,6 @@ function _onRouteBuildDebugLog(data) {
   }
 }
 
-function showRundreiseModal(meta) {
-  document.getElementById('rundreise-modal')?.remove();
-  const ratio = ((meta || {}).rundreise_threshold_ratio || 2).toFixed(1);
-  const target = esc((meta || {}).segment_target || '');
-  const overlay = document.createElement('div');
-  overlay.id = 'rundreise-modal';
-  overlay.className = 'modal-overlay';
-  overlay.innerHTML = `
-    <div class="modal-box">
-      <h3 class="modal-title">Rundreise-Modus</h3>
-      <p class="modal-desc">Du hast <strong>${ratio}×</strong> mehr Zeit als für die direkte
-        Route nach <strong>${target}</strong> nötig wäre. Möchtest du bewusste Umwege
-        erkunden statt der direkten Strecke zu folgen?</p>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="declineRundreise()">Nein, direkte Route</button>
-        <button class="btn btn-primary" onclick="activateRundreise()">Ja, Umwege erkunden</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-}
-
-function _closeRundreiseModal() { document.getElementById('rundreise-modal')?.remove(); }
-
-async function activateRundreise() { _closeRundreiseModal(); await _applyRundreiseChoice(true); }
-async function declineRundreise()  { _closeRundreiseModal(); await _applyRundreiseChoice(false); }
-
-async function _applyRundreiseChoice(activate) {
-  progressOverlay.open('Alternativen werden gesucht…');
-  openRouteSSE(S.jobId);
-  _showSkeletonCards();
-  try {
-    const data = await apiSetRundreiseMode(S.jobId, activate);
-    startRouteBuilding(data);
-  } catch (err) {
-    const container = document.getElementById('route-options-container');
-    if (container) container.innerHTML = `<div class="error-msg">Fehler: ${esc(err.message)}</div>`;
-    progressOverlay.close();
-    S.loadingOptions = false;
-  }
-}
 
 function onRouteOptionReady(data) {
   const opt = data.option;
@@ -242,14 +205,6 @@ function appendOptionCard(opt, i) {
 }
 
 function startRouteBuilding(data) {
-  if ((data.meta || {}).rundreise_suggestion) {
-    const container = document.getElementById('route-options-container');
-    if (container) container.innerHTML = '';
-    progressOverlay.close();
-    closeRouteSSE();
-    showRundreiseModal(data.meta);
-    return;
-  }
   progressOverlay.close();  // immer schliessen — idempotent
   S.selectedStops = [];
   routeMeta = data.meta || {};
@@ -740,6 +695,80 @@ function searchNextStop() {
   if (S.currentOptions.length > 0) {
     renderOptions(S.currentOptions, routeMeta);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Explore mode: guided questions form + circuit display
+// ---------------------------------------------------------------------------
+
+function showExploreGuidanceForm(questions, legId) {
+  const container = document.getElementById('route-builder-panel') ||
+                    document.getElementById('progress-panel');
+  if (!container) return;
+
+  const formHtml = `
+    <div class="explore-guidance-form" id="explore-guidance-form">
+      <h3 class="guidance-title">Fragen zur Erkundungszone</h3>
+      <p class="guidance-subtitle">Beantworte diese Fragen um den Rundkurs zu optimieren</p>
+      ${questions.map((q, i) => `
+        <div class="guidance-question">
+          <label class="guidance-label">${esc(q)}</label>
+          <input type="text" class="guidance-input" id="guidance-answer-${i}"
+              placeholder="Deine Antwort…"
+              oninput="updateGuidanceAnswer(${i}, this.value)">
+        </div>
+      `).join('')}
+      <button class="btn btn-primary" onclick="submitGuidanceAnswers('${esc(legId)}', ${JSON.stringify(questions).replace(/'/g, "\\'")})">
+        Rundkurs planen
+      </button>
+    </div>`;
+
+  container.insertAdjacentHTML('beforeend', formHtml);
+  window._guidanceAnswers = new Array(questions.length).fill('');
+}
+
+function updateGuidanceAnswer(index, value) {
+  if (window._guidanceAnswers) window._guidanceAnswers[index] = value;
+}
+
+async function submitGuidanceAnswers(legId, questions) {
+  const answers = window._guidanceAnswers || [];
+  const form = document.getElementById('explore-guidance-form');
+  if (form) form.remove();
+
+  try {
+    await answerExploreQuestions(S.jobId, answers);
+  } catch (err) {
+    console.error('Fehler beim Senden der Antworten:', err);
+  }
+}
+
+function showExploreCircuit(circuit, warnings) {
+  const container = document.getElementById('route-builder-panel') ||
+                    document.getElementById('progress-panel');
+  if (!container) return;
+
+  const warningHtml = warnings.length ? `
+    <div class="circuit-warnings">
+      ${warnings.map(w => `<div class="circuit-warning">⚠ ${esc(w)}</div>`).join('')}
+    </div>` : '';
+
+  const circuitHtml = `
+    <div class="explore-circuit" id="explore-circuit">
+      <h3 class="circuit-title">Dein Rundkurs</h3>
+      ${warningHtml}
+      <ol class="circuit-stops">
+        ${circuit.map(stop => `
+          <li class="circuit-stop">
+            <span class="circuit-stop-name">${esc(stop.name)}</span>
+            <span class="circuit-stop-nights">${stop.suggested_nights} Nächte</span>
+            ${stop.logistics_note ? `<span class="circuit-logistics">${esc(stop.logistics_note)}</span>` : ''}
+          </li>`).join('')}
+      </ol>
+      <p class="circuit-hint">Stopps werden nun interaktiv ausgewählt.</p>
+    </div>`;
+
+  container.insertAdjacentHTML('beforeend', circuitHtml);
 }
 
 // ---------------------------------------------------------------------------
