@@ -67,14 +67,24 @@ def mock_job(mocker):
 
 @pytest.fixture
 def sample_request():
-    return {
+    leg = {
+        "leg_id": "leg-0",
         "start_location": "Liestal, Schweiz",
-        "main_destination": "Paris, Frankreich",
+        "end_location": "Paris, Frankreich",
         "start_date": "2026-06-01",
         "end_date": "2026-06-10",
-        "total_days": 10,
+        "mode": "transit",
+        "via_points": [],
+        "zone_bbox": None,
+        "zone_guidance": [],
+    }
+    return {
+        "legs": [leg],
         "adults": 2,
         "children": [],
         "budget_chf": 5000,
         "travel_styles": ["culture", "culinary"],
+        "budget_accommodation_pct": 60,
+        "budget_food_pct": 20,
+        "budget_activities_pct": 20,
     }

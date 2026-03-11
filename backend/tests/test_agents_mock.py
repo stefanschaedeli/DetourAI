@@ -4,6 +4,24 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from unittest.mock import MagicMock, AsyncMock, patch
+from datetime import date
+
+
+def _make_single_transit_req(**kwargs):
+    """Create a TravelRequest with a single transit leg using new legs= format."""
+    from models.travel_request import TravelRequest
+    from models.trip_leg import TripLeg
+    leg = TripLeg(
+        leg_id="leg-0",
+        start_location=kwargs.pop("start_location", "Liestal"),
+        end_location=kwargs.pop("main_destination", "Paris"),
+        start_date=kwargs.pop("start_date", date(2026, 6, 1)),
+        end_date=kwargs.pop("end_date", date(2026, 6, 10)),
+        mode="transit",
+    )
+    # Remove legacy flat fields that are no longer accepted
+    kwargs.pop("total_days", None)
+    return TravelRequest(legs=[leg], **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -49,8 +67,6 @@ def test_parse_agent_json_invalid():
 # ---------------------------------------------------------------------------
 
 def test_route_architect_json_parsing(mocker):
-    from models.travel_request import TravelRequest
-
     mock_response = MagicMock()
     mock_response.content = [MagicMock(text='{"stops": [], "total_drive_days": 2, "total_rest_days": 8, "ferry_crossings": []}')]
     mock_response.usage = MagicMock(input_tokens=100, output_tokens=50)
@@ -65,13 +81,7 @@ def test_route_architect_json_parsing(mocker):
     mocker.patch('agents.route_architect.get_client', return_value=mock_client)
     mocker.patch('utils.retry_helper.asyncio.to_thread', new=AsyncMock(return_value=mock_response))
 
-    request = TravelRequest(
-        start_location="Liestal",
-        main_destination="Paris",
-        start_date="2026-06-01",
-        end_date="2026-06-10",
-        total_days=10,
-    )
+    request = _make_single_transit_req()
 
     from agents.route_architect import RouteArchitectAgent
     agent = RouteArchitectAgent(request, "test_job")
@@ -115,21 +125,13 @@ def test_retry_on_rate_limit(mocker):
 # ---------------------------------------------------------------------------
 
 def test_accommodation_researcher_instantiation(mocker):
-    from models.travel_request import TravelRequest
     from agents.accommodation_researcher import AccommodationResearcherAgent
 
     mock_client = MagicMock()
     mocker.patch('anthropic.Anthropic', return_value=mock_client)
     mocker.patch('agents.accommodation_researcher.get_client', return_value=mock_client)
 
-    request = TravelRequest(
-        start_location="Liestal",
-        main_destination="Paris",
-        start_date="2026-06-01",
-        end_date="2026-06-10",
-        total_days=10,
-        budget_chf=5000,
-    )
+    request = _make_single_transit_req(budget_chf=5000)
     agent = AccommodationResearcherAgent(request, "test_job")
     assert agent is not None
     assert agent.extra_instructions == ""
@@ -140,7 +142,6 @@ def test_accommodation_researcher_instantiation(mocker):
 
 def test_accommodation_find_options_structure(mocker):
     import asyncio
-    from models.travel_request import TravelRequest
     from agents.accommodation_researcher import AccommodationResearcherAgent
 
     mock_options = [
@@ -235,12 +236,7 @@ def test_accommodation_find_options_structure(mocker):
         return_value={"image_overview": None, "image_mood": None, "image_customer": None}
     ))
 
-    request = TravelRequest(
-        start_location="Liestal",
-        main_destination="Paris",
-        start_date="2026-06-01",
-        end_date="2026-06-10",
-        total_days=10,
+    request = _make_single_transit_req(
         budget_chf=5000,
         accommodation_preferences=["romantisches Hotel am See", "gemütliches Apartment"],
     )
@@ -290,20 +286,13 @@ def test_accommodation_find_options_structure(mocker):
 # ---------------------------------------------------------------------------
 
 def test_activities_agent_no_enricher(mocker):
-    from models.travel_request import TravelRequest
     from agents.activities_agent import ActivitiesAgent
 
     mock_client = MagicMock()
     mocker.patch('anthropic.Anthropic', return_value=mock_client)
     mocker.patch('agents._client.os.getenv', return_value='sk-ant-test')
 
-    request = TravelRequest(
-        start_location="Liestal",
-        main_destination="Paris",
-        start_date="2026-06-01",
-        end_date="2026-06-10",
-        total_days=10,
-    )
+    request = _make_single_transit_req()
     agent = ActivitiesAgent(request, "test_job")
     assert not hasattr(agent, 'enricher')
 
@@ -395,20 +384,13 @@ def test_debug_logger_subscribe_unsubscribe():
 # ---------------------------------------------------------------------------
 
 def test_travel_guide_agent_instantiation(mocker):
-    from models.travel_request import TravelRequest
     from agents.travel_guide_agent import TravelGuideAgent
 
     mock_client = MagicMock()
     mocker.patch('anthropic.Anthropic', return_value=mock_client)
     mocker.patch('agents.travel_guide_agent.get_client', return_value=mock_client)
 
-    request = TravelRequest(
-        start_location="Liestal",
-        main_destination="Paris",
-        start_date="2026-06-01",
-        end_date="2026-06-10",
-        total_days=10,
-    )
+    request = _make_single_transit_req()
     agent = TravelGuideAgent(request, "test_job")
     assert agent is not None
     assert hasattr(agent, 'model')
@@ -417,7 +399,6 @@ def test_travel_guide_agent_instantiation(mocker):
 
 def test_travel_guide_agent_json_parsing(mocker):
     import asyncio
-    from models.travel_request import TravelRequest
     from agents.travel_guide_agent import TravelGuideAgent
 
     mock_guide_response = {
@@ -451,13 +432,7 @@ def test_travel_guide_agent_json_parsing(mocker):
     mocker.patch('agents.travel_guide_agent.get_client', return_value=mock_client)
     mocker.patch('utils.retry_helper.asyncio.to_thread', new=AsyncMock(return_value=mock_api_response))
 
-    request = TravelRequest(
-        start_location="Liestal",
-        main_destination="Paris",
-        start_date="2026-06-01",
-        end_date="2026-06-10",
-        total_days=10,
-    )
+    request = _make_single_transit_req()
     agent = TravelGuideAgent(request, "test_job")
     stop = {"id": 1, "region": "Annecy", "country": "FR", "nights": 2, "arrival_day": 3}
 

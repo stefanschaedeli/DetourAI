@@ -23,18 +23,32 @@ def client(mock_redis):
     return TestClient(app)
 
 
+def _transit_legs_payload(start="Liestal, Schweiz", end="Paris, Frankreich",
+                           start_date="2026-06-01", end_date="2026-06-10"):
+    return [{
+        "leg_id": "leg-0",
+        "start_location": start,
+        "end_location": end,
+        "start_date": start_date,
+        "end_date": end_date,
+        "mode": "transit",
+        "via_points": [],
+        "zone_bbox": None,
+        "zone_guidance": [],
+    }]
+
+
 @pytest.fixture
 def sample_request():
     return {
-        "start_location": "Liestal, Schweiz",
-        "main_destination": "Paris, Frankreich",
-        "start_date": "2026-06-01",
-        "end_date": "2026-06-10",
-        "total_days": 10,
+        "legs": _transit_legs_payload(),
         "adults": 2,
         "children": [],
         "budget_chf": 5000,
         "travel_styles": ["culture", "culinary"],
+        "budget_accommodation_pct": 60,
+        "budget_food_pct": 20,
+        "budget_activities_pct": 20,
     }
 
 
@@ -70,8 +84,9 @@ def test_plan_trip_missing_required_field(client):
     assert r.status_code == 422
 
 
-def test_plan_trip_missing_destination(client, sample_request):
-    payload = {k: v for k, v in sample_request.items() if k != 'main_destination'}
+def test_plan_trip_missing_destination(client):
+    # Sending a payload without legs should fail validation
+    payload = {"adults": 2, "budget_chf": 5000}
     r = client.post("/api/plan-trip", json=payload)
     assert r.status_code == 422
 
@@ -195,9 +210,10 @@ def test_confirm_accommodations_success(client, mock_redis):
     job = {
         "status": "loading_accommodations",
         "request": {
-            "start_location": "Liestal", "main_destination": "Paris",
-            "start_date": "2026-06-01", "end_date": "2026-06-10",
-            "total_days": 10, "budget_chf": 5000, "adults": 2,
+            "legs": _transit_legs_payload(),
+            "budget_chf": 5000, "adults": 2,
+            "budget_accommodation_pct": 60, "budget_food_pct": 20,
+            "budget_activities_pct": 20,
             "min_nights_per_stop": 1, "budget_buffer_percent": 10,
         },
         "selected_stops": [{"id": 1, "region": "Annecy", "nights": 2}],
@@ -232,9 +248,10 @@ def test_research_accommodation_stop_not_found(client, mock_redis):
     job = {
         "status": "loading_accommodations",
         "request": {
-            "start_location": "Liestal", "main_destination": "Paris",
-            "start_date": "2026-06-01", "end_date": "2026-06-10",
-            "total_days": 10, "budget_chf": 5000, "adults": 2,
+            "legs": _transit_legs_payload(),
+            "budget_chf": 5000, "adults": 2,
+            "budget_accommodation_pct": 60, "budget_food_pct": 20,
+            "budget_activities_pct": 20,
             "min_nights_per_stop": 1, "budget_buffer_percent": 10,
         },
         "selected_stops": [{"id": 1, "region": "Annecy", "nights": 2, "country": "FR", "arrival_day": 3}],
@@ -256,9 +273,10 @@ def test_research_accommodation_success(client, mock_redis, mocker):
     job = {
         "status": "loading_accommodations",
         "request": {
-            "start_location": "Liestal", "main_destination": "Paris",
-            "start_date": "2026-06-01", "end_date": "2026-06-10",
-            "total_days": 10, "budget_chf": 5000, "adults": 2,
+            "legs": _transit_legs_payload(),
+            "budget_chf": 5000, "adults": 2,
+            "budget_accommodation_pct": 60, "budget_food_pct": 20,
+            "budget_activities_pct": 20,
             "min_nights_per_stop": 1, "budget_buffer_percent": 10,
         },
         "selected_stops": [{"id": 1, "region": "Annecy", "nights": 2, "country": "FR", "arrival_day": 3}],
