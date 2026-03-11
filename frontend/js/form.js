@@ -392,13 +392,43 @@ function initSliders() {
 // ---------------------------------------------------------------------------
 
 function initBudgetSliders() {
-  ['budget-acc-pct', 'budget-food-pct', 'budget-act-pct'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.oninput = () => { updateBudgetPreview(); saveFormToCache(); };
+  const sliders = ['budget-acc-pct', 'budget-food-pct', 'budget-act-pct'];
+  sliders.forEach(changedId => {
+    const el = document.getElementById(changedId);
+    if (!el) return;
+    el.oninput = () => {
+      _autoBalanceBudget(changedId);
+      updateBudgetPreview();
+      saveFormToCache();
+    };
   });
   const budgetInput = document.getElementById('budget-chf');
   if (budgetInput) budgetInput.oninput = () => { updateBudgetPreview(); saveFormToCache(); };
   updateBudgetPreview();
+}
+
+function _autoBalanceBudget(changedId) {
+  const ids = ['budget-acc-pct', 'budget-food-pct', 'budget-act-pct'];
+  const others = ids.filter(id => id !== changedId);
+  const changedEl = document.getElementById(changedId);
+  if (!changedEl) return;
+  const changedVal = parseInt(changedEl.value) || 0;
+  const remaining = 100 - changedVal;
+  const [a, b] = others.map(id => document.getElementById(id));
+  if (!a || !b) return;
+  const aVal = parseInt(a.value) || 0;
+  const bVal = parseInt(b.value) || 0;
+  const total = aVal + bVal;
+  if (total === 0) {
+    const half = Math.floor(remaining / 2);
+    a.value = half;
+    b.value = remaining - half;
+  } else {
+    const aNew = Math.max(5, Math.round(remaining * aVal / total));
+    const bNew = Math.max(5, remaining - aNew);
+    a.value = aNew;
+    b.value = bNew;
+  }
 }
 
 function updateBudgetPreview() {
