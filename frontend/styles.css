@@ -647,6 +647,10 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 /* ============================================================ Progress */
 .progress-header { margin-bottom: 24px; }
 .progress-agent-status { background: var(--bg-subtle); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 20px; font-size: 14px; color: var(--text-sub); }
+.progress-wait-hint {
+  font-size: 13px; color: var(--text-sub);
+  margin-bottom: 20px;
+}
 .progress-timeline { }
 .timeline-stop { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
 .timeline-stop.done .timeline-dot { background: var(--success); }

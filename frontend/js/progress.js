@@ -257,3 +257,10 @@ function toggleDebugLog() {
   if (panel) panel.classList.toggle('open', S.debugOpen);
   if (S.debugOpen) updateDebugLog();
 }
+
+function cancelPlanning() {
+  if (!confirm('Planung abbrechen und zum Formular zurückkehren?')) return;
+  // Close any open SSE connection
+  if (S._sseSource) { S._sseSource.close(); S._sseSource = null; }
+  showSection('form-section');
+}
