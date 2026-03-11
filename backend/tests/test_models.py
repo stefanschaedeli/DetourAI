@@ -17,16 +17,24 @@ def test_travel_request_valid(sample_request):
     assert req.adults == 2
     assert req.budget_chf == 5000.0
     assert req.start_location == "Liestal, Schweiz"
+    assert req.main_destination == "Paris, Frankreich"
+
+
+def _sample_leg():
+    return TripLeg(
+        leg_id="leg-0",
+        start_location="Liestal, Schweiz",
+        end_location="Paris, Frankreich",
+        start_date=date(2026, 6, 1),
+        end_date=date(2026, 6, 10),
+        mode="transit",
+    )
 
 
 @pytest.fixture
 def sample_request():
     return {
-        "start_location": "Liestal, Schweiz",
-        "main_destination": "Paris, Frankreich",
-        "start_date": "2026-06-01",
-        "end_date": "2026-06-10",
-        "total_days": 10,
+        "legs": [_sample_leg()],
         "adults": 2,
         "children": [],
         "budget_chf": 5000,
@@ -36,37 +44,47 @@ def sample_request():
 
 
 def test_travel_request_accommodation_preferences():
-    req = TravelRequest(
+    leg = TripLeg(
+        leg_id="leg-0",
         start_location="Liestal",
-        main_destination="Paris",
-        start_date="2026-06-01",
-        end_date="2026-06-10",
-        total_days=10,
+        end_location="Paris",
+        start_date=date(2026, 6, 1),
+        end_date=date(2026, 6, 10),
+        mode="transit",
+    )
+    req = TravelRequest(
+        legs=[leg],
         accommodation_preferences=["romantisches Hotel", "Camping mit Aussicht"],
     )
     assert req.accommodation_preferences == ["romantisches Hotel", "Camping mit Aussicht"]
 
 
 def test_travel_request_accommodation_preferences_too_many():
+    leg = TripLeg(
+        leg_id="leg-0",
+        start_location="Liestal",
+        end_location="Paris",
+        start_date=date(2026, 6, 1),
+        end_date=date(2026, 6, 10),
+        mode="transit",
+    )
     with pytest.raises(Exception):
         TravelRequest(
-            start_location="Liestal",
-            main_destination="Paris",
-            start_date="2026-06-01",
-            end_date="2026-06-10",
-            total_days=10,
+            legs=[leg],
             accommodation_preferences=["a", "b", "c", "d"],
         )
 
 
 def test_travel_request_defaults():
-    req = TravelRequest(
+    leg = TripLeg(
+        leg_id="leg-0",
         start_location="Liestal",
-        main_destination="Paris",
-        start_date="2026-06-01",
-        end_date="2026-06-10",
-        total_days=10,
+        end_location="Paris",
+        start_date=date(2026, 6, 1),
+        end_date=date(2026, 6, 10),
+        mode="transit",
     )
+    req = TravelRequest(legs=[leg])
     assert req.adults == 2
     assert req.budget_chf == 3000.0
     assert req.max_drive_hours_per_day == 4.5
@@ -74,14 +92,16 @@ def test_travel_request_defaults():
 
 
 def test_travel_request_with_via_points():
-    req = TravelRequest(
+    leg = TripLeg(
+        leg_id="leg-0",
         start_location="Liestal",
-        main_destination="Paris",
-        start_date="2026-06-01",
-        end_date="2026-06-10",
-        total_days=10,
-        via_points=[{"location": "Annecy"}, {"location": "Lyon", "fixed_date": "2026-06-04"}],
+        end_location="Paris",
+        start_date=date(2026, 6, 1),
+        end_date=date(2026, 6, 10),
+        mode="transit",
+        via_points=[ViaPoint(location="Annecy"), ViaPoint(location="Lyon", fixed_date=date(2026, 6, 4))],
     )
+    req = TravelRequest(legs=[leg])
     assert len(req.via_points) == 2
     assert req.via_points[0].location == "Annecy"
     assert req.via_points[0].fixed_date is None
@@ -619,3 +639,57 @@ class TestTripLeg:
         leg = self._transit_leg(via_points=[vp])
         assert len(leg.via_points) == 1
         assert leg.via_points[0].location == "Bern"
+
+
+# ---------------------------------------------------------------------------
+# TravelRequest with Legs
+# ---------------------------------------------------------------------------
+
+def _make_transit_leg(leg_id="leg-0", start="Liestal", end="Lyon",
+                      s=date(2026, 6, 12), e=date(2026, 6, 15), **kwargs):
+    return TripLeg(leg_id=leg_id, start_location=start, end_location=end,
+                   start_date=s, end_date=e, mode="transit", **kwargs)
+
+
+def _make_explore_leg(leg_id="leg-1", start="Lyon", end="Athen",
+                      s=date(2026, 6, 15), e=date(2026, 7, 15)):
+    bbox = ZoneBBox(north=42, south=36, east=28, west=20, zone_label="Griechenland")
+    return TripLeg(leg_id=leg_id, start_location=start, end_location=end,
+                   start_date=s, end_date=e, mode="explore", zone_bbox=bbox)
+
+
+class TestTravelRequestLegs:
+    def _base_req(self, legs):
+        return TravelRequest(legs=legs)
+
+    def test_derived_properties(self):
+        req = self._base_req([_make_transit_leg()])
+        assert req.start_location == "Liestal"
+        assert req.main_destination == "Lyon"
+        assert req.total_days == 3
+        assert req.start_date == date(2026, 6, 12)
+        assert req.end_date == date(2026, 6, 15)
+
+    def test_multi_leg_chain(self):
+        leg0 = _make_transit_leg(end="Lyon", e=date(2026, 6, 15))
+        leg1 = _make_explore_leg(start="Lyon", e=date(2026, 7, 15))
+        req = self._base_req([leg0, leg1])
+        assert req.total_days == 33
+
+    def test_chain_validation_location_mismatch(self):
+        leg0 = _make_transit_leg(end="Lyon", e=date(2026, 6, 15))
+        leg1 = _make_explore_leg(start="Paris", s=date(2026, 6, 15), e=date(2026, 7, 15))
+        with pytest.raises(ValueError, match="must match leg"):
+            self._base_req([leg0, leg1])
+
+    def test_chain_validation_date_mismatch(self):
+        leg0 = _make_transit_leg(end="Lyon", e=date(2026, 6, 15))
+        leg1 = _make_explore_leg(start="Lyon", s=date(2026, 6, 16), e=date(2026, 7, 15))
+        with pytest.raises(ValueError, match="start_date must equal"):
+            self._base_req([leg0, leg1])
+
+    def test_via_points_property_flattens_transit_legs(self):
+        leg0 = _make_transit_leg(via_points=[ViaPoint(location="Bern")])
+        req = self._base_req([leg0])
+        assert len(req.via_points) == 1
+        assert req.via_points[0].location == "Bern"
