@@ -145,6 +145,7 @@ function toggleSettings() {
   if (!menu) return;
   const open = menu.style.display !== 'none';
   menu.style.display = open ? 'none' : 'block';
+  menu.setAttribute('aria-hidden', open ? 'true' : 'false');
   if (btn) btn.setAttribute('aria-expanded', String(!open));
 }
 
