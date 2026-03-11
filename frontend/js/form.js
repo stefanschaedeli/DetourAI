@@ -1,9 +1,6 @@
 'use strict';
 
-let viaPoints = [];  // [{location, hasDate, date, notes}]
-
 function initForm() {
-  renderViaPoints();
   initTravelStyles();
   initSliders();
   initBudgetSliders();
@@ -92,6 +89,7 @@ function nextStep() {
   if (S.step < 6) {
     if (S.step === 5) renderSummary();
     goToStep(S.step + 1);
+    if (S.step === 3) initLegs();
   }
 }
 
@@ -187,6 +185,8 @@ async function quickSubmitTrip() {
   if (!dest)  { alert('Bitte Hauptziel eingeben.'); return; }
   if (!sd || !ed) { alert('Bitte Reisedaten eingeben.'); return; }
   if (sd >= ed)   { alert('Enddatum muss nach Startdatum liegen.'); return; }
+  // Ensure legs are initialized from Step 1 data
+  if (S.legs.length === 0) initLegs();
   await submitTrip();
 }
 
@@ -209,64 +209,259 @@ function toggleAdvanced() {
 }
 
 // ---------------------------------------------------------------------------
-// Via-points
+// Legs builder
 // ---------------------------------------------------------------------------
 
-function addViaPoint() {
-  viaPoints.push({ location: '', hasDate: false, date: '', notes: '' });
-  renderViaPoints();
+function dateDiffDays(start, end) {
+  const s = new Date(start), e = new Date(end);
+  return Math.round((e - s) / (1000 * 60 * 60 * 24));
 }
 
-function removeViaPoint(idx) {
-  viaPoints.splice(idx, 1);
-  renderViaPoints();
+function addDays(dateStr, n) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split("T")[0];
 }
 
-function toggleViaDate(idx) {
-  viaPoints[idx].hasDate = !viaPoints[idx].hasDate;
-  renderViaPoints();
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("de-CH", { day: "numeric", month: "short" });
 }
 
-function renderViaPoints() {
-  const container = document.getElementById('via-points-list');
+function initLegs() {
+  // Auto-create first leg from Step 1 data
+  if (S.legs.length === 0) {
+    const startLoc = document.getElementById('start-location')?.value.trim() || '';
+    const mainDest = document.getElementById('main-destination')?.value.trim() || '';
+    const startDate = document.getElementById('start-date')?.value || '';
+    const endDate = document.getElementById('end-date')?.value || '';
+    S.legs = [{
+      leg_id: "leg-0",
+      start_location: startLoc,
+      end_location: mainDest,
+      start_date: startDate,
+      end_date: endDate,
+      mode: "transit",
+      via_points: [],
+      zone_bbox: null,
+      zone_guidance: [],
+    }];
+  }
+  renderLegs();
+}
+
+function renderLegs() {
+  const container = document.getElementById("legs-container");
   if (!container) return;
-  container.innerHTML = viaPoints.map((vp, i) => `
-    <div class="via-point">
-      <div class="via-point-row">
-        <input type="text" id="via-input-${i}" placeholder="Ort (z.B. Annecy)" value="${esc(vp.location)}"
-          oninput="viaPoints[${i}].location = this.value; saveFormToCache()">
-        <button class="btn-icon" onclick="toggleViaDate(${i})" title="Datum festlegen" aria-label="Datum festlegen">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-        </button>
-        <button class="btn-icon btn-danger" onclick="removeViaPoint(${i})" title="Entfernen" aria-label="Via-Punkt entfernen">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-          </svg>
-        </button>
-      </div>
-      ${vp.hasDate ? `<input type="date" value="${esc(vp.date)}"
-        oninput="viaPoints[${i}].date = this.value; saveFormToCache()">` : ''}
-    </div>
-  `).join('');
+  container.innerHTML = S.legs.map((leg, i) => renderLegCard(leg, i)).join("");
+  // Re-init explore maps for any explore legs
+  S.legs.forEach((leg, i) => {
+    if (leg.mode === "explore") setTimeout(() => initZoneMap(i), 50);
+  });
+}
 
-  // Attach autocomplete to each via-point input if Maps API is ready
-  if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-    viaPoints.forEach((vp, i) => {
-      const ac = GoogleMaps.attachAutocomplete(`via-input-${i}`, { types: ['(cities)'], fields: ['formatted_address'] });
-      if (!ac) return;
-      ac.addListener('place_changed', () => {
-        const place = ac.getPlace();
-        if (place && place.formatted_address) {
-          viaPoints[i].location = place.formatted_address;
-          const el = document.getElementById(`via-input-${i}`);
-          if (el) el.value = place.formatted_address;
-        }
-        saveFormToCache();
-      });
+function renderLegCard(leg, index) {
+  const isFirst = index === 0;
+  const isLast = index === S.legs.length - 1;
+  const modeColor = leg.mode === "explore" ? "#e0b840" : "#4a90d9";
+  const days = leg.start_date && leg.end_date ? dateDiffDays(leg.start_date, leg.end_date) : 0;
+
+  const transitContent = leg.mode === "transit" ? `
+      <div class="leg-via-points">
+          <label class="form-label-sm">Via-Punkte (optional)</label>
+          <div class="tag-input" id="via-tags-${index}">
+              ${(leg.via_points || []).map(vp => `
+                  <span class="tag">${esc(vp.location)}
+                      <button onclick="removeViaPoint(${index}, '${esc(vp.location)}')" aria-label="Entfernen">×</button>
+                  </span>`).join("")}
+              <input type="text" placeholder="Via-Punkt hinzufügen…"
+                  onkeydown="handleViaInput(event, ${index})"
+                  class="tag-input-field">
+          </div>
+      </div>` : "";
+
+  const exploreContent = leg.mode === "explore" ? `
+      <div class="leg-zone">
+          <label class="form-label-sm">Erkundungszone</label>
+          <div id="zone-map-${index}" class="zone-map-container" style="height:180px;border-radius:8px;overflow:hidden;border:1px solid #ddd;margin-bottom:8px"></div>
+          <div class="zone-label-row">
+              <span class="form-label-sm">Zone:</span>
+              <input type="text" class="input-sm" id="zone-label-${index}"
+                  value="${esc(leg.zone_bbox?.zone_label || '')}"
+                  oninput="updateZoneLabel(${index}, this.value)"
+                  placeholder="Zone benennen…">
+          </div>
+      </div>` : "";
+
+  return `
+  <div class="leg-card" id="leg-card-${index}" style="border-color:${modeColor}">
+      <div class="leg-card-header" style="background:${leg.mode === 'explore' ? '#fdf8e8' : '#f5f5f5'}">
+          <div class="leg-badge" style="background:${modeColor}">${index + 1}</div>
+          <div class="leg-info">
+              <div class="leg-route">${esc(leg.start_location)} → ${esc(leg.end_location)}</div>
+              <div class="leg-dates">${formatDate(leg.start_date)} – ${formatDate(leg.end_date)} · ${days} Tage</div>
+          </div>
+          <div class="leg-controls">
+              <div class="mode-toggle">
+                  <button class="mode-btn ${leg.mode === 'transit' ? 'active' : ''}"
+                      onclick="setLegMode(${index}, 'transit')" style="border-color:${modeColor}">Transit</button>
+                  <button class="mode-btn ${leg.mode === 'explore' ? 'active' : ''}"
+                      onclick="setLegMode(${index}, 'explore')" style="border-color:${modeColor}">Erkunden</button>
+              </div>
+              ${!isFirst && !isLast ? `<button class="leg-delete-btn" onclick="removeLeg(${index})" aria-label="Schnitt entfernen">×</button>` : ""}
+          </div>
+      </div>
+      <div class="leg-card-body">
+          ${transitContent}
+          ${exploreContent}
+      </div>
+  </div>`;
+}
+
+function addLeg() {
+  const lastLeg = S.legs[S.legs.length - 1];
+  const midpoint = prompt("Trennpunkt eingeben (Stadt/Ort):");
+  if (!midpoint || !midpoint.trim()) return;
+
+  const boundary = midpoint.trim();
+  const totalDays = dateDiffDays(S.legs[0].start_date, lastLeg.end_date);
+  const daysPerLeg = Math.floor(totalDays / (S.legs.length + 1));
+
+  // Adjust existing last leg end date and location
+  const newBoundaryDate = addDays(lastLeg.start_date, daysPerLeg);
+  lastLeg.end_date = newBoundaryDate;
+  lastLeg.end_location = boundary;
+
+  // Insert new leg
+  const newLeg = {
+    leg_id: `leg-${S.legs.length}`,
+    start_location: boundary,
+    end_location: document.getElementById('main-destination')?.value.trim() || '',
+    start_date: newBoundaryDate,
+    end_date: S.legs[0].end_date !== newBoundaryDate
+      ? (S.legs.length > 1 ? S.legs[S.legs.length - 1].end_date : document.getElementById('end-date')?.value || '')
+      : document.getElementById('end-date')?.value || '',
+    mode: "transit",
+    via_points: [],
+    zone_bbox: null,
+    zone_guidance: [],
+  };
+  // Restore original end_date on last leg before splice
+  const originalEndDate = document.getElementById('end-date')?.value || '';
+  newLeg.end_date = originalEndDate;
+
+  S.legs.push(newLeg);
+  // Re-number leg_ids
+  S.legs.forEach((leg, i) => { leg.leg_id = `leg-${i}`; });
+  renderLegs();
+}
+
+function removeLeg(index) {
+  if (index === 0 || index === S.legs.length - 1) return;
+  S.legs.splice(index, 1);
+  // Reconnect: the leg before the removed one should end where the leg after it starts
+  if (index < S.legs.length) {
+    S.legs[index - 1].end_location = S.legs[index].start_location;
+    S.legs[index - 1].end_date = S.legs[index].start_date;
+  }
+  // Re-number leg_ids
+  S.legs.forEach((leg, i) => { leg.leg_id = `leg-${i}`; });
+  renderLegs();
+}
+
+function setLegMode(index, mode) {
+  S.legs[index].mode = mode;
+  if (mode === "explore" && !S.legs[index].zone_bbox) {
+    S.legs[index].zone_bbox = null;
+  }
+  renderLegs();
+  if (mode === "explore") {
+    setTimeout(() => initZoneMap(index), 50);
+  }
+}
+
+function handleViaInput(event, legIndex) {
+  if (event.key === "Enter" || event.key === ",") {
+    event.preventDefault();
+    const val = event.target.value.trim().replace(/,$/, "");
+    if (val) {
+      S.legs[legIndex].via_points.push({ location: val, fixed_date: null, notes: null });
+      event.target.value = "";
+      renderLegs();
+    }
+  }
+}
+
+function removeViaPoint(legIndex, location) {
+  S.legs[legIndex].via_points = S.legs[legIndex].via_points.filter(vp => vp.location !== location);
+  renderLegs();
+}
+
+function updateZoneLabel(legIndex, label) {
+  if (S.legs[legIndex].zone_bbox) {
+    S.legs[legIndex].zone_bbox.zone_label = label;
+  } else {
+    S.legs[legIndex].zone_bbox = { north: 0, south: 0, east: 0, west: 0, zone_label: label };
+  }
+}
+
+function initZoneMap(legIndex) {
+  const containerId = `zone-map-${legIndex}`;
+  const container = document.getElementById(containerId);
+  if (!container || container._leaflet_id) return; // already initialized
+
+  const leg = S.legs[legIndex];
+  const map = L.map(containerId).setView([48.0, 10.0], 4);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap"
+  }).addTo(map);
+
+  let rect = null;
+
+  // Restore existing bbox if present
+  if (leg.zone_bbox && leg.zone_bbox.north) {
+    const bounds = [[leg.zone_bbox.south, leg.zone_bbox.west],
+                    [leg.zone_bbox.north, leg.zone_bbox.east]];
+    rect = L.rectangle(bounds, { color: "#e0b840", weight: 2, fillOpacity: 0.15 }).addTo(map);
+    map.fitBounds(bounds);
+  }
+
+  // Draw bbox on drag using Leaflet.draw
+  if (typeof L.Draw !== 'undefined') {
+    const drawControl = new L.Draw.Rectangle(map, { shapeOptions: { color: "#e0b840" } });
+    map.on(L.Draw.Event.CREATED, async (e) => {
+      if (rect) rect.remove();
+      rect = e.layer.addTo(map);
+      const b = e.layer.getBounds();
+      const bbox = {
+        north: b.getNorth(), south: b.getSouth(),
+        east: b.getEast(), west: b.getWest(),
+        zone_label: S.legs[legIndex].zone_bbox?.zone_label || ""
+      };
+      S.legs[legIndex].zone_bbox = bbox;
+      // Auto-geocode zone label
+      const center = b.getCenter();
+      const label = await geocodeZoneLabel(center.lat, center.lng);
+      if (label) {
+        S.legs[legIndex].zone_bbox.zone_label = label;
+        const labelInput = document.getElementById(`zone-label-${legIndex}`);
+        if (labelInput) labelInput.value = label;
+      }
     });
+    drawControl.enable();
+  }
+}
+
+async function geocodeZoneLabel(lat, lon) {
+  try {
+    const resp = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+      { headers: { "Accept-Language": "de" } }
+    );
+    const data = await resp.json();
+    return data.address?.country || data.address?.state || null;
+  } catch {
+    return null;
   }
 }
 
@@ -497,10 +692,7 @@ function buildPayload() {
     : 7;
 
   return {
-    start_location:   document.getElementById('start-location').value.trim(),
-    main_destination: document.getElementById('main-destination').value.trim(),
-    start_date:       sd,
-    end_date:         ed,
+    legs:             S.legs,
     total_days,
     adults:           S.adults,
     children:         S.children,
@@ -522,13 +714,6 @@ function buildPayload() {
     budget_accommodation_pct: parseInt(document.getElementById('budget-acc-pct')?.value)  || 60,
     budget_food_pct:          parseInt(document.getElementById('budget-food-pct')?.value) || 20,
     budget_activities_pct:    parseInt(document.getElementById('budget-act-pct')?.value)  || 20,
-    via_points: viaPoints
-      .filter(vp => vp.location.trim())
-      .map(vp => ({
-        location: vp.location.trim(),
-        fixed_date: vp.hasDate && vp.date ? vp.date : null,
-        notes: vp.notes || null,
-      })),
   };
 }
 
@@ -550,7 +735,7 @@ function renderSummary() {
       <div class="summary-item"><span class="summary-label">Budget</span><span>CHF ${(p.budget_chf || 0).toLocaleString('de-CH')} (Unterkunft ${p.budget_accommodation_pct}% / Essen ${p.budget_food_pct}% / Aktivitäten ${p.budget_activities_pct}%)</span></div>
       <div class="summary-item"><span class="summary-label">Max. Fahrzeit</span><span>${p.max_drive_hours_per_day}h/Tag</span></div>
       ${p.mandatory_activities.length ? `<div class="summary-item"><span class="summary-label">Pflichtaktivitäten</span><span>${p.mandatory_activities.map(a => esc(a.name)).join(', ')}</span></div>` : ''}
-      ${p.via_points.length ? `<div class="summary-item"><span class="summary-label">Via-Punkte</span><span>${p.via_points.map(vp => esc(vp.location)).join(' → ')}</span></div>` : ''}
+      ${p.legs.length > 1 ? `<div class="summary-item"><span class="summary-label">Reiseschnitte</span><span>${p.legs.map(l => esc(l.start_location) + ' → ' + esc(l.end_location) + ' (' + l.mode + ')').join(' | ')}</span></div>` : ''}
     </div>
   `;
 }
@@ -565,6 +750,8 @@ async function submitTrip() {
   btn.innerHTML = '<span class="btn-spinner"></span> Plane Reise…';
 
   try {
+    // Ensure legs are initialized if user skipped Step 3
+    if (S.legs.length === 0) initLegs();
     const payload = buildPayload();
 
     // 1. Pre-init job so we can open SSE before Claude starts
@@ -600,7 +787,7 @@ async function submitTrip() {
 
 function saveFormToCache() {
   const p = buildPayload();
-  lsSet(LS_FORM, { ...p, viaPoints, travelStyles: S.travelStyles, children: S.children, mandatoryTags: S.mandatoryTags });
+  lsSet(LS_FORM, { ...p, travelStyles: S.travelStyles, children: S.children, mandatoryTags: S.mandatoryTags });
   updateQuickSubmitBar();
 }
 
@@ -676,9 +863,8 @@ function restoreFormFromCache() {
     document.getElementById('adults-count').textContent = S.adults;
   }
 
-  if (cached.viaPoints) {
-    viaPoints = cached.viaPoints;
-    renderViaPoints();
+  if (cached.legs) {
+    S.legs = cached.legs;
   }
 
   updateBudgetPreview();
@@ -698,6 +884,7 @@ function clearAppData() {
 
   // Reset runtime state (keep form-related fields)
   S.step = 1;
+  S.legs = [];
   S.jobId = null;
   S.logs = [];
   S.apiCalls = 0;

@@ -1878,3 +1878,117 @@ strong.req-keyword {
   padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
+
+/* === Legs Builder === */
+.leg-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+.leg-card-header {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.leg-badge {
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.leg-info {
+    flex: 1;
+}
+
+.leg-route { font-weight: 600; font-size: 14px; }
+.leg-dates { font-size: 12px; color: #666; }
+
+.leg-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mode-toggle {
+    display: flex;
+    border-radius: 20px;
+    overflow: hidden;
+    font-size: 12px;
+}
+
+.mode-btn {
+    border: 1.5px solid #4a90d9;
+    background: white;
+    color: #4a90d9;
+    padding: 4px 12px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.mode-btn.active {
+    background: #4a90d9;
+    color: white;
+}
+
+.leg-delete-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.leg-card-body {
+    padding: 14px 18px;
+    border-top: 1px solid #eee;
+}
+
+.zone-map-container { width: 100%; }
+
+.zone-label-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.input-sm {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 13px;
+    width: 180px;
+}
+
+.form-label-sm {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.leg-via-points { margin-bottom: 4px; }
+
+.tag-input-field {
+    border: none;
+    outline: none;
+    font-size: 13px;
+    min-width: 140px;
+    flex: 1;
+    padding: 2px 4px;
+}
