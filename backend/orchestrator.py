@@ -1,13 +1,20 @@
 import asyncio
+import json
+import os
+from typing import Optional
 from models.travel_request import TravelRequest
 from agents.route_architect import RouteArchitectAgent
+from agents.explore_zone_agent import ExploreZoneAgent
 from agents.activities_agent import ActivitiesAgent
 from agents.restaurants_agent import RestaurantsAgent
 from agents.day_planner import DayPlannerAgent
 from agents.travel_guide_agent import TravelGuideAgent
 from agents.trip_analysis_agent import TripAnalysisAgent
+from models.trip_leg import ExploreZoneAnalysis, ExploreStop
 from utils.debug_logger import debug_logger, LogLevel
 from utils.image_fetcher import fetch_unsplash_images
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
 
 class TravelPlannerOrchestrator:
@@ -16,32 +23,150 @@ class TravelPlannerOrchestrator:
         self.request = request
         self.job_id = job_id
 
+    def _get_store(self):
+        try:
+            from main import redis_client
+            return redis_client
+        except Exception:
+            import redis as redis_lib
+            return redis_lib.from_url(REDIS_URL, decode_responses=True)
+
+    def _load_job(self) -> dict:
+        store = self._get_store()
+        raw = store.get(f"job:{self.job_id}")
+        return json.loads(raw) if raw else {}
+
+    def _save_job(self, job: dict):
+        store = self._get_store()
+        store.setex(f"job:{self.job_id}", 86400, json.dumps(job))
+
     async def progress(self, event_type: str, agent_id, data: dict, percent: int = 0):
         await debug_logger.push_event(self.job_id, event_type, agent_id, data, percent)
 
-    async def run(self, pre_built_stops=None, pre_selected_accommodations=None, pre_all_accommodation_options=None) -> dict:
+    async def run(self, pre_built_stops=None, pre_selected_accommodations=None,
+                  pre_all_accommodation_options=None) -> dict:
         req = self.request
         job_id = self.job_id
 
         await debug_logger.log(LogLevel.INFO, "Orchestrator startet", job_id=job_id)
 
-        # Phase 1: Route
-        if pre_built_stops:
+        # Phase 1: Route (leg-sequential)
+        if pre_built_stops and len(pre_built_stops) > 0:
+            # Resume after all legs completed — go straight to research
             stops = pre_built_stops
-            # Assign arrival_day if missing
             day = 1
             for stop in stops:
                 if not stop.get("arrival_day"):
                     stop["arrival_day"] = day
                 day += 1 + stop.get("nights", req.min_nights_per_stop)
         else:
-            await debug_logger.log(LogLevel.AGENT, "RouteArchitect wird gestartet", job_id=job_id)
-            route = await RouteArchitectAgent(req, job_id).run()
-            stops = route.get("stops", [])
+            stops = await self._run_all_legs()
+            if stops is None:
+                # Paused waiting for zone guidance — job state saved, return sentinel
+                return {}
 
         await self.progress("route_ready", "route_architect", {"stops": stops}, 10)
 
-        # Phase 2: Research
+        # Phase 2–4: Research + Day Planning + Analysis (unchanged)
+        return await self._run_research_and_planning(
+            stops, pre_selected_accommodations, pre_all_accommodation_options
+        )
+
+    async def _run_all_legs(self) -> Optional[list]:
+        """Runs all legs sequentially. Returns None if paused mid-explore."""
+        req = self.request
+        job = self._load_job()
+        all_stops = list(job.get("selected_stops", []))
+
+        for leg_index in range(job.get("leg_index", 0), len(req.legs)):
+            leg = req.legs[leg_index]
+            if leg.mode == "transit":
+                leg_stops = await self._run_transit_leg(leg, leg_index)
+            else:
+                leg_stops = await self._run_explore_leg(leg, leg_index)
+                if leg_stops is None:
+                    return None  # Paused for zone guidance
+
+            all_stops.extend(leg_stops)
+
+            # Advance leg_index in Redis
+            job = self._load_job()
+            job["leg_index"] = leg_index + 1
+            job["current_leg_mode"] = req.legs[leg_index + 1].mode if leg_index + 1 < len(req.legs) else None
+            # Reset per-leg state
+            job["segment_index"] = 0
+            job["segment_stops"] = []
+            job["explore_phase"] = None
+            job["explore_circuit"] = []
+            job["explore_circuit_position"] = 0
+            self._save_job(job)
+
+            await debug_logger.push_event(
+                self.job_id, "leg_complete", None,
+                {"leg_id": leg.leg_id, "leg_index": leg_index, "mode": leg.mode}
+            )
+
+        return all_stops
+
+    async def _run_transit_leg(self, leg, leg_index: int) -> list:
+        """Transit leg: use RouteArchitectAgent (unchanged logic)."""
+        req = self.request
+        job = self._load_job()
+        existing_stops = job.get("segment_stops", [])
+
+        if existing_stops:
+            return existing_stops   # Already built interactively
+
+        await debug_logger.log(LogLevel.AGENT, f"RouteArchitect für Leg {leg_index}", job_id=self.job_id)
+        route = await RouteArchitectAgent(req, self.job_id).run()
+        return route.get("stops", [])
+
+    async def _run_explore_leg(self, leg, leg_index: int) -> Optional[list]:
+        """Explore leg: ExploreZoneAgent two-pass, then interactive selection."""
+        job = self._load_job()
+        explore_phase = job.get("explore_phase")
+        agent = ExploreZoneAgent(self.request, self.job_id)
+
+        if explore_phase is None:
+            # First pass: zone analysis + guided questions
+            first_pass = await agent.run_first_pass(leg_index)
+            job = self._load_job()
+            job["explore_zone_analysis"] = first_pass.model_dump()
+            job["explore_phase"] = "awaiting_guidance"
+            job["status"] = "awaiting_zone_guidance"
+            self._save_job(job)
+            await debug_logger.push_event(
+                self.job_id, "explore_zone_questions", None,
+                {"questions": first_pass.guided_questions, "leg_id": leg.leg_id}
+            )
+            return None  # Pause
+
+        if explore_phase == "circuit_ready":
+            # Second pass: generate circuit from guidance answers
+            job = self._load_job()
+            first_pass = ExploreZoneAnalysis(**job["explore_zone_analysis"])
+            guidance = leg.zone_guidance
+            circuit, warnings = await agent.run_second_pass(leg_index, first_pass, guidance)
+            job = self._load_job()
+            job["explore_circuit"] = [s.model_dump() for s in circuit]
+            job["explore_phase"] = "selecting_stops"
+            self._save_job(job)
+            await debug_logger.push_event(
+                self.job_id, "explore_circuit_ready", None,
+                {"circuit": [s.model_dump() for s in circuit],
+                 "warnings": warnings, "leg_id": leg.leg_id}
+            )
+
+        # Interactive stop selection (same as transit — user selects from options)
+        job = self._load_job()
+        return job.get("selected_stops", [])
+
+    async def _run_research_and_planning(self, stops, pre_selected_accommodations,
+                                          pre_all_accommodation_options) -> dict:
+        """Unchanged research + day planning phase."""
+        req = self.request
+        job_id = self.job_id
+
         if pre_selected_accommodations:
             all_accommodations = pre_selected_accommodations
         else:
@@ -57,30 +182,24 @@ class TravelPlannerOrchestrator:
         async def research_activities(stop):
             sid = stop.get("id")
             region = stop.get("region", "")
-            await debug_logger.push_event(job_id, "stop_research_started", None, {
-                "stop_id": sid, "region": region, "section": "activities"
-            })
+            await debug_logger.push_event(job_id, "stop_research_started", None,
+                                           {"stop_id": sid, "region": region, "section": "activities"})
             result = await ActivitiesAgent(req, job_id).run_stop(stop)
             act_map[sid] = result
-            await debug_logger.push_event(job_id, "activities_loaded", None, {
-                "stop_id": sid,
-                "region": region,
-                "activities": result.get("top_activities", []),
-            })
+            await debug_logger.push_event(job_id, "activities_loaded", None,
+                                           {"stop_id": sid, "region": region,
+                                            "activities": result.get("top_activities", [])})
 
         async def research_restaurants(stop):
             sid = stop.get("id")
             region = stop.get("region", "")
-            await debug_logger.push_event(job_id, "stop_research_started", None, {
-                "stop_id": sid, "region": region, "section": "restaurants"
-            })
+            await debug_logger.push_event(job_id, "stop_research_started", None,
+                                           {"stop_id": sid, "region": region, "section": "restaurants"})
             result = await RestaurantsAgent(req, job_id).run_stop(stop)
             rest_map[sid] = result
-            await debug_logger.push_event(job_id, "restaurants_loaded", None, {
-                "stop_id": sid,
-                "region": region,
-                "restaurants": result.get("restaurants", []),
-            })
+            await debug_logger.push_event(job_id, "restaurants_loaded", None,
+                                           {"stop_id": sid, "region": region,
+                                            "restaurants": result.get("restaurants", [])})
 
         async def research_location_images(stop):
             sid = stop.get("id")
