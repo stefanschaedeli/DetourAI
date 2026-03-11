@@ -2,21 +2,44 @@
 
 > An AI-powered road trip planner that builds a personalised day-by-day travel guide through an interactive, multi-agent conversation with Claude.
 
+[![Current Version](https://img.shields.io/badge/version-v6.1.0-blue)](#releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](#license)
+[![Stack](https://img.shields.io/badge/stack-FastAPI%20·%20Vanilla%20JS%20·%20Redis%20·%20Docker-orange)](#tech-stack)
+[![Agents](https://img.shields.io/badge/AI%20agents-10%20Claude%20agents-purple)](#ai-agents)
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [AI Agents](#ai-agents)
+- [API Reference](#api-reference)
+- [Using the App](#using-the-app)
+- [Local Development](#local-development)
+- [Configuration](#configuration)
+- [Project Structure](#project-structure)
+- [Releases](#releases)
+- [License](#license)
+
 ---
 
 ## Overview
 
-Travelman lets you plan a complete road trip in minutes. You describe where you want to go and what matters to you; seven specialised Claude agents then collaboratively research the route, stops, accommodations, activities, restaurants, and driving schedule — and hand you back a structured, budget-aware travel guide.
+Travelman lets you plan a complete road trip in minutes. You describe where you want to go and what matters to you; ten specialised Claude agents then collaboratively research the route, stops, accommodations, activities, restaurants, and driving schedule — and hand you back a structured, budget-aware travel guide.
 
 ```
-You fill a 6-step form  (or hit "Reise jetzt planen" from any step)
+You fill a 5-step form  →  define trip legs (Transit / Explore)
         ↓
-AI proposes stop options — you pick the ones you want
-  (if the route segment is too short: DetourOptionsAgent suggests scenic detours)
+AI proposes stop options per leg — you pick the ones you want
+  (short segments: DetourOptionsAgent suggests scenic detours)
+  (explore legs: ExploreZoneAgent discovers hidden gems in a zone)
         ↓
 AI finds 3 accommodation options per stop — you choose
         ↓
-6 agents run in parallel to research every detail
+10 agents run to research every detail
         ↓
 Day-by-day travel guide  ·  PDF export  ·  PPTX export
 ```
@@ -25,32 +48,93 @@ Day-by-day travel guide  ·  PDF export  ·  PPTX export
 
 ## Features
 
-- **Interactive route building** — Claude suggests stops segment by segment; you tap the ones you want
-- **Geometry-aware stop placement** — before each agent call, OSRM measures the full remaining distance and tells the agent the ideal per-etappe distance; stops are placed evenly along the route, never bunched at start or end
-- **Detour fallback** — when a route segment is too short for classic in-between stops (proximity filter removes all candidates), DetourOptionsAgent automatically proposes scenic side-trip options with a blue info banner in the UI
-- **"Direkt weiterfahren" option** — every route step also offers a skip card; choosing it skips the intermediate stop and adds the freed nights to the next destination
-- **Only real towns** — StopOptionsFinder is instructed to always return concrete towns/cities, never regions, mountain ranges or country names
-- **Drive-limit enforcement** — every option gets an OSRM-verified drive time; options that exceed your limit are flagged with an orange warning badge
-- **Route-adjust modal** — when *all* options exceed the limit a banner appears; one click opens a modal to either add extra days or insert a new via-point, re-running the agent automatically
-- **Configurable proximity filter** — sliders in Step 1 let you set the minimum distance an option must keep from the trip start and from the segment target (as % of segment length); prevents stops bunching at either end
-- **Rundreise (round-trip) mode** — when you have much more time than the direct route needs, the app offers a Rundreise modal; in this mode StopOptionsFinder proposes deliberate detours (left, right, adventure) instead of stepping toward the target
-- **Leaflet map in route builder** — live map with start pin, segment-target pin, and numbered option pins; dashed branch lines visualise each alternative; marker click scrolls to the option card
-- **"Neu berechnen" bar** — free-text field to steer the next suggestion (e.g. "lieber Meeresküste") and re-run the agent with a custom instruction
-- **Rich stop metadata** — options include population, altitude, language, climate note, must-see highlights, and family-friendliness
-- **Parallel accommodation research** — budget / comfort / premium options per stop loaded simultaneously; accommodation type derived from user preference (not hardcoded "hotel")
-- **Seven specialised AI agents** — route architect, stop finder, detour finder, accommodation researcher, activities, restaurants, day planner
-- **Real driving times** — OSRM replaces AI estimates with actual road distances and kilometres
-- **Agent-supplied coordinates** — StopOptionsFinder provides WGS84 lat/lon for every option; Nominatim result takes priority, agent coords serve as guaranteed fallback so all pins always appear
-- **Live progress overlay** — a semi-transparent overlay with a spinner log appears during all three wait phases (route building, accommodation search, trip planning); each step gets its own status line that flips to a green checkmark when done
+### Trip Planning
+- **Leg-based trip architecture** — build trips from Transit legs (A → B routing) and Explore legs (discover a geographic zone)
+- **Interactive route building** — Claude suggests stops segment by segment; you pick the ones you want
+- **Explore mode** — define a zone on the map and let ExploreZoneAgent discover anchor points, scenic spots, and hidden gems via a guided questionnaire
+- **Geometry-aware stop placement** — OSRM measures the full remaining distance; stops are placed evenly along the route
+- **Detour fallback** — when a segment is too short for classic stops, DetourOptionsAgent proposes scenic side-trips
+- **"Direkt weiterfahren" option** — skip a stop and add freed nights to the next destination
+- **Rundkurs display** — explore legs show a circular route through discovered stops
+
+### Route Quality
+- **Only real towns** — StopOptionsFinder always returns concrete towns/cities, never regions
+- **Drive-limit enforcement** — OSRM-verified drive times; options exceeding the limit get a warning badge
+- **Route-adjust modal** — when all options exceed the limit, one click adds days or inserts a via-point
+- **Configurable proximity filter** — set minimum distance from start/target to prevent stop bunching
+- **Real driving times** — OSRM replaces AI estimates with actual road distances
+
+### Accommodation & Budget
+- **Parallel accommodation research** — budget / comfort / premium options per stop loaded simultaneously
+- **Configurable budget split** — set % allocation for accommodation, food, and activities with live CHF preview
+- **Budget tracking** — remaining budget updates live after every accommodation selection
+
+### AI & Agents
+- **10 specialised AI agents** — route architect, stop finder, detour finder, explore zone, accommodation researcher, activities, restaurants, day planner, travel guide, trip analysis
 - **Real-time progress** — Server-Sent Events stream every agent action to the browser
-- **Configurable budget split** — set the exact % allocation for accommodation, food, and activities via sliders with live CHF preview; validated to sum to 100 %
-- **Min/max nights per stop** — control how long the agent stays at each location
-- **Settings menu** — gear icon in the header exposes max activities and max restaurants per stop without cluttering the form
-- **Sticky "Reise jetzt planen" bar** — a persistent footer button appears as soon as the required fields (start, destination, dates) are filled; lets you skip straight to planning from any form step
-- **Interactive overview map in travel guide** — full route polyline (start → all stops → destination) with clickable pins; clicking a pin switches to the Stops & Details tab and scrolls to that stop's card
-- **Export** — download the final plan as PDF or PPTX
+- **Live progress overlay** — spinner log with green checkmarks during all wait phases
+
+### Output & Persistence
+- **Travel guide with 4 tabs** — overview map, stops & details, day-by-day plan, budget breakdown
+- **Export** — download as PDF or PPTX
+- **Trip analysis** — AI-powered post-planning analysis with requirement tags and keyword highlighting
+- **Saved trips** — SQLite persistence with rename, star rating (0–5), replan, and delete
 - **Resume** — browser-local state so you can pick up where you left off
-- **Swiss-first** — all output in German, all prices in CHF
+
+### UX & Design
+- **Travel-Forward design** — sky-blue + adventure-orange branded UI
+- **Lucide SVG icons** — no emoji, consistent icon set throughout
+- **Full accessibility** — focus rings, aria labels, screen-reader compatibility, keyboard navigation
+- **Mobile-responsive** — dynamic viewport height, visible step labels on small screens
+- **Collapsible stops** — sidebar navigation and calendar tab in the travel guide
+- **Google Maps integration** — Places API photos, interactive maps, photo strips with lightbox
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) >= 24
+- An [Anthropic API key](https://console.anthropic.com/)
+
+### 1 — Clone & configure
+
+```bash
+git clone https://github.com/stefanschaedeli/travelman3.git
+cd travelman3
+cp backend/.env.example backend/.env
+```
+
+Edit `backend/.env`:
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...   # required
+TEST_MODE=true                  # true = cheap haiku; false = opus/sonnet
+REDIS_URL=redis://redis:6379
+```
+
+### 2 — Start
+
+```bash
+docker compose up --build
+```
+
+| Container | Role | Port |
+|-----------|------|------|
+| `redis` | Job state store | 6379 (internal) |
+| `backend` | FastAPI app | 8000 (internal) |
+| `celery` | Background workers | — |
+| `frontend` | Nginx + static files | **80** |
+
+### 3 — Open
+
+Navigate to **http://localhost**
+
+```bash
+docker compose down             # stop everything
+docker compose logs -f backend  # follow backend logs
+```
 
 ---
 
@@ -59,20 +143,24 @@ Day-by-day travel guide  ·  PDF export  ·  PPTX export
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Browser  (Vanilla JS, no build step)                   │
-│  6-step form → route builder → acc grid → guide tabs    │
+│  5-step form → legs builder → route builder →           │
+│  acc grid → guide tabs                                  │
 └──────────────────┬──────────────────────────────────────┘
                    │  HTTP + SSE  (via Nginx proxy)
 ┌──────────────────▼──────────────────────────────────────┐
-│  FastAPI  (12 endpoints)                                 │
+│  FastAPI  (25+ endpoints)                                │
 │  ┌──────────────────────────────────────────────────┐   │
 │  │  TravelPlannerOrchestrator                       │   │
 │  │  ├── RouteArchitectAgent      (claude-opus-4-5)  │   │
 │  │  ├── StopOptionsFinderAgent   (claude-sonnet-4-5)│   │
 │  │  ├── DetourOptionsAgent       (claude-haiku-4-5) │   │
+│  │  ├── ExploreZoneAgent         (claude-sonnet-4-5)│   │
 │  │  ├── AccommodationResearcher  (claude-sonnet-4-5)│   │
 │  │  ├── ActivitiesAgent          (claude-sonnet-4-5)│   │
 │  │  ├── RestaurantsAgent         (claude-sonnet-4-5)│   │
-│  │  └── DayPlannerAgent          (claude-opus-4-5)  │   │
+│  │  ├── DayPlannerAgent          (claude-opus-4-5)  │   │
+│  │  ├── TravelGuideAgent         (claude-sonnet-4-5)│   │
+│  │  └── TripAnalysisAgent        (claude-sonnet-4-5)│   │
 │  └──────────────────────────────────────────────────┘   │
 └──────────┬──────────────────────┬───────────────────────┘
            │                      │
@@ -83,7 +171,7 @@ Day-by-day travel guide  ·  PDF export  ·  PPTX export
     └─────────────┘        └─────────────┘
 ```
 
-### Tech stack
+### Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -91,291 +179,150 @@ Day-by-day travel guide  ·  PDF export  ·  PPTX export
 | Frontend | Vanilla JS (ES2020), HTML5, CSS3 |
 | Real-time | Server-Sent Events (sse-starlette) |
 | Job queue | Redis + Celery |
-| AI | Anthropic SDK — 7 Claude agents |
+| AI | Anthropic SDK — 10 Claude agents |
+| Maps | Google Maps JS SDK + Places API |
 | Routing | OSRM (open-source road routing) |
 | Geocoding | OpenStreetMap Nominatim |
+| Icons | Lucide SVG |
 | Export | fpdf2 (PDF), python-pptx (PPTX) |
 | Infra | Docker Compose, Nginx |
+
+### Data Stores
+
+| Store | Technology | Lifetime | Content |
+|-------|-----------|----------|---------|
+| **Job state** | Redis | 24h TTL | Live planning sessions, SSE queues, agent results |
+| **Travel history** | SQLite (`data/travels.db`) | Permanent | Saved trips with metadata and full plan JSON |
 
 ---
 
 ## AI Agents
 
-Travelman uses seven specialised Claude agents. Each agent has a single, clearly scoped task, communicates exclusively via structured JSON, and is orchestrated by `TravelPlannerOrchestrator`.
+Travelman uses ten specialised Claude agents. Each has a single, clearly scoped task, communicates exclusively via structured JSON, and is orchestrated by `TravelPlannerOrchestrator`.
+
+### Agent Model Assignments
+
+| Agent | Production | TEST_MODE=true |
+|-------|-----------|----------------|
+| RouteArchitectAgent | claude-opus-4-5 | claude-haiku-4-5 |
+| StopOptionsFinderAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
+| DetourOptionsAgent | claude-haiku-4-5 | claude-haiku-4-5 |
+| ExploreZoneAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
+| AccommodationResearcherAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
+| ActivitiesAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
+| RestaurantsAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
+| DayPlannerAgent | claude-opus-4-5 | claude-haiku-4-5 |
+| TravelGuideAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
+| TripAnalysisAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
+
+### Agent Details
+
+**RouteArchitectAgent** (`claude-opus-4-5`) — Analyses the full trip and produces a high-level multi-segment route plan: which cities to pass through, how many days per segment, and the logical order of all waypoints. Uses Opus for its ability to reason across the entire trip simultaneously.
+
+**StopOptionsFinderAgent** (`claude-sonnet-4-5`) — For each route segment, proposes 3 stop options: `direct` (shortest path), `scenic` (landscape-first), and `cultural` (historically interesting). In explore mode, types become `anker` (anchor point), `landschaft` (scenic), and `geheimtipp` (hidden gem). Streams partial JSON so cards appear incrementally. All options are OSRM-enriched with real drive times.
+
+**DetourOptionsAgent** (`claude-haiku-4-5`) — Fallback agent for segments too short for classic stops. Proposes 3 deliberate side-trip destinations off the direct route. No proximity filter applied — detours may be close to departure. Always uses Haiku as it is a lightweight fallback.
+
+**ExploreZoneAgent** (`claude-sonnet-4-5`) — Two-pass workflow for explore legs. First pass: generates clarifying questions about the user's interests for the zone. Second pass: uses the answers to discover stops categorised as anchor points, scenic spots, and hidden gems within the defined zone bbox.
+
+**AccommodationResearcherAgent** (`claude-sonnet-4-5`) — Finds 3 accommodation options per stop at budget / comfort / premium tiers. Type matches user preference (hotel, camping, hostel, apartment, Airbnb). Tracks remaining budget across all stops.
+
+**ActivitiesAgent** (`claude-sonnet-4-5`) — Researches activities and attractions per stop, tailored to travel styles and group composition. Wikipedia enrichment adds cultural context for the day planner.
+
+**RestaurantsAgent** (`claude-sonnet-4-5`) — Recommends restaurants per stop matching travel styles and food budget, with cuisine type, price range, and a recommended dish.
+
+**DayPlannerAgent** (`claude-opus-4-5`) — Assembles the day-by-day travel plan from all agent outputs: schedules driving legs, distributes activities, ensures rest days, and writes narrative summaries. Uses Opus for cross-trip reasoning.
+
+**TravelGuideAgent** (`claude-sonnet-4-5`) — Generates a narrative travel guide with storytelling descriptions for each stop and day.
+
+**TripAnalysisAgent** (`claude-sonnet-4-5`) — Post-planning analysis that evaluates how well the generated plan meets the original requirements, with requirement tags and keyword highlighting.
 
 ---
 
-### RouteArchitectAgent — `claude-opus-4-5`
+## API Reference
 
-**What it does:** Analyses the full trip (start, destination, via-points, duration, travel styles, budget) and produces a high-level multi-segment route plan — which cities to pass through, how many days per segment, and the logical order of all waypoints.
+### Planning Flow
 
-**When it runs:** Once at the very start of a planning job, before any stop selection.
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/plan-trip` | Submit form, receive first stop options |
+| `POST` | `/api/select-stop/{job_id}` | Choose a stop, receive next options |
+| `POST` | `/api/recompute-options/{job_id}` | Re-run StopOptionsFinder with custom instructions |
+| `POST` | `/api/patch-job/{job_id}` | Adjust job (add days or via-point) |
+| `POST` | `/api/confirm-route/{job_id}` | Confirm route, begin accommodation loading |
+| `POST` | `/api/start-accommodations/{job_id}` | Trigger parallel accommodation fetch |
+| `POST` | `/api/select-accommodation/{job_id}` | Select accommodation for one stop |
+| `POST` | `/api/confirm-accommodations/{job_id}` | Confirm all accommodation selections |
+| `POST` | `/api/start-planning/{job_id}` | Launch full plan generation |
+| `POST` | `/api/answer-explore-questions` | Submit answers to explore zone questionnaire |
+| `GET` | `/api/progress/{job_id}` | SSE stream of events and debug logs |
+| `GET` | `/api/result/{job_id}` | Fetch completed travel plan (JSON) |
+| `POST` | `/api/generate-output/{job_id}/{type}` | Generate PDF or PPTX |
+| `GET` | `/health` | Health check + active job count |
 
-**Input:** Full `TravelRequest` (start, destination, via-points, dates, styles, adults, children, budget).
+### Travel History (SQLite)
 
-**Output:** A JSON route plan with ordered segments, estimated days per segment, and contextual notes the downstream agents use as a shared reference.
-
-**Why Opus:** Route architecture requires understanding the whole trip at once — tradeoffs between segments, seasonal factors, geographic logic — so it uses the most capable model.
-
----
-
-### StopOptionsFinderAgent — `claude-sonnet-4-5`
-
-**What it does:** For each route segment, proposes exactly 3 concrete intermediate stop options. In standard mode the three types are `direct` (shortest path toward the target), `scenic` (landscape-first detour), and `cultural` (historically or culturally interesting alternative). In Rundreise mode the types become `umweg_links`, `umweg_rechts`, and `abenteuer`.
-
-**When it runs:** Interactively — once per stop selection round. Also re-runs when the user clicks "Neu berechnen" with a custom instruction.
-
-**Input:** Current position, segment target, travel styles, remaining days, OSRM geometry data (total km, ideal km per etappe, minimum distances from origin and target), and optional extra instructions.
-
-**Streaming:** Streams partial JSON so each option card appears in the browser as soon as it is complete, not after all three are done.
-
-**OSRM enrichment:** After the agent responds, every option is geocoded (Nominatim) and OSRM-routed; the real drive hours and km replace the agent's estimates. Options that are too close to the trip origin or the segment target are silently filtered; if fewer than 3 remain, the agent is retried once with a stronger distance hint.
-
-**Output:** 3 option objects with region, country, lat/lon, drive_hours, drive_km, nights, highlights, teaser, population, altitude, language, climate note, must-see list.
-
----
-
-### DetourOptionsAgent — `claude-haiku-4-5`
-
-**What it does:** A fallback agent that activates automatically when StopOptionsFinderAgent produces 0 valid options after its retry (this happens on very short route segments where the proximity filter eliminates all candidates). Instead of showing an empty container, it proposes 3 deliberate *side-trip* destinations that lie off the direct line — `umweg_1` (left/west), `umweg_2` (right/east), and `umweg_3` (surprising third direction).
-
-**When it runs:** Only when both passes of StopOptionsFinder return 0 valid stops. Typical trigger: a segment shorter than ~100 km where the min-distance-from-origin and min-distance-from-target constraints leave no room for a classic in-between stop (example: Basel → Bern, ~95 km).
-
-**Key difference from StopOptionsFinder:** No proximity filter is applied — detour options are allowed to be geographically close to the start, because they are by definition off-axis. The rule instead is that each detour must be reachable from the departure point in ≤ max_drive_hours, *and* the segment target must also be reachable from the detour in ≤ max_drive_hours.
-
-**Frontend:** The UI shows all three detour cards with the same layout as normal stop cards, plus a blue info banner at the top explaining that these are deliberate side-trips, not classic waypoints.
-
-**Output:** Same JSON structure as StopOptionsFinder options, with `is_detour: true` flag and `option_type` values `umweg_1` / `umweg_2` / `umweg_3`.
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/travels` | List all saved trips (metadata only) |
+| `POST` | `/api/travels` | Save a completed plan |
+| `GET` | `/api/travels/{id}` | Load full plan JSON |
+| `PATCH` | `/api/travels/{id}` | Update name and/or rating |
+| `DELETE` | `/api/travels/{id}` | Delete a saved trip |
+| `POST` | `/api/travels/{id}/replan` | Re-run agents against saved route |
 
 ---
 
-### AccommodationResearcherAgent — `claude-sonnet-4-5`
-
-**What it does:** For each selected stop, finds 3 concrete accommodation options at three budget tiers: budget-friendly, comfortable mid-range, and premium. The accommodation type (hotel, camping, hostel, apartment, Airbnb) matches the user's preference.
-
-**When it runs:** After the full route is confirmed, in parallel for all stops via Celery. The frontend starts loading accommodation cards as soon as each stop's result arrives — it does not wait for all stops to finish.
-
-**Input:** Stop location, accommodation type preference, must-have amenities, hotel search radius, remaining budget allocated to accommodation, number of nights, number of adults and children.
-
-**Budget tracking:** A `BudgetState` object tracks how much has been committed across all previously confirmed stops; the agent is told the remaining accommodation budget so it calibrates price ranges realistically.
-
-**Output:** 3 accommodation objects per stop with name, address, price per night, total price, amenities, description, and a booking URL hint.
-
----
-
-### ActivitiesAgent — `claude-sonnet-4-5`
-
-**What it does:** For each stop, researches and recommends top activities and attractions tailored to the group's travel styles, the number of activity days at that stop, and the activities budget. Must-do activities specified by the user in the form are always included.
-
-**When it runs:** As part of the main parallel planning job, alongside RestaurantsAgent and DayPlannerAgent.
-
-**Wikipedia enrichment:** After the agent responds, a `WikipediaEnricher` fetches the Wikipedia summary for each stop city and appends cultural context that the day planner agent can use.
-
-**Input:** Stop name and country, travel styles, number of adults and children, activity days, activities budget, user must-do list, max activities per stop.
-
-**Output:** A ranked list of activities with name, description, duration in hours, estimated price in CHF, whether it is kid-friendly, and the activity category.
-
----
-
-### RestaurantsAgent — `claude-sonnet-4-5`
-
-**What it does:** For each stop, recommends restaurants and dining experiences that match the group's travel styles and food budget. Considers the local cuisine of the region and the group composition (kids, adults, dietary preferences).
-
-**When it runs:** In parallel with ActivitiesAgent during the main planning job.
-
-**Input:** Stop name and country, travel styles, food budget, number of adults and children, max restaurants per stop.
-
-**Output:** A list of restaurant recommendations with name, cuisine type, price range (CHF per person), description, and a recommended dish.
-
----
-
-### DayPlannerAgent — `claude-opus-4-5`
-
-**What it does:** Takes all the research — stops, accommodations, activities, restaurants, OSRM drive times — and assembles a coherent, realistic day-by-day travel plan. It schedules driving legs on the right days, distributes activities across the stay, ensures rest days where appropriate, and writes descriptive daily summaries.
-
-**When it runs:** Last in the pipeline, after all other agents have finished for all stops.
-
-**Input:** Full assembled trip data: ordered stops with confirmed accommodations, activities and restaurants per stop, OSRM-verified driving times between stops, total days and date range.
-
-**Output:** A structured `DayPlan` list — one entry per day — with date, driving leg (if applicable), km and hours from OSRM, scheduled activities, restaurant suggestion for the evening, and a narrative description. Also produces a final cost estimate broken down by category.
-
-**Why Opus:** Day planning requires reasoning across the entire trip simultaneously — balancing drive days with rest days, sequencing activities logically, producing a coherent narrative — so it uses the most capable model.
-
----
-
-## Quick start — Docker (recommended)
-
-### Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) >= 24
-- An [Anthropic API key](https://console.anthropic.com/)
-
-### 1 — Clone the repo
-
-```bash
-git clone https://github.com/stefanschaedeli/travelman3.git
-cd travelman3
-```
-
-### 2 — Create your environment file
-
-```bash
-cp backend/.env.example backend/.env
-```
-
-Open `backend/.env` and set your API key:
-
-```env
-ANTHROPIC_API_KEY=sk-ant-...   # required
-TEST_MODE=true                  # true = cheap haiku model; false = opus/sonnet
-REDIS_URL=redis://redis:6379
-```
-
-> **TEST_MODE=true** uses `claude-haiku-4-5` for all agents — ideal for development and quick tests. Set to `false` for production-quality output (uses Opus and Sonnet).
-
-### 3 — Start all services
-
-```bash
-docker compose up --build
-```
-
-Four containers start:
-
-| Container | Role | Port |
-|-----------|------|------|
-| `redis` | job state store | 6379 (internal) |
-| `backend` | FastAPI app | 8000 (internal) |
-| `celery` | background workers | — |
-| `frontend` | Nginx + static files | **80** |
-
-### 4 — Open the app
-
-Navigate to **[http://localhost](http://localhost)**
-
-```bash
-docker compose down             # stop everything
-docker compose logs -f backend  # follow backend logs
-```
-
----
-
-## Using the app
+## Using the App
 
 ### Step 1 — Route
 
-Fill in **Start** and **Destination** plus travel dates. Optionally add via-points (waypoints you want to pass through, with optional fixed arrival dates). Set the **max drive hours per day** slider.
+Fill in **Start** and **Destination** plus travel dates. Optionally add via-points. Set the **max drive hours per day** slider. As soon as the required fields are filled, a sticky **"Reise jetzt planen"** bar appears.
 
-As soon as these required fields are filled, a sticky **"✈ Reise jetzt planen"** bar appears at the bottom of the screen — click it at any time to skip the remaining steps and plan with defaults.
+### Step 2 — Travellers & Styles
 
-### Step 2 — Travellers
+Set adults, add children with ages, and choose travel styles (Abenteuer, Entspannung, Kultur, Romantik, Kulinarik, Roadtrip, Natur, Stadt, Wellness, Sport, Gruppe, Familie, Slow Travel, Party). Add a free-text trip description.
 
-Set the number of adults, add children with their ages, and choose one or more **travel styles**:
+### Step 3 — Trip Legs
 
-| | | | |
-|-|-|-|-|
-| Abenteuer | Entspannung | Kultur | Romantik |
-| Kulinarik | Roadtrip | Natur | Stadt |
-| Wellness | Sport | Gruppe | Familie |
-| Slow Travel | Party | | |
+Define your trip legs as **Transit** (drive from A to B with stops) or **Explore** (discover a geographic zone). Each leg shows a map with the zone or route segment.
 
-Add a free-text description of what would make this trip special.
-
-### Step 3 — Activities
-
-- Tag must-do activities (e.g. "Eiffelturm besuchen") — agents ensure these are included
-- Max distance from accommodation (10 – 100 km)
-- Max activities and restaurants per stop are in the **⚙ Settings** menu (header)
-
-### Step 4 — Accommodation
+### Step 4 — Accommodation & Activities
 
 - Accommodation types: Hotel · Apartment · Camping · Hostel · Airbnb
 - Must-have amenities: Pool · WiFi · Parking · Kitchen · Breakfast
-- Hotel search radius (1 – 50 km)
+- Must-do activities as tags, max distance from accommodation
 - Min / max nights per stop
 
-### Step 5 — Budget
+### Step 5 — Budget & Submit
 
-- Total budget in CHF
-- **Budget split sliders** — set the exact % for accommodation, food, and activities; a live CHF preview updates as you drag; the form blocks submission if the percentages don't sum to 100 %
+- Total budget in CHF with % split sliders (accommodation / food / activities)
+- Review summary and submit
 
-### Step 6 — Summary & submit
+### Route Builder
 
-Review everything, then click **Reise planen**.
+Claude proposes **3 stop options** per segment, evenly spaced via OSRM geometry. Pick options to build the route iteratively. Features:
 
----
+- Google Maps with numbered pins and branch lines
+- **"Neu berechnen"** bar for custom re-runs (e.g. "lieber Küste")
+- Orange warning badges for drive-limit violations
+- Blue "Umweg-Optionen" banner for detour suggestions
+- Route-adjust modal when all options exceed the limit
 
-### Route builder
+### Travel Guide
 
-Claude proposes **3 stop options** for the current segment. The agent is given the exact total distance and the ideal per-etappe distance so options are evenly spaced — never too close to the start or the destination.
-
-If the segment is too short for any classic in-between stop, **DetourOptionsAgent** kicks in automatically and proposes 3 scenic side-trips with a blue info banner explaining what happened.
-
-Pick an option, and it immediately suggests the next three. Keep picking until the full route is built, then confirm.
-
-Each round displays:
-- A **Leaflet map** with a green Start pin, a red Ziel pin, and blue numbered pins for each option; dashed coloured lines connect start → option → target for each branch
-- A **"Neu berechnen"** bar to re-run the agent with a free-text instruction (e.g. "lieber Küste" or "Weingegend bevorzugt")
-- Option cards stacked vertically, each with OSRM-verified drive time and distance, Google Maps link, and contextual metadata (altitude, language, must-sees, family score)
-- An **orange warning badge** on cards whose OSRM drive time exceeds your limit
-- A **"Route anpassen…"** banner if *all* cards exceed the limit — opens a modal to add days or insert a via-point
-- A **blue "Umweg-Optionen" banner** if all cards are detour suggestions from DetourOptionsAgent
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  Route aufbauen                                                  │
-│                                                                  │
-│  [Sonderwunsch eingeben…]              [Neu berechnen]           │
-│                                                                  │
-│  Stop #3 → Paris  (Segment 1/1)    3 Tage verbleibend            │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │  🗺  [Karte: S  ──┬── 1.Grenoble ──┬── Z:Paris ]        │    │
-│  │                  ├── 2.Valence  ──┤                     │    │
-│  │                  └── 3.Avignon  ──┘                     │    │
-│  └──────────────────────────────────────────────────────────┘    │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │  direct   🇫🇷 Grenoble, FR                               │    │
-│  │  2.5h Fahrt · 210 km    2 Nächte                        │    │
-│  └──────────────────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### Accommodation selection
-
-For each stop, three options are loaded in parallel. The accommodation type matches your preference (hotel, camping, etc.). The remaining budget updates live after every selection.
-
----
-
-### Saving and managing trips
-
-After a trip is generated, click **"Reise speichern"** to persist it to the local SQLite database. Previously saved trips are accessible via the **"Meine Reisen"** drawer (top-right icon).
-
-From the drawer you can:
-
-- **Rename** a trip — click the title, type a new name, press Enter (or Escape to cancel)
-- **Rate** a trip — click any of the five stars; clicking the same star again resets to 0
-- **Open** — loads the full plan back into the travel guide
-- **Replan** — re-runs the activities, restaurant, day-planner, and travel-guide agents against the same route and accommodations (useful after changing preferences)
-- **Delete** — removes the row from the database
-
----
-
-### Travel guide
-
-The finished plan is presented in four tabs:
+Four tabs in the finished plan:
 
 | Tab | Content |
 |-----|---------|
-| **Übersicht** | Route visualisation, key stats, Google Maps link, interactive Leaflet route map, download buttons |
-| **Stops & Details** | Per-stop card: accommodation, top activities (duration / price / kid-friendly), top restaurants (cuisine / price range) |
-| **Tagesplan** | Day-by-day breakdown with driving legs, highlights, and Maps route links |
-| **Budget** | Itemised: accommodation · fuel · activities · food · ferries · total vs. budget |
+| **Übersicht** | Route map, key stats, Google Maps link, downloads |
+| **Stops & Details** | Per-stop card: accommodation, activities, restaurants |
+| **Tagesplan** | Day-by-day breakdown with driving legs and highlights |
+| **Budget** | Itemised: accommodation · fuel · activities · food · total vs. budget |
 
 ---
 
-## Local development (without Docker)
+## Local Development
 
 ### Requirements
 
@@ -391,7 +338,7 @@ cp .env.example .env          # add your API key
 python3 -m uvicorn main:app --reload --port 8000
 ```
 
-### Celery worker (separate terminal)
+### Celery Worker (separate terminal)
 
 ```bash
 cd backend
@@ -400,7 +347,7 @@ celery -A tasks worker --loglevel=info
 
 ### Frontend
 
-Open `frontend/index.html` directly in your browser, or serve it with any static file server. For local dev without Nginx, change `API_BASE` in `frontend/js/api.js` to `http://localhost:8000/api`.
+Open `frontend/index.html` directly, or serve with any static file server. For local dev without Nginx, change `API_BASE` in `frontend/js/api.js` to `http://localhost:8000/api`.
 
 ### Tests
 
@@ -410,278 +357,215 @@ python3 -m pytest tests/ -v                        # all tests
 python3 -m pytest tests/test_models.py             # Pydantic validation
 python3 -m pytest tests/test_endpoints.py          # API routes
 python3 -m pytest tests/test_agents_mock.py        # agents (no API key needed)
+python3 -m pytest tests/test_travel_db.py          # travel persistence
 ```
 
 ---
 
-## Environment variables
+## Configuration
+
+### Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | — | Your Anthropic API key |
-| `TEST_MODE` | | `true` | `true` = haiku (cheap dev mode); `false` = opus/sonnet |
-| `REDIS_URL` | | `redis://localhost:6379` | Redis connection string |
+| `ANTHROPIC_API_KEY` | Yes | — | Anthropic API key |
+| `TEST_MODE` | No | `true` | `true` = haiku (cheap dev); `false` = opus/sonnet |
+| `REDIS_URL` | No | `redis://localhost:6379` | Redis connection string |
+| `GOOGLE_MAPS_API_KEY` | No | — | Google Maps JS SDK + Places API |
+
+### Budget Model
+
+| Category | Allocation |
+|----------|-----------|
+| Accommodation | configurable % (default 60%) |
+| Food | configurable % (default 20%) |
+| Activities | configurable % (default 20%) |
+| Fuel | CHF 12 per driving hour |
 
 ---
 
-## Agent model assignments
-
-| Agent | Production | TEST_MODE=true |
-|-------|-----------|----------------|
-| RouteArchitectAgent | claude-opus-4-5 | claude-haiku-4-5 |
-| StopOptionsFinderAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
-| DetourOptionsAgent | claude-haiku-4-5 | claude-haiku-4-5 |
-| AccommodationResearcherAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
-| ActivitiesAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
-| RestaurantsAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
-| DayPlannerAgent | claude-opus-4-5 | claude-haiku-4-5 |
-
-> DetourOptionsAgent always uses Haiku — it is a lightweight fallback on short segments and does not need higher reasoning capacity.
-
----
-
-## API endpoints
-
-**Planning flow**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/plan-trip` | Submit form, receive first stop options (with OSRM + map anchors) |
-| `POST` | `/api/select-stop/{job_id}` | Choose a stop, receive next options (with OSRM + map anchors) |
-| `POST` | `/api/recompute-options/{job_id}` | Re-run StopOptionsFinder with optional `extra_instructions` |
-| `POST` | `/api/patch-job/{job_id}` | Adjust job when all options exceed drive limit (add days or via-point) |
-| `POST` | `/api/confirm-route/{job_id}` | Confirm route, begin accommodation loading |
-| `POST` | `/api/start-accommodations/{job_id}` | Trigger parallel accommodation fetch |
-| `POST` | `/api/select-accommodation/{job_id}` | Select accommodation for one stop |
-| `POST` | `/api/confirm-accommodations/{job_id}` | Confirm all accommodation selections |
-| `POST` | `/api/start-planning/{job_id}` | Launch full plan generation |
-| `GET` | `/api/progress/{job_id}` | SSE stream of events and debug logs |
-| `GET` | `/api/result/{job_id}` | Fetch completed travel plan (JSON) |
-| `POST` | `/api/generate-output/{job_id}/{type}` | Generate PDF or PPTX (`type` = `pdf`/`pptx`) |
-| `GET` | `/health` | Health check + active job count |
-
-**Travel history (SQLite)**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/travels` | List all saved trips (metadata only, no plan JSON) |
-| `POST` | `/api/travels` | Save a completed plan |
-| `GET` | `/api/travels/{id}` | Load full plan JSON |
-| `PATCH` | `/api/travels/{id}` | Update `custom_name` and/or `rating` |
-| `DELETE` | `/api/travels/{id}` | Delete a saved trip |
-| `POST` | `/api/travels/{id}/replan` | Re-run agents against saved route + accommodations |
-
----
-
-## Project structure
+## Project Structure
 
 ```
 travelman3/
 ├── backend/
-│   ├── main.py                      # FastAPI app — 17 endpoints
-│   ├── orchestrator.py              # TravelPlannerOrchestrator
+│   ├── main.py                        # FastAPI app — 25+ endpoints
+│   ├── orchestrator.py                # TravelPlannerOrchestrator (leg-sequential)
 │   ├── agents/
-│   │   ├── _client.py               # shared Anthropic client + model selector
-│   │   ├── route_architect.py       # RouteArchitectAgent (opus)
-│   │   ├── stop_options_finder.py   # StopOptionsFinderAgent (sonnet, streaming)
-│   │   ├── detour_options_agent.py  # DetourOptionsAgent (haiku, fallback)
+│   │   ├── _client.py                 # shared Anthropic client + model selector
+│   │   ├── route_architect.py         # RouteArchitectAgent (opus)
+│   │   ├── stop_options_finder.py     # StopOptionsFinderAgent (sonnet, streaming)
+│   │   ├── detour_options_agent.py    # DetourOptionsAgent (haiku, fallback)
+│   │   ├── explore_zone_agent.py      # ExploreZoneAgent (sonnet, two-pass)
 │   │   ├── accommodation_researcher.py
-│   │   ├── activities_agent.py      # + WikipediaEnricher
+│   │   ├── activities_agent.py        # + WikipediaEnricher
 │   │   ├── restaurants_agent.py
-│   │   ├── day_planner.py           # DayPlannerAgent (opus)
-│   │   └── output_generator.py      # PDF + PPTX
-│   ├── models/                      # Pydantic models
-│   │   ├── travel_request.py        # TravelRequest (form input)
-│   │   ├── travel_response.py       # TravelPlan, TravelStop, DayPlan, …
-│   │   ├── stop_option.py           # StopOption, StopOptionsResponse
-│   │   └── accommodation_option.py  # AccommodationOption, BudgetState
-│   ├── tasks/                       # Celery tasks
+│   │   ├── day_planner.py             # DayPlannerAgent (opus)
+│   │   ├── travel_guide_agent.py      # TravelGuideAgent (sonnet)
+│   │   ├── trip_analysis_agent.py     # TripAnalysisAgent (sonnet)
+│   │   └── output_generator.py        # PDF + PPTX
+│   ├── models/
+│   │   ├── travel_request.py          # TravelRequest (leg-based)
+│   │   ├── travel_response.py         # TravelPlan, TravelStop, DayPlan
+│   │   ├── stop_option.py             # StopOption, StopOptionsResponse
+│   │   ├── accommodation_option.py    # AccommodationOption, BudgetState
+│   │   ├── trip_leg.py                # TripLeg, Transit/Explore modes
+│   │   └── via_point.py               # ViaPoint, ZoneBBox, ExploreStop
+│   ├── tasks/
+│   │   ├── run_planning_job.py        # Celery: full orchestration + explore pause
+│   │   └── prefetch_accommodations.py # Celery: parallel acc fetch
 │   ├── utils/
-│   │   ├── travel_db.py             # SQLite travel history (save/list/get/update/delete)
-│   │   ├── debug_logger.py          # singleton DebugLogger + SSE subscriber manager
-│   │   ├── maps_helper.py           # geocode_nominatim(), osrm_route(), build_maps_url()
-│   │   ├── retry_helper.py          # call_with_retry() with exponential back-off
-│   │   └── json_parser.py           # parse_agent_json() strips markdown fences
+│   │   ├── debug_logger.py            # DebugLogger + SSE subscriber manager
+│   │   ├── maps_helper.py             # geocode, OSRM routing, Maps URLs
+│   │   ├── retry_helper.py            # call_with_retry() + exponential backoff
+│   │   ├── json_parser.py             # parse_agent_json()
+│   │   ├── travel_db.py               # SQLite persistence
+│   │   ├── hotel_price_fetcher.py     # hotel price fetching
+│   │   └── image_fetcher.py           # destination image fetching
 │   ├── tests/
+│   │   ├── conftest.py
+│   │   ├── test_models.py             # Pydantic validation tests
+│   │   ├── test_endpoints.py          # API route tests
+│   │   ├── test_agents_mock.py        # agent tests with mocked Anthropic
+│   │   └── test_travel_db.py          # travel persistence tests
 │   ├── .env.example
 │   └── requirements.txt
 ├── frontend/
 │   ├── index.html
 │   ├── styles.css
 │   └── js/
-│       ├── state.js                 # global S object + localStorage
-│       ├── api.js                   # all fetch() calls live here
-│       ├── form.js                  # 6-step form + quick-submit bar
-│       ├── route-builder.js         # route builder + detour banner + route-adjust modal
-│       ├── accommodation.js
-│       ├── progress.js              # SSE event handlers
-│       ├── travels.js               # saved trips drawer — rename, stars, replan
-│       └── guide.js                 # 4 output tabs
+│       ├── state.js                   # global S object + localStorage
+│       ├── api.js                     # all fetch() + SSE calls
+│       ├── form.js                    # 5-step form + legs builder
+│       ├── route-builder.js           # route builder + explore UI
+│       ├── accommodation.js           # parallel acc loading + grid
+│       ├── progress.js                # SSE progress handlers
+│       ├── guide.js                   # 4-tab travel guide
+│       ├── travels.js                 # saved trips drawer
+│       ├── maps.js                    # map rendering helpers
+│       ├── loading.js                 # loading state UI
+│       ├── sse-overlay.js             # SSE progress overlay
+│       └── types.d.ts                 # generated from OpenAPI
 ├── docs/
-│   └── database.md                  # detailed DB schema + API reference
+│   └── database.md                    # DB schema + API reference
 ├── infra/
 │   ├── Dockerfile.backend
 │   ├── Dockerfile.frontend
 │   └── nginx.conf
 ├── scripts/
-│   └── generate-types.sh            # OpenAPI → TypeScript types
+│   └── generate-types.sh             # OpenAPI → TypeScript types
 ├── data/
-│   └── travels.db                   # SQLite travel history (auto-created)
+│   └── travels.db                     # SQLite (auto-created)
 ├── docker-compose.yml
-└── outputs/                         # generated PDF / PPTX files
+└── outputs/                           # generated PDF / PPTX files
 ```
 
 ---
 
-## Data & persistence
+## Releases
 
-Travelman uses two stores:
+### v6.1.0 — Trip Legs & Explore Mode (2026-03-11)
 
-| Store | Technology | Lifetime | What's in it |
-|-------|-----------|----------|--------------|
-| **Job state** | Redis | 24 h TTL | Live planning sessions, SSE queues, agent results |
-| **Travel history** | SQLite (`data/travels.db`) | Permanent | Trips the user has saved |
+Major architectural upgrade: trips are now composed of **legs** instead of flat segment sequences.
 
-### Travel history database
+- **Leg-based trip architecture** — TravelRequest refactored from flat via-points to typed `TripLeg` objects (Transit or Explore mode)
+- **Explore mode** — new leg type that lets users define a geographic zone and discover stops via a guided questionnaire
+- **ExploreZoneAgent** — new two-pass agent: generates questions → processes answers → returns categorised stops (anker/landschaft/geheimtipp)
+- **StopOptionsFinder explore branch** — new option types for explore legs: anchor points, scenic spots, hidden gems
+- **Legs Builder UI** — Step 3 redesigned with Transit/Explore leg cards and map zone selection
+- **Explore UI in Route Builder** — zone guidance overlay, circular route display, explore questionnaire flow
+- **Orchestrator refactored** — leg-sequential planning with explore-phase pause/resume logic
+- **POST /api/answer-explore-questions** — new endpoint for explore questionnaire answers
+- **All tests updated** for legs-based architecture
 
-Saved trips are stored in a local SQLite file. Each row holds metadata for the list view plus the full `TravelPlan` JSON for loading/replanning.
+### v6.0.0 — Google Maps & UX Overhaul (2026-03-10)
 
-Key columns in the `travels` table:
+Complete frontend redesign and map provider migration.
 
-| Column | Description |
-|--------|-------------|
-| `id` | Auto-increment primary key |
-| `job_id` | UUID of the originating planning job (unique — duplicate saves ignored) |
-| `title` | Auto-generated: `"Start → Destination (N Tage)"` |
-| `custom_name` | User-defined display name; overrides `title` in the UI |
-| `rating` | Star rating set by the user (`0–5`) |
-| `has_travel_guide` | `1` if any stop includes a narrative travel guide |
-| `plan_json` | Full `TravelPlan` object as JSON |
+- **Google Maps JS SDK migration** — replaced Leaflet & Unsplash with Google Maps + Places API
+- **Google Maps Places API** — real photos via Nearby Search, photo strips with lightbox
+- **Travel-Forward rebrand** — sky-blue + adventure-orange design system
+- **Lucide SVG icons** — all emojis and text icons replaced with consistent SVGs
+- **Full accessibility pass** — focus rings, aria labels, sr-only labels, keyboard navigation, screen-reader compatibility
+- **Collapsible stops + sidebar navigation** — improved travel guide UX with calendar tab
+- **Full-width layout** — gallery UX with lightbox navigation
+- **Step indicators as click navigation** — jump to completed steps
+- **Auto-balancing budget sliders** — automatically maintain 100% sum
+- **Mobile improvements** — `100dvh` viewport, visible step labels on small screens
+- **Inline field validation** — replaced `alert()` with inline error messages
+- **Wait-time hint + cancel button** — user feedback during long planning phases
+- **Advanced settings** — proximity sliders hidden under expandable section
+- **Performance** — parallelised StopOptionsFinder enrichment, reduced timeouts, eliminated geocoding duplication
+- **529 Overloaded error handling** — exponential backoff retry for API overload
 
-The schema is forwards-compatible via idempotent `ALTER TABLE` migrations — existing databases gain new columns automatically on the next start.
+### v5.1.x — Travel Guide & Trip Analysis (2026-03-09)
 
-**→ [Full database documentation](docs/database.md)**
+- **Travel guide agent** — narrative storytelling guide with hourly day plans per stop
+- **Trip analysis agent** — post-planning requirement evaluation with tags and keyword highlighting
+- **Replan saved trips** — re-run agents against saved route and accommodations
+- **Accommodation system overhaul** — free-text wishes, all options included in final plan
+- **Rename + star rating** — inline rename and 0–5 star widget for saved trips
+- **SSE via Redis relay** — Celery worker events reliably forwarded to FastAPI
+- **Database documentation** — full schema reference in `docs/database.md`
 
----
+### v5.0.0 — Progress Overlay & Skip Stops (2026-03-08)
 
-## Budget model
+- **Live progress overlay** — semi-transparent overlay with spinner log during all three wait phases; each step flips to a green checkmark on completion
+- **"Direkt weiterfahren"** — skip a stop and redistribute freed nights to the next destination
+- **Proximity filter in GUI** — two sliders to control minimum distance from start/target
+- **Geo-bounded detours** — DetourOptionsAgent uses explicit bounding box (±1.5°) to keep suggestions in range
+- **Retry optimisation** — skip retry pass when 0 valid stops, go directly to DetourOptionsAgent
+- **Correct map markers** — "S" marker always shows the last confirmed stop
 
-| Category | Allocation |
-|----------|-----------|
-| Accommodation | configurable % (default 60 %) |
-| Food | configurable % (default 20 %) |
-| Activities | configurable % (default 20 %) |
-| Fuel | CHF 12 per driving hour |
+### v4.0.x — Persistence & Detour Agent (2026-03-07)
 
----
+- **SQLite travel history** — "Meine Reisen" with save, load, and delete
+- **DetourOptionsAgent** — automatic fallback when StopOptionsFinder returns 0 valid options on short segments
+- **Rundreise mode** — round-trip detection with deliberate detour options (left, right, adventure)
+- **Interactive map markers** — click-to-select, hover tooltips, number matching
+- **Minimum stop distance validation** — proximity filter for stop placement
+- **Rundreise threshold** — minimum 200 km to prevent false positives
 
-## Changelog
+### v4.0.0 — Accommodation Agent Redesign (2026-03-07)
 
-### v5.1.4 (2026-03-09)
+- **Style-based accommodation search** — 3 options based on travel style instead of hardcoded types
+- **UTM VM Docker host delegation** — Docker deployment from virtual machines
+- **Booking.com deeplinks** — direct booking links and "Geheimtipp" option
 
-**Rename + star rating for saved trips**
+### v3.1 — Performance & Security (2026-03-05)
 
-- Click any trip title in "Meine Reisen" to rename it inline (Enter to confirm, Escape to cancel); custom name persists across page loads
-- New 0–5 star widget per trip card; clicking the active star resets to 0
-- `PATCH /api/travels/{id}` endpoint with `custom_name` and `rating` fields
-- SQLite schema extended with `custom_name TEXT` and `rating INTEGER DEFAULT 0` (auto-migrated)
-- Docs: new `docs/database.md` with full schema, migration, data flow, and API reference
+- **4x speed improvement** — parallelised route option display
+- **Security hardening** — XSS prevention, job enumeration protection, port restrictions
+- **Docker deploy pipeline** — fixed OUTPUTS_DIR path resolution
 
----
+### v2.0 — Form Overhaul (2026-03-03)
 
-### v5.0.0 (2026-03-08)
+- **6-step form** → Route · Travellers · Activities · Accommodation · Budget · Summary
+- **Budget split sliders** — configurable % with live CHF preview and 100% validation
+- **Geometry-aware etappe planning** — OSRM-measured distances for even stop distribution
+- **Drive-limit enforcement** — OSRM-verified times with orange warning badges
+- **Route-adjust modal** — add days or insert via-points when all options exceed limits
+- **Sticky quick-submit bar** — "Reise jetzt planen" visible from any form step
 
-**Live-Fortschritts-Overlay — sichtbares Feedback während aller Wartephasen**
+### v1.2.x — Maps & Routing (2026-03-02)
 
-Ein semitransparentes Overlay erscheint während der drei langen Ladephasen (Routenbau, Unterkunftssuche, Reiseplanung). Jeder Schritt erscheint als eigene Zeile mit Spinner, die beim Abschluss auf ein grünes Häkchen wechselt. Der Overlay schliesst sich automatisch wenn die Phase abgeschlossen ist.
+- **Leaflet map in route builder** — start/target pins, numbered option pins, dashed branch lines
+- **Interactive guide map** — clickable stop pins navigating to detail cards
+- **Agent-supplied coordinates** — WGS84 lat/lon fallback when geocoding fails
+- **"Neu berechnen" bar** — free-text instruction to re-run the agent
+- **OSRM-verified drive times** — real road distances replace AI estimates
 
-- Routenbau: Zeigt welcher Streckenabschnitt berechnet wird, warum ein Retry nötig war (z.B. "zu nahe am Startpunkt"), und welche Optionen gefunden wurden
-- Unterkunftssuche: Pro Stop eine Zeile mit Anzahl gefundener Optionen
-- Reiseplanung: Route → Aktivitäten/Restaurants pro Stop → Tagesplan, alles live
+### v1.1 — Image Galleries (2026-03-01)
 
-**«Direkt weiterfahren» — Zwischenstopp überspringen**
-
-Bei jedem Routenschritt gibt es jetzt eine zusätzliche Karte "Direkt weiterfahren". Wählt man sie, wird der Stopp übersprungen und die freiwerdenden Nächte werden ans nächste Ziel (Zwischenziel oder Endziel) weitergegeben. Die Karte zeigt einen Badge mit der Anzahl Bonus-Nächte.
-
-**Proximity-Filter im GUI einstellbar**
-
-Zwei neue Schieberegler in Schritt 1 (Route) steuern, wie nah eine Option dem Startpunkt oder dem Segmentziel sein darf, bevor sie ausgefiltert wird. Standard: 10 % vom Start, 15 % vom Ziel. Auf 0 gesetzt wird der Filter komplett deaktiviert.
-
-**Geo-Begrenzung für Umweg-Optionen**
-
-DetourOptionsAgent erhält jetzt explizite Koordinaten des Streckenabschnitts und berechnet daraus eine Bounding-Box (±1.5°). Der Claude-Prompt enthält diese Box als harte Vorgabe — Umweg-Optionen bleiben geografisch im Rahmen der Reise.
-
-**Retry-Optimierung**
-
-Wenn der erste Durchlauf 0 gültige Stopps nach dem Proximity-Filter ergibt, wird der Retry-Durchlauf übersprungen und sofort DetourOptionsAgent aktiviert (statt zwei Fehlversuche zu machen).
-
-**Korrekte Kartenmarkierung bei wiederholten Berechnungen**
-
-Der "S"-Marker auf der Karte zeigt jetzt immer den zuletzt bestätigten Stop (aus `S.selectedStops`), nicht mehr den ursprünglichen Startpunkt der Reise.
-
----
-
-### v4.0.8 (2026-03-08)
-
-**DetourOptionsAgent — Fallback for short segments**
-
-When StopOptionsFinder returns 0 valid options after retry (typically on route segments shorter than ~100 km where proximity filters eliminate all candidates), a new `DetourOptionsAgent` activates automatically:
-- Proposes 3 deliberate side-trip destinations off the direct route: `umweg_1` (left/west), `umweg_2` (right/east), `umweg_3` (surprise direction)
-- No proximity filter applied — detour stops may be geographically close to the departure point
-- Each option is still OSRM-enriched for real drive times
-- Frontend shows the same option cards as normal, plus a blue **"Umweg-Optionen"** info banner explaining the situation to the user
-- Selecting a detour option continues the route-building flow normally
-
----
-
-### v4.0.7 (2026-03-07)
-
-**Rundreise round-trip detection improvements**
-- Minimum 200 km threshold prevents round-trip modal from appearing on short legs
-
----
-
-### v2.0 (2026-03-03)
-
-**Form overhaul — 6-step form**
-- Form extended from 5 to 6 steps: Route · Travellers · Activities · Accommodation · **Budget** · Summary
-- Max drive hours slider moved to Step 1 (Route) where it belongs
-- New Step 5: budget split sliders for accommodation / food / activities with live CHF preview and 100 % validation
-- Settings gear icon in header for max activities / restaurants per stop
-- Step 4 (Accommodation): min / max nights per stop selectable
-- Step 3 (Activities): label clarified to "Max. Distanz zu Übernachtungsort"
-- New backend fields: `budget_accommodation_pct`, `budget_food_pct`, `budget_activities_pct`
-
-**Route quality improvements**
-- **Geometry-aware etappe planning** — `_calc_route_geometry()` queries OSRM for the full remaining distance before each agent call; StopOptionsFinder receives `segment_total_km`, `stops_remaining`, and `ideal_km_from_prev` so stops are evenly distributed
-- **Only concrete towns** — SYSTEM_PROMPT now enforces that `region` is always a specific town/city, never a region or geographic area
-- **Drive-limit flag** — `_enrich_options_with_osrm()` sets `drives_over_limit` on each option; flagged cards get an orange border and warning badge in the UI
-- **Route-adjust modal** — when all 3 options exceed the drive limit, a banner with "Route anpassen…" button appears; the modal offers two options: add extra days or insert a via-point; `POST /api/patch-job/{job_id}` handles both, updates the job and recomputes immediately
-- **Accommodation type fix** — `preferred_type` derived from `accommodation_styles[0]`; used in the prompt template instead of hardcoded "hotel"
-
-**Sticky quick-submit bar**
-- Persistent footer bar "✈ Reise jetzt planen" visible on all form steps once required fields are filled
-
----
-
-### v1.2.3 (2026-03-02)
-- **Route lines on maps** — dashed branch lines (start → option → target) per alternative in the route-builder map; solid polyline through all stops in the guide overview map
-- **Agent-supplied coordinates as fallback** — StopOptionsFinder returns WGS84 `lat`/`lon`; used when Nominatim geocoding fails
-
-### v1.2.2 (2026-03-02)
-- **Interactive map in travel guide overview** — Leaflet map with clickable stop pins; clicking navigates to the stop's detail card
-
-### v1.2.1 (2026-03-02)
-- **Start and segment-target pins on route-builder map** — green "S" and red "Z" pins geocoded server-side
-
-### v1.2 (2026-03-02)
-- **Leaflet map in route builder**, **"Neu berechnen" bar**, **OSRM-verified drive times**, **rich stop metadata**, **Google Maps link** per card, vertical card layout
-
-### v1.1 (2026-03-01)
 - Unsplash image galleries with lightbox support
 
-### v1.0 (2026-02-28)
-- Initial release — full 5-step form, 6 AI agents, SSE progress, PDF/PPTX export
+### v1.0 — Initial Release (2026-02-28)
+
+- Full 5-step form with travel style selection
+- 6 AI agents with structured JSON communication
+- Server-Sent Events for real-time progress streaming
+- PDF and PPTX export
+- Swiss-first: all output in German, all prices in CHF
 
 ---
 
