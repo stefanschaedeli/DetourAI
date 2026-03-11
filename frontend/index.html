@@ -124,20 +124,29 @@
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Mindestabstand vom Startpunkt: <strong id="proximity-origin-display">10</strong>% der Streckenlänge</label>
-        <div class="slider-row">
-          <input type="range" id="proximity-origin" min="0" max="30" value="10" step="1">
+      <button class="btn advanced-toggle" type="button"
+              id="advanced-toggle-btn"
+              aria-expanded="false"
+              aria-controls="advanced-section"
+              onclick="toggleAdvanced()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
+        Erweiterte Einstellungen
+      </button>
+      <div class="advanced-section" id="advanced-section">
+        <div class="form-group">
+          <label>Mindestabstand vom Startpunkt: <strong id="proximity-origin-display">10</strong>% der Streckenlänge</label>
+          <div class="slider-row">
+            <input type="range" id="proximity-origin" min="0" max="30" value="10" step="1">
+          </div>
+          <div class="form-hint">Orte näher als dieser Anteil der Gesamtstrecke am Startpunkt werden ausgeschlossen. 0 = kein Filter.</div>
         </div>
-        <div class="form-hint">Orte näher als dieser Anteil der Gesamtstrecke am Startpunkt werden ausgeschlossen. 0 = kein Filter.</div>
-      </div>
-
-      <div class="form-group">
-        <label>Mindestabstand vom Ziel: <strong id="proximity-target-display">15</strong>% der Streckenlänge</label>
-        <div class="slider-row">
-          <input type="range" id="proximity-target" min="0" max="30" value="15" step="1">
+        <div class="form-group">
+          <label>Mindestabstand vom Ziel: <strong id="proximity-target-display">15</strong>% der Streckenlänge</label>
+          <div class="slider-row">
+            <input type="range" id="proximity-target" min="0" max="30" value="15" step="1">
+          </div>
+          <div class="form-hint">Orte zu nahe am Ziel werden ausgeschlossen. 0 = kein Filter.</div>
         </div>
-        <div class="form-hint">Orte zu nahe am Ziel werden ausgeschlossen. 0 = kein Filter.</div>
       </div>
 
       <div class="form-nav">

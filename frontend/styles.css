@@ -212,6 +212,18 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 .slider-row { display: flex; align-items: center; gap: 12px; }
 .slider-row input[type="range"] { flex: 1; cursor: pointer; }
 .slider-display { font-weight: 600; min-width: 40px; }
+.advanced-toggle {
+  display: flex; align-items: center; gap: 8px;
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--text-sub);
+  padding: 4px 0; margin-bottom: 12px;
+}
+.advanced-toggle:hover { color: var(--accent-dark); }
+.advanced-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.advanced-toggle svg { transition: transform .2s; }
+.advanced-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+.advanced-section { display: none; }
+.advanced-section.open { display: block; }
 
 /* Acc styles grid */
 .acc-style-grid, .must-have-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }

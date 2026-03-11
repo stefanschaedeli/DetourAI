@@ -200,6 +200,14 @@ function toggleSettings() {
   if (btn) btn.setAttribute('aria-expanded', String(!open));
 }
 
+function toggleAdvanced() {
+  const btn = document.getElementById('advanced-toggle-btn');
+  const section = document.getElementById('advanced-section');
+  if (!btn || !section) return;
+  const open = section.classList.toggle('open');
+  btn.setAttribute('aria-expanded', String(open));
+}
+
 // ---------------------------------------------------------------------------
 // Via-points
 // ---------------------------------------------------------------------------
