@@ -29,9 +29,13 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
     raw = redis_client.get(f"job:{job_id}")
     if not raw:
         return
+
     job = json.loads(raw)
 
-    # Mark running
+    # Skip if paused waiting for zone guidance answers
+    if job.get("explore_phase") == "awaiting_guidance":
+        return
+
     job["status"] = "running"
     redis_client.setex(f"job:{job_id}", 86400, json.dumps(job))
 
@@ -45,17 +49,14 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
             pre_all_accommodation_options=job.get("all_accommodation_options", {}),
         )
 
-        # Embed request snapshot in result so replan can reconstruct TravelRequest
         result["request"] = job["request"]
 
-        # Save result
         raw2 = redis_client.get(f"job:{job_id}")
         job2 = json.loads(raw2) if raw2 else job
         job2["status"] = "complete"
         job2["result"] = result
         redis_client.setex(f"job:{job_id}", 86400, json.dumps(job2))
 
-        # Backend auto-save guard — fires even if SSE connection dropped
         try:
             from utils.travel_db import save_travel as _db_save
             await _db_save(result)
@@ -81,7 +82,6 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
         job3["status"] = "error"
         job3["error"] = str(e)
         redis_client.setex(f"job:{job_id}", 86400, json.dumps(job3))
-
         await debug_logger.push_event(job_id, "job_error", None, {"error": str(e)})
 
 
