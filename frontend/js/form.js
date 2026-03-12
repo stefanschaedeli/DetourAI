@@ -398,12 +398,19 @@ function renderLegCard(leg, index) {
 
 function addLeg() {
   const prevLeg = S.legs[S.legs.length - 1];
+  const originalEnd = prevLeg.end_location || '';
+  const originalEndDate = prevLeg.end_date || '';
+
+  // Clear previous leg's destination — user fills in the midpoint
+  prevLeg.end_location = '';
+  prevLeg.end_date = '';
+
   S.legs.push({
     leg_id: `leg-${S.legs.length}`,
-    start_location: prevLeg.end_location || '',
-    end_location: '',
-    start_date: prevLeg.end_date || '',
-    end_date: '',
+    start_location: '',
+    end_location: originalEnd,
+    start_date: '',
+    end_date: originalEndDate,
     mode: "transit",
     via_points: [],
     zone_bbox: null,
