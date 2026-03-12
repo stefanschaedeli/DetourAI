@@ -401,15 +401,12 @@ function addLeg() {
   const originalEnd = prevLeg.end_location || '';
   const originalEndDate = prevLeg.end_date || '';
 
-  // Clear previous leg's destination — user fills in the midpoint
-  prevLeg.end_location = '';
-  prevLeg.end_date = '';
-
+  // New segment inherits the original destination and end date
   S.legs.push({
     leg_id: `leg-${S.legs.length}`,
-    start_location: '',
+    start_location: originalEnd,
     end_location: originalEnd,
-    start_date: '',
+    start_date: originalEndDate,
     end_date: originalEndDate,
     mode: "transit",
     via_points: [],
