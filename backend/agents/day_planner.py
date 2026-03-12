@@ -5,6 +5,8 @@ from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
 from utils.maps_helper import geocode_nominatim, osrm_route, build_maps_url
+from utils.weather import get_forecast
+from utils.currency import detect_currency, get_chf_rate
 from agents._client import get_client, get_model
 
 SYSTEM_PROMPT = (
@@ -101,6 +103,27 @@ class DayPlannerAgent:
             enriched.append(s)
         return enriched
 
+    async def _enrich_with_weather(self, stops: list) -> list:
+        """Wetter-Vorhersagen für alle Stopps laden."""
+        req = self.request
+        start_date = req.start_date
+        if isinstance(start_date, str):
+            start_date = date.fromisoformat(start_date)
+
+        for stop in stops:
+            lat = stop.get("lat")
+            lng = stop.get("lng")
+            if not lat or not lng:
+                continue
+            arrival_day = stop.get("arrival_day", 1)
+            nights = stop.get("nights", 1)
+            arr_date = start_date + timedelta(days=arrival_day - 1)
+            dep_date = arr_date + timedelta(days=nights)
+            weather = await get_forecast(lat, lng, arr_date.isoformat(), dep_date.isoformat())
+            if weather:
+                stop["weather_forecast"] = weather
+        return stops
+
     def _fallback_cost_estimate(self, stops: list) -> dict:
         """Calculate cost estimate from stop data if Claude doesn't provide one."""
         req = self.request
@@ -142,6 +165,20 @@ class DayPlannerAgent:
         acts_str = ", ".join(f"{a['name']} ({a.get('duration_hours', 2)}h)" for a in activities[:4])
         rests_str = ", ".join(f"{r['name']} ({r.get('cuisine', '')})" for r in restaurants[:3])
 
+        # Wetter für diesen Tag
+        weather_block = ""
+        weather_forecast = day_ctx.get("weather_forecast", [])
+        if weather_forecast:
+            for w in weather_forecast:
+                if w.get("date") == day_ctx.get("date_iso"):
+                    weather_block = (
+                        f"\nWetter am {w['date']}: {w['description']}, "
+                        f"{w['temp_max']}°C / {w['temp_min']}°C, "
+                        f"Niederschlag: {w['precipitation_mm']}mm\n"
+                        f"Passe den Tagesplan ans Wetter an (bei Regen: Indoor-Aktivitäten bevorzugen).\n"
+                    )
+                    break
+
         prompt = f"""Erstelle einen stündlichen Tagesplan für Tag {day_num} ({date_str}):
 
 Region: {region}
@@ -150,7 +187,7 @@ Fahrtzeit: {drive_hours:.1f}h
 Aktivitäten: {acts_str or 'keine spezifischen'}
 Restaurants: {rests_str or 'keine spezifischen'}
 Reisende: {self.request.adults} Erwachsene{f', {len(self.request.children)} Kinder' if self.request.children else ''}
-
+{weather_block}
 Starte um 08:00 Uhr. Erstelle einen realistischen Zeitplan.
 
 Gib exakt dieses JSON zurück:
@@ -232,6 +269,10 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
         await debug_logger.log(LogLevel.INFO, "OSRM-Anreicherung startet", job_id=self.job_id, agent="DayPlanner")
         stops = await self._enrich_with_osrm(stops)
 
+        # Wetter-Anreicherung für alle Stopps
+        await debug_logger.log(LogLevel.INFO, "Wetter-Anreicherung startet", job_id=self.job_id, agent="DayPlanner")
+        stops = await self._enrich_with_weather(stops)
+
         # Build overview Google Maps URL
         all_locations = [req.start_location] + [s.get("region", "") for s in stops]
         overview_url = build_maps_url(all_locations)
@@ -256,16 +297,20 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
             acts = stop.get("top_activities", [])
             rests = stop.get("restaurants", [])
 
+            weather_forecast = stop.get("weather_forecast", [])
+
             # Arrival day (drive day)
             arrival_date = start_date + timedelta(days=arrival_day - 1)
             day_contexts.append({
                 "day": arrival_day,
                 "date": arrival_date.strftime("%d.%m.%Y"),
+                "date_iso": arrival_date.isoformat(),
                 "region": region,
                 "drive_hours": drive_hours,
                 "activities": acts,
                 "restaurants": rests,
                 "prev_region": prev_region,
+                "weather_forecast": weather_forecast,
             })
 
             # Rest/activity days at this stop
@@ -275,11 +320,13 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
                 day_contexts.append({
                     "day": rest_day,
                     "date": rest_date.strftime("%d.%m.%Y"),
+                    "date_iso": rest_date.isoformat(),
                     "region": region,
                     "drive_hours": 0,
                     "activities": acts,
                     "restaurants": rests,
                     "prev_region": region,
+                    "weather_forecast": weather_forecast,
                 })
 
         # Plan all days in parallel
