@@ -213,6 +213,14 @@ function startRouteBuilding(data) {
   if (cachedForm && cachedForm.max_drive_hours_per_day) {
     routeMeta.max_drive_hours = cachedForm.max_drive_hours_per_day;
   }
+  // Explore-Modus: keine Optionen, warte auf SSE explore_zone_questions
+  if (data.explore_pending) {
+    S.loadingOptions = false;
+    _updateRouteStatus(data.meta || {});
+    renderBuiltStops();
+    return;  // SSE explore_zone_questions triggert showExploreGuidanceForm()
+  }
+
   // If streaming already populated the container, only update state + map
   if (_streamingOptions.length >= (data.options || []).length && _streamingOptions.length > 0) {
     S.currentOptions = data.options || _streamingOptions;

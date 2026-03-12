@@ -878,6 +878,14 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
 
     # Determine segment target using current leg's via_points and end_location
     leg = request.legs[job["leg_index"]]
+
+    # Explore-Modus: Zone analysieren statt Transit-Route planen
+    if leg.mode == "explore":
+        result = await _start_explore_leg(job, job_id, request)
+        result["job_id"] = job_id
+        result["status"] = "awaiting_zone_guidance"
+        return result
+
     segment_target = (
         leg.via_points[0].location if leg.via_points else leg.end_location
     )

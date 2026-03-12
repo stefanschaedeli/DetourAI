@@ -46,10 +46,18 @@ class ExploreZoneAgent:
         leg = req.legs[leg_index]
         bbox = leg.zone_bbox
         styles = ", ".join(req.travel_styles) if req.travel_styles else "keine Angabe"
+
+        if bbox:
+            zone_info = (
+                f"Zone: {bbox.zone_label}\n"
+                f"Begrenzungsrahmen: N={bbox.north:.2f} S={bbox.south:.2f} "
+                f"E={bbox.east:.2f} W={bbox.west:.2f}\n"
+            )
+        else:
+            zone_info = f"Erkundungszone: {leg.start_location} bis {leg.end_location}\n"
+
         return (
-            f"Zone: {bbox.zone_label}\n"
-            f"Begrenzungsrahmen: N={bbox.north:.2f} S={bbox.south:.2f} "
-            f"E={bbox.east:.2f} W={bbox.west:.2f}\n"
+            f"{zone_info}"
             f"Verfügbare Tage in dieser Zone: {leg.total_days}\n"
             f"Reisestile: {styles}\n"
             f"Reisende: {req.adults} Erwachsene"
@@ -75,7 +83,8 @@ class ExploreZoneAgent:
             f"Antwortformat:\n{FIRST_PASS_SCHEMA}"
         )
 
-        await debug_logger.log(LogLevel.API, f"→ ExploreZoneAgent (1. Durchlauf) {leg.zone_bbox.zone_label}",
+        label = leg.zone_bbox.zone_label if leg.zone_bbox else f"{leg.start_location}–{leg.end_location}"
+        await debug_logger.log(LogLevel.API, f"→ ExploreZoneAgent (1. Durchlauf) {label}",
                                job_id=self.job_id, agent="ExploreZoneAgent")
 
         def call():
@@ -119,7 +128,8 @@ class ExploreZoneAgent:
             f"Antwortformat:\n{SECOND_PASS_SCHEMA}"
         )
 
-        await debug_logger.log(LogLevel.API, f"→ ExploreZoneAgent (2. Durchlauf) {leg.zone_bbox.zone_label}",
+        label = leg.zone_bbox.zone_label if leg.zone_bbox else f"{leg.start_location}–{leg.end_location}"
+        await debug_logger.log(LogLevel.API, f"→ ExploreZoneAgent (2. Durchlauf) {label}",
                                job_id=self.job_id, agent="ExploreZoneAgent")
 
         def call():
