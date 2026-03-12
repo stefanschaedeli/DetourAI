@@ -7,6 +7,7 @@ from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
+from utils.wikipedia import get_city_summary
 from agents._client import get_client, get_model
 
 SYSTEM_PROMPT = (
@@ -221,7 +222,20 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
         text = response.content[0].text
         # Return Claude's result immediately — drive_hours/drive_km are placeholders.
         # Authoritative OSRM enrichment runs in main.py after this call.
-        return parse_agent_json(text)
+        result = parse_agent_json(text)
+
+        # Wikipedia-Anreicherung: echte Beschreibungen und Einwohnerzahlen
+        for option in result.get("options", []):
+            region = option.get("region", "")
+            if region:
+                wiki = await get_city_summary(region)
+                if wiki:
+                    if wiki.get("extract"):
+                        option.setdefault("description", wiki["extract"][:200])
+                    if wiki.get("thumbnail_url"):
+                        option["wikipedia_image"] = wiki["thumbnail_url"]
+
+        return result
 
     async def find_options_streaming(
         self,

@@ -2,6 +2,7 @@ from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
+from utils.wikipedia import get_city_summary
 from agents._client import get_client, get_model
 
 SYSTEM_PROMPT = (
@@ -25,6 +26,12 @@ class TravelGuideAgent:
         nights = stop.get("nights", req.min_nights_per_stop)
 
         existing_names_str = ", ".join(existing_activity_names) if existing_activity_names else "keine"
+
+        # Wikipedia-Kontext vorladen
+        wiki_block = ""
+        wiki = await get_city_summary(region)
+        if wiki and wiki.get("extract"):
+            wiki_block = f"\n\nWikipedia-Zusammenfassung über {region}:\n{wiki['extract'][:500]}\nNutze diese Fakten als Grundlage für deinen Reiseführer.\n"
 
         prompt = f"""Schreibe einen Reiseführer für {region}, {country}:
 
@@ -58,7 +65,7 @@ Gib exakt dieses JSON zurück:
   ]
 }}
 
-Schreibe alle Texte auf Deutsch. Gib 3-5 weitere Aktivitäten zurück, die sich von den bereits geplanten unterscheiden."""
+Schreibe alle Texte auf Deutsch. Gib 3-5 weitere Aktivitäten zurück, die sich von den bereits geplanten unterscheiden.{wiki_block}"""
 
         await debug_logger.log(
             LogLevel.API, f"→ Anthropic API call: {self.model} (Reiseführer: {region})",
