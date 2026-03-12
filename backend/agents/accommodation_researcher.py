@@ -6,6 +6,9 @@ from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
 from utils.image_fetcher import fetch_unsplash_images
+from utils.brave_search import search_places
+from utils.google_places import search_hotels, place_photo_url
+from utils.currency import detect_currency, get_chf_rate
 from agents._client import get_client, get_model
 
 
@@ -80,12 +83,36 @@ class AccommodationResearcherAgent:
         if self.extra_instructions:
             extra_hint = f"\nZusätzliche Wünsche des Gastes: {self.extra_instructions}"
 
+        # Pre-fetch: echte Hoteldaten + Wechselkurse
+        lat = stop.get("lat")
+        lon = stop.get("lon")
+        real_data_block = ""
+        currency_block = ""
+
+        if lat and lon:
+            gp_results = await search_hotels(lat, lon, radius_m=req.hotel_radius_km * 1000)
+            if gp_results:
+                lines = [f"- {h['name']} | ★{h.get('rating','?')} ({h.get('user_ratings_total',0)} Bewertungen) | {h.get('address','')}" for h in gp_results[:8]]
+                real_data_block = "\n\nEchte Hotels in der Nähe (Google Places Daten):\n" + "\n".join(lines) + "\nBevorzuge diese echten Unterkünfte und ergänze mit deinem Wissen.\n"
+
+        if not real_data_block:
+            brave_results = await search_places(f"Hotel Unterkunft {region} {country}", count=5)
+            if brave_results:
+                lines = [f"- {r['name']} ({r.get('rating','?')}★) — {r.get('address','')}" for r in brave_results if r.get("name")]
+                if lines:
+                    real_data_block = "\n\nEchte Suchergebnisse für Unterkünfte:\n" + "\n".join(lines) + "\nBevorzuge diese echten Unterkünfte.\n"
+
+        local_currency = detect_currency(country)
+        if local_currency != "CHF":
+            rate = await get_chf_rate(local_currency)
+            currency_block = f"\nDas Land verwendet {local_currency}. Gib Preise trotzdem in CHF an.\nAktueller Kurs: 1 {local_currency} = {rate:.4f} CHF\n"
+
         prompt = f"""Finde genau 4 Unterkunftsoptionen in {region}, {country}.
 
 Reisende: {req.adults} Erwachsene{f', {children_count} Kinder' if children_count else ''}
 Nächte: {nights}
 Suchradius: {req.hotel_radius_km} km
-Preisrahmen pro Nacht: CHF {budget_min:.0f} – CHF {budget_max:.0f}{children_hint}{extra_hint}
+Preisrahmen pro Nacht: CHF {budget_min:.0f} – CHF {budget_max:.0f}{children_hint}{extra_hint}{currency_block}
 
 REGELN:
 1. Option 1 (preference_index: 0): Entspricht diesem Wunsch des Gastes: "{pref0}"
@@ -176,7 +203,7 @@ Gib exakt dieses JSON zurück:
       "geheimtipp_hinweis": "Buche direkt beim Betrieb oder über lokales Tourismusbüro."
     }}
   ]
-}}"""
+}}{real_data_block}"""
 
         await debug_logger.log(
             LogLevel.API, f"→ Anthropic API call: {self.model} (Stop {stop_id}: {region})",
@@ -238,9 +265,22 @@ Gib exakt dieses JSON zurück:
                     children=children_count,
                 )
 
-            actual_type = opt.get("type") or "unterkunft"
-            images = await fetch_unsplash_images(f"{region} {actual_type}", actual_type)
-            opt.update(images)
+            # Bilder: Google Places wenn verfügbar
+            hotel_name_lower = hotel_name.lower()
+            if lat and lon:
+                gp_hotels = await search_hotels(lat, lon, radius_m=req.hotel_radius_km * 1000)
+                gp_match = next((h for h in gp_hotels if h["name"].lower() == hotel_name_lower), None)
+            else:
+                gp_match = None
+
+            if gp_match and gp_match.get("photo_reference"):
+                opt["image_overview"] = place_photo_url(gp_match["photo_reference"])
+                opt["image_mood"] = None
+                opt["image_customer"] = None
+            else:
+                actual_type = opt.get("type") or "unterkunft"
+                images = await fetch_unsplash_images(f"{region} {actual_type}", actual_type)
+                opt.update(images)
             return opt
 
         options = await asyncio.gather(*[enrich_option(opt) for opt in result.get("options", [])])
