@@ -485,7 +485,8 @@ function updateZoneLabel(legIndex, label) {
   if (S.legs[legIndex].zone_bbox) {
     S.legs[legIndex].zone_bbox.zone_label = label;
   } else {
-    S.legs[legIndex].zone_bbox = { north: 0, south: 0, east: 0, west: 0, zone_label: label };
+    // Store label for when bbox is drawn on the map — don't create invalid zero-coords bbox
+    S.legs[legIndex]._pending_zone_label = label;
   }
 }
 
@@ -520,7 +521,7 @@ function initZoneMap(legIndex) {
       const bbox = {
         north: b.getNorth(), south: b.getSouth(),
         east: b.getEast(), west: b.getWest(),
-        zone_label: S.legs[legIndex].zone_bbox?.zone_label || ""
+        zone_label: S.legs[legIndex].zone_bbox?.zone_label || S.legs[legIndex]._pending_zone_label || ""
       };
       S.legs[legIndex].zone_bbox = bbox;
       // Auto-geocode zone label
@@ -777,8 +778,14 @@ function buildPayload() {
     ? Math.max(1, Math.round((new Date(ed) - new Date(sd)) / msPerDay))
     : 7;
 
+  // Clean legs for payload: strip internal fields, ensure explore legs have valid zone_bbox
+  const cleanLegs = S.legs.map(leg => {
+    const { _pending_zone_label, ...clean } = leg;
+    return clean;
+  });
+
   return {
-    legs:             S.legs,
+    legs:             cleanLegs,
     total_days,
     adults:           S.adults,
     children:         S.children,
