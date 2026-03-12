@@ -401,12 +401,24 @@ function addLeg() {
   const originalEnd = prevLeg.end_location || '';
   const originalEndDate = prevLeg.end_date || '';
 
-  // New segment inherits the original destination and end date
+  // Split dates: give half the previous leg's days to the new segment
+  let splitDate = originalEndDate;
+  if (prevLeg.start_date && prevLeg.end_date) {
+    const totalDays = dateDiffDays(prevLeg.start_date, prevLeg.end_date);
+    if (totalDays < 2) {
+      alert('Das Segment hat zu wenige Tage zum Aufteilen. Bitte zuerst das Enddatum anpassen.');
+      return;
+    }
+    const halfDays = Math.max(1, Math.floor(totalDays / 2));
+    splitDate = addDays(prevLeg.start_date, halfDays);
+    prevLeg.end_date = splitDate;
+  }
+
   S.legs.push({
     leg_id: `leg-${S.legs.length}`,
     start_location: originalEnd,
     end_location: originalEnd,
-    start_date: originalEndDate,
+    start_date: splitDate,
     end_date: originalEndDate,
     mode: "transit",
     via_points: [],

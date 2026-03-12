@@ -10,10 +10,11 @@ from typing import Optional
 
 import redis as redis_lib
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
@@ -102,6 +103,17 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    import logging
+    errors = [
+        {k: str(v) if not isinstance(v, (str, int, float, bool, list, tuple, type(None))) else v
+         for k, v in e.items()}
+        for e in exc.errors()
+    ]
+    logging.getLogger("uvicorn").error(f"Validation error: {errors}")
+    return JSONResponse(status_code=422, content={"detail": errors})
 
 OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", str(Path(__file__).parent.parent / "outputs")))
 OUTPUTS_DIR.mkdir(exist_ok=True)
