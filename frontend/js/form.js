@@ -397,49 +397,18 @@ function renderLegCard(leg, index) {
 }
 
 function addLeg() {
-  const lastLeg = S.legs[S.legs.length - 1];
-  const midpoint = prompt("Trennpunkt eingeben (Stadt/Ort):");
-  if (!midpoint || !midpoint.trim()) return;
-
-  const boundary = midpoint.trim();
-  const originalEndLoc = lastLeg.end_location;
-  const originalEndDate = lastLeg.end_date;
-
-  // Split last leg's date range evenly
-  if (lastLeg.start_date && lastLeg.end_date) {
-    const totalDays = dateDiffDays(lastLeg.start_date, lastLeg.end_date);
-    const halfDays = Math.max(1, Math.floor(totalDays / 2));
-    const newBoundaryDate = addDays(lastLeg.start_date, halfDays);
-    lastLeg.end_date = newBoundaryDate;
-    lastLeg.end_location = boundary;
-
-    S.legs.push({
-      leg_id: `leg-${S.legs.length}`,
-      start_location: boundary,
-      end_location: originalEndLoc,
-      start_date: newBoundaryDate,
-      end_date: originalEndDate,
-      mode: "transit",
-      via_points: [],
-      zone_bbox: null,
-      zone_guidance: [],
-    });
-  } else {
-    lastLeg.end_location = boundary;
-    S.legs.push({
-      leg_id: `leg-${S.legs.length}`,
-      start_location: boundary,
-      end_location: originalEndLoc,
-      start_date: '',
-      end_date: '',
-      mode: "transit",
-      via_points: [],
-      zone_bbox: null,
-      zone_guidance: [],
-    });
-  }
-
-  // Re-number leg_ids
+  const prevLeg = S.legs[S.legs.length - 1];
+  S.legs.push({
+    leg_id: `leg-${S.legs.length}`,
+    start_location: prevLeg.end_location || '',
+    end_location: '',
+    start_date: prevLeg.end_date || '',
+    end_date: '',
+    mode: "transit",
+    via_points: [],
+    zone_bbox: null,
+    zone_guidance: [],
+  });
   S.legs.forEach((leg, i) => { leg.leg_id = `leg-${i}`; });
   renderLegs();
   saveFormToCache();
