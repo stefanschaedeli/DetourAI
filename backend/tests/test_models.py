@@ -611,14 +611,15 @@ class TestTripLeg:
         with pytest.raises(ValueError, match="end_date must be after start_date"):
             self._transit_leg(end_date=date(2026, 6, 10))
 
-    def test_explore_requires_bbox(self):
-        with pytest.raises(ValueError, match="explore legs require zone_bbox"):
-            TripLeg(
-                leg_id="leg-1",
-                start_location="A", end_location="B",
-                start_date=date(2026, 6, 15), end_date=date(2026, 7, 15),
-                mode="explore",
-            )
+    def test_explore_without_bbox_allowed(self):
+        """Explore legs without zone_bbox are valid — bbox can be resolved later."""
+        leg = TripLeg(
+            leg_id="leg-1",
+            start_location="A", end_location="B",
+            start_date=date(2026, 6, 15), end_date=date(2026, 7, 15),
+            mode="explore",
+        )
+        assert leg.zone_bbox is None
 
     def test_leg_id_pattern(self):
         with pytest.raises(ValueError):

@@ -53,8 +53,6 @@ class TripLeg(BaseModel):
     def validate_leg(self) -> "TripLeg":
         if self.end_date <= self.start_date:
             raise ValueError("end_date must be after start_date")
-        if self.mode == "explore" and self.zone_bbox is None:
-            raise ValueError("explore legs require zone_bbox")
         return self
 
     @property
