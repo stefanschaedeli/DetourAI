@@ -1907,12 +1907,11 @@ strong.req-keyword {
     flex-shrink: 0;
 }
 
-.leg-info {
+.leg-days-label {
+    font-size: 12px;
+    color: #888;
     flex: 1;
 }
-
-.leg-route { font-weight: 600; font-size: 14px; }
-.leg-dates { font-size: 12px; color: #666; }
 
 .leg-controls {
     display: flex;
@@ -1953,6 +1952,21 @@ strong.req-keyword {
 .leg-card-body {
     padding: 14px 18px;
     border-top: 1px solid #eee;
+}
+
+.leg-card-body .form-group { margin-bottom: 0; }
+
+.leg-location-row, .leg-date-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.leg-input-chained {
+    background: #f5f5f5;
+    color: #888;
+    cursor: not-allowed;
 }
 
 .zone-map-container { width: 100%; }

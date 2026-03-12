@@ -89,28 +89,16 @@
 
     <!-- ---- Step 1: Route ---- -->
     <div class="form-step active" id="form-step-1">
-      <h2 class="form-section-title">Wohin geht die Reise?</h2>
+      <h2 class="form-section-title">Reise planen</h2>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="start-location">Startort</label>
-          <input type="text" id="start-location" placeholder="z.B. Liestal, Schweiz">
-        </div>
-        <div class="form-group">
-          <label for="main-destination">Hauptziel</label>
-          <input type="text" id="main-destination" placeholder="z.B. Paris, Frankreich">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="start-date">Startdatum</label>
-          <input type="date" id="start-date">
-        </div>
-        <div class="form-group">
-          <label for="end-date">Enddatum</label>
-          <input type="date" id="end-date">
-        </div>
+      <!-- Legs builder (segments) -->
+      <div class="form-group" id="legs-section">
+        <label class="form-label">Reisesegmente</label>
+        <p class="form-hint" id="legs-hint">Jedes Segment definiert einen Abschnitt deiner Reise mit Start, Ziel und Daten.</p>
+        <div id="legs-container"></div>
+        <button type="button" class="btn btn-outline" id="add-leg-btn" onclick="addLeg()">
+          + Segment hinzufügen
+        </button>
       </div>
 
       <div class="form-group">
@@ -189,16 +177,6 @@
     <!-- ---- Step 3: Activities ---- -->
     <div class="form-step" id="form-step-3">
       <h2 class="form-section-title">Aktivitäten & Erlebnisse</h2>
-
-      <!-- Legs builder -->
-      <div class="form-group" id="legs-section">
-          <label class="form-label">Reiseschnitte</label>
-          <p class="form-hint" id="legs-hint">Deine Reise wird als ein Schnitt geplant. Füge Schnitte hinzu um verschiedene Modi zu kombinieren.</p>
-          <div id="legs-container"></div>
-          <button type="button" class="btn btn-outline" id="add-leg-btn" onclick="addLeg()">
-              + Schnitt hinzufügen
-          </button>
-      </div>
 
       <div class="form-group">
         <label>Pflichtaktivitäten</label>
@@ -577,15 +555,7 @@
       const d = document.getElementById(id + '-display');
       if (s && d) { d.textContent = s.value; s.oninput = () => { d.textContent = s.value; saveFormToCache(); }; }
     });
-    // Clear field errors on input
-    ['start-location', 'main-destination', 'start-date', 'end-date'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('input', () => {
-        el.classList.remove('invalid');
-        const errEl = el.parentElement.querySelector('.field-error');
-        if (errEl) errEl.textContent = '';
-      });
-    });
+    // Field error clearing is handled in leg card input event handlers
   });
 </script>
 

@@ -6,14 +6,11 @@ function initForm() {
   initBudgetSliders();
   setupFormAutoSave();
   restoreFormFromCache();
+  initLegs();
   updateQuickSubmitBar();
 
-  // Attach Google Places autocomplete when Maps API is ready
-  if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-    _initLocationAutocomplete();
-  } else {
-    document.addEventListener('google-maps-ready', _initLocationAutocomplete);
-  }
+  // Re-render legs when Google Maps API loads (for autocomplete attachment)
+  document.addEventListener('google-maps-ready', () => renderLegs());
 
   // Close settings menu on click outside
   document.addEventListener('click', e => {
@@ -21,23 +18,6 @@ function initForm() {
       const m = document.getElementById('settings-menu');
       if (m) m.style.display = 'none';
     }
-  });
-}
-
-function _initLocationAutocomplete() {
-  const acOpts = { types: ['(cities)'], fields: ['formatted_address', 'place_id', 'geometry'] };
-
-  ['start-location', 'main-destination'].forEach(id => {
-    const ac = GoogleMaps.attachAutocomplete(id, acOpts);
-    if (!ac) return;
-    ac.addListener('place_changed', () => {
-      const place = ac.getPlace();
-      if (place && place.formatted_address) {
-        document.getElementById(id).value = place.formatted_address;
-      }
-      saveFormToCache();
-      updateQuickSubmitBar();
-    });
   });
 }
 
@@ -89,7 +69,6 @@ function nextStep() {
   if (S.step < 6) {
     if (S.step === 5) renderSummary();
     goToStep(S.step + 1);
-    if (S.step === 3) initLegs();
   }
 }
 
@@ -123,21 +102,36 @@ function _clearFieldErrors(ids) {
 
 function validateStep(n) {
   if (n === 1) {
-    _clearFieldErrors(['start-location', 'main-destination', 'start-date', 'end-date']);
-    const start = document.getElementById('start-location').value.trim();
-    const dest  = document.getElementById('main-destination').value.trim();
-    const sd    = document.getElementById('start-date').value;
-    const ed    = document.getElementById('end-date').value;
+    // Collect all leg field IDs for clearing
+    const fieldIds = [];
+    S.legs.forEach((_, i) => {
+      fieldIds.push(`leg-start-${i}`, `leg-end-${i}`, `leg-sdate-${i}`, `leg-edate-${i}`);
+    });
+    _clearFieldErrors(fieldIds);
+
     let valid = true;
-    if (!start) { _setFieldError('start-location', 'Bitte Startort eingeben.'); valid = false; }
-    if (!dest)  { _setFieldError('main-destination', 'Bitte Hauptziel eingeben.'); if (valid) valid = false; }
-    if (!sd || !ed) {
-      if (!sd) _setFieldError('start-date', 'Startdatum fehlt.');
-      if (!ed) _setFieldError('end-date', 'Enddatum fehlt.');
-      valid = false;
-    } else if (sd >= ed) {
-      _setFieldError('end-date', 'Enddatum muss nach dem Startdatum liegen.');
-      valid = false;
+    for (let i = 0; i < S.legs.length; i++) {
+      const leg = S.legs[i];
+      if (!leg.start_location) {
+        _setFieldError(`leg-start-${i}`, 'Bitte Startort eingeben.');
+        if (valid) valid = false;
+      }
+      if (!leg.end_location) {
+        _setFieldError(`leg-end-${i}`, 'Bitte Ziel eingeben.');
+        if (valid) valid = false;
+      }
+      if (!leg.start_date) {
+        _setFieldError(`leg-sdate-${i}`, 'Startdatum fehlt.');
+        if (valid) valid = false;
+      }
+      if (!leg.end_date) {
+        _setFieldError(`leg-edate-${i}`, 'Enddatum fehlt.');
+        if (valid) valid = false;
+      }
+      if (leg.start_date && leg.end_date && leg.start_date >= leg.end_date) {
+        _setFieldError(`leg-edate-${i}`, 'Enddatum muss nach dem Startdatum liegen.');
+        if (valid) valid = false;
+      }
     }
     return valid;
   }
@@ -165,28 +159,21 @@ function updateQuickSubmitBar() {
   const bar = document.getElementById('quick-submit-bar');
   if (!bar) return;
   const formActive = document.getElementById('form-section')?.classList.contains('active');
-  const start = document.getElementById('start-location')?.value.trim();
-  const dest  = document.getElementById('main-destination')?.value.trim();
-  const sd    = document.getElementById('start-date')?.value;
-  const ed    = document.getElementById('end-date')?.value;
-  // Hide on step 6 (summary already has main CTA)
   const onSummaryStep = S.step === 6;
-  const ready = formActive && start && dest && sd && ed && sd < ed && !onSummaryStep;
+  // Check if all legs have valid data
+  const legsReady = S.legs.length > 0 && S.legs.every(l =>
+    l.start_location && l.end_location && l.start_date && l.end_date && l.start_date < l.end_date
+  );
+  const ready = formActive && legsReady && !onSummaryStep;
   bar.classList.toggle('visible', !!ready);
 }
 
 async function quickSubmitTrip() {
-  // Validate step 1 (required fields) — skip steps 2-6 validation
-  const start = document.getElementById('start-location')?.value.trim();
-  const dest  = document.getElementById('main-destination')?.value.trim();
-  const sd    = document.getElementById('start-date')?.value;
-  const ed    = document.getElementById('end-date')?.value;
-  if (!start) { alert('Bitte Startort eingeben.'); return; }
-  if (!dest)  { alert('Bitte Hauptziel eingeben.'); return; }
-  if (!sd || !ed) { alert('Bitte Reisedaten eingeben.'); return; }
-  if (sd >= ed)   { alert('Enddatum muss nach Startdatum liegen.'); return; }
-  // Ensure legs are initialized from Step 1 data
-  if (S.legs.length === 0) initLegs();
+  // Validate legs
+  const legsReady = S.legs.length > 0 && S.legs.every(l =>
+    l.start_location && l.end_location && l.start_date && l.end_date && l.start_date < l.end_date
+  );
+  if (!legsReady) { alert('Bitte alle Segmente vollständig ausfüllen.'); return; }
   await submitTrip();
 }
 
@@ -229,18 +216,13 @@ function formatDate(dateStr) {
 }
 
 function initLegs() {
-  // Auto-create first leg from Step 1 data
   if (S.legs.length === 0) {
-    const startLoc = document.getElementById('start-location')?.value.trim() || '';
-    const mainDest = document.getElementById('main-destination')?.value.trim() || '';
-    const startDate = document.getElementById('start-date')?.value || '';
-    const endDate = document.getElementById('end-date')?.value || '';
     S.legs = [{
       leg_id: "leg-0",
-      start_location: startLoc,
-      end_location: mainDest,
-      start_date: startDate,
-      end_date: endDate,
+      start_location: '',
+      end_location: '',
+      start_date: '',
+      end_date: '',
       mode: "transit",
       via_points: [],
       zone_bbox: null,
@@ -250,21 +232,118 @@ function initLegs() {
   renderLegs();
 }
 
+function _attachLegAutocomplete(legIndex, field) {
+  const inputId = field === 'start' ? `leg-start-${legIndex}` : `leg-end-${legIndex}`;
+  const acOpts = { types: ['(cities)'], fields: ['formatted_address', 'place_id', 'geometry'] };
+  const ac = GoogleMaps.attachAutocomplete(inputId, acOpts);
+  if (!ac) return;
+  ac.addListener('place_changed', () => {
+    const place = ac.getPlace();
+    if (place && place.formatted_address) {
+      const val = place.formatted_address;
+      if (field === 'start') {
+        updateLegField(legIndex, 'start_location', val);
+      } else {
+        updateLegField(legIndex, 'end_location', val);
+      }
+    }
+    saveFormToCache();
+    updateQuickSubmitBar();
+  });
+}
+
+function updateLegField(index, field, value) {
+  S.legs[index][field] = value;
+  // Chain: end_location → next leg's start_location
+  if (field === 'end_location' && index < S.legs.length - 1) {
+    S.legs[index + 1].start_location = value;
+    const nextInput = document.getElementById(`leg-start-${index + 1}`);
+    if (nextInput) nextInput.value = value;
+  }
+  saveFormToCache();
+  updateQuickSubmitBar();
+}
+
+function updateLegDate(index, field, value) {
+  S.legs[index][field] = value;
+  // Chain: end_date → next leg's start_date
+  if (field === 'end_date' && index < S.legs.length - 1) {
+    S.legs[index + 1].start_date = value;
+    const nextInput = document.getElementById(`leg-sdate-${index + 1}`);
+    if (nextInput) nextInput.value = value;
+  }
+  // Update days label
+  const leg = S.legs[index];
+  const daysLabel = document.getElementById(`leg-days-${index}`);
+  if (daysLabel && leg.start_date && leg.end_date) {
+    const days = dateDiffDays(leg.start_date, leg.end_date);
+    daysLabel.textContent = `${days} Tag${days !== 1 ? 'e' : ''}`;
+  }
+  saveFormToCache();
+  updateQuickSubmitBar();
+}
+
 function renderLegs() {
   const container = document.getElementById("legs-container");
   if (!container) return;
   container.innerHTML = S.legs.map((leg, i) => renderLegCard(leg, i)).join("");
-  // Re-init explore maps for any explore legs
+
+  // Attach autocomplete if Google Maps is ready
+  const gmReady = typeof google !== 'undefined' && google.maps && google.maps.places;
   S.legs.forEach((leg, i) => {
+    if (gmReady) {
+      // First leg: both fields editable; others: only end is editable
+      if (i === 0) _attachLegAutocomplete(i, 'start');
+      _attachLegAutocomplete(i, 'end');
+    }
     if (leg.mode === "explore") setTimeout(() => initZoneMap(i), 50);
   });
 }
 
 function renderLegCard(leg, index) {
   const isFirst = index === 0;
-  const isLast = index === S.legs.length - 1;
   const modeColor = leg.mode === "explore" ? "#e0b840" : "#4a90d9";
   const days = leg.start_date && leg.end_date ? dateDiffDays(leg.start_date, leg.end_date) : 0;
+  const canDelete = S.legs.length > 1;
+
+  // Location row
+  const startReadonly = !isFirst ? 'readonly tabindex="-1"' : '';
+  const startClass = !isFirst ? 'leg-input-chained' : '';
+  const locationRow = `
+    <div class="leg-location-row">
+      <div class="form-group">
+        <label for="leg-start-${index}">Von</label>
+        <input type="text" id="leg-start-${index}" class="${startClass}"
+          value="${esc(leg.start_location)}" placeholder="z.B. Liestal, Schweiz"
+          ${startReadonly}
+          oninput="updateLegField(${index}, 'start_location', this.value)">
+      </div>
+      <div class="form-group">
+        <label for="leg-end-${index}">Nach</label>
+        <input type="text" id="leg-end-${index}"
+          value="${esc(leg.end_location)}" placeholder="z.B. Paris, Frankreich"
+          oninput="updateLegField(${index}, 'end_location', this.value)">
+      </div>
+    </div>`;
+
+  // Date row
+  const sdateReadonly = !isFirst ? 'readonly tabindex="-1"' : '';
+  const sdateClass = !isFirst ? 'leg-input-chained' : '';
+  const dateRow = `
+    <div class="leg-date-row">
+      <div class="form-group">
+        <label for="leg-sdate-${index}">Startdatum</label>
+        <input type="date" id="leg-sdate-${index}" class="${sdateClass}"
+          value="${leg.start_date}" ${sdateReadonly}
+          oninput="updateLegDate(${index}, 'start_date', this.value)">
+      </div>
+      <div class="form-group">
+        <label for="leg-edate-${index}">Enddatum</label>
+        <input type="date" id="leg-edate-${index}"
+          value="${leg.end_date}"
+          oninput="updateLegDate(${index}, 'end_date', this.value)">
+      </div>
+    </div>`;
 
   const transitContent = leg.mode === "transit" ? `
       <div class="leg-via-points">
@@ -297,10 +376,7 @@ function renderLegCard(leg, index) {
   <div class="leg-card" id="leg-card-${index}" style="border-color:${modeColor}">
       <div class="leg-card-header" style="background:${leg.mode === 'explore' ? '#fdf8e8' : '#f5f5f5'}">
           <div class="leg-badge" style="background:${modeColor}">${index + 1}</div>
-          <div class="leg-info">
-              <div class="leg-route">${esc(leg.start_location)} → ${esc(leg.end_location)}</div>
-              <div class="leg-dates">${formatDate(leg.start_date)} – ${formatDate(leg.end_date)} · ${days} Tage</div>
-          </div>
+          <span class="leg-days-label" id="leg-days-${index}">${days > 0 ? `${days} Tag${days !== 1 ? 'e' : ''}` : ''}</span>
           <div class="leg-controls">
               <div class="mode-toggle">
                   <button class="mode-btn ${leg.mode === 'transit' ? 'active' : ''}"
@@ -308,10 +384,12 @@ function renderLegCard(leg, index) {
                   <button class="mode-btn ${leg.mode === 'explore' ? 'active' : ''}"
                       onclick="setLegMode(${index}, 'explore')" style="border-color:${modeColor}">Erkunden</button>
               </div>
-              ${!isFirst && !isLast ? `<button class="leg-delete-btn" onclick="removeLeg(${index})" aria-label="Schnitt entfernen">×</button>` : ""}
+              ${canDelete ? `<button class="leg-delete-btn" onclick="removeLeg(${index})" aria-label="Segment entfernen">×</button>` : ""}
           </div>
       </div>
       <div class="leg-card-body">
+          ${locationRow}
+          ${dateRow}
           ${transitContent}
           ${exploreContent}
       </div>
@@ -324,49 +402,70 @@ function addLeg() {
   if (!midpoint || !midpoint.trim()) return;
 
   const boundary = midpoint.trim();
-  const totalDays = dateDiffDays(S.legs[0].start_date, lastLeg.end_date);
-  const daysPerLeg = Math.floor(totalDays / (S.legs.length + 1));
+  const originalEndLoc = lastLeg.end_location;
+  const originalEndDate = lastLeg.end_date;
 
-  // Adjust existing last leg end date and location
-  const newBoundaryDate = addDays(lastLeg.start_date, daysPerLeg);
-  lastLeg.end_date = newBoundaryDate;
-  lastLeg.end_location = boundary;
+  // Split last leg's date range evenly
+  if (lastLeg.start_date && lastLeg.end_date) {
+    const totalDays = dateDiffDays(lastLeg.start_date, lastLeg.end_date);
+    const halfDays = Math.max(1, Math.floor(totalDays / 2));
+    const newBoundaryDate = addDays(lastLeg.start_date, halfDays);
+    lastLeg.end_date = newBoundaryDate;
+    lastLeg.end_location = boundary;
 
-  // Insert new leg
-  const newLeg = {
-    leg_id: `leg-${S.legs.length}`,
-    start_location: boundary,
-    end_location: document.getElementById('main-destination')?.value.trim() || '',
-    start_date: newBoundaryDate,
-    end_date: S.legs[0].end_date !== newBoundaryDate
-      ? (S.legs.length > 1 ? S.legs[S.legs.length - 1].end_date : document.getElementById('end-date')?.value || '')
-      : document.getElementById('end-date')?.value || '',
-    mode: "transit",
-    via_points: [],
-    zone_bbox: null,
-    zone_guidance: [],
-  };
-  // Restore original end_date on last leg before splice
-  const originalEndDate = document.getElementById('end-date')?.value || '';
-  newLeg.end_date = originalEndDate;
+    S.legs.push({
+      leg_id: `leg-${S.legs.length}`,
+      start_location: boundary,
+      end_location: originalEndLoc,
+      start_date: newBoundaryDate,
+      end_date: originalEndDate,
+      mode: "transit",
+      via_points: [],
+      zone_bbox: null,
+      zone_guidance: [],
+    });
+  } else {
+    lastLeg.end_location = boundary;
+    S.legs.push({
+      leg_id: `leg-${S.legs.length}`,
+      start_location: boundary,
+      end_location: originalEndLoc,
+      start_date: '',
+      end_date: '',
+      mode: "transit",
+      via_points: [],
+      zone_bbox: null,
+      zone_guidance: [],
+    });
+  }
 
-  S.legs.push(newLeg);
   // Re-number leg_ids
   S.legs.forEach((leg, i) => { leg.leg_id = `leg-${i}`; });
   renderLegs();
+  saveFormToCache();
 }
 
 function removeLeg(index) {
-  if (index === 0 || index === S.legs.length - 1) return;
-  S.legs.splice(index, 1);
-  // Reconnect: the leg before the removed one should end where the leg after it starts
-  if (index < S.legs.length) {
-    S.legs[index - 1].end_location = S.legs[index].start_location;
-    S.legs[index - 1].end_date = S.legs[index].start_date;
+  if (S.legs.length <= 1) return;
+
+  if (index === 0) {
+    // First leg removed: next leg inherits start_location + start_date
+    S.legs[1].start_location = S.legs[0].start_location;
+    S.legs[1].start_date = S.legs[0].start_date;
+  } else if (index === S.legs.length - 1) {
+    // Last leg removed: prev leg inherits end_location + end_date
+    S.legs[index - 1].end_location = S.legs[index].end_location;
+    S.legs[index - 1].end_date = S.legs[index].end_date;
+  } else {
+    // Middle leg removed: prev leg's end connects to next leg's start
+    S.legs[index - 1].end_location = S.legs[index + 1].start_location;
+    S.legs[index - 1].end_date = S.legs[index + 1].start_date;
   }
-  // Re-number leg_ids
+
+  S.legs.splice(index, 1);
   S.legs.forEach((leg, i) => { leg.leg_id = `leg-${i}`; });
   renderLegs();
+  saveFormToCache();
 }
 
 function setLegMode(index, mode) {
@@ -684,8 +783,10 @@ function updateBudgetPreview() {
 // ---------------------------------------------------------------------------
 
 function buildPayload() {
-  const sd = document.getElementById('start-date').value;
-  const ed = document.getElementById('end-date').value;
+  const firstLeg = S.legs[0] || {};
+  const lastLeg = S.legs[S.legs.length - 1] || {};
+  const sd = firstLeg.start_date || '';
+  const ed = lastLeg.end_date || '';
   const msPerDay = 86400000;
   const total_days = sd && ed
     ? Math.max(1, Math.round((new Date(ed) - new Date(sd)) / msPerDay))
@@ -725,17 +826,20 @@ function renderSummary() {
   const el = document.getElementById('summary-content');
   if (!el) return;
   const p = buildPayload();
+  const firstLeg = S.legs[0] || {};
+  const lastLeg = S.legs[S.legs.length - 1] || {};
+  const legsDisplay = S.legs.map(l => esc(l.start_location) + ' → ' + esc(l.end_location) + ' (' + l.mode + ')').join(' | ');
   el.innerHTML = `
     <div class="summary-grid">
-      <div class="summary-item"><span class="summary-label">Start</span><span>${esc(p.start_location)}</span></div>
-      <div class="summary-item"><span class="summary-label">Ziel</span><span>${esc(p.main_destination)}</span></div>
-      <div class="summary-item"><span class="summary-label">Datum</span><span>${esc(p.start_date)} – ${esc(p.end_date)} (${p.total_days} Tage)</span></div>
+      <div class="summary-item"><span class="summary-label">Start</span><span>${esc(firstLeg.start_location)}</span></div>
+      <div class="summary-item"><span class="summary-label">Ziel</span><span>${esc(lastLeg.end_location)}</span></div>
+      <div class="summary-item"><span class="summary-label">Datum</span><span>${formatDate(firstLeg.start_date)} – ${formatDate(lastLeg.end_date)} (${p.total_days} Tage)</span></div>
       <div class="summary-item"><span class="summary-label">Reisende</span><span>${p.adults} Erwachsene${p.children.length ? ', ' + p.children.length + ' Kinder' : ''}</span></div>
       <div class="summary-item"><span class="summary-label">Stile</span><span>${p.travel_styles.map(s => TRAVEL_STYLES.find(t => t.id === s)?.label || s).join(', ') || '–'}</span></div>
       <div class="summary-item"><span class="summary-label">Budget</span><span>CHF ${(p.budget_chf || 0).toLocaleString('de-CH')} (Unterkunft ${p.budget_accommodation_pct}% / Essen ${p.budget_food_pct}% / Aktivitäten ${p.budget_activities_pct}%)</span></div>
       <div class="summary-item"><span class="summary-label">Max. Fahrzeit</span><span>${p.max_drive_hours_per_day}h/Tag</span></div>
       ${p.mandatory_activities.length ? `<div class="summary-item"><span class="summary-label">Pflichtaktivitäten</span><span>${p.mandatory_activities.map(a => esc(a.name)).join(', ')}</span></div>` : ''}
-      ${p.legs.length > 1 ? `<div class="summary-item"><span class="summary-label">Reiseschnitte</span><span>${p.legs.map(l => esc(l.start_location) + ' → ' + esc(l.end_location) + ' (' + l.mode + ')').join(' | ')}</span></div>` : ''}
+      <div class="summary-item"><span class="summary-label">Segmente</span><span>${legsDisplay}</span></div>
     </div>
   `;
 }
@@ -750,8 +854,6 @@ async function submitTrip() {
   btn.innerHTML = '<span class="btn-spinner"></span> Plane Reise…';
 
   try {
-    // Ensure legs are initialized if user skipped Step 3
-    if (S.legs.length === 0) initLegs();
     const payload = buildPayload();
 
     // 1. Pre-init job so we can open SSE before Claude starts
@@ -810,10 +912,6 @@ function restoreFormFromCache() {
     if (el && val != null) el.value = val;
   };
 
-  setVal('start-location', cached.start_location);
-  setVal('main-destination', cached.main_destination);
-  setVal('start-date', cached.start_date);
-  setVal('end-date', cached.end_date);
   setVal('budget-chf', cached.budget_chf);
   setVal('max-drive-hours', cached.max_drive_hours_per_day);
   setVal('hotel-radius', cached.hotel_radius_km);
@@ -863,8 +961,21 @@ function restoreFormFromCache() {
     document.getElementById('adults-count').textContent = S.adults;
   }
 
-  if (cached.legs) {
+  // Restore legs — handle legacy cache that used top-level start/end fields
+  if (cached.legs && cached.legs.length > 0) {
     S.legs = cached.legs;
+  } else if (cached.start_location || cached.main_destination) {
+    S.legs = [{
+      leg_id: "leg-0",
+      start_location: cached.start_location || '',
+      end_location: cached.main_destination || '',
+      start_date: cached.start_date || '',
+      end_date: cached.end_date || '',
+      mode: "transit",
+      via_points: [],
+      zone_bbox: null,
+      zone_guidance: [],
+    }];
   }
 
   updateBudgetPreview();
