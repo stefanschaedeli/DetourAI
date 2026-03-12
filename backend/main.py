@@ -107,12 +107,19 @@ app.add_middleware(
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     import logging
+    logger = logging.getLogger("uvicorn")
+    # Log the raw request body for debugging
+    try:
+        body = await request.body()
+        logger.error(f"Request body: {body.decode('utf-8', errors='replace')[:2000]}")
+    except Exception:
+        pass
     errors = [
         {k: str(v) if not isinstance(v, (str, int, float, bool, list, tuple, type(None))) else v
          for k, v in e.items()}
         for e in exc.errors()
     ]
-    logging.getLogger("uvicorn").error(f"Validation error: {errors}")
+    logger.error(f"Validation error: {errors}")
     return JSONResponse(status_code=422, content={"detail": errors})
 
 OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", str(Path(__file__).parent.parent / "outputs")))
@@ -184,6 +191,124 @@ def _calc_skip_bonus(days_remaining: int, request: "TravelRequest") -> int:
     bonus = max(0, days_remaining - 1)
     return min(bonus, request.max_nights_per_stop)
 
+
+
+def _advance_to_next_leg(job: dict, request: TravelRequest) -> dict:
+    """Advance job to the next leg, resetting per-leg state. Mirrors orchestrator pattern."""
+    new_idx = job["leg_index"] + 1
+    job["leg_index"] = new_idx
+    job["current_leg_mode"] = request.legs[new_idx].mode if new_idx < len(request.legs) else None
+    job["segment_index"] = 0
+    job["segment_budget"] = _calc_leg_segment_budget(request, new_idx) if new_idx < len(request.legs) else 0
+    job["segment_stops"] = []
+    job["explore_phase"] = None
+    job["explore_zone_analysis"] = None
+    job["explore_circuit"] = []
+    job["explore_circuit_position"] = 0
+    return job
+
+
+async def _start_leg_route_building(job: dict, job_id: str, request: TravelRequest) -> dict:
+    """Start transit-mode route building for the current leg. Returns response dict."""
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    leg_index = job["leg_index"]
+    leg = request.legs[leg_index]
+    segment_target = (
+        leg.via_points[0].location if leg.via_points else leg.end_location
+    )
+    stops_in_segment = max(1, (job["segment_budget"] - 1) // (1 + request.min_nights_per_stop))
+    route_geo = await _calc_route_geometry_cached(
+        job, job_id, leg.start_location, segment_target,
+        stops_in_segment, request.max_drive_hours_per_day,
+        origin_location=leg.start_location,
+        proximity_origin_pct=request.proximity_origin_pct,
+        proximity_target_pct=request.proximity_target_pct,
+    )
+
+    agent = StopOptionsFinderAgent(request, job_id)
+    options, map_anchors, estimated_total, route_complete = \
+        await _find_and_stream_options(
+            agent=agent,
+            job_id=job_id,
+            selected_stops=job["selected_stops"],
+            stop_number=job["stop_counter"] + 1,
+            days_remaining=job["segment_budget"],
+            route_could_be_complete=False,
+            segment_target=segment_target,
+            segment_index=0,
+            segment_count=len(leg.via_points) + 1,
+            prev_location=leg.start_location,
+            max_drive_hours=request.max_drive_hours_per_day,
+            route_geometry=route_geo,
+        )
+
+    job["current_options"] = options
+    job["route_could_be_complete"] = route_complete
+    save_job(job_id, job)
+
+    n_segments = len(leg.via_points) + 1
+    route_status = _calc_route_status(request, [], job["segment_budget"], n_segments == 1)
+
+    return {
+        "options": options,
+        "meta": {
+            "stop_number": job["stop_counter"] + 1,
+            "days_remaining": route_status["days_remaining"],
+            "estimated_total_stops": estimated_total,
+            "route_could_be_complete": route_status["route_could_be_complete"],
+            "must_complete": route_status["must_complete"],
+            "segment_index": 0,
+            "segment_count": n_segments,
+            "segment_target": segment_target,
+            "map_anchors": map_anchors,
+            "skip_nights_bonus": _calc_skip_bonus(route_status["days_remaining"], request),
+            "leg_index": leg_index,
+            "total_legs": len(request.legs),
+            "leg_mode": leg.mode,
+        },
+        "leg_advanced": True,
+    }
+
+
+async def _start_explore_leg(job: dict, job_id: str, request: TravelRequest) -> dict:
+    """Start explore-mode leg: runs ExploreZoneAgent first pass, returns explore_pending response."""
+    from agents.explore_zone_agent import ExploreZoneAgent
+
+    leg_index = job["leg_index"]
+    leg = request.legs[leg_index]
+    agent = ExploreZoneAgent(request, job_id)
+
+    first_pass = await agent.run_first_pass(leg_index)
+    job["explore_zone_analysis"] = first_pass.model_dump()
+    job["explore_phase"] = "awaiting_guidance"
+    job["status"] = "awaiting_zone_guidance"
+    save_job(job_id, job)
+
+    await debug_logger.push_event(
+        job_id, "explore_zone_questions", None,
+        {"questions": first_pass.guided_questions, "leg_id": leg.leg_id}
+    )
+
+    return {
+        "options": [],
+        "meta": {
+            "leg_index": leg_index,
+            "total_legs": len(request.legs),
+            "leg_mode": leg.mode,
+        },
+        "explore_pending": True,
+        "leg_advanced": True,
+    }
+
+
+def _leg_meta(request: TravelRequest, leg_index: int) -> dict:
+    """Returns leg_index, total_legs, leg_mode fields for meta responses."""
+    return {
+        "leg_index": leg_index,
+        "total_legs": len(request.legs),
+        "leg_mode": request.legs[leg_index].mode if leg_index < len(request.legs) else None,
+    }
 
 
 def _calc_budget_state(request: TravelRequest, selected_stops: list,
@@ -828,6 +953,7 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
             "segment_target": segment_target,
             "map_anchors": map_anchors,
             "skip_nights_bonus": _calc_skip_bonus(route_status["days_remaining"], request),
+            **_leg_meta(request, job["leg_index"]),
         },
     }
 
@@ -946,30 +1072,58 @@ async def select_stop(job_id: str, body: StopSelectRequest):
                 "segment_target": segment_target,
                 "map_anchors": map_anchors,
                 "skip_nights_bonus": _calc_skip_bonus(new_status["days_remaining"], request),
+                **_leg_meta(request, job["leg_index"]),
             },
         }
 
     elif route_status["must_complete"] and is_last_segment:
-        # Route complete
-        job["current_options"] = []
-        job["route_could_be_complete"] = True
-        save_job(job_id, job)
-        return {
-            "job_id": job_id,
-            "selected_stop": selected,
-            "selected_stops": job["selected_stops"],
-            "options": [],
-            "meta": {
-                "stop_number": job["stop_counter"] + 1,
-                "days_remaining": 0,
-                "estimated_total_stops": len(job["selected_stops"]),
-                "route_could_be_complete": True,
-                "must_complete": True,
-                "segment_index": seg_idx,
-                "segment_count": n_segments,
-                "segment_target": leg.end_location,
-            },
-        }
+        # Current leg's last segment is complete
+        leg_index = job["leg_index"]
+        total_legs = len(request.legs)
+
+        # Emit leg_complete SSE event
+        await debug_logger.push_event(
+            job_id, "leg_complete", None,
+            {"leg_id": leg.leg_id, "leg_index": leg_index, "mode": leg.mode}
+        )
+
+        if leg_index < total_legs - 1:
+            # More legs remain — advance to next leg
+            _advance_to_next_leg(job, request)
+            save_job(job_id, job)
+
+            next_leg = request.legs[job["leg_index"]]
+            if next_leg.mode == "explore":
+                result = await _start_explore_leg(job, job_id, request)
+            else:
+                result = await _start_leg_route_building(job, job_id, request)
+
+            result["job_id"] = job_id
+            result["selected_stop"] = selected
+            result["selected_stops"] = job["selected_stops"]
+            return result
+        else:
+            # Last leg — route fully complete
+            job["current_options"] = []
+            job["route_could_be_complete"] = True
+            save_job(job_id, job)
+            return {
+                "job_id": job_id,
+                "selected_stop": selected,
+                "selected_stops": job["selected_stops"],
+                "options": [],
+                "meta": {
+                    "stop_number": job["stop_counter"] + 1,
+                    "days_remaining": 0,
+                    "estimated_total_stops": len(job["selected_stops"]),
+                    "route_could_be_complete": True,
+                    "must_complete": True,
+                    "segment_index": seg_idx,
+                    "segment_count": n_segments,
+                    "segment_target": leg.end_location,
+                    **_leg_meta(request, leg_index),
+                },
+            }
 
     else:
         # Continue building route
@@ -1024,6 +1178,7 @@ async def select_stop(job_id: str, body: StopSelectRequest):
                 "segment_target": segment_target,
                 "map_anchors": map_anchors,
                 "skip_nights_bonus": _calc_skip_bonus(new_status["days_remaining"], request),
+                **_leg_meta(request, job["leg_index"]),
             },
         }
 
@@ -1101,6 +1256,7 @@ async def recompute_options(job_id: str, body: RecomputeRequest):
             "segment_target": segment_target,
             "map_anchors": map_anchors,
             "skip_nights_bonus": _calc_skip_bonus(route_status["days_remaining"], request),
+            **_leg_meta(request, job["leg_index"]),
         },
     }
 
@@ -1238,6 +1394,7 @@ async def patch_job(job_id: str, body: PatchJobRequest):
             "map_anchors": map_anchors,
             "skip_nights_bonus": _calc_skip_bonus(new_status["days_remaining"], request),
             "total_days": request.total_days,
+            **_leg_meta(request, leg_index),
         },
     }
 
@@ -1252,6 +1409,12 @@ async def confirm_route(job_id: str):
 
     job = get_job(job_id)
     request = TravelRequest(**job["request"])
+
+    # Guard: all legs must be complete before confirming route
+    if job["leg_index"] < len(request.legs) - 1:
+        raise HTTPException(status_code=409,
+            detail="Nicht alle Etappen abgeschlossen — Route kann noch nicht bestätigt werden")
+
     selected_stops = job["selected_stops"]
 
     # Append missing via-points and main destination
@@ -1758,8 +1921,76 @@ async def api_replan_travel(travel_id: int):
 # Answer explore zone questions
 # ---------------------------------------------------------------------------
 
+@app.post("/api/skip-to-leg-end/{job_id}")
+async def skip_to_leg_end(job_id: str):
+    """Skip remaining stops in current leg — add end_location as stop and advance to next leg."""
+    job = get_job(job_id)
+    request = TravelRequest(**job["request"])
+    leg_index = job["leg_index"]
+    leg = request.legs[leg_index]
+    total_legs = len(request.legs)
+
+    # Add current leg's end_location as a stop
+    days_used = sum(1 + s.get("nights", request.min_nights_per_stop) for s in job["segment_stops"])
+    days_remaining = max(0, job["segment_budget"] - days_used)
+    dest_nights = max(request.min_nights_per_stop,
+                      min(request.max_nights_per_stop, days_remaining - 1))
+
+    job["stop_counter"] += 1
+    end_stop = {
+        "id": job["stop_counter"],
+        "option_type": "direct",
+        "region": leg.end_location,
+        "country": "XX",
+        "drive_hours": 1.0,
+        "nights": dest_nights,
+        "highlights": [],
+        "teaser": f"Ziel Etappe {leg_index + 1}: {leg.end_location}",
+        "is_fixed": False,
+    }
+    job["selected_stops"].append(end_stop)
+
+    # Emit leg_complete
+    await debug_logger.push_event(
+        job_id, "leg_complete", None,
+        {"leg_id": leg.leg_id, "leg_index": leg_index, "mode": leg.mode}
+    )
+
+    if leg_index < total_legs - 1:
+        _advance_to_next_leg(job, request)
+        save_job(job_id, job)
+
+        next_leg = request.legs[job["leg_index"]]
+        if next_leg.mode == "explore":
+            result = await _start_explore_leg(job, job_id, request)
+        else:
+            result = await _start_leg_route_building(job, job_id, request)
+
+        result["job_id"] = job_id
+        result["selected_stop"] = end_stop
+        result["selected_stops"] = job["selected_stops"]
+        return result
+    else:
+        job["current_options"] = []
+        job["route_could_be_complete"] = True
+        save_job(job_id, job)
+        return {
+            "job_id": job_id,
+            "selected_stop": end_stop,
+            "selected_stops": job["selected_stops"],
+            "options": [],
+            "meta": {
+                "route_could_be_complete": True,
+                **_leg_meta(request, leg_index),
+            },
+        }
+
+
 @app.post("/api/answer-explore-questions/{job_id}")
 async def answer_explore_questions(job_id: str, body: ExploreAnswersRequest):
+    from agents.explore_zone_agent import ExploreZoneAgent
+    from models.trip_leg import ExploreZoneAnalysis
+
     job = get_job(job_id)
     if job.get("explore_phase") != "awaiting_guidance":
         raise HTTPException(status_code=409,
@@ -1769,17 +2000,81 @@ async def answer_explore_questions(job_id: str, body: ExploreAnswersRequest):
     leg_index = job.get("leg_index", 0)
     req_data = job["request"]
     req_data["legs"][leg_index]["zone_guidance"] = body.answers
-
-    # Advance explore_phase to trigger second-pass on resume
-    job["explore_phase"] = "circuit_ready"
-    job["status"] = "building_route"
     job["request"] = req_data
     save_job(job_id, job)
 
-    # Re-enqueue planning job
-    _fire_task("run_planning_job", job_id)
+    request = TravelRequest(**req_data)
+    leg = request.legs[leg_index]
 
-    return {"status": "ok"}
+    # Run ExploreZoneAgent second pass inline
+    agent = ExploreZoneAgent(request, job_id)
+    first_pass = ExploreZoneAnalysis(**job["explore_zone_analysis"])
+    circuit, warnings = await agent.run_second_pass(leg_index, first_pass, body.answers)
+
+    # Convert circuit stops → selected_stops entries
+    for stop_data in circuit:
+        job["stop_counter"] += 1
+        stop_dict = {
+            "id": job["stop_counter"],
+            "option_type": "explore",
+            "region": stop_data.name,
+            "country": "XX",
+            "lat": stop_data.lat,
+            "lon": stop_data.lon,
+            "drive_hours": 1.0,
+            "nights": stop_data.suggested_nights,
+            "highlights": [],
+            "teaser": stop_data.logistics_note or f"Erkundungsstopp: {stop_data.name}",
+            "significance": stop_data.significance,
+        }
+        job["selected_stops"].append(stop_dict)
+
+    job["explore_phase"] = "complete"
+    job["explore_circuit"] = [s.model_dump() for s in circuit]
+    job["status"] = "building_route"
+
+    # Emit circuit + leg_complete SSE events
+    await debug_logger.push_event(
+        job_id, "explore_circuit_ready", None,
+        {"circuit": [s.model_dump() for s in circuit],
+         "warnings": warnings, "leg_id": leg.leg_id}
+    )
+    await debug_logger.push_event(
+        job_id, "leg_complete", None,
+        {"leg_id": leg.leg_id, "leg_index": leg_index, "mode": leg.mode}
+    )
+
+    total_legs = len(request.legs)
+    if leg_index < total_legs - 1:
+        # More legs remain — advance to next leg
+        _advance_to_next_leg(job, request)
+        save_job(job_id, job)
+
+        next_leg = request.legs[job["leg_index"]]
+        if next_leg.mode == "explore":
+            result = await _start_explore_leg(job, job_id, request)
+        else:
+            result = await _start_leg_route_building(job, job_id, request)
+
+        result["status"] = "ok"
+        result["circuit"] = [s.model_dump() for s in circuit]
+        result["warnings"] = warnings
+        return result
+    else:
+        # Last leg — route complete
+        job["route_could_be_complete"] = True
+        save_job(job_id, job)
+        return {
+            "status": "ok",
+            "circuit": [s.model_dump() for s in circuit],
+            "warnings": warnings,
+            "options": [],
+            "meta": {
+                "route_could_be_complete": True,
+                **_leg_meta(request, leg_index),
+            },
+            "route_could_be_complete": True,
+        }
 
 
 # ---------------------------------------------------------------------------

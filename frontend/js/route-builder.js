@@ -244,11 +244,21 @@ function _updateRouteStatus(meta) {
   const target  = meta.segment_target || '';
   const segInfo = meta.segment_count > 1
     ? ` (Segment ${(meta.segment_index || 0) + 1}/${meta.segment_count} → ${esc(target)})`
-    : ` → ${esc(target)}`;
+    : target ? ` → ${esc(target)}` : '';
+
+  const totalLegs = meta.total_legs || 1;
+  const legIdx = meta.leg_index || 0;
+  const legMode = meta.leg_mode || 'transit';
+  const modeLabel = legMode === 'explore' ? 'Erkunden' : 'Transit';
+  const legBadge = totalLegs > 1
+    ? `<span class="badge leg-badge">Etappe ${legIdx + 1}/${totalLegs}: ${modeLabel}</span>`
+    : '';
+
   status.innerHTML = `
     <div class="route-status-info">
+      ${legBadge}
       <strong>Stop #${stopNum}</strong>${segInfo}
-      <span class="badge">${daysRem} Tage verbleibend</span>
+      ${daysRem ? `<span class="badge">${daysRem} Tage verbleibend</span>` : ''}
     </div>
   `;
 }
@@ -284,20 +294,8 @@ function renderOptions(options, meta) {
 
   if (!container) return;
 
-  // Status header
-  const stopNum = (meta.stop_number || 1);
-  const daysRem = (meta.days_remaining || 0);
-  const target  = meta.segment_target || '';
-  const segInfo = meta.segment_count > 1
-    ? ` (Segment ${(meta.segment_index || 0) + 1}/${meta.segment_count} → ${esc(target)})`
-    : ` → ${esc(target)}`;
-
-  status.innerHTML = `
-    <div class="route-status-info">
-      <strong>Stop #${stopNum}</strong>${segInfo}
-      <span class="badge">${daysRem} Tage verbleibend</span>
-    </div>
-  `;
+  // Status header — delegate to shared function
+  _updateRouteStatus(meta);
 
   // Stops built so far
   renderBuiltStops();
@@ -547,6 +545,19 @@ async function selectOption(idx) {
     const options = data.options || [];
     const meta    = data.meta || {};
 
+    // Handle leg advancement
+    if (data.leg_advanced && data.explore_pending) {
+      // Explore leg started — wait for SSE explore_zone_questions
+      progressOverlay.close();
+      closeRouteSSE();
+      _streamingOptions = [];
+      S.loadingOptions = false;
+      routeMeta = { ...routeMeta, ...meta };
+      renderBuiltStops();
+      _updateRouteStatus(meta);
+      return;
+    }
+
     if (options.length === 0 && meta.route_could_be_complete) {
       // Route done — close SSE and show confirm
       progressOverlay.close();
@@ -598,8 +609,59 @@ function _appendSkipCardFromMeta() {
     _renderSkipCard(routeMeta.segment_target || '', routeMeta.skip_nights_bonus || 0));
 }
 
-function skipStop() {
-  confirmRoute();
+async function skipStop() {
+  const meta = routeMeta || {};
+  const totalLegs = meta.total_legs || 1;
+  const legIdx = meta.leg_index || 0;
+
+  if (totalLegs > 1 && legIdx < totalLegs - 1) {
+    // Multi-leg: skip to current leg's end and advance
+    S.loadingOptions = true;
+    _clearMap();
+    if (S.jobId) {
+      progressOverlay.open('Etappe wird abgeschlossen…');
+      openRouteSSE(S.jobId);
+    }
+    _showSkeletonCards();
+
+    try {
+      const data = await apiSkipToLegEnd(S.jobId);
+      if (data.selected_stop) addBuiltStop(data.selected_stop);
+      saveRouteState();
+
+      const options = data.options || [];
+      const newMeta = data.meta || {};
+
+      if (data.explore_pending) {
+        progressOverlay.close();
+        closeRouteSSE();
+        _streamingOptions = [];
+        S.loadingOptions = false;
+        routeMeta = { ...routeMeta, ...newMeta };
+        renderBuiltStops();
+        _updateRouteStatus(newMeta);
+        return;
+      }
+
+      progressOverlay.close();
+      closeRouteSSE();
+      _streamingOptions = [];
+
+      if (options.length === 0 && newMeta.route_could_be_complete) {
+        renderOptions([], newMeta);
+      } else {
+        renderOptions(options, newMeta);
+      }
+    } catch (err) {
+      const container = document.getElementById('route-options-container');
+      if (container) container.innerHTML = `<div class="error-msg">Fehler: ${esc(err.message)}</div>`;
+      progressOverlay.close();
+      closeRouteSSE();
+      S.loadingOptions = false;
+    }
+  } else {
+    confirmRoute();
+  }
 }
 
 async function confirmRoute() {
@@ -736,10 +798,39 @@ async function submitGuidanceAnswers(legId, questions) {
   const form = document.getElementById('explore-guidance-form');
   if (form) form.remove();
 
+  progressOverlay.open('Rundkurs wird geplant…');
+  if (S.jobId) openRouteSSE(S.jobId);
+
   try {
-    await answerExploreQuestions(S.jobId, answers);
+    const data = await answerExploreQuestions(S.jobId, answers);
+
+    const options = data.options || [];
+    const meta = data.meta || {};
+
+    if (data.explore_pending) {
+      // Next leg is also explore — wait for SSE questions
+      progressOverlay.close();
+      closeRouteSSE();
+      S.loadingOptions = false;
+      routeMeta = { ...routeMeta, ...meta };
+      renderBuiltStops();
+      _updateRouteStatus(meta);
+      return;
+    }
+
+    progressOverlay.close();
+    closeRouteSSE();
+    _streamingOptions = [];
+
+    if (options.length === 0 && (meta.route_could_be_complete || data.route_could_be_complete)) {
+      renderOptions([], { ...meta, route_could_be_complete: true });
+    } else if (options.length > 0) {
+      renderOptions(options, meta);
+    }
   } catch (err) {
     console.error('Fehler beim Senden der Antworten:', err);
+    progressOverlay.close();
+    closeRouteSSE();
   }
 }
 

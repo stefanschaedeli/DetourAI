@@ -145,6 +145,10 @@ async function apiSetRundreiseMode(jobId, activate) {
   return res.json();
 }
 
+async function apiSkipToLegEnd(jobId) {
+  return (await _fetchQuiet(`${API}/skip-to-leg-end/${jobId}`, { method: 'POST' })).json();
+}
+
 async function answerExploreQuestions(jobId, answers) {
   return await _fetchQuiet(`${API}/answer-explore-questions/${jobId}`, {
     method: 'POST',

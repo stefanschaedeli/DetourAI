@@ -422,13 +422,42 @@ class TestAnswerExploreQuestions:
         )
         assert resp.status_code == 409
 
-    def test_accepts_answers_and_re_enqueues(self, client, mock_job):
+    def test_accepts_answers_and_runs_second_pass(self, client, mock_job, mocker):
+        from models.trip_leg import ExploreStop
         mock_job["explore_phase"] = "awaiting_guidance"
         mock_job["leg_index"] = 0
+        mock_job["stop_counter"] = 0
+        mock_job["explore_zone_analysis"] = {
+            "zone_characteristics": "Alpen",
+            "preliminary_anchors": ["Chamonix"],
+            "guided_questions": ["Inseln?"],
+        }
+        # Change leg mode to explore with zone_bbox
+        mock_job["request"]["legs"][0]["mode"] = "explore"
+        mock_job["request"]["legs"][0]["zone_bbox"] = {
+            "north": 47.0, "south": 46.0, "east": 8.0, "west": 7.0,
+            "zone_label": "Testzone",
+        }
         job_id = mock_job["job_id"]
+
+        # Mock ExploreZoneAgent.run_second_pass
+        mock_circuit = [
+            ExploreStop(name="Chamonix", lat=45.9, lon=6.87,
+                        suggested_nights=2, significance="anchor",
+                        logistics_note=""),
+        ]
+        mock_agent = mocker.patch("agents.explore_zone_agent.ExploreZoneAgent", autospec=True)
+        mock_instance = mock_agent.return_value
+        mock_instance.run_second_pass = mocker.AsyncMock(return_value=(mock_circuit, []))
+
+        # Mock debug_logger.push_event
+        mocker.patch("main.debug_logger.push_event", new_callable=mocker.AsyncMock)
+
         resp = client.post(
             f"/api/answer-explore-questions/{job_id}",
             json={"answers": ["Ja, Inseln"]}
         )
         assert resp.status_code == 200
-        assert resp.json()["status"] == "ok"
+        data = resp.json()
+        assert data["status"] == "ok"
+        assert "circuit" in data
