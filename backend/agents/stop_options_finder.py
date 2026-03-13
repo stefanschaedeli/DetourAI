@@ -81,7 +81,7 @@ class StopOptionsFinderAgent:
         if geo.get("ideal_km_from_prev"):
             geo_lines.append(
                 f"Ideale Distanz dieses Stops vom letzten Stop: ~{geo['ideal_km_from_prev']:.0f} km / ~{geo.get('ideal_hours_from_prev', 0):.1f}h"
-                f" (gleichmässige Aufteilung der Reststrecke auf {geo['stops_remaining']} Etappen)"
+                f" (gleichmässig verteilt zwischen Start und Ziel — Stop soll ZWISCHEN den beiden liegen)"
             )
             if not is_rundreise:
                 geo_lines.append(

@@ -445,8 +445,10 @@ async def _calc_route_geometry(
         return {}
 
     n = max(1, stops_remaining)
-    ideal_km = total_km / n
-    ideal_hours = total_hours / n
+    # Divide by (n+1) so the stop sits BETWEEN start and target, not AT the target.
+    # E.g. 200km with 1 stop → ideal_km = 100km (midpoint), not 200km (target).
+    ideal_km = total_km / (n + 1)
+    ideal_hours = total_hours / (n + 1)
 
     result = {
         "segment_total_km": total_km,
