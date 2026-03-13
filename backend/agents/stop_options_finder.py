@@ -11,10 +11,12 @@ from utils.wikipedia import get_city_summary
 from agents._client import get_client, get_model
 
 SYSTEM_PROMPT = (
-    "Du bist ein Reiseplaner. Schlage genau 3 Zwischenstopps vor: direct, scenic, cultural. "
+    "Du bist ein Reiseplaner der Zwischenstopps entlang einer konkreten Fahrroute vorschlägt. "
     "KRITISCH — Regeln für das Feld 'region': "
     "Immer eine konkrete Ortschaft (Stadt, Dorf, Kleinstadt) angeben — NIEMALS Regionen, Gebirge, Länder oder Gebiete "
     "(z.B. NICHT 'Toskana', 'Alpen', 'Provence', 'Schwarzwald', sondern 'Siena', 'Annecy', 'Aix-en-Provence', 'Freiburg im Breisgau'). "
+    "KRITISCH — Geographie: Vorgeschlagene Stopps müssen ZWISCHEN dem aktuellen Standort und dem Ziel liegen, "
+    "nicht hinter dem Ziel oder in eine andere Richtung. Orientiere dich an den Referenzorten entlang der Route. "
     "KRITISCH — Fahrzeiten: Jede Option muss drive_hours ≤ dem angegebenen Maximum einhalten. "
     "Wähle nähere Zwischenstopps wenn nötig — lieber einen kürzeren Etappenstopp als das Limit zu überschreiten. "
     "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
@@ -86,6 +88,24 @@ class StopOptionsFinderAgent:
                     f"→ Wähle Orte die ca. {geo['ideal_km_from_prev']:.0f} km von {prev_stop} entfernt liegen, "
                     f"NICHT direkt am Start und NICHT direkt am Ziel."
                 )
+
+        # Corridor reference cities for transit mode
+        ref_cities = geo.get("corridor_reference_cities", [])
+        if ref_cities and not is_rundreise:
+            geo_lines.append(
+                f"ROUTE-KORRIDOR: Die Fahrroute verläuft durch/nahe: {', '.join(ref_cities)}. "
+                f"Suche Stopps in diesem Bereich oder in der unmittelbaren Umgebung dieser Route."
+            )
+
+        # Bounding box as hard limit
+        box = geo.get("corridor_box")
+        if box and not is_rundreise:
+            geo_lines.append(
+                f"SUCHBEREICH (±30 km entlang der Fahrroute): "
+                f"Lat {box['min_lat']:.2f}–{box['max_lat']:.2f}, Lon {box['min_lon']:.2f}–{box['max_lon']:.2f}. "
+                f"Alle 3 Optionen MÜSSEN in diesem geographischen Bereich liegen."
+            )
+
         geo_block = "\n".join(geo_lines) + "\n" if geo_lines else ""
 
         # Option-type block
@@ -100,12 +120,23 @@ class StopOptionsFinderAgent:
                 f'- option_type "abenteuer": überraschende andere Richtung, maximaler Kontrast zur Direktroute\n'
             )
         else:
-            option_block = (
-                f"Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor:\n"
-                f'- option_type "direct": kürzeste Route Richtung {segment_target}\n'
-                f'- option_type "scenic": landschaftlich schöne Alternative\n'
-                f'- option_type "cultural": kulturell interessante Alternative\n'
-            )
+            ref_cities = geo.get("corridor_reference_cities", [])
+            if ref_cities:
+                ref_str = ", ".join(ref_cities)
+                option_block = (
+                    f"Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor "
+                    f"(im Bereich der Route durch {ref_str}):\n"
+                    f'- option_type "direct": direkt an der Hauptroute Richtung {segment_target}\n'
+                    f'- option_type "scenic": landschaftlich schöne Alternative nahe der Route\n'
+                    f'- option_type "cultural": kulturell interessante Alternative nahe der Route\n'
+                )
+            else:
+                option_block = (
+                    f"Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor:\n"
+                    f'- option_type "direct": kürzeste Route Richtung {segment_target}\n'
+                    f'- option_type "scenic": landschaftlich schöne Alternative\n'
+                    f'- option_type "cultural": kulturell interessante Alternative\n'
+                )
 
         # Rules block
         if is_rundreise:
@@ -120,13 +151,19 @@ class StopOptionsFinderAgent:
             )
         else:
             rules_block = (
-                f"PFLICHT — alle 5 Regeln einhalten:\n"
+                f"PFLICHT — alle 7 Regeln einhalten:\n"
                 f"1. drive_hours von {prev_stop} zu diesem Stop: ≤ {req.max_drive_hours_per_day}h\n"
                 f"2. Distanz: ~{geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80):.0f} km von {prev_stop}\n"
                 f"   (Toleranz ±30%; NICHT unter {geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80) * 0.5:.0f} km — zu nahe am letzten Stop)\n"
                 f"3. NICHT zu nahe am Reise-Startpunkt {geo.get('origin_location', req.start_location)}: min {geo.get('min_km_from_origin', 50):.0f} km Luftlinie\n"
                 f"4. NICHT zu nahe am Ziel {segment_target}: min {geo.get('min_km_from_target', 50):.0f} km Luftlinie\n"
                 f"5. Teile lange Strecken auf — niemals direkt zum Ziel springen wenn noch {geo.get('stops_remaining', 1)} Etappe(n) geplant sind\n"
+                f"6. RICHTUNG: Der Stop muss geographisch ZWISCHEN {prev_stop} und {segment_target} liegen — "
+                f"NICHT hinter dem Ziel und NICHT in die entgegengesetzte Richtung. "
+                f"Nutze die Route-Referenzorte als Orientierung.\n"
+                f"7. SUCHBEREICH: Wenn ein geographischer Suchbereich (Lat/Lon) angegeben ist, "
+                f"müssen alle Optionen innerhalb dieses Bereichs liegen. "
+                f"Prüfe die lat/lon-Koordinaten deiner Vorschläge gegen den angegebenen Bereich.\n"
             )
 
         # JSON example option_types

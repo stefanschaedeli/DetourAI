@@ -25,7 +25,10 @@ from models.stop_option import StopSelectRequest
 from models.accommodation_option import AccommodationSelectRequest, BudgetState, AccommodationResearchRequest
 from models.trip_leg import ReplaceRegionRequest, RecomputeRegionsRequest
 from utils.debug_logger import debug_logger, LogLevel
-from utils.maps_helper import geocode_nominatim, osrm_route, build_maps_url
+from utils.maps_helper import (
+    geocode_nominatim, osrm_route, osrm_route_with_geometry, build_maps_url,
+    decode_polyline5, point_along_route, reference_cities_along_route, corridor_bbox,
+)
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
@@ -437,7 +440,7 @@ async def _calc_route_geometry(
     if not from_coords or not to_coords:
         return {}
 
-    total_hours, total_km = await osrm_route([from_coords, to_coords])
+    total_hours, total_km, geometry_str = await osrm_route_with_geometry([from_coords, to_coords])
     if total_km <= 0:
         return {}
 
@@ -445,7 +448,7 @@ async def _calc_route_geometry(
     ideal_km = total_km / n
     ideal_hours = total_hours / n
 
-    return {
+    result = {
         "segment_total_km": total_km,
         "segment_total_hours": total_hours,
         "stops_remaining": n,
@@ -458,6 +461,25 @@ async def _calc_route_geometry(
         "_from_coords": from_coords,
         "_to_coords": to_coords,
     }
+
+    # Corridor data for transit routes (not Rundreise)
+    if geometry_str:
+        route_points = decode_polyline5(geometry_str)
+        if route_points:
+            result["_route_decoded"] = route_points
+            # Search corridor: from ideal_km*0.5 to ideal_km*1.3
+            search_from_km = ideal_km * 0.5
+            search_to_km = min(ideal_km * 1.3, total_km * 0.9)
+            if search_to_km > search_from_km:
+                result["corridor_target"] = point_along_route(route_points, ideal_km)
+                result["corridor_box"] = corridor_bbox(route_points, search_from_km, search_to_km)
+                ref_cities = await reference_cities_along_route(
+                    route_points, total_km, search_from_km, search_to_km, num_points=3,
+                )
+                if ref_cities:
+                    result["corridor_reference_cities"] = ref_cities
+
+    return result
 
 
 async def _calc_route_geometry_cached(
@@ -724,6 +746,19 @@ async def _find_and_stream_options(
                     await debug_logger.log(
                         LogLevel.DEBUG,
                         f"  Verworfen (zu nahe am Ziel {segment_target}: {d_target:.0f} km < {min_km_from_target:.0f} km): {place}",
+                        job_id=job_id, agent="StopOptionsFinder",
+                    )
+                    return None
+
+            # Overshoot check: stop must not be further from segment start than the target
+            segment_start_coords = geo.get("_from_coords")
+            if segment_start_coords and target_coords and not geo.get("rundreise_mode", False):
+                d_start_to_target = _haversine_km(segment_start_coords, target_coords)
+                d_start_to_stop = _haversine_km(segment_start_coords, coords)
+                if d_start_to_stop > d_start_to_target * 1.15:  # 15% tolerance
+                    await debug_logger.log(
+                        LogLevel.DEBUG,
+                        f"  Verworfen (Overshoot: {d_start_to_stop:.0f} km > {d_start_to_target:.0f} km): {place}",
                         job_id=job_id, agent="StopOptionsFinder",
                     )
                     return None
