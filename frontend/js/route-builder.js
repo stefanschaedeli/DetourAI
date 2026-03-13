@@ -1083,19 +1083,9 @@ async function _doRecompute() {
 
 async function _confirmRegions() {
   progressOverlay.open('Regionen werden bestätigt…');
+  openRouteSSE(S.jobId);
   try {
     const data = await confirmRegions(S.jobId);
-
-    if (data.explore_stops_created) {
-      // Vereinfachter Explore-Flow: Stops sind bereits erstellt
-      S.selectedStops = data.selected_stops || [];
-      S.allStops = data.selected_stops || [];
-      await confirmRoute();
-      return;
-    }
-
-    // Weitere Etappen (Transit): normales Route-Building
-    openRouteSSE(S.jobId);
     startRouteBuilding(data);
   } catch (err) {
     progressOverlay.close();

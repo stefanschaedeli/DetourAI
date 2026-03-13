@@ -203,10 +203,12 @@ def _advance_to_next_leg(job: dict, request: TravelRequest) -> dict:
     job["segment_stops"] = []
     job["region_plan"] = None
     job["region_plan_confirmed"] = False
+    job["explore_segment_budgets"] = []
+    job["explore_regions"] = []
     return job
 
 
-async def _start_leg_route_building(job: dict, job_id: str, request: TravelRequest) -> dict:
+async def _start_leg_route_building(job: dict, job_id: str, request: TravelRequest, extra_instructions: str = "") -> dict:
     """Start transit-mode route building for the current leg. Returns response dict."""
     from agents.stop_options_finder import StopOptionsFinderAgent
 
@@ -239,6 +241,7 @@ async def _start_leg_route_building(job: dict, job_id: str, request: TravelReque
             prev_location=leg.start_location,
             max_drive_hours=request.max_drive_hours_per_day,
             route_geometry=route_geo,
+            extra_instructions=extra_instructions,
         )
 
     job["current_options"] = options
@@ -362,6 +365,8 @@ def _new_job(job_id: str, request: TravelRequest) -> dict:
         # Explore/Region leg state (reset on each explore leg transition)
         "region_plan": None,           # RegionPlan dict after planning
         "region_plan_confirmed": False, # True after user confirms
+        "explore_segment_budgets": [], # Pro-Region-Budget für Explore-Legs
+        "explore_regions": [],         # Region-Metadaten für StopFinder-Kontext
 
         # Accommodation (unchanged)
         "selected_accommodations": [],
@@ -985,28 +990,41 @@ async def select_stop(job_id: str, body: StopSelectRequest):
     segment_complete = False
 
     if route_status["must_complete"] and not is_last_segment:
-        # Insert via-point stop
         via_point = leg.via_points[seg_idx]
-        job["stop_counter"] += 1
-        via_stop = {
-            "id": job["stop_counter"],
-            "option_type": "via_point",
-            "region": via_point.location,
-            "country": "XX",
-            "drive_hours": 1.0,
-            "nights": request.min_nights_per_stop,
-            "highlights": [],
-            "teaser": f"Fixpunkt: {via_point.location}",
-            "is_fixed": True,
-        }
-        job["selected_stops"].append(via_stop)
-        via_point_added = via_stop
+        is_explore = bool(job.get("explore_regions"))
+
+        # Explore: gewählter Stop bekommt Region-Nächte
+        if is_explore and job.get("explore_segment_budgets"):
+            selected["nights"] = job["explore_segment_budgets"][seg_idx] - 1  # budget minus 1 drive day
+
+        if not is_explore:
+            # Transit: via-point Stop einfügen (bestehende Logik)
+            job["stop_counter"] += 1
+            via_stop = {
+                "id": job["stop_counter"],
+                "option_type": "via_point",
+                "region": via_point.location,
+                "country": "XX",
+                "drive_hours": 1.0,
+                "nights": request.min_nights_per_stop,
+                "highlights": [],
+                "teaser": f"Fixpunkt: {via_point.location}",
+                "is_fixed": True,
+            }
+            job["selected_stops"].append(via_stop)
+            via_point_added = via_stop
+
         segment_complete = True
 
         # Move to next segment
         job["segment_index"] += 1
-        job["segment_budget"] = _calc_leg_segment_budget(request, job["leg_index"])
         job["segment_stops"] = []
+
+        # Explore: Budget aus explore_segment_budgets, sonst normal berechnen
+        if job.get("explore_segment_budgets") and job["segment_index"] < len(job["explore_segment_budgets"]):
+            job["segment_budget"] = job["explore_segment_budgets"][job["segment_index"]]
+        else:
+            job["segment_budget"] = _calc_leg_segment_budget(request, job["leg_index"])
 
         seg_idx = job["segment_index"]
         is_last_segment = seg_idx == n_segments - 1
@@ -1018,7 +1036,21 @@ async def select_stop(job_id: str, body: StopSelectRequest):
         )
 
         stops_in_new_seg = max(1, (job["segment_budget"] - 1) // (1 + request.min_nights_per_stop))
-        prev_loc = via_point.location
+
+        # Explore: prev_loc ist der gewählte Stop, nicht der via_point
+        if is_explore:
+            prev_loc = selected.get("region", via_point.location)
+            # Extra-Instructions für nächste Region
+            new_seg = job["segment_index"]
+            if new_seg < len(job.get("explore_regions", [])):
+                er = job["explore_regions"][new_seg]
+                extra_instr = f"Suche Städte/Orte IN der Region {er['name']}. Highlights: {', '.join(er.get('highlights', []))}."
+            else:
+                extra_instr = ""
+        else:
+            prev_loc = via_point.location
+            extra_instr = ""
+
         next_geo = await _calc_route_geometry_cached(
             job, job_id, prev_loc, segment_target, stops_in_new_seg, request.max_drive_hours_per_day,
             origin_location=leg.start_location,
@@ -1041,6 +1073,7 @@ async def select_stop(job_id: str, body: StopSelectRequest):
                 prev_location=prev_loc,
                 max_drive_hours=request.max_drive_hours_per_day,
                 route_geometry=next_geo,
+                extra_instructions=extra_instr,
             )
         job["current_options"] = next_options
         job["route_could_be_complete"] = route_complete
@@ -2035,60 +2068,6 @@ async def recompute_regions(job_id: str, body: RecomputeRegionsRequest):
 # POST /api/confirm-regions/{job_id}
 # ---------------------------------------------------------------------------
 
-async def _regions_to_stops(
-    job: dict, region_plan: "RegionPlan", request: TravelRequest, leg_index: int
-) -> list[dict]:
-    """Konvertiere Regionen direkt in Stops mit ausbalancierten Tagen."""
-    leg = request.legs[leg_index]
-    total_days = leg.total_days
-    num_regions = len(region_plan.regions)
-
-    # Tage gleichmässig verteilen, Rest auf erste Regionen
-    base_nights = total_days // num_regions
-    remainder = total_days % num_regions
-
-    stops = []
-    prev_coords = None
-
-    # Start-Koordinaten für erste Fahrzeitberechnung
-    start_loc = leg.start_location or request.start_location
-    if start_loc:
-        prev_coords = await geocode_nominatim(start_loc)
-        await asyncio.sleep(0.35)  # Nominatim Rate-Limit
-
-    for i, region in enumerate(region_plan.regions):
-        nights = base_nights + (1 if i < remainder else 0)
-        nights = max(nights, request.min_nights_per_stop)
-
-        drive_hours, drive_km = 0.0, 0.0
-        coords = (region.lat, region.lon)
-        if prev_coords and coords[0] and coords[1]:
-            try:
-                drive_hours, drive_km = await osrm_route([prev_coords, coords])
-                drive_hours = round(drive_hours, 1)
-                drive_km = round(drive_km, 0)
-            except Exception:
-                pass
-
-        job["stop_counter"] += 1
-        stops.append({
-            "id": job["stop_counter"],
-            "option_type": "region",
-            "region": region.name,
-            "country": "XX",
-            "lat": region.lat,
-            "lon": region.lon,
-            "drive_hours": drive_hours,
-            "drive_km": drive_km,
-            "nights": nights,
-            "highlights": region.highlights or [],
-            "teaser": region.teaser or region.reason,
-        })
-        prev_coords = coords
-
-    return stops
-
-
 @app.post("/api/confirm-regions/{job_id}")
 async def confirm_regions(job_id: str):
     from models.trip_leg import RegionPlan
@@ -2100,26 +2079,57 @@ async def confirm_regions(job_id: str):
     region_plan = RegionPlan(**job["region_plan"])
     request = TravelRequest(**job["request"])
     leg_index = job["leg_index"]
+    leg = request.legs[leg_index]
+    total_days = leg.total_days
+    num_regions = len(region_plan.regions)
 
-    # Regionen direkt in Stops konvertieren (vereinfachter Explore-Flow)
-    stops = await _regions_to_stops(job, region_plan, request, leg_index)
-    job["selected_stops"].extend(stops)
+    # --- Nächte pro Region berechnen ---
+    base_nights = total_days // num_regions
+    remainder = total_days % num_regions
+    per_region_nights = []
+    for i in range(num_regions):
+        n = base_nights + (1 if i < remainder else 0)
+        n = max(n, request.min_nights_per_stop)
+        per_region_nights.append(n)
+
+    # --- Regionen als via_points injizieren ---
+    req_data = job["request"]
+    leg_data = req_data["legs"][leg_index]
+    leg_data["via_points"] = [
+        {"location": r.name, "fixed_date": None, "notes": f"Region: {r.reason}"}
+        for r in region_plan.regions[:-1]   # alle ausser letzte
+    ]
+    leg_data["mode"] = "transit"
+    if not leg_data.get("start_location"):
+        leg_data["start_location"] = request.start_location
+    if not leg_data.get("end_location"):
+        leg_data["end_location"] = region_plan.regions[-1].name
+    job["request"] = req_data
+
+    # --- Explore-spezifische Job-Felder ---
+    job["explore_segment_budgets"] = [n + 1 for n in per_region_nights]  # nights + 1 drive day
+    job["explore_regions"] = [
+        {"name": r.name, "lat": r.lat, "lon": r.lon,
+         "highlights": r.highlights or [], "teaser": r.teaser or r.reason}
+        for r in region_plan.regions
+    ]
     job["region_plan_confirmed"] = True
+    job["current_leg_mode"] = "transit"
+    job["segment_index"] = 0
+    job["segment_stops"] = []
+    job["segment_budget"] = job["explore_segment_budgets"][0]
 
-    # Prüfe ob weitere Etappen folgen
-    if leg_index < len(request.legs) - 1:
-        job["leg_index"] += 1
-        save_job(job_id, job)
-        request = TravelRequest(**job["request"])
-        return await _start_leg_route_building(job, job_id, request)
-
-    # Alle Etappen fertig → Route kann bestätigt werden
+    request = TravelRequest(**req_data)
     save_job(job_id, job)
-    return {
-        "job_id": job_id,
-        "explore_stops_created": True,
-        "selected_stops": job["selected_stops"],
-    }
+
+    # Extra-Instructions für StopFinder: "Suche in Region X"
+    region = region_plan.regions[0]
+    extra = (f"Suche Städte/Orte IN der Region {region.name}. "
+             f"Highlights der Region: {', '.join(region.highlights or [])}.")
+
+    result = await _start_leg_route_building(job, job_id, request, extra_instructions=extra)
+    result["job_id"] = job_id
+    return result
 
 
 # ---------------------------------------------------------------------------
