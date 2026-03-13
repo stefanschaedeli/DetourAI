@@ -138,7 +138,7 @@ function _buildOptionCardHTML(opt, i) {
     classes: `option-card${overLimit ? ' over-limit' : ''}`,
     id: `option-card-${i}`,
     html: `
-      <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+      ${buildHeroPhotoLoading('md')}
       <div class="option-card-body" onclick="selectOption(${i})">
         <div class="option-card-header">
           <span class="option-card-number">${i + 1}</span>
@@ -241,30 +241,31 @@ function startRouteBuilding(data) {
 }
 
 function _updateRouteStatus(meta) {
-  const status = document.getElementById('route-status');
-  if (!status) return;
+  const subtitle = document.getElementById('route-subtitle');
+  if (!subtitle) return;
   const stopNum = (meta.stop_number || 1);
   const daysRem = (meta.days_remaining || 0);
   const target  = meta.segment_target || '';
   const segInfo = meta.segment_count > 1
-    ? ` (Segment ${(meta.segment_index || 0) + 1}/${meta.segment_count} → ${esc(target)})`
-    : target ? ` → ${esc(target)}` : '';
+    ? `Segment ${(meta.segment_index || 0) + 1}/${meta.segment_count} → ${esc(target)}`
+    : target ? `→ ${esc(target)}` : '';
 
   const totalLegs = meta.total_legs || 1;
   const legIdx = meta.leg_index || 0;
   const legMode = meta.leg_mode || 'transit';
   const modeLabel = legMode === 'explore' ? 'Erkunden' : 'Transit';
-  const legBadge = totalLegs > 1
-    ? `<span class="badge leg-badge">Etappe ${legIdx + 1}/${totalLegs}: ${modeLabel}</span>`
+  const legInfo = totalLegs > 1
+    ? `Etappe ${legIdx + 1}/${totalLegs} (${modeLabel})`
     : '';
 
-  status.innerHTML = `
-    <div class="route-status-info">
-      ${legBadge}
-      <strong>Stop #${stopNum}</strong>${segInfo}
-      ${daysRem ? `<span class="badge">${daysRem} Tage verbleibend</span>` : ''}
-    </div>
-  `;
+  const parts = [legInfo, `Stop #${stopNum}`, segInfo, daysRem ? `${daysRem} Tage verbleibend` : ''].filter(Boolean);
+  subtitle.textContent = parts.join(' · ');
+
+  // Update options count badge
+  const countBadge = document.getElementById('options-count');
+  if (countBadge && S.currentOptions) {
+    countBadge.textContent = `${S.currentOptions.length} Optionen`;
+  }
 }
 
 function _renderSkipCard(target, skipBonus) {
@@ -500,8 +501,15 @@ function scrollToOption(i) {
 
 function renderBuiltStops() {
   const list = document.getElementById('built-stops-list');
+  const panel = document.getElementById('built-stops-panel');
+  const countBadge = document.getElementById('built-stops-count');
   if (!list) return;
-  list.innerHTML = S.selectedStops.map((stop, i) => {
+
+  const stops = S.selectedStops;
+  if (panel) panel.style.display = stops.length > 0 ? '' : 'none';
+  if (countBadge) countBadge.textContent = `${stops.length} Stop${stops.length !== 1 ? 's' : ''}`;
+
+  list.innerHTML = stops.map((stop, i) => {
     const flag = FLAGS[stop.country] || '';
     return `
       <div class="built-stop">
@@ -769,7 +777,7 @@ function _showNoStopsFoundUI(corridor) {
   mapDiv.style.cssText = 'height:300px;border-radius:12px;margin-bottom:16px';
 
   container.innerHTML = `
-    <div class="no-stops-found">
+    <div class="no-stops-card">
       <h3>Keine passenden Zwischenstopps gefunden</h3>
       <p>Auf der direkten Route zwischen <strong>${esc(corridor.start)}</strong> und
          <strong>${esc(corridor.end)}</strong> gibt es keine passenden Stopps.</p>
@@ -777,16 +785,11 @@ function _showNoStopsFoundUI(corridor) {
   `;
   container.appendChild(mapDiv);
   container.insertAdjacentHTML('beforeend', `
-    <div class="guidance-input-row" style="margin-top:12px">
-      <label class="form-label-sm">Wo möchtest du anhalten?</label>
-      <input type="text" class="input-sm" id="guidance-text"
-        placeholder="z.B. 'In der Nähe von Annecy' oder 'Am Genfer See'" style="width:100%">
-      <button class="btn btn-primary" style="margin-top:8px" onclick="_submitGuidance()">
-        Nochmal suchen
-      </button>
-      <button class="btn btn-secondary" style="margin-top:8px;margin-left:8px" onclick="skipStop()">
-        Direkt zum Ziel fahren
-      </button>
+    <div class="recompute-bar" style="margin-top:12px">
+      <input type="text" id="guidance-text"
+        placeholder="z.B. 'In der Nähe von Annecy' oder 'Am Genfer See'" style="flex:1">
+      <button class="btn btn-primary btn-sm" onclick="_submitGuidance()">Nochmal suchen</button>
+      <button class="btn btn-secondary btn-sm" onclick="skipStop()">Direkt zum Ziel</button>
     </div>
   `);
 
@@ -836,66 +839,103 @@ let _regionPlanMap = null;
 let _regionMarkers = [];
 let _regionPolyline = null;
 
+function _buildRegionCardHtml(r, i) {
+  const highlightsHtml = (r.highlights || []).length > 0
+    ? `<ul class="region-highlights">${r.highlights.map(h => `<li>${esc(h)}</li>`).join('')}</ul>`
+    : '';
+  const teaserHtml = r.teaser ? `<p class="region-teaser">${esc(r.teaser)}</p>` : '';
+  return `
+    <div class="region-card" draggable="true" data-index="${i}"
+         ondragstart="_onRegionDragStart(event, ${i})"
+         ondragover="event.preventDefault(); this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="_onRegionDrop(event, ${i}); this.classList.remove('drag-over')">
+      ${buildHeroPhotoLoading('md')}
+      <div class="region-card-body">
+        <div class="region-card-header">
+          <span class="region-card-number">${i + 1}</span>
+          <h3>${esc(r.name)}</h3>
+          <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); _toggleReplaceRegion(${i})">Ersetzen</button>
+        </div>
+        ${teaserHtml}
+        ${highlightsHtml}
+        <p class="region-reason">${esc(r.reason)}</p>
+      </div>
+      <div class="region-replace-form" id="region-replace-${i}" style="display:none">
+        <input type="text" id="region-replace-text-${i}"
+          placeholder="Wie soll diese Region ersetzt werden?">
+        <button class="btn btn-sm btn-primary" onclick="_doReplaceRegion(${i})">Ersetzen</button>
+      </div>
+    </div>`;
+}
+
 function showRegionPlanUI(regions, summary, legId) {
   progressOverlay.close();
   closeRouteSSE();
   S.loadingOptions = false;
 
-  const container = document.getElementById('route-options-container');
-  if (!container) return;
+  // Hide options panel, show region plan in its place
+  const optionsPanel = document.getElementById('options-panel');
+  if (optionsPanel) optionsPanel.style.display = 'none';
+
+  // Remove existing region panel if present
+  const existing = document.getElementById('region-plan-panel');
+  if (existing) existing.remove();
 
   // Store regions globally for drag-and-drop
   window._currentRegions = regions;
   window._currentRegionLegId = legId;
 
-  const regionListHtml = regions.map((r, i) => `
-    <li class="region-item" draggable="true" data-index="${i}"
-        ondragstart="_onRegionDragStart(event, ${i})"
-        ondragover="event.preventDefault()"
-        ondrop="_onRegionDrop(event, ${i})">
-      <div class="region-item-content">
-        <span class="region-number">${i + 1}</span>
-        <div class="region-info">
-          <strong>${esc(r.name)}</strong>
-          <span class="region-reason">${esc(r.reason)}</span>
-        </div>
-        <button class="btn btn-sm btn-outline" onclick="_toggleReplaceRegion(${i})">Ersetzen</button>
-      </div>
-      <div class="region-replace-form" id="region-replace-${i}" style="display:none">
-        <input type="text" class="input-sm" id="region-replace-text-${i}"
-          placeholder="Wie soll diese Region ersetzt werden?">
-        <button class="btn btn-sm btn-primary" onclick="_doReplaceRegion(${i})">Ersetzen</button>
-      </div>
-    </li>
-  `).join('');
+  const regionCardsHtml = regions.map((r, i) => _buildRegionCardHtml(r, i)).join('');
 
-  container.innerHTML = `
-    <div class="region-plan-ui">
+  const panel = document.createElement('div');
+  panel.id = 'region-plan-panel';
+  panel.className = 'route-panel';
+  panel.innerHTML = `
+    <div class="route-panel-header">
       <h3>Regionen-Plan</h3>
+      <div class="region-actions">
+        <button class="btn btn-secondary btn-sm" onclick="_toggleRecompute()">Neu berechnen</button>
+        <button class="btn btn-primary btn-sm" onclick="_confirmRegions()">Route bestätigen</button>
+      </div>
+    </div>
+    <div class="route-panel-body">
       <p class="region-summary">${esc(summary)}</p>
       <div class="region-plan-layout">
-        <div class="region-list-panel">
-          <ol class="region-list" id="region-list">${regionListHtml}</ol>
-          <div class="region-actions">
-            <button class="btn btn-secondary" onclick="_toggleRecompute()">Neu berechnen</button>
-            <button class="btn btn-primary" onclick="_confirmRegions()">Route bestätigen</button>
-          </div>
-          <div id="recompute-form" style="display:none;margin-top:8px">
-            <input type="text" class="input-sm" id="recompute-text"
-              placeholder="Was soll geändert werden?" style="width:100%">
-            <button class="btn btn-sm btn-primary" style="margin-top:4px" onclick="_doRecompute()">
-              Neu berechnen
-            </button>
-          </div>
-        </div>
+        <div class="region-cards-list" id="region-list">${regionCardsHtml}</div>
         <div class="region-map-panel">
-          <div id="region-plan-map" style="height:400px;border-radius:12px"></div>
+          <div id="region-plan-map"></div>
+        </div>
+      </div>
+      <div id="recompute-form" style="display:none;margin-top:12px">
+        <div class="recompute-bar">
+          <input type="text" id="recompute-text"
+            placeholder="Was soll geändert werden?" style="flex:1">
+          <button class="btn btn-sm btn-primary" onclick="_doRecompute()">Neu berechnen</button>
         </div>
       </div>
     </div>
   `;
 
+  // Insert after built-stops-panel or after map
+  const builtPanel = document.getElementById('built-stops-panel');
+  const routeMap = document.getElementById('route-map');
+  const insertAfter = builtPanel || routeMap;
+  if (insertAfter && insertAfter.parentNode) {
+    insertAfter.parentNode.insertBefore(panel, insertAfter.nextSibling);
+  }
+
   _initRegionMap(regions);
+  _lazyLoadRegionImages(regions);
+}
+
+function _lazyLoadRegionImages(regions) {
+  regions.forEach((r, i) => {
+    const card = document.querySelector(`.region-card[data-index="${i}"]`);
+    if (card && r.lat && r.lon) {
+      _lazyLoadEntityImages(card, r.name, r.lat, r.lon, 'city', 'md');
+    }
+  });
 }
 
 function _initRegionMap(regions) {
@@ -935,29 +975,11 @@ function _initRegionMap(regions) {
 
 function updateRegionPlanUI(regions, summary) {
   window._currentRegions = regions;
-  // Re-render the list
+  // Re-render the cards list
   const list = document.getElementById('region-list');
   if (list) {
-    list.innerHTML = regions.map((r, i) => `
-      <li class="region-item" draggable="true" data-index="${i}"
-          ondragstart="_onRegionDragStart(event, ${i})"
-          ondragover="event.preventDefault()"
-          ondrop="_onRegionDrop(event, ${i})">
-        <div class="region-item-content">
-          <span class="region-number">${i + 1}</span>
-          <div class="region-info">
-            <strong>${esc(r.name)}</strong>
-            <span class="region-reason">${esc(r.reason)}</span>
-          </div>
-          <button class="btn btn-sm btn-outline" onclick="_toggleReplaceRegion(${i})">Ersetzen</button>
-        </div>
-        <div class="region-replace-form" id="region-replace-${i}" style="display:none">
-          <input type="text" class="input-sm" id="region-replace-text-${i}"
-            placeholder="Wie soll diese Region ersetzt werden?">
-          <button class="btn btn-sm btn-primary" onclick="_doReplaceRegion(${i})">Ersetzen</button>
-        </div>
-      </li>
-    `).join('');
+    list.innerHTML = regions.map((r, i) => _buildRegionCardHtml(r, i)).join('');
+    _lazyLoadRegionImages(regions);
   }
   // Update summary
   const summaryEl = document.querySelector('.region-summary');

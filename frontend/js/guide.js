@@ -296,7 +296,7 @@ function renderFurtherActivities(activities) {
       <div class="further-activities-list">
         ${activities.map(act => `
           <div class="further-activity-item">
-            <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+            ${buildHeroPhotoLoading('sm')}
             <div class="further-activity-content">
               <strong>${esc(act.name)}</strong>
               <p>${esc(act.description)}</p>
@@ -391,7 +391,7 @@ function renderStops(plan) {
       return `
       <div class="stop-accommodation">
         <h4>Unterkunft</h4>
-        <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+        ${buildHeroPhotoLoading('sm')}
         <div class="acc-summary">
           <strong>${esc(acc.name)}</strong>
           <span class="acc-selected-badge">Gewählt</span>
@@ -411,7 +411,7 @@ function renderStops(plan) {
           <div class="acc-alt-list">
             ${altOpts.map(o => `
               <div class="acc-alt-item">
-                <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+                ${buildHeroPhotoLoading('sm')}
                 <div class="acc-alt-summary">
                   <strong>${esc(o.name)}</strong>
                   ${o.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
@@ -439,7 +439,7 @@ function renderStops(plan) {
           <div class="activities-grid">
             ${acts.map(act => `
               <div class="activity-card">
-                <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+                ${buildHeroPhotoLoading('sm')}
                 <div class="activity-content">
                   <strong>${esc(act.name)}</strong>
                   <p>${esc(act.description)}</p>
@@ -464,7 +464,7 @@ function renderStops(plan) {
           <div class="restaurants-list">
             ${rests.map(r => `
               <div class="restaurant-item">
-                <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+                ${buildHeroPhotoLoading('sm')}
                 <div style="padding: 10px">
                   <strong>${esc(r.name)}</strong>
                   <span class="cuisine-tag">${esc(r.cuisine)}</span>
@@ -518,7 +518,7 @@ function renderStops(plan) {
         </button>
 
         <div class="stop-body"${isFirst ? '' : ' style="display:none"'}>
-          <div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>
+          ${buildHeroPhotoLoading('lg')}
           ${renderTravelGuide(stop.travel_guide)}
           ${accHtml}
           ${actsHtml}
@@ -781,20 +781,23 @@ function _initGuideMap(plan) {
  * Lazily load images for an entity (stop, activity, restaurant, accommodation)
  * via Google Places and fill the .photo-strip skeleton container.
  */
-async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context) {
+async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context, sizeClass) {
   if (!containerEl || typeof GoogleMaps === 'undefined') return;
   try {
     const urls = await GoogleMaps.getPlaceImages(placeName, lat, lng, context);
-    const strip = containerEl.querySelector('.photo-strip, .photo-strip-loading');
-    const newStrip = buildPhotoGallery(urls, placeName);
-    if (!newStrip) return;
-    if (strip) {
+    // Find hero-photo-loading or legacy photo-strip-loading placeholder
+    const placeholder = containerEl.querySelector('.hero-photo-loading, .photo-strip-loading, .photo-strip');
+    const size = sizeClass || (placeholder?.classList.contains('hero-photo--lg') ? 'lg'
+      : placeholder?.classList.contains('hero-photo--sm') ? 'sm' : 'md');
+    const newHtml = buildHeroPhoto(urls, placeName, size);
+    if (!newHtml) return;
+    if (placeholder) {
       const tmp = document.createElement('div');
-      tmp.innerHTML = newStrip;
-      strip.replaceWith(tmp.firstChild);
+      tmp.innerHTML = newHtml;
+      placeholder.replaceWith(tmp.firstChild);
     } else {
       const tmp = document.createElement('div');
-      tmp.innerHTML = newStrip;
+      tmp.innerHTML = newHtml;
       containerEl.insertBefore(tmp.firstChild, containerEl.firstChild);
     }
   } catch (e) {

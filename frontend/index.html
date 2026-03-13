@@ -326,33 +326,41 @@
   <!-- ============================================================ Route builder -->
   <section class="section" id="route-builder">
     <div class="route-builder-header">
-      <h2>Route aufbauen</h2>
-      <button class="btn btn-secondary" onclick="backToForm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück zum Formular</button>
-    </div>
-
-    <div class="recompute-bar" id="recompute-bar">
-      <input type="text" id="recompute-input" placeholder="Sonderwunsch, z.B. «lieber Meeresküste» oder «mit Sehenswürdigkeit X»">
-      <button class="btn btn-secondary" onclick="recomputeOptions()">Neu berechnen</button>
-    </div>
-
-    <div class="route-status" id="route-status">
-      <div class="route-status-info">
-        <strong>Stop #1</strong>
-        <span class="badge">Optionen werden geladen…</span>
+      <div>
+        <h2>Route aufbauen</h2>
+        <p class="route-builder-subtitle" id="route-subtitle"></p>
       </div>
+      <button class="btn btn-secondary" onclick="backToForm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück zum Formular</button>
     </div>
 
     <div id="route-map"></div>
 
-    <div class="built-stops">
-      <h3>Ausgewählte Stops</h3>
-      <div id="built-stops-list"></div>
+    <!-- Built stops panel -->
+    <div class="route-panel" id="built-stops-panel" style="display:none">
+      <div class="route-panel-header">
+        <h3>Ausgewählte Stops</h3>
+        <span class="badge" id="built-stops-count"></span>
+      </div>
+      <div class="route-panel-body" id="built-stops-list"></div>
     </div>
 
-    <div class="options-grid" id="route-options-container">
-      <div class="shimmer-card"></div>
-      <div class="shimmer-card"></div>
-      <div class="shimmer-card"></div>
+    <!-- Options panel -->
+    <div class="route-panel" id="options-panel">
+      <div class="route-panel-header">
+        <h3>Verfügbare Optionen</h3>
+        <span class="badge" id="options-count"></span>
+      </div>
+      <div class="route-panel-header recompute-bar" id="recompute-bar">
+        <input type="text" id="recompute-input" placeholder="Sonderwunsch, z.B. «lieber Meeresküste» oder «mit Sehenswürdigkeit X»" style="flex:1">
+        <button class="btn btn-secondary btn-sm" onclick="recomputeOptions()">Neu berechnen</button>
+      </div>
+      <div class="route-panel-body">
+        <div class="options-grid" id="route-options-container">
+          <div class="shimmer-card"></div>
+          <div class="shimmer-card"></div>
+          <div class="shimmer-card"></div>
+        </div>
+      </div>
     </div>
 
     <div class="confirm-route-area">

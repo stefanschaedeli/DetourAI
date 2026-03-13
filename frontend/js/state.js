@@ -121,25 +121,48 @@ function showSection(id) {
   if (typeof updateQuickSubmitBar === 'function') updateQuickSubmitBar();
 }
 
-/** Build a horizontal photo strip from an array of URLs. Returns '' if empty. */
-function buildPhotoGallery(urls, altText) {
+/**
+ * Build a hero photo component — one large image with click-to-open gallery.
+ * @param {string[]} urls - Array of image URLs
+ * @param {string} altText - Alt text for the image
+ * @param {'lg'|'md'|'sm'} sizeClass - Size variant (lg=280px, md=200px, sm=140px)
+ * @returns {string} HTML string
+ */
+function buildHeroPhoto(urls, altText, sizeClass = 'md') {
   if (!urls || !urls.length) return '';
   const alt = esc(altText || '');
-  const items = urls.map((url, i) =>
-    `<div class="photo-strip-item">
-       <img src="${esc(url)}" alt="${alt}" loading="lazy"
-            data-lightbox-url="${esc(url)}"
-            data-lightbox-caption="${esc(altText || '')} — ${i + 1}/${urls.length}"
-            onerror="this.parentElement.style.display='none'">
-     </div>`
-  ).join('');
-  return `<div class="photo-strip">${items}</div>`;
+  const urlsJson = JSON.stringify(urls.map(u => esc(u)));
+  const countBadge = urls.length > 1
+    ? `<span class="hero-photo-count">${urls.length} Fotos</span>`
+    : '';
+  return `
+    <div class="hero-photo hero-photo--${sizeClass}" data-photo-urls='${urlsJson}'>
+      <img src="${esc(urls[0])}" alt="${alt}" loading="lazy"
+           data-lightbox-url="${esc(urls[0])}"
+           data-lightbox-caption="${alt}"
+           onerror="this.parentElement.classList.add('hero-photo-error')">
+      ${countBadge}
+    </div>`;
 }
 
-/** @deprecated Use buildPhotoGallery() instead */
+/**
+ * Build a hero photo loading placeholder.
+ * @param {'lg'|'md'|'sm'} sizeClass - Size variant
+ * @returns {string} HTML string
+ */
+function buildHeroPhotoLoading(sizeClass = 'md') {
+  return `<div class="hero-photo hero-photo--${sizeClass} hero-photo-loading"><div class="hero-photo-shimmer shimmer-elem"></div></div>`;
+}
+
+/** @deprecated Use buildHeroPhoto() instead */
+function buildPhotoGallery(urls, altText) {
+  return buildHeroPhoto(urls, altText, 'md');
+}
+
+/** @deprecated Use buildHeroPhoto() instead */
 function buildImageGallery(overview, mood, customer, altText) {
   const urls = [overview, mood, customer].filter(Boolean);
-  return buildPhotoGallery(urls, altText);
+  return buildHeroPhoto(urls, altText, 'md');
 }
 
 // Lightbox gallery state
@@ -185,6 +208,20 @@ function closeLightbox() {
 
 // Event delegation for lightbox open/close
 document.addEventListener('click', e => {
+  // Hero-photo click → open lightbox with all photos from data-photo-urls
+  const hero = e.target.closest('.hero-photo[data-photo-urls]');
+  if (hero && !e.target.closest('button')) {
+    e.stopPropagation();
+    try {
+      _lbUrls = JSON.parse(hero.dataset.photoUrls);
+    } catch { _lbUrls = []; }
+    if (_lbUrls.length === 0) return;
+    _lbIndex = 0;
+    openLightbox(_lbUrls[0], hero.querySelector('img')?.alt || '');
+    return;
+  }
+
+  // Legacy photo-strip support
   const img = e.target.closest('[data-lightbox-url]');
   if (img) {
     e.stopPropagation();

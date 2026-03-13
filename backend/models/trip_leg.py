@@ -33,6 +33,8 @@ class RegionPlanItem(BaseModel):
     lat: float
     lon: float
     reason: str = Field(max_length=500)
+    teaser: str = Field(default="", max_length=300)
+    highlights: list[str] = Field(default_factory=list)
 
 
 class RegionPlan(BaseModel):

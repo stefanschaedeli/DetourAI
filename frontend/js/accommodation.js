@@ -95,7 +95,7 @@ function renderAccCards(stopId, options, mustHaves) {
       const isMH = (opt.matched_must_haves || []).some(m => m.toLowerCase() === f.toLowerCase());
       return `<span class="feature-tag${isMH ? ' must-have' : ''}">${esc(f)}</span>`;
     }).slice(0, 5).join('');
-    const imgHtml = `<div class="photo-strip photo-strip-loading"><div class="photo-strip-shimmer shimmer-elem"></div></div>`;
+    const imgHtml = buildHeroPhotoLoading('md');
     const isGeheimtipp = opt.is_geheimtipp === true;
     const cardClass = isGeheimtipp ? 'acc-option-card acc-geheimtipp-card' : 'acc-option-card';
     const geheimtippBadge = isGeheimtipp

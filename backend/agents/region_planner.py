@@ -9,13 +9,26 @@ SYSTEM_PROMPT = (
     "Du bist ein Reiserouten-Stratege. Plane eine Rundreise durch Regionen basierend auf der "
     "Beschreibung des Reisenden. Ordne Regionen in einer logistisch sinnvollen Reihenfolge "
     "(minimale Rückwege, geografische Effizienz). Jede Region soll ein Gebiet repräsentieren, "
-    "in dem der Reisende konkrete Stopps machen kann. "
+    "in dem der Reisende konkrete Stopps machen kann.\n"
+    "Für jede Region liefere:\n"
+    "- name: Name der Region\n"
+    "- lat/lon: Zentrale Koordinaten der Region\n"
+    "- reason: Warum diese Region zur Reise passt (1 Satz)\n"
+    "- teaser: Kurzer, einladender Satz der die Region beschreibt und Lust auf den Besuch macht\n"
+    "- highlights: 3-5 konkrete Sehenswürdigkeiten, Aktivitäten oder Besonderheiten der Region\n\n"
     "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
 )
 
 REGION_SCHEMA = """{
   "regions": [
-    { "name": "Regionsname", "lat": 0.0, "lon": 0.0, "reason": "Warum diese Region" }
+    {
+      "name": "Regionsname",
+      "lat": 0.0,
+      "lon": 0.0,
+      "reason": "Warum diese Region zur Reise passt",
+      "teaser": "Ein Satz der die Region beschreibt und Lust macht",
+      "highlights": ["Sehenswürdigkeit 1", "Aktivität 2", "Besonderheit 3"]
+    }
   ],
   "summary": "Zusammenfassung der Rundreise"
 }"""
