@@ -841,8 +841,7 @@ function showRegionPlanUI(regions, summary, legId) {
   closeRouteSSE();
   S.loadingOptions = false;
 
-  const container = document.getElementById('route-builder-panel') ||
-                    document.getElementById('progress-panel');
+  const container = document.getElementById('route-options-container');
   if (!container) return;
 
   // Store regions globally for drag-and-drop

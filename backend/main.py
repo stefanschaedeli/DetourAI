@@ -297,6 +297,7 @@ async def _start_explore_leg(job: dict, job_id: str, request: TravelRequest) -> 
             "leg_index": leg_index,
             "total_legs": len(request.legs),
             "leg_mode": leg.mode,
+            "leg_id": leg.leg_id,
         },
         "explore_pending": True,
         "region_plan": region_plan.model_dump(),
