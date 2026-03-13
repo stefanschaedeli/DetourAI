@@ -199,6 +199,17 @@ async function apiUpdateTravel(id, data) {
   })).json();
 }
 
+/** Send a frontend log entry to the backend. */
+async function apiLogError(level, message, source, stack) {
+  try {
+    await fetch(`${API}/log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level, message: String(message).slice(0, 5000), source: String(source || '').slice(0, 200), stack: String(stack || '').slice(0, 10000) }),
+    });
+  } catch (_) { /* best-effort — don't throw on logging failures */ }
+}
+
 /**
  * Open SSE connection for a job.
  * @param {string} jobId

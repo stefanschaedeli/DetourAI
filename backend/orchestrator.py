@@ -48,29 +48,34 @@ class TravelPlannerOrchestrator:
         req = self.request
         job_id = self.job_id
 
-        await debug_logger.log(LogLevel.INFO, "Orchestrator startet", job_id=job_id)
+        debug_logger.set_verbosity(job_id, req.log_verbosity)
 
-        # Phase 1: Route (leg-sequential)
-        if pre_built_stops and len(pre_built_stops) > 0:
-            # Resume after all legs completed — go straight to research
-            stops = pre_built_stops
-            day = 1
-            for stop in stops:
-                if not stop.get("arrival_day"):
-                    stop["arrival_day"] = day
-                day += 1 + stop.get("nights", req.min_nights_per_stop)
-        else:
-            stops = await self._run_all_legs()
-            if stops is None:
-                # Paused waiting for zone guidance — job state saved, return sentinel
-                return {}
+        try:
+            await debug_logger.log(LogLevel.INFO, "Orchestrator startet", job_id=job_id)
 
-        await self.progress("route_ready", "route_architect", {"stops": stops}, 10)
+            # Phase 1: Route (leg-sequential)
+            if pre_built_stops and len(pre_built_stops) > 0:
+                # Resume after all legs completed — go straight to research
+                stops = pre_built_stops
+                day = 1
+                for stop in stops:
+                    if not stop.get("arrival_day"):
+                        stop["arrival_day"] = day
+                    day += 1 + stop.get("nights", req.min_nights_per_stop)
+            else:
+                stops = await self._run_all_legs()
+                if stops is None:
+                    # Paused waiting for zone guidance — job state saved, return sentinel
+                    return {}
 
-        # Phase 2–4: Research + Day Planning + Analysis (unchanged)
-        return await self._run_research_and_planning(
-            stops, pre_selected_accommodations, pre_all_accommodation_options
-        )
+            await self.progress("route_ready", "route_architect", {"stops": stops}, 10)
+
+            # Phase 2–4: Research + Day Planning + Analysis (unchanged)
+            return await self._run_research_and_planning(
+                stops, pre_selected_accommodations, pre_all_accommodation_options
+            )
+        finally:
+            debug_logger.clear_verbosity(job_id)
 
     async def _run_all_legs(self) -> Optional[list]:
         """Runs all legs sequentially. Returns None if paused mid-explore."""

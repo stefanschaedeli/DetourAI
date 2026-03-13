@@ -221,3 +221,17 @@ document.addEventListener('click', e => {
     closeLightbox();
   }
 });
+
+// Global error handlers → report to backend log
+window.onerror = function(message, source, lineno, colno, error) {
+  if (typeof apiLogError === 'function') {
+    apiLogError('error', `${message} (${source}:${lineno}:${colno})`, source || '', error?.stack || '');
+  }
+};
+
+window.onunhandledrejection = function(event) {
+  if (typeof apiLogError === 'function') {
+    const msg = event.reason?.message || String(event.reason);
+    apiLogError('error', `Unhandled rejection: ${msg}`, '', event.reason?.stack || '');
+  }
+};

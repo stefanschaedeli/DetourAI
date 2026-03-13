@@ -58,6 +58,9 @@ class TravelRequest(BaseModel):
     budget_food_pct: int = Field(default=20, ge=0, le=100)
     budget_activities_pct: int = Field(default=20, ge=0, le=100)
 
+    # Logging
+    log_verbosity: str = Field(default="normal", pattern="^(minimal|normal|verbose|debug)$")
+
     # --- Derived properties (replace removed explicit fields) ---
 
     @property

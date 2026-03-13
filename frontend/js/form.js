@@ -768,6 +768,7 @@ function buildPayload() {
     budget_accommodation_pct: parseInt(document.getElementById('budget-acc-pct')?.value)  || 60,
     budget_food_pct:          parseInt(document.getElementById('budget-food-pct')?.value) || 20,
     budget_activities_pct:    parseInt(document.getElementById('budget-act-pct')?.value)  || 20,
+    log_verbosity:            document.getElementById('log-verbosity')?.value || 'normal',
   };
 }
 
@@ -859,7 +860,7 @@ function setupFormAutoSave() {
   document.querySelectorAll('#form-section input, #form-section select, #form-section textarea')
     .forEach(el => { el.addEventListener('change', saveFormToCache); });
   // Settings menu lives outside #form-section — attach separately
-  ['max-activities', 'max-restaurants'].forEach(id => {
+  ['max-activities', 'max-restaurants', 'log-verbosity'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', saveFormToCache);
   });
@@ -888,6 +889,7 @@ function restoreFormFromCache() {
   setVal('proximity-origin', cached.proximity_origin_pct);
   setVal('proximity-target', cached.proximity_target_pct);
   setVal('travel-description', cached.travel_description);
+  setVal('log-verbosity', cached.log_verbosity);
 
   // Sync slider display labels
   ['hotel-radius', 'activities-radius', 'max-drive-hours', 'proximity-origin', 'proximity-target'].forEach(id => {

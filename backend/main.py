@@ -12,7 +12,7 @@ import redis as redis_lib
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -2130,6 +2130,22 @@ async def confirm_regions(job_id: str):
     result = await _start_leg_route_building(job, job_id, request, extra_instructions=extra)
     result["job_id"] = job_id
     return result
+
+
+# ---------------------------------------------------------------------------
+# Frontend error logging
+# ---------------------------------------------------------------------------
+
+class FrontendLogEntry(BaseModel):
+    level: str = Field(pattern="^(error|warning|info)$")
+    message: str = Field(max_length=5000)
+    source: str = Field(default="", max_length=200)
+    stack: str = Field(default="", max_length=10000)
+
+@app.post("/api/log")
+async def frontend_log(entry: FrontendLogEntry):
+    debug_logger.log_frontend(entry.level, entry.message, entry.source, entry.stack)
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------------------

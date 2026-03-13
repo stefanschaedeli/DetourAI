@@ -25,6 +25,10 @@ backend/.env
 outputs/*.pdf
 outputs/*.pptx
 
+# Logs
+logs/
+backend/logs/
+
 # Node (if ever)
 node_modules/
 

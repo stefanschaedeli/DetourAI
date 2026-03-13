@@ -18,10 +18,12 @@ services:
       - REDIS_URL=redis://redis:6379
       - OUTPUTS_DIR=/app/outputs
       - DATA_DIR=/app/data
+      - LOGS_DIR=/app/logs
     depends_on: [redis]
     volumes:
       - ./outputs:/app/outputs
       - travel_data:/app/data
+      - ./logs:/app/logs
 
   celery:
     image: travelman/backend:latest
@@ -36,9 +38,11 @@ services:
       - TEST_MODE=${TEST_MODE:-true}
       - REDIS_URL=redis://redis:6379
       - DATA_DIR=/app/data
+      - LOGS_DIR=/app/logs
     depends_on: [redis]
     volumes:
       - travel_data:/app/data
+      - ./logs:/app/logs
 
   frontend:
     image: travelman/frontend:latest

@@ -63,7 +63,7 @@ class RegionPlannerAgent:
         """Extract JSON from response, warning on truncation."""
         if response.stop_reason == "max_tokens":
             await debug_logger.log(
-                LogLevel.WARN,
+                LogLevel.WARNING,
                 "RegionPlannerAgent Antwort wurde abgeschnitten (max_tokens erreicht)",
                 job_id=self.job_id, agent="RegionPlannerAgent",
             )
