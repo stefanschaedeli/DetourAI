@@ -227,6 +227,7 @@ function initLegs() {
       via_points: [],
       zone_bbox: null,
       zone_guidance: [],
+      explore_description: '',
     }];
   }
   renderLegs();
@@ -296,7 +297,6 @@ function renderLegs() {
       if (i === 0) _attachLegAutocomplete(i, 'start');
       _attachLegAutocomplete(i, 'end');
     }
-    if (leg.mode === "explore") setTimeout(() => initZoneMap(i), 50);
   });
 }
 
@@ -361,15 +361,12 @@ function renderLegCard(leg, index) {
 
   const exploreContent = leg.mode === "explore" ? `
       <div class="leg-zone">
-          <label class="form-label-sm">Erkundungszone</label>
-          <div id="zone-map-${index}" class="zone-map-container" style="height:180px;border-radius:8px;overflow:hidden;border:1px solid #ddd;margin-bottom:8px"></div>
-          <div class="zone-label-row">
-              <span class="form-label-sm">Zone:</span>
-              <input type="text" class="input-sm" id="zone-label-${index}"
-                  value="${esc(leg.zone_bbox?.zone_label || '')}"
-                  oninput="updateZoneLabel(${index}, this.value)"
-                  placeholder="Zone benennen…">
-          </div>
+          <label class="form-label-sm">Was möchtest du erkunden?</label>
+          <textarea id="explore-text-${index}" class="input-sm"
+              placeholder="z.B. 'Die Französischen Alpen — Bergdörfer, Seen und Alpenpässe' oder 'Toskana mit Fokus auf Weingüter und mittelalterliche Städte'"
+              rows="3"
+              oninput="S.legs[${index}].explore_description = this.value"
+          >${esc(leg.explore_description || '')}</textarea>
       </div>` : "";
 
   return `
@@ -424,6 +421,7 @@ function addLeg() {
     via_points: [],
     zone_bbox: null,
     zone_guidance: [],
+    explore_description: '',
   });
   S.legs.forEach((leg, i) => { leg.leg_id = `leg-${i}`; });
   renderLegs();
@@ -455,13 +453,10 @@ function removeLeg(index) {
 
 function setLegMode(index, mode) {
   S.legs[index].mode = mode;
-  if (mode === "explore" && !S.legs[index].zone_bbox) {
-    S.legs[index].zone_bbox = null;
+  if (mode === "explore" && !S.legs[index].explore_description) {
+    S.legs[index].explore_description = '';
   }
   renderLegs();
-  if (mode === "explore") {
-    setTimeout(() => initZoneMap(index), 50);
-  }
 }
 
 function handleViaInput(event, legIndex) {
@@ -479,75 +474,6 @@ function handleViaInput(event, legIndex) {
 function removeViaPoint(legIndex, location) {
   S.legs[legIndex].via_points = S.legs[legIndex].via_points.filter(vp => vp.location !== location);
   renderLegs();
-}
-
-function updateZoneLabel(legIndex, label) {
-  if (S.legs[legIndex].zone_bbox) {
-    S.legs[legIndex].zone_bbox.zone_label = label;
-  } else {
-    // Store label for when bbox is drawn on the map — don't create invalid zero-coords bbox
-    S.legs[legIndex]._pending_zone_label = label;
-  }
-}
-
-function initZoneMap(legIndex) {
-  const containerId = `zone-map-${legIndex}`;
-  const container = document.getElementById(containerId);
-  if (!container || container._leaflet_id) return; // already initialized
-
-  const leg = S.legs[legIndex];
-  const map = L.map(containerId).setView([48.0, 10.0], 4);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap"
-  }).addTo(map);
-
-  let rect = null;
-
-  // Restore existing bbox if present
-  if (leg.zone_bbox && leg.zone_bbox.north) {
-    const bounds = [[leg.zone_bbox.south, leg.zone_bbox.west],
-                    [leg.zone_bbox.north, leg.zone_bbox.east]];
-    rect = L.rectangle(bounds, { color: "#e0b840", weight: 2, fillOpacity: 0.15 }).addTo(map);
-    map.fitBounds(bounds);
-  }
-
-  // Draw bbox on drag using Leaflet.draw
-  if (typeof L.Draw !== 'undefined') {
-    const drawControl = new L.Draw.Rectangle(map, { shapeOptions: { color: "#e0b840" } });
-    map.on(L.Draw.Event.CREATED, async (e) => {
-      if (rect) rect.remove();
-      rect = e.layer.addTo(map);
-      const b = e.layer.getBounds();
-      const bbox = {
-        north: b.getNorth(), south: b.getSouth(),
-        east: b.getEast(), west: b.getWest(),
-        zone_label: S.legs[legIndex].zone_bbox?.zone_label || S.legs[legIndex]._pending_zone_label || ""
-      };
-      S.legs[legIndex].zone_bbox = bbox;
-      // Auto-geocode zone label
-      const center = b.getCenter();
-      const label = await geocodeZoneLabel(center.lat, center.lng);
-      if (label) {
-        S.legs[legIndex].zone_bbox.zone_label = label;
-        const labelInput = document.getElementById(`zone-label-${legIndex}`);
-        if (labelInput) labelInput.value = label;
-      }
-    });
-    drawControl.enable();
-  }
-}
-
-async function geocodeZoneLabel(lat, lon) {
-  try {
-    const resp = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-      { headers: { "Accept-Language": "de" } }
-    );
-    const data = await resp.json();
-    return data.address?.country || data.address?.state || null;
-  } catch {
-    return null;
-  }
 }
 
 // ---------------------------------------------------------------------------
