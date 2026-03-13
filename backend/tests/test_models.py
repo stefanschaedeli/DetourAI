@@ -528,7 +528,8 @@ def test_place_id_can_be_set():
 # ZoneBBox
 # ---------------------------------------------------------------------------
 
-from models.trip_leg import ZoneBBox, ExploreStop, ExploreZoneAnalysis, ExploreAnswersRequest, TripLeg
+from models.trip_leg import (ZoneBBox, ExploreStop, ExploreZoneAnalysis, ExploreAnswersRequest,
+                              RegionPlanItem, RegionPlan, ReplaceRegionRequest, RecomputeRegionsRequest, TripLeg)
 from models.via_point import ViaPoint
 from datetime import date
 
@@ -588,6 +589,57 @@ class TestExploreAnswersRequest:
     def test_empty_answers_rejected(self):
         with pytest.raises(ValueError):
             ExploreAnswersRequest(answers=[])
+
+
+class TestRegionPlanItem:
+    def test_valid(self):
+        item = RegionPlanItem(name="Tessin", lat=46.2, lon=8.95, reason="Seen")
+        assert item.name == "Tessin"
+
+    def test_name_too_long(self):
+        with pytest.raises(ValueError):
+            RegionPlanItem(name="x" * 201, lat=46.2, lon=8.95, reason="ok")
+
+
+class TestRegionPlan:
+    def test_valid(self):
+        plan = RegionPlan(
+            regions=[RegionPlanItem(name="Tessin", lat=46.2, lon=8.95, reason="Seen")],
+            summary="Kurztrip"
+        )
+        assert len(plan.regions) == 1
+
+    def test_empty_regions_rejected(self):
+        with pytest.raises(ValueError):
+            RegionPlan(regions=[], summary="Leer")
+
+    def test_summary_too_long(self):
+        with pytest.raises(ValueError):
+            RegionPlan(
+                regions=[RegionPlanItem(name="X", lat=0, lon=0, reason="ok")],
+                summary="x" * 1001
+            )
+
+
+class TestReplaceRegionRequest:
+    def test_valid(self):
+        r = ReplaceRegionRequest(index=0, instruction="Ersetze durch Wallis")
+        assert r.index == 0
+
+    def test_negative_index_rejected(self):
+        with pytest.raises(ValueError):
+            ReplaceRegionRequest(index=-1, instruction="test")
+
+
+class TestRecomputeRegionsRequest:
+    def test_valid(self):
+        r = RecomputeRegionsRequest(instruction="Mehr Küste")
+        assert r.instruction == "Mehr Küste"
+
+    def test_empty_instruction_allowed(self):
+        # Empty string is allowed — no min_length constraint
+        r = RecomputeRegionsRequest(instruction="")
+        assert r.instruction == ""
 
 
 class TestTripLeg:

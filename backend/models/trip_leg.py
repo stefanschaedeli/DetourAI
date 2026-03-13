@@ -28,6 +28,27 @@ class ExploreStop(BaseModel):
     logistics_note: str = Field(default="", max_length=500)
 
 
+class RegionPlanItem(BaseModel):
+    name: str = Field(max_length=200)
+    lat: float
+    lon: float
+    reason: str = Field(max_length=500)
+
+
+class RegionPlan(BaseModel):
+    regions: list[RegionPlanItem] = Field(min_length=1)
+    summary: str = Field(max_length=1000)
+
+
+class ReplaceRegionRequest(BaseModel):
+    index: int = Field(ge=0)
+    instruction: str = Field(max_length=1000)
+
+
+class RecomputeRegionsRequest(BaseModel):
+    instruction: str = Field(max_length=1000)
+
+
 class ExploreZoneAnalysis(BaseModel):
     zone_characteristics: str = Field(max_length=2000)
     preliminary_anchors: list[str] = Field(default=[])
@@ -48,6 +69,7 @@ class TripLeg(BaseModel):
     via_points: list[ViaPoint] = Field(default=[])
     zone_bbox: Optional[ZoneBBox] = None
     zone_guidance: list[str] = Field(default=[])
+    explore_description: Optional[str] = None
 
     @model_validator(mode="after")
     def validate_leg(self) -> "TripLeg":
