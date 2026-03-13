@@ -176,6 +176,39 @@ travelman3/
 - `esc()` for all user-content interpolation into HTML (XSS prevention)
 - localStorage keys prefixed `tp_v1_*`
 
+### File-Based Logging (REQUIRED for new code)
+
+All backend code **must** use the centralized file-logging system in `utils/debug_logger.py`.
+Log files are written to `backend/logs/` with daily rotation (30-day retention).
+
+**When adding a new agent or backend component:**
+1. Add an entry to `_COMPONENT_MAP` in `debug_logger.py`:
+   ```python
+   "NewAgentName": "agents/new_agent",
+   ```
+2. Use `debug_logger.log(LogLevel.X, "message", job_id=self.job_id, agent="NewAgentName")`
+   for all log calls — the `agent` parameter routes the message to the correct log file.
+3. Use appropriate `LogLevel`:
+   - `ERROR` / `WARNING` — problems (always logged)
+   - `INFO` / `SUCCESS` / `AGENT` — normal flow (logged at Normal+)
+   - `API` — external API calls (logged at Verbose+)
+   - `DEBUG` / `PROMPT` — detailed debug info (logged at Debug only)
+4. For prompt logging: `debug_logger.log_prompt(agent, model, prompt, job_id=job_id)`
+
+**Log file structure:**
+```
+backend/logs/
+  agents/<agent_name>.log      — one file per agent
+  orchestrator/orchestrator.log — orchestration flow
+  api/api.log                  — general API / endpoint logs
+  frontend/frontend.log        — errors reported by the browser
+```
+
+**Frontend error reporting:**
+- All `console.error()` calls in JS should also call `apiLogError('error', msg, source, stack)`
+  (defined in `api.js`) to persist errors in `frontend/frontend.log`.
+- `window.onerror` and `window.onunhandledrejection` already auto-report to backend.
+
 ---
 
 ## Environment Variables
@@ -184,6 +217,7 @@ travelman3/
 ANTHROPIC_API_KEY=sk-ant-...     # required
 TEST_MODE=true                   # true=haiku, false=opus/sonnet
 REDIS_URL=redis://localhost:6379 # job state store
+LOGS_DIR=/app/logs               # file logging dir (default: backend/logs/)
 ```
 
 ---
