@@ -793,11 +793,11 @@ async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context, 
     if (placeholder) {
       const tmp = document.createElement('div');
       tmp.innerHTML = newHtml;
-      placeholder.replaceWith(tmp.firstChild);
+      placeholder.replaceWith(tmp.firstElementChild);
     } else {
       const tmp = document.createElement('div');
       tmp.innerHTML = newHtml;
-      containerEl.insertBefore(tmp.firstChild, containerEl.firstChild);
+      containerEl.insertBefore(tmp.firstElementChild, containerEl.firstChild);
     }
   } catch (e) {
     if (typeof S !== 'undefined') {
