@@ -2058,9 +2058,15 @@ async def confirm_regions(job_id: str):
 
     # Inject via_points into the request leg
     req_data = job["request"]
-    req_data["legs"][leg_index]["via_points"] = via_points
+    leg_data = req_data["legs"][leg_index]
+    leg_data["via_points"] = via_points
     # Switch leg mode to transit for stop-by-stop processing
-    req_data["legs"][leg_index]["mode"] = "transit"
+    leg_data["mode"] = "transit"
+    # Populate start/end locations from region plan (required for transit validation)
+    if not leg_data.get("start_location"):
+        leg_data["start_location"] = region_plan.regions[0].name
+    if not leg_data.get("end_location"):
+        leg_data["end_location"] = region_plan.regions[-1].name
     job["request"] = req_data
     job["region_plan_confirmed"] = True
     job["current_leg_mode"] = "transit"
