@@ -66,8 +66,6 @@ function _onRouteBuildDebugLog(data) {
     progressOverlay.completeLine('route_options', '');
     progressOverlay.addLine('route_options_retry',
       `Nur ${n} brauchbare Option${n === '1' ? '' : 'en'} — suche weiter…`);
-  } else if (msg.includes('DetourOptionsAgent')) {
-    progressOverlay.addLine('route_detour', 'Suche Umweg-Optionen seitlich der Route…');
   }
 }
 
@@ -545,7 +543,7 @@ async function selectOption(idx) {
 
     // Handle leg advancement
     if (data.leg_advanced && data.explore_pending) {
-      // Explore leg started — wait for SSE explore_zone_questions
+      // Explore leg started — wait for SSE region_plan_ready
       progressOverlay.close();
       closeRouteSSE();
       _streamingOptions = [];
