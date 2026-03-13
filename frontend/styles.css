@@ -1071,9 +1071,41 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
 .acc-price-tag { background: var(--bg-subtle); color: var(--accent-dark); font-weight: 600; }
 .booking-link { font-size: 13px; color: var(--accent); text-decoration: none; }
 
+.acc-alt-options { margin-top: 12px; }
+.acc-alt-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.acc-alt-item {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg);
+}
+.acc-alt-item .hero-photo,
+.acc-alt-item .hero-photo-loading {
+  width: 80px;
+  min-width: 80px;
+  height: auto;
+  min-height: 100%;
+}
+.acc-alt-summary {
+  flex: 1;
+  padding: 8px 10px;
+  min-width: 0;
+}
+
 .activities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
 .activity-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: transform .15s, box-shadow .15s; }
 .activity-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,.1); }
+.activity-card .hero-photo,
+.activity-card .hero-photo-loading {
+  height: 140px;
+}
 .activity-content { padding: 12px; }
 .activity-content strong { display: block; font-size: 14px; margin-bottom: 4px; }
 .activity-content p { font-size: 13px; color: var(--text-sub); margin-bottom: 6px; }
@@ -1174,6 +1206,13 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
   flex: 1;
   padding: 10px 12px;
   min-width: 0;
+}
+.restaurant-item .hero-photo,
+.restaurant-item .hero-photo-loading {
+  width: 100px;
+  min-width: 100px;
+  height: auto;
+  min-height: 100%;
 }
 
 /* ============================================================ Lightbox */
@@ -1550,6 +1589,13 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
   gap: 0;
   padding: 0;
   overflow: hidden;
+}
+.further-activity-item .hero-photo,
+.further-activity-item .hero-photo-loading {
+  width: 120px;
+  min-width: 120px;
+  height: auto;
+  min-height: 100%;
 }
 .further-activity-content {
   flex: 1;
@@ -2199,3 +2245,17 @@ strong.req-keyword {
 
 .circuit-warnings { margin-bottom: 10px; }
 .circuit-warning { background: #fff8e1; border-left: 3px solid #e0b840; padding: 6px 10px; font-size: 12px; margin-bottom: 4px; border-radius: 0 4px 4px 0; }
+
+/* ============================================================ Mobile: hero-photo in flex layouts */
+@media (max-width: 600px) {
+  .further-activity-item .hero-photo,
+  .further-activity-item .hero-photo-loading {
+    width: 90px;
+    min-width: 90px;
+  }
+  .restaurant-item .hero-photo,
+  .restaurant-item .hero-photo-loading {
+    width: 80px;
+    min-width: 80px;
+  }
+}
