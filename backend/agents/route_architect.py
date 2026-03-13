@@ -56,11 +56,14 @@ Nächte pro Stop: {req.min_nights_per_stop}–{req.max_nights_per_stop}
 Budget: CHF {req.budget_chf:,.0f}
 {mandatory_str}
 
-Erstelle eine optimale Route mit 3–6 Zwischenstopps. Verteile die Tage sinnvoll.
+Erstelle eine optimale Route. Der erste Stop MUSS der Startort sein, der letzte Stop MUSS das Hauptziel sein.
+Dazwischen plane 2–5 sinnvolle Zwischenstopps. Verteile die Tage sinnvoll.
 Gib genau dieses JSON zurück:
 {{
   "stops": [
-    {{"id": 1, "region": "Annecy", "country": "FR", "arrival_day": 2, "nights": 2, "drive_hours": 3.5, "is_fixed": false, "notes": "..."}}
+    {{"id": 1, "region": "{req.start_location}", "country": "CH", "arrival_day": 1, "nights": 0, "drive_hours": 0, "is_fixed": false, "notes": "Startort"}},
+    {{"id": 2, "region": "Annecy", "country": "FR", "arrival_day": 2, "nights": 2, "drive_hours": 3.5, "is_fixed": false, "notes": "..."}},
+    {{"id": 3, "region": "{req.main_destination}", "country": "FR", "arrival_day": 8, "nights": 3, "drive_hours": 4.0, "is_fixed": false, "notes": "Hauptziel"}}
   ],
   "total_drive_days": 3,
   "total_rest_days": 7,

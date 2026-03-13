@@ -113,7 +113,7 @@ class TravelPlannerOrchestrator:
         return all_stops
 
     async def _run_transit_leg(self, leg, leg_index: int) -> list:
-        """Transit leg: use RouteArchitectAgent (unchanged logic)."""
+        """Transit leg: use RouteArchitectAgent, ensure start+destination are included."""
         req = self.request
         job = self._load_job()
         existing_stops = job.get("segment_stops", [])
@@ -123,7 +123,56 @@ class TravelPlannerOrchestrator:
 
         await debug_logger.log(LogLevel.AGENT, f"RouteArchitect für Leg {leg_index}", job_id=self.job_id)
         route = await RouteArchitectAgent(req, self.job_id).run()
-        return route.get("stops", [])
+        stops = route.get("stops", [])
+
+        # Safety net: ensure destination is included as last stop
+        if stops and leg.end_location:
+            last_region = stops[-1].get("region", "").lower()
+            end_loc = leg.end_location.lower()
+            if end_loc not in last_region and last_region not in end_loc:
+                max_id = max(s.get("id", 0) for s in stops)
+                last_stop = stops[-1]
+                dest_arrival = last_stop.get("arrival_day", 1) + last_stop.get("nights", 1) + 1
+                stops.append({
+                    "id": max_id + 1,
+                    "region": leg.end_location,
+                    "country": "XX",
+                    "arrival_day": dest_arrival,
+                    "nights": req.min_nights_per_stop,
+                    "drive_hours": 0,
+                    "is_fixed": False,
+                    "notes": "Hauptziel",
+                })
+                await debug_logger.log(
+                    LogLevel.WARNING,
+                    f"Ziel '{leg.end_location}' fehlte in Route — automatisch ergänzt",
+                    job_id=self.job_id,
+                )
+
+        # Safety net: ensure start city is included as first stop
+        if stops and leg.start_location:
+            first_region = stops[0].get("region", "").lower()
+            start_loc = leg.start_location.lower()
+            if start_loc not in first_region and first_region not in start_loc:
+                for s in stops:
+                    s["id"] = s.get("id", 0) + 1
+                stops.insert(0, {
+                    "id": 1,
+                    "region": leg.start_location,
+                    "country": "XX",
+                    "arrival_day": 1,
+                    "nights": 0,
+                    "drive_hours": 0,
+                    "is_fixed": False,
+                    "notes": "Startort",
+                })
+                await debug_logger.log(
+                    LogLevel.WARNING,
+                    f"Startort '{leg.start_location}' fehlte in Route — automatisch ergänzt",
+                    job_id=self.job_id,
+                )
+
+        return stops
 
     async def _run_explore_leg(self, leg, leg_index: int) -> Optional[list]:
         """Explore leg: RegionPlannerAgent plans regions, user confirms interactively."""
