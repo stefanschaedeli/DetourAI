@@ -149,10 +149,23 @@ async function apiSkipToLegEnd(jobId) {
   return (await _fetchQuiet(`${API}/skip-to-leg-end/${jobId}`, { method: 'POST' })).json();
 }
 
-async function answerExploreQuestions(jobId, answers) {
-  return await _fetchQuiet(`${API}/answer-explore-questions/${jobId}`, {
+async function replaceRegion(jobId, index, instruction) {
+  return await _fetchQuiet(`${API}/replace-region/${jobId}`, {
     method: 'POST',
-    body: JSON.stringify({ answers }),
+    body: JSON.stringify({ index, instruction }),
+  }).then(r => r.json());
+}
+
+async function recomputeRegions(jobId, instruction) {
+  return await _fetchQuiet(`${API}/recompute-regions/${jobId}`, {
+    method: 'POST',
+    body: JSON.stringify({ instruction }),
+  }).then(r => r.json());
+}
+
+async function confirmRegions(jobId) {
+  return await _fetchQuiet(`${API}/confirm-regions/${jobId}`, {
+    method: 'POST',
   }).then(r => r.json());
 }
 
@@ -200,7 +213,7 @@ function openSSE(jobId, handlers) {
     'job_complete', 'job_error', 'accommodation_loading', 'accommodation_loaded',
     'accommodations_all_loaded', 'stop_research_started', 'activities_loaded',
     'restaurants_loaded', 'route_option_ready', 'route_options_done', 'ping',
-    'explore_zone_questions', 'explore_circuit_ready', 'leg_complete',
+    'region_plan_ready', 'region_updated', 'leg_complete',
   ];
 
   events.forEach(evt => {
