@@ -401,63 +401,63 @@ def test_delete_travel_not_found(client, mocker):
 
 
 # ---------------------------------------------------------------------------
-# Answer explore questions
+# Region plan endpoints
 # ---------------------------------------------------------------------------
 
-class TestAnswerExploreQuestions:
-    def test_404_on_missing_job(self, client):
-        resp = client.post(
-            "/api/answer-explore-questions/" + "a" * 32,
-            json={"answers": ["Ja"]}
-        )
-        assert resp.status_code == 404
-
-    def test_409_if_not_awaiting_guidance(self, client, mock_job):
-        """Job exists but explore_phase is not awaiting_guidance."""
-        mock_job["explore_phase"] = None
+class TestRegionEndpoints:
+    def test_replace_region_409_no_plan(self, client, mock_job):
         job_id = mock_job["job_id"]
         resp = client.post(
-            f"/api/answer-explore-questions/{job_id}",
-            json={"answers": ["Ja"]}
+            f"/api/replace-region/{job_id}",
+            json={"index": 0, "instruction": "Wallis stattdessen"}
         )
         assert resp.status_code == 409
 
-    def test_accepts_answers_and_runs_second_pass(self, client, mock_job, mocker):
-        from models.trip_leg import ExploreStop
-        mock_job["explore_phase"] = "awaiting_guidance"
-        mock_job["leg_index"] = 0
-        mock_job["stop_counter"] = 0
-        mock_job["explore_zone_analysis"] = {
-            "zone_characteristics": "Alpen",
-            "preliminary_anchors": ["Chamonix"],
-            "guided_questions": ["Inseln?"],
-        }
-        # Change leg mode to explore with zone_bbox
-        mock_job["request"]["legs"][0]["mode"] = "explore"
-        mock_job["request"]["legs"][0]["zone_bbox"] = {
-            "north": 47.0, "south": 46.0, "east": 8.0, "west": 7.0,
-            "zone_label": "Testzone",
+    def test_recompute_regions_409_no_plan(self, client, mock_job):
+        job_id = mock_job["job_id"]
+        resp = client.post(
+            f"/api/recompute-regions/{job_id}",
+            json={"instruction": "Mehr Küste"}
+        )
+        assert resp.status_code == 409
+
+    def test_confirm_regions_409_no_plan(self, client, mock_job):
+        job_id = mock_job["job_id"]
+        resp = client.post(f"/api/confirm-regions/{job_id}")
+        assert resp.status_code == 409
+
+    def test_replace_region_400_index_out_of_bounds(self, client, mock_job, mocker):
+        mock_job["region_plan"] = {
+            "regions": [{"name": "Tessin", "lat": 46.2, "lon": 8.95, "reason": "Seen"}],
+            "summary": "Test"
         }
         job_id = mock_job["job_id"]
+        resp = client.post(
+            f"/api/replace-region/{job_id}",
+            json={"index": 5, "instruction": "egal"}
+        )
+        assert resp.status_code == 400
 
-        # Mock ExploreZoneAgent.run_second_pass
-        mock_circuit = [
-            ExploreStop(name="Chamonix", lat=45.9, lon=6.87,
-                        suggested_nights=2, significance="anchor",
-                        logistics_note=""),
-        ]
-        mock_agent = mocker.patch("agents.explore_zone_agent.ExploreZoneAgent", autospec=True)
-        mock_instance = mock_agent.return_value
-        mock_instance.run_second_pass = mocker.AsyncMock(return_value=(mock_circuit, []))
-
-        # Mock debug_logger.push_event
+    def test_replace_region_ok(self, client, mock_job, mocker):
+        from models.trip_leg import RegionPlan, RegionPlanItem
+        mock_job["region_plan"] = {
+            "regions": [{"name": "Tessin", "lat": 46.2, "lon": 8.95, "reason": "Seen"}],
+            "summary": "Test"
+        }
+        mock_job["leg_index"] = 0
+        mock_job["request"]["legs"][0]["mode"] = "explore"
+        job_id = mock_job["job_id"]
+        new_plan = RegionPlan(
+            regions=[RegionPlanItem(name="Wallis", lat=46.3, lon=7.6, reason="Matterhorn")],
+            summary="Neu"
+        )
+        mock_agent = mocker.patch("agents.region_planner.RegionPlannerAgent", autospec=True)
+        mock_agent.return_value.replace_region = mocker.AsyncMock(return_value=new_plan)
         mocker.patch("main.debug_logger.push_event", new_callable=mocker.AsyncMock)
 
         resp = client.post(
-            f"/api/answer-explore-questions/{job_id}",
-            json={"answers": ["Ja, Inseln"]}
+            f"/api/replace-region/{job_id}",
+            json={"index": 0, "instruction": "Wallis stattdessen"}
         )
         assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "ok"
-        assert "circuit" in data
+        assert resp.json()["region_plan"]["regions"][0]["name"] == "Wallis"

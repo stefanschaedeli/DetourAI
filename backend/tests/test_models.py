@@ -528,7 +528,7 @@ def test_place_id_can_be_set():
 # ZoneBBox
 # ---------------------------------------------------------------------------
 
-from models.trip_leg import (ZoneBBox, ExploreStop, ExploreZoneAnalysis, ExploreAnswersRequest,
+from models.trip_leg import (ZoneBBox, ExploreStop,
                               RegionPlanItem, RegionPlan, ReplaceRegionRequest, RecomputeRegionsRequest, TripLeg)
 from models.via_point import ViaPoint
 from datetime import date
@@ -562,33 +562,6 @@ class TestExploreStop:
     def test_invalid_significance(self):
         with pytest.raises(ValueError):
             ExploreStop(name="X", lat=0, lon=0, suggested_nights=1, significance="unknown")
-
-
-class TestExploreZoneAnalysis:
-    def test_valid(self):
-        a = ExploreZoneAnalysis(
-            zone_characteristics="Küstengebiet",
-            guided_questions=["Inseln einschließen?"]
-        )
-        assert len(a.guided_questions) == 1
-
-    def test_requires_at_least_one_question(self):
-        with pytest.raises(ValueError):
-            ExploreZoneAnalysis(zone_characteristics="X", guided_questions=[])
-
-
-class TestExploreAnswersRequest:
-    def test_valid(self):
-        r = ExploreAnswersRequest(answers=["Ja"])
-        assert r.answers == ["Ja"]
-
-    def test_max_3_answers(self):
-        with pytest.raises(ValueError):
-            ExploreAnswersRequest(answers=["a", "b", "c", "d"])
-
-    def test_empty_answers_rejected(self):
-        with pytest.raises(ValueError):
-            ExploreAnswersRequest(answers=[])
 
 
 class TestRegionPlanItem:

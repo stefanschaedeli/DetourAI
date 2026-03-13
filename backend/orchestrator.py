@@ -4,13 +4,13 @@ import os
 from typing import Optional
 from models.travel_request import TravelRequest
 from agents.route_architect import RouteArchitectAgent
-from agents.explore_zone_agent import ExploreZoneAgent
+from agents.region_planner import RegionPlannerAgent
 from agents.activities_agent import ActivitiesAgent
 from agents.restaurants_agent import RestaurantsAgent
 from agents.day_planner import DayPlannerAgent
 from agents.travel_guide_agent import TravelGuideAgent
 from agents.trip_analysis_agent import TripAnalysisAgent
-from models.trip_leg import ExploreZoneAnalysis, ExploreStop
+from models.trip_leg import RegionPlan
 from utils.debug_logger import debug_logger, LogLevel
 from utils.image_fetcher import fetch_unsplash_images
 
@@ -96,9 +96,8 @@ class TravelPlannerOrchestrator:
             # Reset per-leg state
             job["segment_index"] = 0
             job["segment_stops"] = []
-            job["explore_phase"] = None
-            job["explore_circuit"] = []
-            job["explore_circuit_position"] = 0
+            job["region_plan"] = None
+            job["region_plan_confirmed"] = False
             self._save_job(job)
 
             await debug_logger.push_event(
@@ -122,42 +121,26 @@ class TravelPlannerOrchestrator:
         return route.get("stops", [])
 
     async def _run_explore_leg(self, leg, leg_index: int) -> Optional[list]:
-        """Explore leg: ExploreZoneAgent two-pass, then interactive selection."""
+        """Explore leg: RegionPlannerAgent plans regions, user confirms interactively."""
         job = self._load_job()
-        explore_phase = job.get("explore_phase")
-        agent = ExploreZoneAgent(self.request, self.job_id)
 
-        if explore_phase is None:
-            # First pass: zone analysis + guided questions
-            first_pass = await agent.run_first_pass(leg_index)
+        if not job.get("region_plan"):
+            # First call: generate region plan
+            description = leg.explore_description or f"{leg.start_location} bis {leg.end_location} erkunden"
+            agent = RegionPlannerAgent(self.request, self.job_id)
+            region_plan = await agent.plan(description=description, leg_index=leg_index)
             job = self._load_job()
-            job["explore_zone_analysis"] = first_pass.model_dump()
-            job["explore_phase"] = "awaiting_guidance"
-            job["status"] = "awaiting_zone_guidance"
+            job["region_plan"] = region_plan.model_dump()
+            job["status"] = "awaiting_region_confirmation"
             self._save_job(job)
             await debug_logger.push_event(
-                self.job_id, "explore_zone_questions", None,
-                {"questions": first_pass.guided_questions, "leg_id": leg.leg_id}
+                self.job_id, "region_plan_ready", None,
+                {"regions": [r.model_dump() for r in region_plan.regions],
+                 "summary": region_plan.summary, "leg_id": leg.leg_id}
             )
-            return None  # Pause
+            return None  # Pause — user confirms via /api/confirm-regions
 
-        if explore_phase == "circuit_ready":
-            # Second pass: generate circuit from guidance answers
-            job = self._load_job()
-            first_pass = ExploreZoneAnalysis(**job["explore_zone_analysis"])
-            guidance = leg.zone_guidance
-            circuit, warnings = await agent.run_second_pass(leg_index, first_pass, guidance)
-            job = self._load_job()
-            job["explore_circuit"] = [s.model_dump() for s in circuit]
-            job["explore_phase"] = "selecting_stops"
-            self._save_job(job)
-            await debug_logger.push_event(
-                self.job_id, "explore_circuit_ready", None,
-                {"circuit": [s.model_dump() for s in circuit],
-                 "warnings": warnings, "leg_id": leg.leg_id}
-            )
-
-        # Interactive stop selection (same as transit — user selects from options)
+        # Region plan confirmed — stops are being selected via normal transit flow
         job = self._load_job()
         return job.get("selected_stops", [])
 

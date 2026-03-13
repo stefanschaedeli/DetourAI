@@ -51,7 +51,8 @@ def mock_job(mocker):
                     "budget_activities_pct": 20},
         "selected_stops": [],
         "leg_index": 0,
-        "explore_phase": None,
+        "region_plan": None,
+        "region_plan_confirmed": False,
     }
 
     mock_redis = mocker.patch("main.redis_client")

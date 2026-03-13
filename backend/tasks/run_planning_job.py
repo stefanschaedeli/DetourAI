@@ -32,8 +32,8 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
 
     job = json.loads(raw)
 
-    # Skip if paused waiting for zone guidance answers
-    if job.get("explore_phase") == "awaiting_guidance":
+    # Skip if paused waiting for region confirmation
+    if job.get("status") == "awaiting_region_confirmation":
         return
 
     job["status"] = "running"

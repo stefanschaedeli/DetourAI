@@ -49,16 +49,6 @@ class RecomputeRegionsRequest(BaseModel):
     instruction: str = Field(max_length=1000)
 
 
-class ExploreZoneAnalysis(BaseModel):
-    zone_characteristics: str = Field(max_length=2000)
-    preliminary_anchors: list[str] = Field(default=[])
-    guided_questions: list[str] = Field(min_length=1, max_length=3)
-
-
-class ExploreAnswersRequest(BaseModel):
-    answers: list[str] = Field(min_length=1, max_length=3)
-
-
 class TripLeg(BaseModel):
     leg_id: str = Field(pattern=r"^leg-\d+$")
     start_location: str = Field(max_length=200)
