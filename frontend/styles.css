@@ -5,39 +5,118 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:          #F0F9FF;
-  --card:        #ffffff;
-  --accent:      #0EA5E9;
-  --accent-dark: #0284C7;
-  --success:     #22C55E;
+  /* ── Design System (DESIGN_GUIDELINE.md) ── */
+
+  /* Hintergründe */
+  --bg-primary: #0F0F1A;
+  --bg-secondary: #1A1A2E;
+  --bg-elevated: #252540;
+
+  /* Akzente */
+  --accent-primary: #6C63FF;
+  --accent-secondary: #00D4AA;
+  --accent-warm: #FF6B6B;
+
+  /* Text */
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0A0B8;
+  --text-muted: #6B6B80;
+
+  /* Oberflächen */
+  --surface-card: rgba(255, 255, 255, 0.05);
+  --surface-hover: rgba(255, 255, 255, 0.08);
+  --surface-active: rgba(108, 99, 255, 0.15);
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-focus: var(--accent-primary);
+
+  /* Gradienten */
+  --gradient-hero: linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%);
+  --gradient-cta: linear-gradient(135deg, #6C63FF 0%, #5A52D5 100%);
+  --gradient-glow: radial-gradient(ellipse at center, rgba(108, 99, 255, 0.15) 0%, transparent 70%);
+
+  /* Typografie */
+  --font-primary: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.5rem;
+  --text-5xl: 3.5rem;
+
+  /* Spacing */
+  --max-width-content: 1200px;
+  --max-width-narrow: 800px;
+  --max-width-chat: 680px;
+  --section-gap: 6rem;
+  --section-gap-mobile: 3rem;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+
+  /* Radien */
+  --radius: 16px;
+  --radius-sm: 8px;
+  --radius-lg: 24px;
+
+  /* Animation */
+  --transition-default: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Legacy-Aliases (alt → neu) ── */
+  --bg:          var(--bg-primary);
+  --card:        var(--bg-elevated);
+  --accent:      var(--accent-primary);
+  --accent-dark: var(--accent-primary);
+  --accent-glow: var(--surface-active);
+  --success:     var(--accent-secondary);
   --warning:     #F59E0B;
-  --danger:      #EF4444;
-  --text:        #0F172A;
-  --text-sub:    #475569;
-  --border:      #BAE6FD;
-  --radius:      16px;
-  --radius-sm:   8px;
-  --radius-lg:   24px;
-  --shadow:      0 4px 24px rgba(14,165,233,.10);
-  --cta:         #EA580C;
-  --cta-dark:    #C2410C;
-  --cta-glow:    rgba(234,88,12,.15);
-  --accent-glow: rgba(14,165,233,.15);
-  --bg-subtle:   #E0F2FE;
-  --font-base:   'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --danger:      var(--accent-warm);
+  --text:        var(--text-primary);
+  --text-sub:    var(--text-secondary);
+  --text-tertiary: var(--text-muted);
+  --border:      var(--border-default);
+  --shadow:      0 4px 24px rgba(0, 0, 0, 0.2);
+  --cta:         var(--accent-primary);
+  --cta-dark:    var(--accent-primary);
+  --cta-glow:    var(--surface-active);
+  --bg-subtle:   var(--bg-secondary);
+  --bg-light:    var(--bg-secondary);
+  --font-base:   var(--font-primary);
+}
+
+:root[data-theme="light"] {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F5F5FA;
+  --bg-elevated: #FFFFFF;
+  --text-primary: #1A1A2E;
+  --text-secondary: #6B6B80;
+  --surface-card: rgba(0, 0, 0, 0.03);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.10);
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
 }
 
 body {
-  font-family: var(--font-base);
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.5;
+  font-family: var(--font-primary);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
   min-height: 100dvh;
 }
 
 /* ============================================================ Layout */
 .app-header {
-  background: rgba(240,249,255,.92);
+  background: rgba(15, 15, 26, 0.85);
   backdrop-filter: blur(20px);
   position: sticky; top: 0; z-index: 100;
   border-bottom: 1px solid var(--border);
@@ -1311,7 +1390,7 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
   display: none; align-items: center; justify-content: space-between;
   gap: 16px; padding: 14px clamp(24px, 4vw, 60px);
-  background: rgba(240,249,255,.96);
+  background: rgba(15, 15, 26, 0.92);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
   box-shadow: 0 -4px 20px rgba(0,0,0,.08);
