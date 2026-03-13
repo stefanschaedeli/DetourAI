@@ -73,6 +73,7 @@ travelman2/
 │   │   ├── activities_agent.py      # claude-sonnet-4-5 + WikipediaEnricher
 │   │   ├── restaurants_agent.py     # claude-sonnet-4-5
 │   │   ├── day_planner.py           # claude-opus-4-5 + OSRM
+│   │   ├── region_planner.py        # claude-opus-4-5 (region route planning)
 │   │   └── output_generator.py      # PDF/PPTX (fpdf2 + pptx)
 │   ├── models/
 │   │   ├── travel_request.py        # TravelRequest Pydantic model
@@ -137,6 +138,7 @@ travelman2/
 | ActivitiesAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
 | RestaurantsAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
 | DayPlannerAgent | claude-opus-4-5 | claude-haiku-4-5 |
+| RegionPlannerAgent | claude-opus-4-5 | claude-haiku-4-5 |
 
 ---
 
