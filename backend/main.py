@@ -1462,6 +1462,26 @@ async def confirm_route(job_id: str):
             })
             existing_regions.add(vp.location.lower())
 
+    # Append destination (end_location of last leg) if missing
+    last_leg = request.legs[-1]
+    dest = last_leg.end_location
+    if dest and dest.lower() not in existing_regions:
+        total_nights_used = sum(s.get("nights", request.min_nights_per_stop) for s in selected_stops)
+        days_left = max(request.min_nights_per_stop, request.total_days - total_nights_used - len(selected_stops))
+        job["stop_counter"] += 1
+        selected_stops.append({
+            "id": job["stop_counter"],
+            "option_type": "destination",
+            "region": dest,
+            "country": "XX",
+            "drive_hours": 0,
+            "nights": min(days_left, request.max_nights_per_stop),
+            "highlights": [],
+            "teaser": f"Hauptziel: {dest}",
+            "is_fixed": True,
+        })
+        existing_regions.add(dest.lower())
+
     # Assign 1-based IDs
     for i, stop in enumerate(selected_stops):
         stop["id"] = i + 1
