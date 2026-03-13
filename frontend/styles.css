@@ -677,6 +677,37 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 }
 .all-over-limit-banner p { flex: 1; font-size: 14px; color: #7a4f00; margin: 0; }
 
+/* Segment-Kontext-Banner (Von → Nach) */
+.segment-context-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 15px;
+  color: var(--text-secondary);
+  grid-column: 1 / -1;
+}
+.segment-context-banner .segment-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  display: block;
+}
+.segment-context-banner .segment-from,
+.segment-context-banner .segment-to {
+  font-weight: 600;
+  color: var(--text);
+}
+.segment-context-banner .segment-arrow {
+  font-size: 20px;
+  color: var(--accent);
+}
+
 /* Detour-Banner */
 .detour-banner {
   background: #e8f4fd;

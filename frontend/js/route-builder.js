@@ -358,6 +358,20 @@ function renderOptions(options, meta) {
     container.prepend(banner);
   }
 
+  // Segment-Kontext-Banner (Von → Nach)
+  const prevLabel = (routeMeta.map_anchors || {}).prev_label || '';
+  const targetLabel = routeMeta.segment_target || '';
+  if (prevLabel || targetLabel) {
+    const ctxBanner = document.createElement('div');
+    ctxBanner.className = 'segment-context-banner';
+    ctxBanner.innerHTML = `
+      <span class="segment-from"><span class="segment-label">Von</span>${esc(prevLabel)}</span>
+      <span class="segment-arrow">→</span>
+      <span class="segment-to"><span class="segment-label">Nach</span>${esc(targetLabel)}</span>
+    `;
+    container.prepend(ctxBanner);
+  }
+
   // Skip card — always shown when there are option cards (options.length > 0)
   if (options.length > 0) {
     container.insertAdjacentHTML('beforeend',
@@ -1068,10 +1082,20 @@ async function _doRecompute() {
 }
 
 async function _confirmRegions() {
-  progressOverlay.open('Route wird bestätigt — Stopps werden gesucht…');
-  openRouteSSE(S.jobId);
+  progressOverlay.open('Regionen werden bestätigt…');
   try {
     const data = await confirmRegions(S.jobId);
+
+    if (data.explore_stops_created) {
+      // Vereinfachter Explore-Flow: Stops sind bereits erstellt
+      S.selectedStops = data.selected_stops || [];
+      S.allStops = data.selected_stops || [];
+      await confirmRoute();
+      return;
+    }
+
+    // Weitere Etappen (Transit): normales Route-Building
+    openRouteSSE(S.jobId);
     startRouteBuilding(data);
   } catch (err) {
     progressOverlay.close();

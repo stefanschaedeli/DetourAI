@@ -2035,6 +2035,60 @@ async def recompute_regions(job_id: str, body: RecomputeRegionsRequest):
 # POST /api/confirm-regions/{job_id}
 # ---------------------------------------------------------------------------
 
+async def _regions_to_stops(
+    job: dict, region_plan: "RegionPlan", request: TravelRequest, leg_index: int
+) -> list[dict]:
+    """Konvertiere Regionen direkt in Stops mit ausbalancierten Tagen."""
+    leg = request.legs[leg_index]
+    total_days = leg.total_days
+    num_regions = len(region_plan.regions)
+
+    # Tage gleichmässig verteilen, Rest auf erste Regionen
+    base_nights = total_days // num_regions
+    remainder = total_days % num_regions
+
+    stops = []
+    prev_coords = None
+
+    # Start-Koordinaten für erste Fahrzeitberechnung
+    start_loc = leg.start_location or request.start_location
+    if start_loc:
+        prev_coords = await geocode_nominatim(start_loc)
+        await asyncio.sleep(0.35)  # Nominatim Rate-Limit
+
+    for i, region in enumerate(region_plan.regions):
+        nights = base_nights + (1 if i < remainder else 0)
+        nights = max(nights, request.min_nights_per_stop)
+
+        drive_hours, drive_km = 0.0, 0.0
+        coords = (region.lat, region.lon)
+        if prev_coords and coords[0] and coords[1]:
+            try:
+                drive_hours, drive_km = await osrm_route([prev_coords, coords])
+                drive_hours = round(drive_hours, 1)
+                drive_km = round(drive_km, 0)
+            except Exception:
+                pass
+
+        job["stop_counter"] += 1
+        stops.append({
+            "id": job["stop_counter"],
+            "option_type": "region",
+            "region": region.name,
+            "country": "XX",
+            "lat": region.lat,
+            "lon": region.lon,
+            "drive_hours": drive_hours,
+            "drive_km": drive_km,
+            "nights": nights,
+            "highlights": region.highlights or [],
+            "teaser": region.teaser or region.reason,
+        })
+        prev_coords = coords
+
+    return stops
+
+
 @app.post("/api/confirm-regions/{job_id}")
 async def confirm_regions(job_id: str):
     from models.trip_leg import RegionPlan
@@ -2047,39 +2101,25 @@ async def confirm_regions(job_id: str):
     request = TravelRequest(**job["request"])
     leg_index = job["leg_index"]
 
-    # Convert regions to via_points on the leg (invisible to user)
-    via_points = []
-    for region in region_plan.regions:
-        via_points.append({
-            "location": region.name,
-            "fixed_date": None,
-            "notes": f"Region: {region.reason}",
-        })
-
-    # Inject via_points into the request leg
-    req_data = job["request"]
-    leg_data = req_data["legs"][leg_index]
-    leg_data["via_points"] = via_points
-    # Switch leg mode to transit for stop-by-stop processing
-    leg_data["mode"] = "transit"
-    # Populate start/end locations from region plan (required for transit validation)
-    if not leg_data.get("start_location"):
-        leg_data["start_location"] = region_plan.regions[0].name
-    if not leg_data.get("end_location"):
-        leg_data["end_location"] = region_plan.regions[-1].name
-    job["request"] = req_data
+    # Regionen direkt in Stops konvertieren (vereinfachter Explore-Flow)
+    stops = await _regions_to_stops(job, region_plan, request, leg_index)
+    job["selected_stops"].extend(stops)
     job["region_plan_confirmed"] = True
-    job["current_leg_mode"] = "transit"
 
-    # Recalculate segment budget with new via_points
-    request = TravelRequest(**req_data)
-    job["segment_budget"] = _calc_leg_segment_budget(request, leg_index)
+    # Prüfe ob weitere Etappen folgen
+    if leg_index < len(request.legs) - 1:
+        job["leg_index"] += 1
+        save_job(job_id, job)
+        request = TravelRequest(**job["request"])
+        return await _start_leg_route_building(job, job_id, request)
+
+    # Alle Etappen fertig → Route kann bestätigt werden
     save_job(job_id, job)
-
-    # Start stop finding for the first segment
-    result = await _start_leg_route_building(job, job_id, request)
-    result["job_id"] = job_id
-    return result
+    return {
+        "job_id": job_id,
+        "explore_stops_created": True,
+        "selected_stops": job["selected_stops"],
+    }
 
 
 # ---------------------------------------------------------------------------
