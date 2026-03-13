@@ -21,16 +21,6 @@ SYSTEM_PROMPT = (
 )
 
 
-SYSTEM_PROMPT_EXPLORE = (
-    "Du bist ein Entdeckungsreise-Planer. Schlage genau 3 Stopps vor: anker, landschaft, geheimtipp. "
-    "KRITISCH — Regeln für das Feld 'region': "
-    "Immer eine konkrete Ortschaft — NIEMALS Regionen, Gebirge oder Länder. "
-    "KRITISCH — Fahrzeiten: Jede Option muss drive_hours ≤ dem angegebenen Maximum einhalten. "
-    "Im Erkunden-Modus: Kein Zieldruck — der Reisende möchte die Zone entdecken. "
-    "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
-)
-
-
 class StopOptionsFinderAgent:
     def __init__(self, request: TravelRequest, job_id: str):
         self.request = request
@@ -359,91 +349,3 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
             "route_could_be_complete": full_parsed.get("route_could_be_complete", False),
         }
 
-    def _build_prompt_explore(
-        self,
-        selected_stops: list,
-        circuit_position: int,
-        circuit_stops: list,
-        zone_characteristics: str,
-        days_remaining: int,
-        route_geometry: dict,
-    ) -> str:
-        req = self.request
-        geo = route_geometry or {}
-        prev_stop = selected_stops[-1]["region"] if selected_stops else req.start_location
-
-        stops_str = ""
-        if selected_stops:
-            parts = [
-                f"Stop {s['id']}: {s['region']} ({s.get('nights',1)} Nächte)"
-                for s in selected_stops
-            ]
-            stops_str = "Bisherige Stopps: " + ", ".join(parts) + "\n"
-
-        circuit_hint = ""
-        if circuit_stops:
-            upcoming = circuit_stops[circuit_position:circuit_position + 3]
-            circuit_hint = f"Geplante Rundkurs-Stopps in diesem Bereich: {', '.join(upcoming)}\n"
-
-        has_children = bool(req.children)
-        family_field = '"family_friendly": true,' if has_children else ""
-
-        return f"""Aktuelle Position: {prev_stop}
-Verbleibende Tage in der Zone: {days_remaining}
-Zonenmerkmale: {zone_characteristics}
-{stops_str}{circuit_hint}
-Reisestile: {", ".join(req.travel_styles) if req.travel_styles else "keine Angabe"}
-Max. Fahrzeit/Tag: {req.max_drive_hours_per_day}h
-
-Schlage 3 Stopps vor:
-- "anker": Muss-gesehen-haben in dieser Zone (hohe Bedeutung, ideal {req.min_nights_per_stop}-{req.max_nights_per_stop} Nächte)
-- "landschaft": Malerische Alternative (Natur/Panorama)
-- "geheimtipp": Unbekannter, besonderer Geheimtipp
-
-Antworte als JSON:
-{{
-  "options": [
-    {{
-      "option_type": "anker",
-      "region": "Konkreter Ortsname",
-      "country": "Land",
-      "lat": 0.0,
-      "lon": 0.0,
-      "drive_hours": 0.0,
-      "nights": {req.min_nights_per_stop},
-      {family_field}
-      "highlights": ["highlight1"],
-      "teaser": "Kurze Beschreibung"
-    }}
-  ]
-}}"""
-
-    async def find_options_explore(
-        self,
-        selected_stops: list,
-        circuit_position: int,
-        circuit_stops: list,
-        zone_characteristics: str,
-        days_remaining: int,
-        route_geometry: dict,
-    ) -> list:
-        prompt = self._build_prompt_explore(
-            selected_stops, circuit_position, circuit_stops,
-            zone_characteristics, days_remaining, route_geometry,
-        )
-
-        await debug_logger.log(LogLevel.API, "→ StopOptionsFinder (Erkunden-Modus)",
-                                job_id=self.job_id, agent="StopOptionsFinder")
-
-        def call():
-            return self.client.messages.create(
-                model=self.model,
-                max_tokens=1024,
-                system=SYSTEM_PROMPT_EXPLORE,
-                messages=[{"role": "user", "content": prompt}],
-            )
-
-        response = await call_with_retry(call, job_id=self.job_id, agent_name="StopOptionsFinder")
-        text = response.content[0].text
-        data = parse_agent_json(text)
-        return data.get("options", [])
