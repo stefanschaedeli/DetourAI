@@ -154,17 +154,6 @@ function buildHeroPhotoLoading(sizeClass = 'md') {
   return `<div class="hero-photo hero-photo--${sizeClass} hero-photo-loading"><div class="hero-photo-shimmer shimmer-elem"></div></div>`;
 }
 
-/** @deprecated Use buildHeroPhoto() instead */
-function buildPhotoGallery(urls, altText) {
-  return buildHeroPhoto(urls, altText, 'md');
-}
-
-/** @deprecated Use buildHeroPhoto() instead */
-function buildImageGallery(overview, mood, customer, altText) {
-  const urls = [overview, mood, customer].filter(Boolean);
-  return buildHeroPhoto(urls, altText, 'md');
-}
-
 // Lightbox gallery state
 let _lbUrls = [];
 let _lbIndex = 0;
@@ -221,20 +210,12 @@ document.addEventListener('click', e => {
     return;
   }
 
-  // Legacy photo-strip support
+  // Fallback: standalone lightbox-url elements
   const img = e.target.closest('[data-lightbox-url]');
   if (img) {
     e.stopPropagation();
-    const strip = img.closest('.photo-strip');
-    if (strip) {
-      _lbUrls = [...strip.querySelectorAll('[data-lightbox-url]')]
-        .map(el => el.dataset.lightboxUrl);
-      _lbIndex = _lbUrls.indexOf(img.dataset.lightboxUrl);
-      if (_lbIndex < 0) _lbIndex = 0;
-    } else {
-      _lbUrls = [img.dataset.lightboxUrl];
-      _lbIndex = 0;
-    }
+    _lbUrls = [img.dataset.lightboxUrl];
+    _lbIndex = 0;
     openLightbox(img.dataset.lightboxUrl, img.dataset.lightboxCaption);
   } else if (e.target.id === 'lightbox-overlay') {
     closeLightbox();

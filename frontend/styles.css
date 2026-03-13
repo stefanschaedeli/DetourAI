@@ -756,34 +756,22 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 
 .acc-options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 20px; }
 .acc-option-card {
-  display: flex; flex-direction: row; align-items: stretch;
+  display: flex; flex-direction: column;
   border: 1px solid var(--border); border-radius: var(--radius);
   box-shadow: var(--shadow); cursor: pointer; transition: background .15s, box-shadow .15s;
-  overflow: hidden; min-height: 220px;
+  overflow: hidden;
 }
 .acc-option-card:hover { background: var(--bg); box-shadow: 0 4px 24px rgba(0,0,0,.12); }
 .acc-option-card.selected { background: var(--bg-subtle); outline: 2px solid var(--accent); outline-offset: -2px; box-shadow: 0 0 0 4px var(--accent-glow); }
 
-/* Photo strip: vertical left panel inside hotel cards */
-.acc-option-card .photo-strip,
-.acc-option-card .photo-strip-loading {
-  flex: 0 0 260px;
-  width: 260px;
-  min-height: 220px;
-  height: auto;
-  flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scroll-snap-type: y mandatory;
-  border-radius: var(--radius) 0 0 var(--radius);
-}
-.acc-option-card .photo-strip .photo-strip-item {
-  width: 100%;
+/* Hero photo: top panel inside hotel cards */
+.acc-option-card .hero-photo,
+.acc-option-card .hero-photo-loading {
   height: 180px;
-  flex-shrink: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
-/* Right content panel */
+/* Content panel */
 .acc-card-body {
   flex: 1;
   display: flex;
@@ -871,15 +859,8 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 @media (max-width: 768px) {
   #accommodation { padding-left: 16px; padding-right: 16px; }
   .acc-options-grid { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
-  .acc-option-card { flex-direction: column; min-height: auto; }
-  .acc-option-card .photo-strip,
-  .acc-option-card .photo-strip-loading {
-    flex: 0 0 auto; width: 100%; height: 180px;
-    flex-direction: row; overflow-x: auto; overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    border-radius: var(--radius) var(--radius) 0 0;
-  }
-  .acc-option-card .photo-strip .photo-strip-item { width: 220px; height: 180px; }
+  .acc-option-card .hero-photo,
+  .acc-option-card .hero-photo-loading { height: 160px; }
 }
 
 /* ============================================================ Progress */
@@ -1029,7 +1010,7 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 
 /* Collapsible body */
 .stop-body { }
-.stop-body > .photo-strip, .stop-body > .photo-strip-loading { display: block; }
+.stop-body > .hero-photo-loading { display: block; }
 
 /* Section collapse (<details>) inside stop body */
 .stop-section-collapse { border-bottom: 1px solid var(--border); }
@@ -1150,63 +1131,6 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
 .log-api     { color: #80d0ff; }
 .log-debug   { color: #a0a0a0; }
 
-/* ============================================================ Photo strip (5-photo horizontal gallery) */
-.photo-strip {
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  border-radius: var(--radius) var(--radius) 0 0;
-  min-height: 160px;
-  background: var(--border);
-  -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
-  mask-image: linear-gradient(to right, black 85%, transparent 100%);
-}
-.photo-strip::-webkit-scrollbar { display: none; }
-.photo-strip:has(.photo-strip-item:only-child) {
-  -webkit-mask-image: none;
-  mask-image: none;
-}
-
-.photo-strip-item {
-  flex: 0 0 auto;
-  width: 220px;
-  height: 160px;
-  scroll-snap-align: start;
-}
-.photo-strip-item img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  display: block;
-  cursor: zoom-in;
-  transition: opacity .15s;
-}
-.photo-strip-item img:hover { opacity: .85; }
-
-/* Single photo: expand to full width */
-.photo-strip:has(.photo-strip-item:only-child) .photo-strip-item { width: 100%; }
-
-/* Stop-level city photo strip — taller hero */
-.stop-body > .photo-strip { min-height: 240px; }
-.stop-body > .photo-strip .photo-strip-item {
-  width: 320px;
-  height: 240px;
-}
-
-/* Activity card — single full-width cover photo */
-.activity-card .photo-strip {
-  min-height: 180px;
-  scroll-snap-type: none;
-}
-.activity-card .photo-strip .photo-strip-item {
-  width: 100%;
-  height: 180px;
-  flex-shrink: 1;
-}
-
 /* Restaurant items — thumbnail-left layout */
 .restaurant-item {
   display: flex;
@@ -1215,29 +1139,11 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
   overflow: hidden;
   border-radius: 8px;
 }
-.restaurant-item .photo-strip {
-  flex: 0 0 100px;
-  width: 100px;
-  min-height: 80px;
-  height: auto;
-  border-radius: 0;
-  flex-direction: column;
-  overflow: hidden;
-}
-.restaurant-item .photo-strip .photo-strip-item {
-  width: 100px;
-  height: 100%;
-  min-height: 80px;
-}
 .restaurant-item > div:last-child {
   flex: 1;
   padding: 10px 12px;
   min-width: 0;
 }
-
-/* Loading skeleton */
-.photo-strip-loading { border-radius: var(--radius) var(--radius) 0 0; min-height: 160px; overflow: hidden; }
-.photo-strip-shimmer { width: 100%; height: 160px; }
 
 /* ============================================================ Lightbox */
 .lightbox-overlay {
@@ -1613,19 +1519,6 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
   gap: 0;
   padding: 0;
   overflow: hidden;
-}
-.further-activity-item .photo-strip {
-  flex: 0 0 110px;
-  width: 110px;
-  min-height: 90px;
-  height: auto;
-  border-radius: 0;
-  flex-direction: column;
-  overflow: hidden;
-}
-.further-activity-item .photo-strip .photo-strip-item {
-  width: 110px;
-  height: 90px;
 }
 .further-activity-content {
   flex: 1;

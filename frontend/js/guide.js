@@ -779,14 +779,13 @@ function _initGuideMap(plan) {
 
 /**
  * Lazily load images for an entity (stop, activity, restaurant, accommodation)
- * via Google Places and fill the .photo-strip skeleton container.
+ * via Google Places and fill the hero-photo skeleton container.
  */
 async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context, sizeClass) {
   if (!containerEl || typeof GoogleMaps === 'undefined') return;
   try {
     const urls = await GoogleMaps.getPlaceImages(placeName, lat, lng, context);
-    // Find hero-photo-loading or legacy photo-strip-loading placeholder
-    const placeholder = containerEl.querySelector('.hero-photo-loading, .photo-strip-loading, .photo-strip');
+    const placeholder = containerEl.querySelector('.hero-photo-loading');
     const size = sizeClass || (placeholder?.classList.contains('hero-photo--lg') ? 'lg'
       : placeholder?.classList.contains('hero-photo--sm') ? 'sm' : 'md');
     const newHtml = buildHeroPhoto(urls, placeName, size);
