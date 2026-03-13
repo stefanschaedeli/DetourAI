@@ -54,13 +54,23 @@ In the `TripLeg` class (line 41), add after `zone_guidance`:
     explore_description: Optional[str] = None
 ```
 
-- [ ] **Step 2: Remove old explore models**
+- [ ] **Step 2: Keep old explore models as dead code (deferred to Chunk 2)**
 
-Delete `ExploreZoneAnalysis` (lines 31-34) and `ExploreAnswersRequest` (lines 37-38) from `trip_leg.py`.
+Do NOT delete `ExploreZoneAnalysis` or `ExploreAnswersRequest` yet — they are still imported by `main.py`, `orchestrator.py`, and `explore_zone_agent.py`. They will be removed in Task 5 when those consumers are updated.
 
 - [ ] **Step 3: Write tests for new models**
 
-Replace the `TestExploreZoneAnalysis` and `TestExploreAnswersRequest` classes (lines 566-590 of `test_models.py`) with:
+Add new test classes AFTER the existing `TestExploreAnswersRequest` class (line 590 of `test_models.py`). Keep the old tests for now — they still pass since the models still exist. Add at the import block near line 531, add the new model imports:
+
+```python
+# At line 531, change:
+from models.trip_leg import ZoneBBox, ExploreStop, ExploreZoneAnalysis, ExploreAnswersRequest, TripLeg
+# To:
+from models.trip_leg import (ZoneBBox, ExploreStop, ExploreZoneAnalysis, ExploreAnswersRequest,
+                              RegionPlanItem, RegionPlan, ReplaceRegionRequest, RecomputeRegionsRequest, TripLeg)
+```
+
+Add these test classes after `TestExploreAnswersRequest`:
 
 ```python
 class TestRegionPlanItem:
@@ -140,7 +150,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write failing test for RegionPlannerAgent**
 
-Add to `test_agents_mock.py`, replacing the `TestExploreZoneAgent` class (lines 452-535):
+In `test_agents_mock.py`, replace the ENTIRE explore section (lines 451-535) — this includes the comment header, imports (`ExploreZoneAgent`, `ExploreZoneAnalysis`), the `_make_req_with_explore_leg()` fixture, JSON fixtures, and the `TestExploreZoneAgent` class. Replace with:
 
 ```python
 # RegionPlannerAgent — region-based route planning
@@ -249,7 +259,13 @@ class TestRegionPlannerAgent:
         assert len(result.regions) == 2
 ```
 
-Remove old imports: `from agents.explore_zone_agent import ExploreZoneAgent` and the old `_make_req_with_explore_leg`, `FIRST_PASS_JSON`, `SECOND_PASS_JSON` fixtures.
+This replacement covers the entire block including:
+- Line 452: section comment
+- Line 456: `from agents.explore_zone_agent import ExploreZoneAgent`
+- Line 457: `from models.trip_leg import ZoneBBox, ExploreZoneAnalysis, ExploreStop`
+- Lines 458-460: old imports
+- Lines 462-487: old `_make_req_with_explore_leg`, `FIRST_PASS_JSON`, `SECOND_PASS_JSON` fixtures
+- Lines 488-535: old `TestExploreZoneAgent` class
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -450,10 +466,10 @@ Delete these three items from `stop_options_finder.py`:
 - `_build_prompt_explore()` method (lines 362-419)
 - `find_options_explore()` method (lines 421-449)
 
-- [ ] **Step 3: Run all tests**
+- [ ] **Step 3: Run scoped tests**
 
-Run: `cd backend && python3 -m pytest tests/ -v`
-Expected: All tests pass (no code references the removed methods).
+Run: `cd backend && python3 -m pytest tests/test_models.py tests/test_agents_mock.py -v`
+Expected: All tests pass. Full test suite will pass after Chunk 2 removes old consumers.
 
 - [ ] **Step 4: Commit**
 
@@ -815,7 +831,11 @@ Replace `_run_explore_leg()` method (lines 124-162):
         return job.get("selected_stops", [])
 ```
 
-- [ ] **Step 7: Delete explore_zone_agent.py**
+- [ ] **Step 7: Delete old models from trip_leg.py**
+
+Now that all consumers are updated, delete `ExploreZoneAnalysis` (lines 31-34) and `ExploreAnswersRequest` (lines 37-38) from `trip_leg.py`. Also update `test_models.py` line 531 import to remove them, and delete the `TestExploreZoneAnalysis` and `TestExploreAnswersRequest` test classes (lines 566-590).
+
+- [ ] **Step 8: Delete explore_zone_agent.py**
 
 ```bash
 rm backend/agents/explore_zone_agent.py
@@ -984,7 +1004,7 @@ In `buildPayload()` (around line 771), the `cleanLegs` mapping already strips `_
 
 - [ ] **Step 6: Initialize explore_description in leg defaults**
 
-In the function that creates new legs (check `addLeg()` or the initial `S.legs` setup), ensure new legs get `explore_description: ''`.
+In `addLeg()` (line 417), add `explore_description: ''` to the new leg object literal (around lines 417-427). Also add it to the initial leg in `initLegs()` if present.
 
 - [ ] **Step 7: Commit**
 
@@ -1093,7 +1113,7 @@ Delete `_insertDetourBanner()` (lines 105-112).
 
 Remove the detour banner insertion calls:
 - In `onRouteOptionsDone()`: remove the `allDetour` check and `_insertDetourBanner()` call (around line 128)
-- In `renderOptions()`: remove the `allDetour` check and detour banner insertion (around line 325)
+- In `renderOptions()`: remove the `allDetour` variable declaration (line 325) AND the detour banner insertion block (lines 353-358)
 
 - [ ] **Step 4: Handle no_stops_found in onRouteOptionsDone()**
 
@@ -1172,7 +1192,10 @@ async function _submitGuidance() {
   progressOverlay.open('Suche mit deiner Angabe…');
   openRouteSSE(S.jobId);
   try {
-    const data = await recomputeOptions(S.jobId, { extra_instructions: guidance });
+    const data = await _fetchQuiet(`${API}/recompute-options/${S.jobId}`, {
+      method: 'POST',
+      body: JSON.stringify({ extra_instructions: guidance }),
+    }).then(r => r.json());
     startRouteBuilding(data);
   } catch (err) {
     progressOverlay.close();
@@ -1501,11 +1524,18 @@ ls backend/agents/explore_zone_agent.py 2>/dev/null && echo "STILL EXISTS" || ec
 - [ ] **Step 4: Check for stale references**
 
 ```bash
-grep -r "DetourOptionsAgent\|detour_options_agent\|ExploreZoneAgent\|explore_zone_agent\|ExploreZoneAnalysis\|ExploreAnswersRequest\|answerExploreQuestions\|answer-explore-questions\|explore_zone_questions\|explore_circuit_ready" backend/ frontend/ --include="*.py" --include="*.js" -l
+grep -r "DetourOptionsAgent\|detour_options_agent\|ExploreZoneAgent\|explore_zone_agent\|ExploreZoneAnalysis\|ExploreAnswersRequest\|answerExploreQuestions\|answer-explore-questions\|explore_zone_questions\|explore_circuit_ready\|showExploreGuidanceForm\|submitGuidanceAnswers\|showExploreCircuit\|_guidanceAnswers\|initZoneMap\|geocodeZoneLabel\|_insertDetourBanner" backend/ frontend/ --include="*.py" --include="*.js" -l
 ```
 Expected: No results (all references cleaned up).
 
-- [ ] **Step 5: Tag and push**
+- [ ] **Step 5: Frontend syntax check**
+
+```bash
+node --check frontend/js/route-builder.js && node --check frontend/js/form.js && node --check frontend/js/api.js && echo "OK"
+```
+Expected: `OK` (no syntax errors).
+
+- [ ] **Step 6: Tag and push**
 
 ```bash
 git tag vX.X.Y   # increment from latest
