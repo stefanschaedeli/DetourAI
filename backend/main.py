@@ -745,7 +745,7 @@ async def _find_and_stream_options(
     # First pass
     enriched_options, estimated_total_stops, final_route_could_be_complete = await _run_one_pass(extra_instructions)
 
-    # Retry only if 1–2 valid options (worth filling up; 0 goes straight to DetourOptionsAgent)
+    # Retry only if 1–2 valid options (worth filling up)
     if 0 < len(enriched_options) < 3 and min_km_from_origin > 0:
         retry_hint = (
             f"WICHTIG: Letzte Optionen zu nahe am Start/Ziel. "
@@ -768,44 +768,30 @@ async def _find_and_stream_options(
             if len(enriched_options) >= 3:
                 break
 
-    # Fallback: wenn 0 gültige Optionen (direkt oder nach Retry) → DetourOptionsAgent
     if len(enriched_options) == 0:
-        from agents.detour_options_agent import DetourOptionsAgent
+        # Keine gültigen Optionen — Frontend zeigt Korridor + Eingabefeld
         await debug_logger.log(
             LogLevel.WARNING,
-            f"0 gültige Optionen nach Retry — starte DetourOptionsAgent",
-            job_id=job_id, agent="DetourOptions",
+            f"0 gültige Optionen — Frontend zeigt Korridor für Benutzerführung",
+            job_id=job_id,
         )
-        detour_agent = DetourOptionsAgent(agent.request, job_id)
-        detour_opts = await detour_agent.find_detour_options(
-            prev_location=prev_location,
-            segment_target=segment_target,
-            route_geometry=route_geometry,
-            prev_coords=prev_coords,
-            target_coords=target_coords,
+        await debug_logger.push_event(
+            job_id, "route_options_done", None,
+            {
+                "options": [],
+                "map_anchors": map_anchors,
+                "estimated_total_stops": 0,
+                "route_could_be_complete": False,
+                "no_stops_found": True,
+                "corridor": {
+                    "start": prev_location,
+                    "end": segment_target,
+                    "start_coords": prev_coords,
+                    "end_coords": target_coords,
+                },
+            },
         )
-        for opt in detour_opts:
-            place = f"{opt.get('region', '')}, {opt.get('country', '')}"
-            nom_coords = await geocode_nominatim(place)
-            await asyncio.sleep(0.08)
-            agent_lat = opt.get("lat")
-            agent_lon = opt.get("lon")
-            agent_coords = (agent_lat, agent_lon) if agent_lat and agent_lon else None
-            coords = nom_coords or agent_coords
-            if not coords:
-                continue
-            opt["lat"] = coords[0]
-            opt["lon"] = coords[1]
-            opt["maps_url"] = build_maps_url([prev_location, place])
-            opt["is_detour"] = True
-            if prev_coords:
-                hours, km = await osrm_route([prev_coords, coords])
-                if hours > 0:
-                    opt["drive_hours"] = hours
-                    opt["drive_km"] = km
-            if max_drive_hours > 0:
-                opt["drives_over_limit"] = opt.get("drive_hours", 0) > max_drive_hours
-            enriched_options.append(opt)
+        return [], map_anchors, 0, False
 
     # Emit SSE events for all valid options
     for option_index, opt in enumerate(enriched_options):
