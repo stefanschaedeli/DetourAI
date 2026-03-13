@@ -135,14 +135,7 @@ function buildHeroPhoto(urls, altText, sizeClass = 'md') {
   const countBadge = urls.length > 1
     ? `<span class="hero-photo-count">${urls.length} Fotos</span>`
     : '';
-  return `
-    <div class="hero-photo hero-photo--${sizeClass}" data-photo-urls='${urlsJson}'>
-      <img src="${esc(urls[0])}" alt="${alt}" loading="lazy"
-           data-lightbox-url="${esc(urls[0])}"
-           data-lightbox-caption="${alt}"
-           onerror="this.parentElement.classList.add('hero-photo-error')">
-      ${countBadge}
-    </div>`;
+  return `<div class="hero-photo hero-photo--${sizeClass}" data-photo-urls='${urlsJson}'><img src="${esc(urls[0])}" alt="${alt}" loading="lazy" data-lightbox-url="${esc(urls[0])}" data-lightbox-caption="${alt}" onerror="this.parentElement.classList.add('hero-photo-error')">${countBadge}</div>`;
 }
 
 /**
