@@ -219,6 +219,12 @@ function startRouteBuilding(data) {
 
   // If streaming already populated the container, only update state + map
   if (_streamingOptions.length >= (data.options || []).length && _streamingOptions.length > 0) {
+    // Region-Plan-Panel entfernen und Options-Panel wieder anzeigen
+    const regionPanel = document.getElementById('region-plan-panel');
+    if (regionPanel) regionPanel.remove();
+    const optionsPanel = document.getElementById('options-panel');
+    if (optionsPanel) optionsPanel.style.display = '';
+
     S.currentOptions = data.options || _streamingOptions;
     S.loadingOptions = false;
     progressOverlay.close();
@@ -298,6 +304,12 @@ function renderOptions(options, meta) {
   const confirmBtn = document.getElementById('confirm-route-btn');
 
   if (!container) return;
+
+  // Region-Plan-Panel entfernen und Options-Panel wieder anzeigen
+  const regionPanel = document.getElementById('region-plan-panel');
+  if (regionPanel) regionPanel.remove();
+  const optionsPanel = document.getElementById('options-panel');
+  if (optionsPanel) optionsPanel.style.display = '';
 
   // Status header — delegate to shared function
   _updateRouteStatus(meta);
