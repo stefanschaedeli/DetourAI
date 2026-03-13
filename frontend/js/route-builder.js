@@ -18,8 +18,8 @@ function openRouteSSE(jobId) {
     route_option_ready:     onRouteOptionReady,
     route_options_done:     onRouteOptionsDone,
     debug_log:              _onRouteBuildDebugLog,
-    explore_zone_questions: data => { showExploreGuidanceForm(data.questions, data.leg_id); },
-    explore_circuit_ready:  data => { showExploreCircuit(data.circuit, data.warnings); },
+    region_plan_ready: data => { showRegionPlanUI(data.regions, data.summary, data.leg_id); },
+    region_updated:    data => { updateRegionPlanUI(data.regions, data.summary); },
     leg_complete:           data => { console.log(`Schnitt ${(data.leg_index || 0) + 1} abgeschlossen (${data.mode || ''})`); },
     onerror: () => {},  // silently ignore — HTTP response is the fallback
   });
@@ -102,16 +102,12 @@ function onRouteOptionReady(data) {
   progressOverlay.completeLine(`option_${optIndex}`, '');
 }
 
-function _insertDetourBanner() {
-  const container = document.getElementById('route-options-container');
-  if (!container || container.querySelector('.detour-banner')) return;
-  const banner = document.createElement('div');
-  banner.className = 'detour-banner';
-  banner.innerHTML = `<strong>Umweg-Optionen:</strong> Auf dieser Strecke gibt es zu wenig Raum für einen klassischen Zwischenstopp. Diese Orte liegen seitlich der Route und machen die Reise abwechslungsreicher — von dort ist das Ziel weiterhin erreichbar.`;
-  container.prepend(banner);
-}
-
 function onRouteOptionsDone(data) {
+  if (data.no_stops_found) {
+    _showNoStopsFoundUI(data.corridor);
+    return;
+  }
+
   // All options arrived via SSE — close overlay first, then init map
   const opts = data.options || _streamingOptions;
   const count = opts.length;
@@ -125,8 +121,6 @@ function onRouteOptionsDone(data) {
 
   const anchors = _streamingMeta || data.map_anchors || {};
 
-  const allDetour = opts.length > 0 && opts.every(o => o.is_detour);
-  if (allDetour) { _insertDetourBanner(); }
   _initMap(anchors, opts);
   closeRouteSSE();
 }
@@ -213,12 +207,16 @@ function startRouteBuilding(data) {
   if (cachedForm && cachedForm.max_drive_hours_per_day) {
     routeMeta.max_drive_hours = cachedForm.max_drive_hours_per_day;
   }
-  // Explore-Modus: keine Optionen, warte auf SSE explore_zone_questions
+  // Explore-Modus: Region-Plan wird angezeigt via SSE region_plan_ready
   if (data.explore_pending) {
     S.loadingOptions = false;
     _updateRouteStatus(data.meta || {});
     renderBuiltStops();
-    return;  // SSE explore_zone_questions triggert showExploreGuidanceForm()
+    // If region_plan is included directly (non-SSE path), show it immediately
+    if (data.region_plan) {
+      showRegionPlanUI(data.region_plan.regions, data.region_plan.summary, data.meta?.leg_id || '');
+    }
+    return;
   }
 
   // If streaming already populated the container, only update state + map
@@ -322,7 +320,6 @@ function renderOptions(options, meta) {
   }
 
   const allOverLimit = options.length > 0 && options.every(o => o.drives_over_limit);
-  const allDetour = options.length > 0 && options.every(o => o.is_detour);
 
   container.innerHTML = options.map((opt, i) => {
     const { classes, id, html } = _buildOptionCardHTML(opt, i);
@@ -347,13 +344,6 @@ function renderOptions(options, meta) {
       <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alle vorgeschlagenen Etappen überschreiten die maximale Fahrzeit von ${routeMeta.max_drive_hours || ''}h.</p>
       <button class="btn btn-secondary" onclick="openRouteAdjustModal()">Route anpassen…</button>
     `;
-    container.prepend(banner);
-  }
-
-  if (allDetour) {
-    const banner = document.createElement('div');
-    banner.className = 'detour-banner';
-    banner.innerHTML = `<strong>Umweg-Optionen:</strong> Auf dieser Strecke gibt es zu wenig Raum für einen klassischen Zwischenstopp. Diese Orte liegen seitlich der Route und machen die Reise abwechslungsreicher — von dort ist das Ziel weiterhin erreichbar.`;
     container.prepend(banner);
   }
 
@@ -768,106 +758,295 @@ function searchNextStop() {
 }
 
 // ---------------------------------------------------------------------------
-// Explore mode: guided questions form + circuit display
+// No-stops-found UI
 // ---------------------------------------------------------------------------
 
-function showExploreGuidanceForm(questions, legId) {
-  const container = document.getElementById('route-builder-panel') ||
-                    document.getElementById('progress-panel');
+function _showNoStopsFoundUI(corridor) {
+  const container = document.getElementById('route-options-container');
   if (!container) return;
+  container.innerHTML = '';
 
-  const formHtml = `
-    <div class="explore-guidance-form" id="explore-guidance-form">
-      <h3 class="guidance-title">Fragen zur Erkundungszone</h3>
-      <p class="guidance-subtitle">Beantworte diese Fragen um den Rundkurs zu optimieren</p>
-      ${questions.map((q, i) => `
-        <div class="guidance-question">
-          <label class="guidance-label">${esc(q)}</label>
-          <input type="text" class="guidance-input" id="guidance-answer-${i}"
-              placeholder="Deine Antwort…"
-              oninput="updateGuidanceAnswer(${i}, this.value)">
-        </div>
-      `).join('')}
-      <button class="btn btn-primary" onclick="submitGuidanceAnswers('${esc(legId)}', ${JSON.stringify(questions).replace(/'/g, "\\'")})">
-        Rundkurs planen
+  const mapDiv = document.createElement('div');
+  mapDiv.id = 'no-stops-map';
+  mapDiv.style.cssText = 'height:300px;border-radius:12px;margin-bottom:16px';
+
+  container.innerHTML = `
+    <div class="no-stops-found">
+      <h3>Keine passenden Zwischenstopps gefunden</h3>
+      <p>Auf der direkten Route zwischen <strong>${esc(corridor.start)}</strong> und
+         <strong>${esc(corridor.end)}</strong> gibt es keine passenden Stopps.</p>
+    </div>
+  `;
+  container.appendChild(mapDiv);
+  container.insertAdjacentHTML('beforeend', `
+    <div class="guidance-input-row" style="margin-top:12px">
+      <label class="form-label-sm">Wo möchtest du anhalten?</label>
+      <input type="text" class="input-sm" id="guidance-text"
+        placeholder="z.B. 'In der Nähe von Annecy' oder 'Am Genfer See'" style="width:100%">
+      <button class="btn btn-primary" style="margin-top:8px" onclick="_submitGuidance()">
+        Nochmal suchen
       </button>
-    </div>`;
+      <button class="btn btn-secondary" style="margin-top:8px;margin-left:8px" onclick="skipStop()">
+        Direkt zum Ziel fahren
+      </button>
+    </div>
+  `);
 
-  container.insertAdjacentHTML('beforeend', formHtml);
-  window._guidanceAnswers = new Array(questions.length).fill('');
-}
-
-function updateGuidanceAnswer(index, value) {
-  if (window._guidanceAnswers) window._guidanceAnswers[index] = value;
-}
-
-async function submitGuidanceAnswers(legId, questions) {
-  const answers = window._guidanceAnswers || [];
-  const form = document.getElementById('explore-guidance-form');
-  if (form) form.remove();
-
-  progressOverlay.open('Rundkurs wird geplant…');
-  if (S.jobId) openRouteSSE(S.jobId);
-
-  try {
-    const data = await answerExploreQuestions(S.jobId, answers);
-
-    const options = data.options || [];
-    const meta = data.meta || {};
-
-    if (data.explore_pending) {
-      // Next leg is also explore — wait for SSE questions
-      progressOverlay.close();
-      closeRouteSSE();
-      S.loadingOptions = false;
-      routeMeta = { ...routeMeta, ...meta };
-      renderBuiltStops();
-      _updateRouteStatus(meta);
-      return;
-    }
-
-    progressOverlay.close();
-    closeRouteSSE();
-    _streamingOptions = [];
-
-    if (options.length === 0 && (meta.route_could_be_complete || data.route_could_be_complete)) {
-      renderOptions([], { ...meta, route_could_be_complete: true });
-    } else if (options.length > 0) {
-      renderOptions(options, meta);
-    }
-  } catch (err) {
-    console.error('Fehler beim Senden der Antworten:', err);
-    progressOverlay.close();
-    closeRouteSSE();
+  // Show corridor on Google Maps
+  if (corridor.start_coords && corridor.end_coords && typeof google !== 'undefined') {
+    const map = new google.maps.Map(mapDiv, { zoom: 6, center: {
+      lat: (corridor.start_coords[0] + corridor.end_coords[0]) / 2,
+      lng: (corridor.start_coords[1] + corridor.end_coords[1]) / 2,
+    }});
+    new google.maps.Marker({ position: { lat: corridor.start_coords[0], lng: corridor.start_coords[1] }, map, label: 'S' });
+    new google.maps.Marker({ position: { lat: corridor.end_coords[0], lng: corridor.end_coords[1] }, map, label: 'Z' });
+    new google.maps.Polyline({
+      path: [
+        { lat: corridor.start_coords[0], lng: corridor.start_coords[1] },
+        { lat: corridor.end_coords[0], lng: corridor.end_coords[1] },
+      ],
+      strokeColor: '#4a90d9', strokeWeight: 3, strokeOpacity: 0.7,
+      map,
+    });
   }
 }
 
-function showExploreCircuit(circuit, warnings) {
+async function _submitGuidance() {
+  const input = document.getElementById('guidance-text');
+  if (!input || !input.value.trim()) return;
+  const guidance = input.value.trim();
+  progressOverlay.open('Suche mit deiner Angabe…');
+  openRouteSSE(S.jobId);
+  try {
+    const data = await _fetchQuiet(`${API}/recompute-options/${S.jobId}`, {
+      method: 'POST',
+      body: JSON.stringify({ extra_instructions: guidance }),
+    }).then(r => r.json());
+    startRouteBuilding(data);
+  } catch (err) {
+    progressOverlay.close();
+    closeRouteSSE();
+    console.error('Guidance retry fehlgeschlagen:', err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Explore mode: Region plan UI
+// ---------------------------------------------------------------------------
+
+let _regionPlanMap = null;
+let _regionMarkers = [];
+let _regionPolyline = null;
+
+function showRegionPlanUI(regions, summary, legId) {
+  progressOverlay.close();
+  closeRouteSSE();
+  S.loadingOptions = false;
+
   const container = document.getElementById('route-builder-panel') ||
                     document.getElementById('progress-panel');
   if (!container) return;
 
-  const warningHtml = warnings.length ? `
-    <div class="circuit-warnings">
-      ${warnings.map(w => `<div class="circuit-warning">⚠ ${esc(w)}</div>`).join('')}
-    </div>` : '';
+  // Store regions globally for drag-and-drop
+  window._currentRegions = regions;
+  window._currentRegionLegId = legId;
 
-  const circuitHtml = `
-    <div class="explore-circuit" id="explore-circuit">
-      <h3 class="circuit-title">Dein Rundkurs</h3>
-      ${warningHtml}
-      <ol class="circuit-stops">
-        ${circuit.map(stop => `
-          <li class="circuit-stop">
-            <span class="circuit-stop-name">${esc(stop.name)}</span>
-            <span class="circuit-stop-nights">${stop.suggested_nights} Nächte</span>
-            ${stop.logistics_note ? `<span class="circuit-logistics">${esc(stop.logistics_note)}</span>` : ''}
-          </li>`).join('')}
-      </ol>
-      <p class="circuit-hint">Stopps werden nun interaktiv ausgewählt.</p>
-    </div>`;
+  const regionListHtml = regions.map((r, i) => `
+    <li class="region-item" draggable="true" data-index="${i}"
+        ondragstart="_onRegionDragStart(event, ${i})"
+        ondragover="event.preventDefault()"
+        ondrop="_onRegionDrop(event, ${i})">
+      <div class="region-item-content">
+        <span class="region-number">${i + 1}</span>
+        <div class="region-info">
+          <strong>${esc(r.name)}</strong>
+          <span class="region-reason">${esc(r.reason)}</span>
+        </div>
+        <button class="btn btn-sm btn-outline" onclick="_toggleReplaceRegion(${i})">Ersetzen</button>
+      </div>
+      <div class="region-replace-form" id="region-replace-${i}" style="display:none">
+        <input type="text" class="input-sm" id="region-replace-text-${i}"
+          placeholder="Wie soll diese Region ersetzt werden?">
+        <button class="btn btn-sm btn-primary" onclick="_doReplaceRegion(${i})">Ersetzen</button>
+      </div>
+    </li>
+  `).join('');
 
-  container.insertAdjacentHTML('beforeend', circuitHtml);
+  container.innerHTML = `
+    <div class="region-plan-ui">
+      <h3>Regionen-Plan</h3>
+      <p class="region-summary">${esc(summary)}</p>
+      <div class="region-plan-layout">
+        <div class="region-list-panel">
+          <ol class="region-list" id="region-list">${regionListHtml}</ol>
+          <div class="region-actions">
+            <button class="btn btn-secondary" onclick="_toggleRecompute()">Neu berechnen</button>
+            <button class="btn btn-primary" onclick="_confirmRegions()">Route bestätigen</button>
+          </div>
+          <div id="recompute-form" style="display:none;margin-top:8px">
+            <input type="text" class="input-sm" id="recompute-text"
+              placeholder="Was soll geändert werden?" style="width:100%">
+            <button class="btn btn-sm btn-primary" style="margin-top:4px" onclick="_doRecompute()">
+              Neu berechnen
+            </button>
+          </div>
+        </div>
+        <div class="region-map-panel">
+          <div id="region-plan-map" style="height:400px;border-radius:12px"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  _initRegionMap(regions);
+}
+
+function _initRegionMap(regions) {
+  const mapDiv = document.getElementById('region-plan-map');
+  if (!mapDiv || typeof google === 'undefined') return;
+
+  const bounds = new google.maps.LatLngBounds();
+  const path = [];
+
+  _regionPlanMap = new google.maps.Map(mapDiv, { zoom: 5 });
+  _regionMarkers = [];
+
+  regions.forEach((r, i) => {
+    const pos = { lat: r.lat, lng: r.lon };
+    bounds.extend(pos);
+    path.push(pos);
+
+    const marker = new google.maps.Marker({
+      position: pos,
+      map: _regionPlanMap,
+      label: { text: String(i + 1), color: '#fff' },
+      title: r.name,
+    });
+    _regionMarkers.push(marker);
+  });
+
+  _regionPolyline = new google.maps.Polyline({
+    path,
+    strokeColor: '#4a90d9',
+    strokeWeight: 3,
+    strokeOpacity: 0.8,
+    map: _regionPlanMap,
+  });
+
+  _regionPlanMap.fitBounds(bounds, 50);
+}
+
+function updateRegionPlanUI(regions, summary) {
+  window._currentRegions = regions;
+  // Re-render the list
+  const list = document.getElementById('region-list');
+  if (list) {
+    list.innerHTML = regions.map((r, i) => `
+      <li class="region-item" draggable="true" data-index="${i}"
+          ondragstart="_onRegionDragStart(event, ${i})"
+          ondragover="event.preventDefault()"
+          ondrop="_onRegionDrop(event, ${i})">
+        <div class="region-item-content">
+          <span class="region-number">${i + 1}</span>
+          <div class="region-info">
+            <strong>${esc(r.name)}</strong>
+            <span class="region-reason">${esc(r.reason)}</span>
+          </div>
+          <button class="btn btn-sm btn-outline" onclick="_toggleReplaceRegion(${i})">Ersetzen</button>
+        </div>
+        <div class="region-replace-form" id="region-replace-${i}" style="display:none">
+          <input type="text" class="input-sm" id="region-replace-text-${i}"
+            placeholder="Wie soll diese Region ersetzt werden?">
+          <button class="btn btn-sm btn-primary" onclick="_doReplaceRegion(${i})">Ersetzen</button>
+        </div>
+      </li>
+    `).join('');
+  }
+  // Update summary
+  const summaryEl = document.querySelector('.region-summary');
+  if (summaryEl) summaryEl.textContent = summary;
+  // Update map
+  _updateRegionMap(regions);
+}
+
+function _updateRegionMap(regions) {
+  if (!_regionPlanMap) return;
+  _regionMarkers.forEach(m => m.setMap(null));
+  if (_regionPolyline) _regionPolyline.setMap(null);
+  _initRegionMap(regions);
+}
+
+// Drag and drop
+let _dragSourceIndex = null;
+
+function _onRegionDragStart(e, index) {
+  _dragSourceIndex = index;
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function _onRegionDrop(e, targetIndex) {
+  e.preventDefault();
+  if (_dragSourceIndex === null || _dragSourceIndex === targetIndex) return;
+  const regions = window._currentRegions;
+  const [moved] = regions.splice(_dragSourceIndex, 1);
+  regions.splice(targetIndex, 0, moved);
+  _dragSourceIndex = null;
+  updateRegionPlanUI(regions, document.querySelector('.region-summary')?.textContent || '');
+}
+
+function _toggleReplaceRegion(index) {
+  const form = document.getElementById(`region-replace-${index}`);
+  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function _doReplaceRegion(index) {
+  const input = document.getElementById(`region-replace-text-${index}`);
+  if (!input || !input.value.trim()) return;
+  progressOverlay.open('Region wird ersetzt…');
+  try {
+    const data = await replaceRegion(S.jobId, index, input.value.trim());
+    progressOverlay.close();
+    if (data.region_plan) {
+      updateRegionPlanUI(data.region_plan.regions, data.region_plan.summary);
+    }
+  } catch (err) {
+    progressOverlay.close();
+    console.error('Region ersetzen fehlgeschlagen:', err);
+  }
+}
+
+function _toggleRecompute() {
+  const form = document.getElementById('recompute-form');
+  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function _doRecompute() {
+  const input = document.getElementById('recompute-text');
+  if (!input || !input.value.trim()) return;
+  progressOverlay.open('Route wird neu berechnet…');
+  try {
+    const data = await recomputeRegions(S.jobId, input.value.trim());
+    progressOverlay.close();
+    if (data.region_plan) {
+      updateRegionPlanUI(data.region_plan.regions, data.region_plan.summary);
+    }
+  } catch (err) {
+    progressOverlay.close();
+    console.error('Neu berechnen fehlgeschlagen:', err);
+  }
+}
+
+async function _confirmRegions() {
+  progressOverlay.open('Route wird bestätigt — Stopps werden gesucht…');
+  openRouteSSE(S.jobId);
+  try {
+    const data = await confirmRegions(S.jobId);
+    startRouteBuilding(data);
+  } catch (err) {
+    progressOverlay.close();
+    closeRouteSSE();
+    console.error('Region-Bestätigung fehlgeschlagen:', err);
+  }
 }
 
 // ---------------------------------------------------------------------------
