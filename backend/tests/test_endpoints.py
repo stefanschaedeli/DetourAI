@@ -446,6 +446,7 @@ class TestRegionEndpoints:
         }
         mock_job["leg_index"] = 0
         mock_job["request"]["legs"][0]["mode"] = "explore"
+        mock_job["request"]["legs"][0]["explore_description"] = "Französische Alpen erkunden"
         job_id = mock_job["job_id"]
         new_plan = RegionPlan(
             regions=[RegionPlanItem(name="Wallis", lat=46.3, lon=7.6, reason="Matterhorn")],

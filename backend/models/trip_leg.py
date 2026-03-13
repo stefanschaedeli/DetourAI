@@ -51,8 +51,8 @@ class RecomputeRegionsRequest(BaseModel):
 
 class TripLeg(BaseModel):
     leg_id: str = Field(pattern=r"^leg-\d+$")
-    start_location: str = Field(max_length=200)
-    end_location: str = Field(max_length=200)
+    start_location: str = Field(default="", max_length=200)
+    end_location: str = Field(default="", max_length=200)
     start_date: date
     end_date: date
     mode: Literal["transit", "explore"]
@@ -65,6 +65,10 @@ class TripLeg(BaseModel):
     def validate_leg(self) -> "TripLeg":
         if self.end_date <= self.start_date:
             raise ValueError("end_date must be after start_date")
+        if self.mode == "transit" and (not self.start_location or not self.end_location):
+            raise ValueError("transit legs require start_location and end_location")
+        if self.mode == "explore" and not self.explore_description:
+            raise ValueError("explore legs require explore_description")
         return self
 
     @property

@@ -275,7 +275,7 @@ async def _start_explore_leg(job: dict, job_id: str, request: TravelRequest) -> 
 
     leg_index = job["leg_index"]
     leg = request.legs[leg_index]
-    description = leg.explore_description or f"{leg.start_location} bis {leg.end_location} erkunden"
+    description = leg.explore_description or "Region erkunden"
 
     agent = RegionPlannerAgent(request, job_id)
     region_plan = await agent.plan(description=description, leg_index=leg_index)

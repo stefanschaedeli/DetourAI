@@ -32,15 +32,30 @@ class RegionPlannerAgent:
         req = self.request
         leg = req.legs[leg_index]
         styles = ", ".join(req.travel_styles) if req.travel_styles else "keine Angabe"
-        return (
-            f"Startort: {leg.start_location}\n"
-            f"Endort: {leg.end_location}\n"
-            f"Verfügbare Tage: {leg.total_days}\n"
-            f"Max. Fahrzeit/Tag: {req.max_drive_hours_per_day}h\n"
-            f"Reisestile: {styles}\n"
-            f"Reisende: {req.adults} Erwachsene"
-            + (f", Kinder: {len(req.children)}" if req.children else "")
-        )
+        lines = []
+        if leg.start_location:
+            lines.append(f"Startort: {leg.start_location}")
+        if leg.end_location:
+            lines.append(f"Endort: {leg.end_location}")
+        lines.append(f"Verfügbare Tage: {leg.total_days}")
+        lines.append(f"Max. Fahrzeit/Tag: {req.max_drive_hours_per_day}h")
+        lines.append(f"Reisestile: {styles}")
+        travellers = f"Reisende: {req.adults} Erwachsene"
+        if req.children:
+            travellers += f", Kinder: {len(req.children)}"
+        lines.append(travellers)
+        return "\n".join(lines)
+
+    async def _extract_json(self, response) -> dict:
+        """Extract JSON from response, warning on truncation."""
+        if response.stop_reason == "max_tokens":
+            await debug_logger.log(
+                LogLevel.WARN,
+                "RegionPlannerAgent Antwort wurde abgeschnitten (max_tokens erreicht)",
+                job_id=self.job_id, agent="RegionPlannerAgent",
+            )
+        text = response.content[0].text
+        return parse_agent_json(text)
 
     async def plan(self, description: str, leg_index: int) -> RegionPlan:
         context = self._leg_context(leg_index)
@@ -64,14 +79,13 @@ class RegionPlannerAgent:
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=1024,
+                max_tokens=4096,
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )
 
         response = await call_with_retry(call, job_id=self.job_id, agent_name="RegionPlannerAgent")
-        text = response.content[0].text
-        data = parse_agent_json(text)
+        data = await self._extract_json(response)
         return RegionPlan(**data)
 
     async def replace_region(
@@ -102,14 +116,13 @@ class RegionPlannerAgent:
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=1024,
+                max_tokens=4096,
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )
 
         response = await call_with_retry(call, job_id=self.job_id, agent_name="RegionPlannerAgent")
-        text = response.content[0].text
-        data = parse_agent_json(text)
+        data = await self._extract_json(response)
         return RegionPlan(**data)
 
     async def recalculate(
@@ -140,12 +153,11 @@ class RegionPlannerAgent:
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=1024,
+                max_tokens=4096,
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )
 
         response = await call_with_retry(call, job_id=self.job_id, agent_name="RegionPlannerAgent")
-        text = response.content[0].text
-        data = parse_agent_json(text)
+        data = await self._extract_json(response)
         return RegionPlan(**data)

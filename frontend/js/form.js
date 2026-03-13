@@ -105,20 +105,29 @@ function validateStep(n) {
     // Collect all leg field IDs for clearing
     const fieldIds = [];
     S.legs.forEach((_, i) => {
-      fieldIds.push(`leg-start-${i}`, `leg-end-${i}`, `leg-sdate-${i}`, `leg-edate-${i}`);
+      fieldIds.push(`leg-start-${i}`, `leg-end-${i}`, `leg-sdate-${i}`, `leg-edate-${i}`, `explore-text-${i}`);
     });
     _clearFieldErrors(fieldIds);
 
     let valid = true;
     for (let i = 0; i < S.legs.length; i++) {
       const leg = S.legs[i];
-      if (!leg.start_location) {
-        _setFieldError(`leg-start-${i}`, 'Bitte Startort eingeben.');
-        if (valid) valid = false;
-      }
-      if (!leg.end_location) {
-        _setFieldError(`leg-end-${i}`, 'Bitte Ziel eingeben.');
-        if (valid) valid = false;
+      if (leg.mode === "explore") {
+        // Explore legs need description, not locations
+        if (!leg.explore_description || !leg.explore_description.trim()) {
+          _setFieldError(`explore-text-${i}`, 'Bitte Beschreibung eingeben.');
+          if (valid) valid = false;
+        }
+      } else {
+        // Transit legs need locations
+        if (!leg.start_location) {
+          _setFieldError(`leg-start-${i}`, 'Bitte Startort eingeben.');
+          if (valid) valid = false;
+        }
+        if (!leg.end_location) {
+          _setFieldError(`leg-end-${i}`, 'Bitte Ziel eingeben.');
+          if (valid) valid = false;
+        }
       }
       if (!leg.start_date) {
         _setFieldError(`leg-sdate-${i}`, 'Startdatum fehlt.');
@@ -161,18 +170,22 @@ function updateQuickSubmitBar() {
   const formActive = document.getElementById('form-section')?.classList.contains('active');
   const onSummaryStep = S.step === 6;
   // Check if all legs have valid data
-  const legsReady = S.legs.length > 0 && S.legs.every(l =>
-    l.start_location && l.end_location && l.start_date && l.end_date && l.start_date < l.end_date
-  );
+  const legsReady = S.legs.length > 0 && S.legs.every(l => {
+    const datesOk = l.start_date && l.end_date && l.start_date < l.end_date;
+    if (l.mode === "explore") return datesOk && l.explore_description && l.explore_description.trim();
+    return datesOk && l.start_location && l.end_location;
+  });
   const ready = formActive && legsReady && !onSummaryStep;
   bar.classList.toggle('visible', !!ready);
 }
 
 async function quickSubmitTrip() {
   // Validate legs
-  const legsReady = S.legs.length > 0 && S.legs.every(l =>
-    l.start_location && l.end_location && l.start_date && l.end_date && l.start_date < l.end_date
-  );
+  const legsReady = S.legs.length > 0 && S.legs.every(l => {
+    const datesOk = l.start_date && l.end_date && l.start_date < l.end_date;
+    if (l.mode === "explore") return datesOk && l.explore_description && l.explore_description.trim();
+    return datesOk && l.start_location && l.end_location;
+  });
   if (!legsReady) { alert('Bitte alle Segmente vollständig ausfüllen.'); return; }
   await submitTrip();
 }
@@ -289,10 +302,10 @@ function renderLegs() {
   if (!container) return;
   container.innerHTML = S.legs.map((leg, i) => renderLegCard(leg, i)).join("");
 
-  // Attach autocomplete if Google Maps is ready
+  // Attach autocomplete if Google Maps is ready (transit legs only)
   const gmReady = typeof google !== 'undefined' && google.maps && google.maps.places;
   S.legs.forEach((leg, i) => {
-    if (gmReady) {
+    if (gmReady && leg.mode === "transit") {
       // First leg: both fields editable; others: only end is editable
       if (i === 0) _attachLegAutocomplete(i, 'start');
       _attachLegAutocomplete(i, 'end');
@@ -306,10 +319,10 @@ function renderLegCard(leg, index) {
   const days = leg.start_date && leg.end_date ? dateDiffDays(leg.start_date, leg.end_date) : 0;
   const canDelete = S.legs.length > 1;
 
-  // Location row
+  // Location row — only shown for transit legs
   const startReadonly = !isFirst ? 'readonly tabindex="-1"' : '';
   const startClass = !isFirst ? 'leg-input-chained' : '';
-  const locationRow = `
+  const locationRow = leg.mode === "transit" ? `
     <div class="leg-location-row">
       <div class="form-group">
         <label for="leg-start-${index}">Von</label>
@@ -324,7 +337,7 @@ function renderLegCard(leg, index) {
           value="${esc(leg.end_location)}" placeholder="z.B. Paris, Frankreich"
           oninput="updateLegField(${index}, 'end_location', this.value)">
       </div>
-    </div>`;
+    </div>` : '';
 
   // Date row
   const sdateReadonly = !isFirst ? 'readonly tabindex="-1"' : '';

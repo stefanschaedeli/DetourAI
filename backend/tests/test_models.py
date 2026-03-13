@@ -640,9 +640,8 @@ class TestTripLeg:
         """Explore legs without zone_bbox are valid — bbox can be resolved later."""
         leg = TripLeg(
             leg_id="leg-1",
-            start_location="A", end_location="B",
             start_date=date(2026, 6, 15), end_date=date(2026, 7, 15),
-            mode="explore",
+            mode="explore", explore_description="Alpen erkunden",
         )
         assert leg.zone_bbox is None
 
@@ -654,9 +653,9 @@ class TestTripLeg:
         bbox = ZoneBBox(north=42, south=36, east=28, west=20, zone_label="Griechenland")
         leg = TripLeg(
             leg_id="leg-1",
-            start_location="Athen", end_location="Athen",
             start_date=date(2026, 6, 15), end_date=date(2026, 7, 15),
             mode="explore", zone_bbox=bbox,
+            explore_description="Griechische Inseln erkunden",
         )
         assert leg.total_days == 30
 
@@ -681,7 +680,8 @@ def _make_explore_leg(leg_id="leg-1", start="Lyon", end="Athen",
                       s=date(2026, 6, 15), e=date(2026, 7, 15)):
     bbox = ZoneBBox(north=42, south=36, east=28, west=20, zone_label="Griechenland")
     return TripLeg(leg_id=leg_id, start_location=start, end_location=end,
-                   start_date=s, end_date=e, mode="explore", zone_bbox=bbox)
+                   start_date=s, end_date=e, mode="explore", zone_bbox=bbox,
+                   explore_description="Griechische Region erkunden")
 
 
 class TestTravelRequestLegs:
