@@ -268,8 +268,9 @@ function _attachLegAutocomplete(legIndex, field) {
 
 function updateLegField(index, field, value) {
   S.legs[index][field] = value;
-  // Chain: end_location → next leg's start_location
-  if (field === 'end_location' && index < S.legs.length - 1) {
+  // Chain: end_location → next leg's start_location (skip explore legs)
+  if (field === 'end_location' && index < S.legs.length - 1
+      && S.legs[index + 1].mode === 'transit') {
     S.legs[index + 1].start_location = value;
     const nextInput = document.getElementById(`leg-start-${index + 1}`);
     if (nextInput) nextInput.value = value;
@@ -466,10 +467,22 @@ function removeLeg(index) {
 
 function setLegMode(index, mode) {
   S.legs[index].mode = mode;
-  if (mode === "explore" && !S.legs[index].explore_description) {
+  if (mode === "explore") {
+    // Clear transit-specific fields
+    S.legs[index].start_location = '';
+    S.legs[index].end_location = '';
+    S.legs[index].via_points = [];
+    if (!S.legs[index].explore_description) {
+      S.legs[index].explore_description = '';
+    }
+  } else {
+    // Clear explore-specific fields
     S.legs[index].explore_description = '';
+    S.legs[index].zone_bbox = null;
+    S.legs[index].zone_guidance = [];
   }
   renderLegs();
+  saveFormToCache();
 }
 
 function handleViaInput(event, legIndex) {
@@ -717,9 +730,18 @@ function buildPayload() {
     ? Math.max(1, Math.round((new Date(ed) - new Date(sd)) / msPerDay))
     : 7;
 
-  // Clean legs for payload: strip internal fields, ensure explore legs have valid zone_bbox
+  // Clean legs for payload: strip internal fields, filter mode-irrelevant data
   const cleanLegs = S.legs.map(leg => {
     const { _pending_zone_label, ...clean } = leg;
+    if (clean.mode === "explore") {
+      clean.start_location = '';
+      clean.end_location = '';
+      clean.via_points = [];
+    } else {
+      delete clean.explore_description;
+      delete clean.zone_bbox;
+      delete clean.zone_guidance;
+    }
     return clean;
   });
 
@@ -759,11 +781,20 @@ function renderSummary() {
   const p = buildPayload();
   const firstLeg = S.legs[0] || {};
   const lastLeg = S.legs[S.legs.length - 1] || {};
-  const legsDisplay = S.legs.map(l => esc(l.start_location) + ' → ' + esc(l.end_location) + ' (' + l.mode + ')').join(' | ');
+  const legsDisplay = S.legs.map(l => {
+    if (l.mode === 'explore') return '[Erkunden] ' + esc(l.explore_description || '').substring(0, 50);
+    return esc(l.start_location) + ' → ' + esc(l.end_location);
+  }).join(' | ');
+  const startDisplay = firstLeg.mode === 'explore'
+    ? '[Erkunden] ' + esc(firstLeg.explore_description || '').substring(0, 50)
+    : esc(firstLeg.start_location);
+  const endDisplay = lastLeg.mode === 'explore'
+    ? '[Erkunden] ' + esc(lastLeg.explore_description || '').substring(0, 50)
+    : esc(lastLeg.end_location);
   el.innerHTML = `
     <div class="summary-grid">
-      <div class="summary-item"><span class="summary-label">Start</span><span>${esc(firstLeg.start_location)}</span></div>
-      <div class="summary-item"><span class="summary-label">Ziel</span><span>${esc(lastLeg.end_location)}</span></div>
+      <div class="summary-item"><span class="summary-label">Start</span><span>${startDisplay}</span></div>
+      <div class="summary-item"><span class="summary-label">Ziel</span><span>${endDisplay}</span></div>
       <div class="summary-item"><span class="summary-label">Datum</span><span>${formatDate(firstLeg.start_date)} – ${formatDate(lastLeg.end_date)} (${p.total_days} Tage)</span></div>
       <div class="summary-item"><span class="summary-label">Reisende</span><span>${p.adults} Erwachsene${p.children.length ? ', ' + p.children.length + ' Kinder' : ''}</span></div>
       <div class="summary-item"><span class="summary-label">Stile</span><span>${p.travel_styles.map(s => TRAVEL_STYLES.find(t => t.id === s)?.label || s).join(', ') || '–'}</span></div>

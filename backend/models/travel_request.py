@@ -62,11 +62,17 @@ class TravelRequest(BaseModel):
 
     @property
     def start_location(self) -> str:
-        return self.legs[0].start_location.strip()
+        leg = self.legs[0]
+        if leg.mode == "explore":
+            return f"[Erkunden] {(leg.explore_description or '')[:50]}"
+        return leg.start_location.strip()
 
     @property
     def main_destination(self) -> str:
-        return self.legs[-1].end_location.strip()
+        leg = self.legs[-1]
+        if leg.mode == "explore":
+            return f"[Erkunden] {(leg.explore_description or '')[:50]}"
+        return leg.end_location.strip()
 
     @property
     def start_date(self) -> date:
