@@ -49,6 +49,8 @@ class StopActivity(BaseModel):
     duration_hours: float
     price_chf: float = 0.0
     suitable_for_children: bool = False
+    min_age: Optional[int] = None          # empfohlenes Mindestalter (0=Babys, 4=Kindergarten, ...)
+    age_group: Optional[str] = None        # z.B. "ab 4 Jahre", "alle Altersgruppen"
     notes: Optional[str] = None
     address: Optional[str] = None
     google_maps_url: Optional[str] = None

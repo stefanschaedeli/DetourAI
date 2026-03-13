@@ -303,7 +303,7 @@ function renderFurtherActivities(activities) {
               <div class="activity-meta">
                 ${act.duration_hours}h
                 ${act.price_chf > 0 ? ` · CHF ${act.price_chf}` : ' · kostenlos'}
-                ${act.suitable_for_children ? ' · familienfreundlich' : ''}
+                ${act.age_group ? ` · ${esc(act.age_group)}` : (act.suitable_for_children ? ' · familienfreundlich' : '')}
               </div>
               ${act.google_maps_url ? `<a href="${safeUrl(act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
             </div>
@@ -446,7 +446,7 @@ function renderStops(plan) {
                   <div class="activity-meta">
                     ${act.duration_hours}h
                     ${act.price_chf > 0 ? ` · CHF ${act.price_chf}` : ' · kostenlos'}
-                    ${act.suitable_for_children ? ' · familienfreundlich' : ''}
+                    ${act.age_group ? ` · ${esc(act.age_group)}` : (act.suitable_for_children ? ' · familienfreundlich' : '')}
                   </div>
                   ${act.google_maps_url ? `<a href="${safeUrl(act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
                 </div>

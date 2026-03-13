@@ -525,6 +525,30 @@ def test_place_id_can_be_set():
 
 
 # ---------------------------------------------------------------------------
+# StopActivity age fields
+# ---------------------------------------------------------------------------
+
+def test_stop_activity_age_fields_default_none():
+    from models.travel_response import StopActivity
+    act = StopActivity(name="Streichelzoo", description="Tiere füttern", duration_hours=1.5)
+    assert act.min_age is None
+    assert act.age_group is None
+    assert act.suitable_for_children is False
+
+
+def test_stop_activity_age_fields_set():
+    from models.travel_response import StopActivity
+    act = StopActivity(
+        name="Kindermuseum", description="Interaktives Museum",
+        duration_hours=2.0, price_chf=15.0,
+        suitable_for_children=True, min_age=3, age_group="ab 3 Jahre",
+    )
+    assert act.min_age == 3
+    assert act.age_group == "ab 3 Jahre"
+    assert act.suitable_for_children is True
+
+
+# ---------------------------------------------------------------------------
 # ZoneBBox
 # ---------------------------------------------------------------------------
 
