@@ -25,45 +25,45 @@ const Router = (() => {
     settings:       'Einstellungen — Travelman',
   };
 
-  // Internal flag to prevent pushState during popstate handling
+  // Internal flag to prevent re-entrant dispatch (including across async handlers)
   let _dispatching = false;
 
   function init() {
     window.addEventListener('popstate', () => {
-      _dispatching = true;
       _dispatch(location.pathname);
-      _dispatching = false;
     });
     // Dispatch the current URL on load
-    _dispatching = true;
     _dispatch(location.pathname);
-    _dispatching = false;
   }
 
   function navigate(path, opts) {
     opts = opts || {};
-    if (_dispatching) return;
     const method = opts.replace ? 'replaceState' : 'pushState';
     history[method](null, '', path + location.search);
-    _dispatching = true;
+    if (_dispatching) return;  // URL updated but no re-dispatch
     _dispatch(path);
-    _dispatching = false;
   }
 
-  function _dispatch(path) {
-    // Strip trailing slash for matching (except root)
-    const clean = path.length > 1 ? path.replace(/\/$/, '') : path;
+  async function _dispatch(path) {
+    if (_dispatching) return;
+    _dispatching = true;
+    try {
+      // Strip trailing slash for matching (except root)
+      const clean = path.length > 1 ? path.replace(/\/$/, '') : path;
 
-    for (const route of _routes) {
-      const m = clean.match(route.pattern);
-      if (m) {
-        _handlers[route.handler](m);
-        return;
+      for (const route of _routes) {
+        const m = clean.match(route.pattern);
+        if (m) {
+          await _handlers[route.handler](m);
+          return;
+        }
       }
+      // 404 fallback → redirect to /
+      history.replaceState(null, '', '/' + location.search);
+      _handlers._form([]);
+    } finally {
+      _dispatching = false;
     }
-    // 404 fallback → redirect to /
-    history.replaceState(null, '', '/' + location.search);
-    _handlers._form([]);
   }
 
   function slugify(text) {
