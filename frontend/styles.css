@@ -2636,12 +2636,12 @@ strong.req-keyword {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: none;
-  border: 1px solid var(--border-color);
+  background: rgba(108, 99, 255, 0.08);
+  border: 1px solid rgba(108, 99, 255, 0.25);
   border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 12px;
-  color: var(--text-secondary);
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--accent, #6C63FF);
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   white-space: nowrap;
