@@ -2906,3 +2906,152 @@ strong.req-keyword {
   .replace-modal-content { width: 95%; padding: 16px; }
   .replace-stop-btn span { display: none; }
 }
+
+/* ── Stop Overview Grid ── */
+.stops-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+@media (max-width: 480px) {
+  .stops-overview-grid { grid-template-columns: 1fr; }
+}
+
+.stop-overview-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow .15s ease, transform .15s ease;
+}
+.stop-overview-card:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,.1);
+  transform: translateY(-2px);
+}
+.stop-overview-card .hero-photo-loading,
+.stop-overview-card .hero-photo {
+  height: 160px;
+}
+.stop-overview-card .hero-photo img {
+  height: 160px;
+  object-fit: cover;
+  width: 100%;
+}
+
+.stop-overview-card-body {
+  padding: 16px;
+}
+.stop-overview-card-body h3 {
+  font-size: 18px;
+  margin: 4px 0 6px;
+}
+.stop-overview-card-body .stop-number {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-sub);
+  text-transform: uppercase;
+}
+.stop-overview-card-body .stop-meta {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 10px;
+}
+
+.stop-overview-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.stop-overview-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.chip-acc {
+  background: var(--bg-subtle);
+  color: var(--accent-dark);
+}
+.chip-act {
+  background: #FFF7ED;
+  color: #C2410C;
+}
+.chip-rest {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
+/* ── Stop Detail Page ── */
+.stop-detail-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.stop-detail-back {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background .12s;
+}
+.stop-detail-back:hover {
+  background: var(--bg-subtle);
+}
+.stop-detail-breadcrumb {
+  font-size: 14px;
+  color: var(--text-sub);
+}
+
+.stop-detail-header {
+  padding: 20px;
+  background: rgba(240, 237, 248, .95);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.stop-detail-header h3 {
+  font-size: 22px;
+  margin: 6px 0 4px;
+}
+
+.stop-detail-prevnext {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.stop-detail-prevnext .btn {
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .stop-detail-prevnext {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .stop-detail-prevnext .btn {
+    max-width: 100%;
+    width: 100%;
+  }
+}

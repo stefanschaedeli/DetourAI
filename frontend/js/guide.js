@@ -4,6 +4,7 @@ let activeTab = 'overview';
 let _guideMarkers = [];
 let _guidePolyline = null;
 let _initializedStopMaps = new Set();
+let _activeStopId = null;
 
 function showTravelGuide(plan) {
   S.result = plan;
@@ -28,12 +29,23 @@ function renderGuide(plan, tab) {
       break;
     case 'stops':
       _initializedStopMaps = new Set();
-      content.innerHTML = renderStops(plan);
-      requestAnimationFrame(() => {
-        _initStopsSidebar();
-        try { _lazyLoadStopImages(plan); } catch (e) { console.error('Stop images:', e); }
-        if (plan.stops && plan.stops.length) _initStopMap(plan.stops[0]);
-      });
+      if (_activeStopId !== null) {
+        content.innerHTML = renderStopDetail(plan, _activeStopId);
+        requestAnimationFrame(() => {
+          _initGuideDelegation();
+          const stop = (plan.stops || []).find(s => String(s.id) === String(_activeStopId));
+          if (stop) {
+            _initStopMap(stop);
+            _lazyLoadSingleStopImages(plan, stop);
+          }
+        });
+      } else {
+        content.innerHTML = renderStopsOverview(plan);
+        requestAnimationFrame(() => {
+          _initGuideDelegation();
+          _lazyLoadOverviewImages(plan);
+        });
+      }
       break;
     case 'calendar':
       content.innerHTML = renderCalendar(plan);
@@ -56,6 +68,7 @@ function renderGuide(plan, tab) {
 }
 
 function switchGuideTab(tab) {
+  if (tab !== 'stops') _activeStopId = null;
   renderGuide(S.result, tab);
   if (S.result && S.result._saved_travel_id) {
     const title = S.result.custom_name || S.result.title || '';
@@ -369,182 +382,201 @@ function renderDayTimeBlocks(dayPlan) {
   `;
 }
 
-function renderStops(plan) {
-  const stops = plan.stops || [];
-  const dayPlans = plan.day_plans || [];
+// ---------------------------------------------------------------------------
+// Extracted stop-section HTML helpers
+// ---------------------------------------------------------------------------
 
-  // Sidebar items
-  const sidebarItems = stops.map((stop, i) => {
+function _renderAccommodationHtml(stop) {
+  const acc = stop.accommodation || {};
+  if (!acc.name) return '';
+  const allOpts = stop.all_accommodation_options || [];
+  const altOpts = allOpts.filter(o => o.name !== acc.name);
+  return `
+  <div class="stop-accommodation">
+    <h4>Unterkunft</h4>
+    ${buildHeroPhotoLoading('sm')}
+    <div class="acc-summary">
+      <strong>${esc(acc.name)}</strong>
+      <span class="acc-selected-badge">Gewählt</span>
+      ${acc.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
+      <span class="acc-type-tag">${esc(acc.type || '')}</span>
+      <span class="acc-price-tag">ca. CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>
+    </div>
+    ${acc.description ? `<div class="acc-guide-description">${esc(acc.description)}</div>` : ''}
+    <div class="acc-guide-links">
+      ${acc.booking_url ? `<a href="${safeUrl(acc.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com anschauen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+      ${acc.booking_search_url ? `<a href="${safeUrl(acc.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Bei Booking.com suchen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+      ${acc.hotel_website_url ? `<a href="${safeUrl(acc.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+    </div>
+    ${altOpts.length ? `
+    <details class="acc-alt-options">
+      <summary>Weitere Optionen (${altOpts.length})</summary>
+      <div class="acc-alt-list">
+        ${altOpts.map(o => `
+          <div class="acc-alt-item">
+            ${buildHeroPhotoLoading('sm')}
+            <div class="acc-alt-summary">
+              <strong>${esc(o.name)}</strong>
+              ${o.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
+              <span class="acc-type-tag">${esc(o.type || '')}</span>
+              <span class="acc-price-tag">ca. CHF ${(o.total_price_chf || 0).toLocaleString('de-CH')}</span>
+            </div>
+            <div class="acc-guide-links">
+              ${o.booking_url ? `<a href="${safeUrl(o.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+              ${o.booking_search_url ? `<a href="${safeUrl(o.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Booking.com suchen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+              ${o.hotel_website_url ? `<a href="${safeUrl(o.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </details>
+    ` : ''}
+  </div>
+  `;
+}
+
+function _renderActivitiesHtml(stop) {
+  const acts = stop.top_activities || [];
+  if (!acts.length) return '';
+  return `
+    <details class="stop-section-collapse" open>
+      <summary class="stop-section-summary">Aktivitäten (${acts.length})</summary>
+      <div class="stop-activities">
+        <div class="activities-grid">
+          ${acts.map(act => `
+            <div class="activity-card">
+              ${buildHeroPhotoLoading('sm')}
+              <div class="activity-content">
+                <strong>${esc(act.name)}</strong>
+                <p>${esc(act.description)}</p>
+                <div class="activity-meta">
+                  ${act.duration_hours}h
+                  ${act.price_chf > 0 ? ` · CHF ${act.price_chf}` : ' · kostenlos'}
+                  ${act.age_group ? ` · ${esc(act.age_group)}` : (act.suitable_for_children ? ' · familienfreundlich' : '')}
+                </div>
+                ${(act.place_id || act.google_maps_url) ? `<a href="${safeUrl(act.place_id ? `https://www.google.com/maps/place/?q=place_id:${act.place_id}` : act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function _renderRestaurantsHtml(stop) {
+  const rests = stop.restaurants || [];
+  if (!rests.length) return '';
+  return `
+    <details class="stop-section-collapse" open>
+      <summary class="stop-section-summary">Restaurants (${rests.length})</summary>
+      <div class="stop-restaurants">
+        <div class="restaurants-list">
+          ${rests.map(r => `
+            <div class="restaurant-item">
+              ${buildHeroPhotoLoading('sm')}
+              <div style="padding: 10px">
+                <strong>${esc(r.name)}</strong>
+                <span class="cuisine-tag">${esc(r.cuisine)}</span>
+                <span class="price-range">${esc(r.price_range)}</span>
+                ${r.family_friendly ? '<span class="family-tag">Familienfreundlich</span>' : ''}
+                ${r.notes ? `<p class="rest-notes">${esc(r.notes)}</p>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function _renderDayExamplesHtml(stop, dayPlans) {
+  const arrivalDay = stop.arrival_day || 1;
+  const stopDays = dayPlans.filter(d =>
+    d.day >= arrivalDay && d.day < arrivalDay + (stop.nights || 1)
+  );
+  if (!stopDays.length) return '';
+  return `
+    <div class="stop-day-examples">
+      <h4>Tagesbeispiele</h4>
+      ${stopDays.map(dp => `
+        <details class="day-example-collapse" open>
+          <summary>
+            <span class="day-example-label">Tag ${dp.day}${dp.date ? ' · ' + esc(dp.date) : ''}</span>
+            <span class="day-example-title">${esc(dp.title)}</span>
+          </summary>
+          <div class="day-example-body">
+            <p class="day-example-desc">${esc(dp.description)}</p>
+            ${renderDayTimeBlocks(dp)}
+          </div>
+        </details>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// Stops Overview (card grid)
+// ---------------------------------------------------------------------------
+
+function renderStopsOverview(plan) {
+  const stops = plan.stops || [];
+  const cards = stops.map((stop, i) => {
     const flag = FLAGS[stop.country] || '';
+    const acc = stop.accommodation || {};
+    const actCount = (stop.top_activities || []).length;
+    const restCount = (stop.restaurants || []).length;
     return `
-      <div class="stops-sidebar-item${i === 0 ? ' active' : ''}" data-target="guide-stop-${stop.id}">
-        <span class="sidebar-stop-num">${stop.id}</span>
-        <span class="sidebar-stop-label">${flag} ${esc(stop.region)}</span>
+      <div class="stop-overview-card" data-stop-id="${stop.id}">
+        ${buildHeroPhotoLoading('sm')}
+        <div class="stop-overview-card-body">
+          <div class="stop-number">Stop ${stop.id}</div>
+          <h3>${flag} ${esc(stop.region)}, ${esc(stop.country)}</h3>
+          <div class="stop-meta">
+            ${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}
+            ${stop.drive_hours_from_prev > 0 ? ` · ${stop.drive_hours_from_prev}h Fahrt` : ''}
+            ${stop.drive_km_from_prev > 0 ? ` · ${stop.drive_km_from_prev} km` : ''}
+          </div>
+          <div class="stop-overview-highlights">
+            ${acc.name ? `<span class="stop-overview-chip chip-acc">${esc(acc.name)} · CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>` : ''}
+            ${actCount ? `<span class="stop-overview-chip chip-act">${actCount} Aktivität${actCount !== 1 ? 'en' : ''}</span>` : ''}
+            ${restCount ? `<span class="stop-overview-chip chip-rest">${restCount} Restaurant${restCount !== 1 ? 's' : ''}</span>` : ''}
+          </div>
+        </div>
       </div>
     `;
   }).join('');
 
-  // Stop cards
-  const stopCards = stops.map((stop, i) => {
-    const flag = FLAGS[stop.country] || '';
-    const acc  = stop.accommodation || {};
-    const acts = stop.top_activities || [];
-    const rests = stop.restaurants || [];
-    const further = stop.further_activities || [];
-    const isFirst = i === 0;
+  return `
+    <div class="stops-overview-grid">
+      ${cards}
+    </div>
+  `;
+}
 
-    // Day plans that fall within this stop's nights
-    const arrivalDay = stop.arrival_day || 1;
-    const stopDays = dayPlans.filter(d =>
-      d.day >= arrivalDay && d.day < arrivalDay + (stop.nights || 1)
-    );
+// ---------------------------------------------------------------------------
+// Stop Detail (full page with sidebar + prev/next)
+// ---------------------------------------------------------------------------
 
-    const accHtml = acc.name ? (() => {
-      const allOpts = stop.all_accommodation_options || [];
-      const altOpts = allOpts.filter(o => o.name !== acc.name);
-      return `
-      <div class="stop-accommodation">
-        <h4>Unterkunft</h4>
-        ${buildHeroPhotoLoading('sm')}
-        <div class="acc-summary">
-          <strong>${esc(acc.name)}</strong>
-          <span class="acc-selected-badge">Gewählt</span>
-          ${acc.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
-          <span class="acc-type-tag">${esc(acc.type || '')}</span>
-          <span class="acc-price-tag">ca. CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>
-        </div>
-        ${acc.description ? `<div class="acc-guide-description">${esc(acc.description)}</div>` : ''}
-        <div class="acc-guide-links">
-          ${acc.booking_url ? `<a href="${safeUrl(acc.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com anschauen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
-          ${acc.booking_search_url ? `<a href="${safeUrl(acc.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Bei Booking.com suchen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
-          ${acc.hotel_website_url ? `<a href="${safeUrl(acc.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
-        </div>
-        ${altOpts.length ? `
-        <details class="acc-alt-options">
-          <summary>Weitere Optionen (${altOpts.length})</summary>
-          <div class="acc-alt-list">
-            ${altOpts.map(o => `
-              <div class="acc-alt-item">
-                ${buildHeroPhotoLoading('sm')}
-                <div class="acc-alt-summary">
-                  <strong>${esc(o.name)}</strong>
-                  ${o.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
-                  <span class="acc-type-tag">${esc(o.type || '')}</span>
-                  <span class="acc-price-tag">ca. CHF ${(o.total_price_chf || 0).toLocaleString('de-CH')}</span>
-                </div>
-                <div class="acc-guide-links">
-                  ${o.booking_url ? `<a href="${safeUrl(o.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
-                  ${o.booking_search_url ? `<a href="${safeUrl(o.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Booking.com suchen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
-                  ${o.hotel_website_url ? `<a href="${safeUrl(o.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </details>
-        ` : ''}
-      </div>
-      `;
-    })() : '';
+function renderStopDetail(plan, stopId) {
+  const stops = plan.stops || [];
+  const dayPlans = plan.day_plans || [];
+  const idx = stops.findIndex(s => String(s.id) === String(stopId));
+  const stop = stops[idx];
+  if (!stop) return renderStopsOverview(plan);
 
-    const actsHtml = acts.length ? `
-      <details class="stop-section-collapse" open>
-        <summary class="stop-section-summary">Aktivitäten (${acts.length})</summary>
-        <div class="stop-activities">
-          <div class="activities-grid">
-            ${acts.map(act => `
-              <div class="activity-card">
-                ${buildHeroPhotoLoading('sm')}
-                <div class="activity-content">
-                  <strong>${esc(act.name)}</strong>
-                  <p>${esc(act.description)}</p>
-                  <div class="activity-meta">
-                    ${act.duration_hours}h
-                    ${act.price_chf > 0 ? ` · CHF ${act.price_chf}` : ' · kostenlos'}
-                    ${act.age_group ? ` · ${esc(act.age_group)}` : (act.suitable_for_children ? ' · familienfreundlich' : '')}
-                  </div>
-                  ${(act.place_id || act.google_maps_url) ? `<a href="${safeUrl(act.place_id ? `https://www.google.com/maps/place/?q=place_id:${act.place_id}` : act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </details>
-    ` : '';
+  const flag = FLAGS[stop.country] || '';
+  const prev = idx > 0 ? stops[idx - 1] : null;
+  const next = idx < stops.length - 1 ? stops[idx + 1] : null;
+  const further = stop.further_activities || [];
 
-    const restsHtml = rests.length ? `
-      <details class="stop-section-collapse" open>
-        <summary class="stop-section-summary">Restaurants (${rests.length})</summary>
-        <div class="stop-restaurants">
-          <div class="restaurants-list">
-            ${rests.map(r => `
-              <div class="restaurant-item">
-                ${buildHeroPhotoLoading('sm')}
-                <div style="padding: 10px">
-                  <strong>${esc(r.name)}</strong>
-                  <span class="cuisine-tag">${esc(r.cuisine)}</span>
-                  <span class="price-range">${esc(r.price_range)}</span>
-                  ${r.family_friendly ? '<span class="family-tag">Familienfreundlich</span>' : ''}
-                  ${r.notes ? `<p class="rest-notes">${esc(r.notes)}</p>` : ''}
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </details>
-    ` : '';
-
-    const daysHtml = stopDays.length ? `
-      <div class="stop-day-examples">
-        <h4>Tagesbeispiele</h4>
-        ${stopDays.map(dp => `
-          <details class="day-example-collapse" open>
-            <summary>
-              <span class="day-example-label">Tag ${dp.day}${dp.date ? ' · ' + esc(dp.date) : ''}</span>
-              <span class="day-example-title">${esc(dp.title)}</span>
-            </summary>
-            <div class="day-example-body">
-              <p class="day-example-desc">${esc(dp.description)}</p>
-              ${renderDayTimeBlocks(dp)}
-            </div>
-          </details>
-        `).join('')}
-      </div>
-    ` : '';
-
+  // Sidebar items for quick nav
+  const sidebarItems = stops.map(s => {
+    const f = FLAGS[s.country] || '';
     return `
-      <div class="stop-card" id="guide-stop-${stop.id}" data-stop-id="${stop.id}">
-        <button class="stop-header stop-toggle" aria-expanded="${isFirst}" data-stop-id="${stop.id}">
-          <div class="stop-header-left">
-            <div class="stop-number">Stop ${stop.id}</div>
-            <h3>${flag} ${esc(stop.region)}, ${esc(stop.country)}</h3>
-            <div class="stop-meta">
-              Tag ${stop.arrival_day} · ${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}
-              ${stop.drive_hours_from_prev > 0 ? ` · ${stop.drive_hours_from_prev}h Fahrt` : ''}
-              ${stop.drive_km_from_prev > 0 ? ` · ${stop.drive_km_from_prev} km` : ''}
-            </div>
-          </div>
-          <div class="stop-header-right">
-            <button class="replace-stop-btn" onclick="event.stopPropagation(); openReplaceStopModal(${stop.id}, ${stop.nights})" title="Stopp ersetzen">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-              Ersetzen
-            </button>
-            ${(stop.place_id || stop.google_maps_url) ? `<a href="${safeUrl(stop.place_id ? `https://www.google.com/maps/place/?q=place_id:${stop.place_id}` : stop.google_maps_url)}" target="_blank" class="maps-link" onclick="event.stopPropagation()">Maps</a>` : ''}
-            <span class="stop-toggle-arrow">${isFirst
-              ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>`
-              : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="9 6 15 12 9 18"/></svg>`}</span>
-          </div>
-        </button>
-
-        <div class="stop-body"${isFirst ? '' : ' style="display:none"'}>
-          ${buildHeroPhotoLoading('lg')}
-          <div class="stop-overview-map" id="stop-map-${stop.id}"></div>
-          ${renderTravelGuide(stop.travel_guide)}
-          ${accHtml}
-          ${actsHtml}
-          ${renderFurtherActivities(further)}
-          ${restsHtml}
-          ${daysHtml}
-        </div>
+      <div class="stops-sidebar-item${String(s.id) === String(stopId) ? ' active' : ''}" data-stop-id="${s.id}">
+        <span class="sidebar-stop-num">${s.id}</span>
+        <span class="sidebar-stop-label">${f} ${esc(s.region)}</span>
       </div>
     `;
   }).join('');
@@ -557,15 +589,89 @@ function renderStops(plan) {
         </div>
       </aside>
       <div class="stops-main">
-        ${stopCards}
+        <div class="stop-detail-nav">
+          <button class="stop-detail-back">\u2190 Alle Stops</button>
+          <span class="stop-detail-breadcrumb">Stop ${stop.id}: ${flag} ${esc(stop.region)}</span>
+        </div>
+
+        <div class="stop-card" id="guide-stop-${stop.id}" data-stop-id="${stop.id}">
+          <div class="stop-detail-header">
+            <div class="stop-header-left">
+              <div class="stop-number">Stop ${stop.id}</div>
+              <h3>${flag} ${esc(stop.region)}, ${esc(stop.country)}</h3>
+              <div class="stop-meta">
+                Tag ${stop.arrival_day} \u00b7 ${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}
+                ${stop.drive_hours_from_prev > 0 ? ` \u00b7 ${stop.drive_hours_from_prev}h Fahrt` : ''}
+                ${stop.drive_km_from_prev > 0 ? ` \u00b7 ${stop.drive_km_from_prev} km` : ''}
+              </div>
+            </div>
+            <div class="stop-header-right">
+              <button class="replace-stop-btn" onclick="event.stopPropagation(); openReplaceStopModal(${stop.id}, ${stop.nights})" title="Stopp ersetzen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                Ersetzen
+              </button>
+              ${(stop.place_id || stop.google_maps_url) ? `<a href="${safeUrl(stop.place_id ? 'https://www.google.com/maps/place/?q=place_id:' + stop.place_id : stop.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
+            </div>
+          </div>
+
+          <div class="stop-body" style="display:block">
+            ${buildHeroPhotoLoading('lg')}
+            <div class="stop-overview-map" id="stop-map-${stop.id}"></div>
+            ${renderTravelGuide(stop.travel_guide)}
+            ${_renderAccommodationHtml(stop)}
+            ${_renderActivitiesHtml(stop)}
+            ${renderFurtherActivities(further)}
+            ${_renderRestaurantsHtml(stop)}
+            ${_renderDayExamplesHtml(stop, dayPlans)}
+          </div>
+        </div>
+
+        <div class="stop-detail-prevnext">
+          ${prev ? `<button class="btn btn-secondary stop-nav-prev" data-stop-id="${prev.id}">\u2190 Stop ${prev.id}: ${esc(prev.region)}</button>` : '<span></span>'}
+          ${next ? `<button class="btn btn-secondary stop-nav-next" data-stop-id="${next.id}">Stop ${next.id}: ${esc(next.region)} \u2192</button>` : '<span></span>'}
+        </div>
       </div>
     </div>
   `;
 }
 
+// ---------------------------------------------------------------------------
+// Stop navigation helpers
+// ---------------------------------------------------------------------------
+
+function navigateToStop(stopId) {
+  _activeStopId = Number(stopId);
+  const plan = S.result;
+  if (!plan) return;
+  renderGuide(plan, 'stops');
+  // Update URL
+  if (plan._saved_travel_id) {
+    const title = plan.custom_name || plan.title || '';
+    const base = Router.travelPath(plan._saved_travel_id, title);
+    Router.navigate(base + '/stops/' + stopId, { skipDispatch: true });
+  }
+}
+
+function navigateToStopsOverview() {
+  _activeStopId = null;
+  const plan = S.result;
+  if (!plan) return;
+  renderGuide(plan, 'stops');
+  // Update URL
+  if (plan._saved_travel_id) {
+    const title = plan.custom_name || plan.title || '';
+    const base = Router.travelPath(plan._saved_travel_id, title);
+    Router.navigate(base + '/stops', { skipDispatch: true });
+  }
+}
+
+function activateStopDetail(stopId) {
+  _activeStopId = Number(stopId);
+  renderGuide(S.result, 'stops');
+}
+
 // One-time event delegation on #guide-content (set up in _initGuideDelegation)
 let _guideDelegationReady = false;
-let _stopsObserver = null;
 
 function _initGuideDelegation() {
   if (_guideDelegationReady) return;
@@ -574,87 +680,37 @@ function _initGuideDelegation() {
   if (!root) return;
 
   root.addEventListener('click', (e) => {
-    // Sidebar item click
-    const sidebarItem = e.target.closest('.stops-sidebar-item');
-    if (sidebarItem) {
-      const targetId = sidebarItem.dataset.target;
-      const stopId = targetId.replace('guide-stop-', '');
-      document.querySelectorAll('.stops-sidebar-item').forEach(si => {
-        si.classList.toggle('active', si === sidebarItem);
-      });
-      _expandOnlyStop(stopId);
-      const el = document.getElementById(targetId);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Overview card click → navigate to stop detail
+    const overviewCard = e.target.closest('.stop-overview-card');
+    if (overviewCard) {
+      const stopId = overviewCard.dataset.stopId;
+      if (stopId) navigateToStop(stopId);
       return;
     }
 
-    // Stop header toggle click
-    const toggleBtn = e.target.closest('.stop-toggle');
-    if (toggleBtn) {
-      const stopId = toggleBtn.dataset.stopId;
-      _toggleStop(stopId, true);
+    // Back button on detail page → navigate to overview
+    const backBtn = e.target.closest('.stop-detail-back');
+    if (backBtn) {
+      navigateToStopsOverview();
+      return;
+    }
+
+    // Prev/next navigation on detail page
+    const navBtn = e.target.closest('.stop-nav-prev, .stop-nav-next');
+    if (navBtn) {
+      const stopId = navBtn.dataset.stopId;
+      if (stopId) navigateToStop(stopId);
+      return;
+    }
+
+    // Sidebar item click on detail page → navigate to that stop
+    const sidebarItem = e.target.closest('.stops-sidebar-item');
+    if (sidebarItem) {
+      const stopId = sidebarItem.dataset.stopId;
+      if (stopId) navigateToStop(stopId);
+      return;
     }
   });
-}
-
-function _initStopsSidebar() {
-  // Set up delegation (once)
-  _initGuideDelegation();
-
-  // IntersectionObserver to highlight active stop in sidebar
-  if (_stopsObserver) _stopsObserver.disconnect();
-  _stopsObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const stopId = entry.target.dataset.stopId;
-        document.querySelectorAll('.stops-sidebar-item').forEach(item => {
-          item.classList.toggle('active', item.dataset.target === `guide-stop-${stopId}`);
-        });
-      }
-    });
-  }, { threshold: 0.15, rootMargin: '-80px 0px -60% 0px' });
-
-  document.querySelectorAll('.stop-card').forEach(card => _stopsObserver.observe(card));
-}
-
-function _toggleStop(stopId, scrollIntoView) {
-  const card = document.getElementById(`guide-stop-${stopId}`);
-  if (!card) return;
-  const body = card.querySelector('.stop-body');
-  const btn  = card.querySelector('.stop-toggle');
-  const arrow = btn?.querySelector('.stop-toggle-arrow');
-  const isOpen = body.style.display !== 'none';
-
-  body.style.display = isOpen ? 'none' : 'block';
-  if (btn)   btn.setAttribute('aria-expanded', String(!isOpen));
-  if (arrow) arrow.innerHTML = isOpen
-    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="9 6 15 12 9 18"/></svg>`
-    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>`;
-  // Init stop map when expanding
-  if (!isOpen && S.result && S.result.stops) {
-    const stop = S.result.stops.find(s => String(s.id) === String(stopId));
-    if (stop) _initStopMap(stop);
-  }
-}
-
-function _expandOnlyStop(stopId) {
-  document.querySelectorAll('.stop-card').forEach(card => {
-    const id = card.dataset.stopId;
-    const body  = card.querySelector('.stop-body');
-    const btn   = card.querySelector('.stop-toggle');
-    const arrow = btn?.querySelector('.stop-toggle-arrow');
-    const open  = String(id) === String(stopId);
-    body.style.display = open ? 'block' : 'none';
-    if (btn)   btn.setAttribute('aria-expanded', String(open));
-    if (arrow) arrow.innerHTML = open
-      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>`
-      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="9 6 15 12 9 18"/></svg>`;
-  });
-  // Init stop map for newly expanded stop
-  if (S.result && S.result.stops) {
-    const stop = S.result.stops.find(s => String(s.id) === String(stopId));
-    if (stop) _initStopMap(stop);
-  }
 }
 
 function renderCalendar(plan) {
@@ -726,11 +782,7 @@ function _initCalendarClicks(plan) {
     const stopId = cell.dataset.stopId;
     if (!stopId) return;
     cell.addEventListener('click', () => {
-      switchGuideTab('stops');
-      requestAnimationFrame(() => {
-        _expandOnlyStop(stopId);
-        document.getElementById(`guide-stop-${stopId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+      navigateToStop(stopId);
     });
     cell.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cell.click(); }
@@ -739,12 +791,7 @@ function _initCalendarClicks(plan) {
 }
 
 function _scrollToGuideStop(stopId) {
-  switchGuideTab('stops');
-  // After tab switch the DOM is re-rendered; use rAF to wait one frame
-  requestAnimationFrame(() => {
-    _expandOnlyStop(stopId);
-    document.getElementById(`guide-stop-${stopId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
+  navigateToStop(stopId);
 }
 
 function _initGuideMap(plan) {
@@ -1054,46 +1101,45 @@ async function _initStopMap(stop) {
   }
 }
 
-function _lazyLoadStopImages(plan) {
+function _lazyLoadOverviewImages(plan) {
   const stops = plan.stops || [];
   stops.forEach(stop => {
-    const stopEl = document.getElementById(`guide-stop-${stop.id}`);
-    if (!stopEl) return;
-    const lat = stop.lat;
-    const lng = stop.lng;
+    const card = document.querySelector(`.stop-overview-card[data-stop-id="${stop.id}"]`);
+    if (card) _lazyLoadEntityImages(card, stop.region, stop.lat, stop.lng, 'city', 'sm');
+  });
+}
 
-    // Stop overview images
-    _lazyLoadEntityImages(stopEl.querySelector('.stop-header')?.parentElement || stopEl, stop.region, lat, lng, 'city');
+function _lazyLoadSingleStopImages(plan, stop) {
+  const stopEl = document.getElementById(`guide-stop-${stop.id}`);
+  if (!stopEl) return;
+  const lat = stop.lat;
+  const lng = stop.lng;
 
-    // Accommodation
-    const accEl = stopEl.querySelector('.stop-accommodation');
-    if (accEl && stop.accommodation) {
-      _lazyLoadEntityImages(accEl, stop.accommodation.name, lat, lng, 'hotel');
-      // Alt options
-      accEl.querySelectorAll('.acc-alt-item').forEach((el, i) => {
-        const altOpts = (stop.all_accommodation_options || []).filter(o => o.name !== stop.accommodation.name);
-        const o = altOpts[i];
-        if (o) _lazyLoadEntityImages(el, o.name, lat, lng, 'hotel');
-      });
-    }
+  _lazyLoadEntityImages(stopEl.querySelector('.stop-detail-header')?.parentElement || stopEl, stop.region, lat, lng, 'city');
 
-    // Top activities
-    stopEl.querySelectorAll('.activity-card').forEach((el, i) => {
-      const act = (stop.top_activities || [])[i];
-      if (act) _lazyLoadEntityImages(el, act.name, lat, lng, 'activity');
+  const accEl = stopEl.querySelector('.stop-accommodation');
+  if (accEl && stop.accommodation) {
+    _lazyLoadEntityImages(accEl, stop.accommodation.name, lat, lng, 'hotel');
+    accEl.querySelectorAll('.acc-alt-item').forEach((el, i) => {
+      const altOpts = (stop.all_accommodation_options || []).filter(o => o.name !== stop.accommodation.name);
+      const o = altOpts[i];
+      if (o) _lazyLoadEntityImages(el, o.name, lat, lng, 'hotel');
     });
+  }
 
-    // Further activities
-    stopEl.querySelectorAll('.further-activity-item').forEach((el, i) => {
-      const act = (stop.further_activities || [])[i];
-      if (act) _lazyLoadEntityImages(el, act.name, lat, lng, 'activity');
-    });
+  stopEl.querySelectorAll('.activity-card').forEach((el, i) => {
+    const act = (stop.top_activities || [])[i];
+    if (act) _lazyLoadEntityImages(el, act.name, lat, lng, 'activity');
+  });
 
-    // Restaurants
-    stopEl.querySelectorAll('.restaurant-item').forEach((el, i) => {
-      const rest = (stop.restaurants || [])[i];
-      if (rest) _lazyLoadEntityImages(el, rest.name, lat, lng, 'restaurant');
-    });
+  stopEl.querySelectorAll('.further-activity-item').forEach((el, i) => {
+    const act = (stop.further_activities || [])[i];
+    if (act) _lazyLoadEntityImages(el, act.name, lat, lng, 'activity');
+  });
+
+  stopEl.querySelectorAll('.restaurant-item').forEach((el, i) => {
+    const rest = (stop.restaurants || [])[i];
+    if (rest) _lazyLoadEntityImages(el, rest.name, lat, lng, 'restaurant');
   });
 }
 
