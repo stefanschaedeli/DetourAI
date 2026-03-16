@@ -26,8 +26,9 @@ from models.accommodation_option import AccommodationSelectRequest, BudgetState,
 from models.trip_leg import ReplaceRegionRequest, RecomputeRegionsRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.maps_helper import (
-    geocode_nominatim, osrm_route, osrm_route_with_geometry, build_maps_url,
-    decode_polyline5, point_along_route, reference_cities_along_route, corridor_bbox,
+    geocode_google, google_directions, google_directions_simple,
+    reverse_geocode_google, reference_cities_along_route_google,
+    build_maps_url, decode_polyline5, point_along_route, corridor_bbox,
 )
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")

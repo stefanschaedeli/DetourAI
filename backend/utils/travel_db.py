@@ -103,6 +103,27 @@ def _sync_delete(travel_id: int) -> bool:
     return cur.rowcount > 0
 
 
+def _sync_update_plan_json(travel_id: int, plan: dict) -> bool:
+    """Replace plan_json and refresh derived columns (num_stops, total_cost, etc.)."""
+    stops = plan.get("stops", [])
+    cost = plan.get("cost_estimate", {})
+    has_guide = int(any(s.get("travel_guide") for s in stops))
+    with _get_conn() as conn:
+        cur = conn.execute(
+            """UPDATE travels
+               SET plan_json = ?, title = ?, num_stops = ?,
+                   total_cost_chf = ?, has_travel_guide = ?,
+                   total_days = ?, destination = ?
+               WHERE id = ?""",
+            (json.dumps(plan), _build_title(plan), len(stops),
+             cost.get("total_chf", 0.0), has_guide,
+             len(plan.get("day_plans", [])),
+             stops[-1]["region"] if stops else "",
+             travel_id),
+        )
+    return cur.rowcount > 0
+
+
 def _sync_update(travel_id: int, custom_name: Optional[str], rating: Optional[int]) -> bool:
     fields, values = [], []
     if custom_name is not None:
@@ -138,3 +159,7 @@ async def delete_travel(travel_id: int) -> bool:
 
 async def update_travel(travel_id: int, custom_name: Optional[str] = None, rating: Optional[int] = None) -> bool:
     return await asyncio.to_thread(_sync_update, travel_id, custom_name, rating)
+
+
+async def update_plan_json(travel_id: int, plan: dict) -> bool:
+    return await asyncio.to_thread(_sync_update_plan_json, travel_id, plan)

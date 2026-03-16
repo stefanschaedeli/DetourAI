@@ -510,6 +510,10 @@ function renderStops(plan) {
             </div>
           </div>
           <div class="stop-header-right">
+            <button class="replace-stop-btn" onclick="event.stopPropagation(); openReplaceStopModal(${stop.id}, ${stop.nights})" title="Stopp ersetzen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              Ersetzen
+            </button>
             ${stop.google_maps_url ? `<a href="${safeUrl(stop.google_maps_url)}" target="_blank" class="maps-link" onclick="event.stopPropagation()">Maps</a>` : ''}
             <span class="stop-toggle-arrow">${isFirst
               ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>`
@@ -1037,4 +1041,216 @@ async function replanCurrentTravel() {
     }
     console.error('Replan-Fehler:', err);
   }
+}
+
+
+// ---------------------------------------------------------------------------
+// Replace Stop — Modal + SSE handling
+// ---------------------------------------------------------------------------
+
+let _replaceStopSSE = null;
+
+function openReplaceStopModal(stopId, currentNights) {
+  const plan = S.result;
+  if (!plan) return;
+
+  const savedId = plan._saved_travel_id;
+  if (!savedId) {
+    alert('Reise muss zuerst gespeichert werden.');
+    return;
+  }
+
+  const stop = (plan.stops || []).find(s => s.id === stopId);
+  if (!stop) return;
+
+  const stopIdx = (plan.stops || []).indexOf(stop);
+  const prevLabel = stopIdx > 0
+    ? plan.stops[stopIdx - 1].region
+    : plan.start_location || '';
+  const nextLabel = stopIdx < plan.stops.length - 1
+    ? plan.stops[stopIdx + 1].region
+    : '';
+
+  // Remove existing modal
+  const existing = document.getElementById('replace-stop-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'replace-stop-modal';
+  modal.className = 'replace-modal';
+  modal.innerHTML = `
+    <div class="replace-modal-backdrop" onclick="closeReplaceStopModal()"></div>
+    <div class="replace-modal-content">
+      <div class="replace-modal-header">
+        <h3>Stopp ersetzen: ${esc(stop.region)}</h3>
+        <button class="replace-modal-close" onclick="closeReplaceStopModal()">&times;</button>
+      </div>
+
+      <div class="replace-modal-tabs">
+        <button class="replace-tab active" data-tab="manual" onclick="_switchReplaceTab('manual')">Ort eingeben</button>
+        <button class="replace-tab" data-tab="search" onclick="_switchReplaceTab('search')">Neue Suche</button>
+      </div>
+
+      <div class="replace-tab-content" id="replace-tab-manual">
+        <div class="replace-form">
+          <label>Neuer Ort</label>
+          <input type="text" id="replace-manual-location" class="replace-input" placeholder="z.B. Lyon, Frankreich" />
+          <label>Nächte <small>(Standard: ${currentNights})</small></label>
+          <input type="number" id="replace-manual-nights" class="replace-input" min="1" max="14" value="${currentNights}" />
+          <button class="btn btn-primary replace-submit-btn" id="replace-manual-btn"
+            onclick="_doManualReplace(${savedId}, ${stopId})">Ersetzen</button>
+        </div>
+      </div>
+
+      <div class="replace-tab-content" id="replace-tab-search" style="display:none">
+        <p class="replace-search-info">
+          Suche basierend auf ${esc(prevLabel)} → ${nextLabel ? esc(nextLabel) : 'Reiseende'}
+          mit den Original-Einstellungen.
+        </p>
+        <button class="btn btn-primary replace-submit-btn" id="replace-search-btn"
+          onclick="_doSearchReplace(${savedId}, ${stopId})">Alternativen suchen</button>
+        <div id="replace-search-results" class="replace-search-results"></div>
+      </div>
+
+      <div id="replace-progress" class="replace-progress" style="display:none">
+        <div class="replace-spinner"></div>
+        <p id="replace-progress-msg">Wird bearbeitet…</p>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  requestAnimationFrame(() => modal.classList.add('visible'));
+
+  // Focus input
+  const input = document.getElementById('replace-manual-location');
+  if (input) setTimeout(() => input.focus(), 100);
+}
+
+function closeReplaceStopModal() {
+  const modal = document.getElementById('replace-stop-modal');
+  if (modal) {
+    modal.classList.remove('visible');
+    setTimeout(() => modal.remove(), 200);
+  }
+  if (_replaceStopSSE) {
+    _replaceStopSSE.close();
+    _replaceStopSSE = null;
+  }
+}
+
+function _switchReplaceTab(tab) {
+  document.querySelectorAll('.replace-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('replace-tab-manual').style.display = tab === 'manual' ? '' : 'none';
+  document.getElementById('replace-tab-search').style.display = tab === 'search' ? '' : 'none';
+}
+
+function _showReplaceProgress(msg) {
+  const p = document.getElementById('replace-progress');
+  const m = document.getElementById('replace-progress-msg');
+  if (p) p.style.display = '';
+  if (m) m.textContent = msg || 'Wird bearbeitet…';
+}
+
+function _hideReplaceProgress() {
+  const p = document.getElementById('replace-progress');
+  if (p) p.style.display = 'none';
+}
+
+async function _doManualReplace(travelId, stopId) {
+  const loc = (document.getElementById('replace-manual-location')?.value || '').trim();
+  const nights = parseInt(document.getElementById('replace-manual-nights')?.value) || 1;
+  if (!loc) { alert('Bitte einen Ort eingeben.'); return; }
+
+  const btn = document.getElementById('replace-manual-btn');
+  if (btn) btn.disabled = true;
+  _showReplaceProgress('Ort wird gesucht…');
+
+  try {
+    const res = await apiReplaceStop(travelId, stopId, 'manual', loc, nights);
+    _listenForReplaceComplete(res.job_id, travelId);
+  } catch (err) {
+    _hideReplaceProgress();
+    if (btn) btn.disabled = false;
+    alert('Fehler: ' + err.message);
+  }
+}
+
+async function _doSearchReplace(travelId, stopId) {
+  const btn = document.getElementById('replace-search-btn');
+  if (btn) btn.disabled = true;
+  _showReplaceProgress('Alternativen werden gesucht…');
+
+  try {
+    const res = await apiReplaceStop(travelId, stopId, 'search');
+    _hideReplaceProgress();
+    if (btn) btn.disabled = false;
+
+    const options = res.options || [];
+    const container = document.getElementById('replace-search-results');
+    if (!container) return;
+
+    if (!options.length) {
+      container.innerHTML = '<p class="replace-no-results">Keine Alternativen gefunden.</p>';
+      return;
+    }
+
+    container.innerHTML = options.map((opt, i) => `
+      <div class="replace-option-card" onclick="_selectSearchOption(${travelId}, '${esc(res.job_id)}', ${i})">
+        <div class="replace-option-header">
+          <strong>${FLAGS[opt.country] || ''} ${esc(opt.region)}</strong>
+          <span class="replace-option-type">${esc(opt.option_type || '')}</span>
+        </div>
+        <p class="replace-option-teaser">${esc(opt.teaser || '')}</p>
+        <div class="replace-option-meta">
+          ${opt.drive_hours ? `${opt.drive_hours}h Fahrt` : ''}
+          ${opt.drive_km ? ` · ${opt.drive_km} km` : ''}
+          ${opt.nights ? ` · ${opt.nights} Nacht${opt.nights !== 1 ? 'e' : ''}` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    _hideReplaceProgress();
+    if (btn) btn.disabled = false;
+    alert('Fehler: ' + err.message);
+  }
+}
+
+async function _selectSearchOption(travelId, jobId, optionIndex) {
+  _showReplaceProgress('Gewählter Stopp wird recherchiert…');
+
+  try {
+    const res = await apiReplaceStopSelect(travelId, jobId, optionIndex);
+    _listenForReplaceComplete(res.job_id, travelId);
+  } catch (err) {
+    _hideReplaceProgress();
+    alert('Fehler: ' + err.message);
+  }
+}
+
+function _listenForReplaceComplete(jobId, travelId) {
+  _showReplaceProgress('Recherche läuft…');
+
+  _replaceStopSSE = openSSE(jobId, {
+    replace_stop_progress: (data) => {
+      const msg = data.message || 'Wird bearbeitet…';
+      _showReplaceProgress(msg);
+    },
+    replace_stop_complete: (data) => {
+      if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
+      // data is the full updated plan
+      data._saved_travel_id = travelId;
+      S.result = data;
+      lsSet(LS_RESULT, { jobId: data.job_id || jobId, savedAt: new Date().toISOString(), plan: data });
+      closeReplaceStopModal();
+      renderGuide(data, activeTab);
+    },
+    job_error: (data) => {
+      if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
+      _hideReplaceProgress();
+      alert('Fehler beim Ersetzen: ' + (data.error || 'Unbekannter Fehler'));
+    },
+    debug_log: (data) => {
+      if (data.message) _showReplaceProgress(data.message);
+    },
+  });
 }
