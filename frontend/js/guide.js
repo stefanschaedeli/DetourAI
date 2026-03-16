@@ -817,11 +817,14 @@ async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context, 
     if (placeholder) placeholder.remove();
     return;
   }
+  // Safety timeout: remove shimmer if image loading hangs
+  const timer = placeholder && setTimeout(() => { if (placeholder.isConnected) placeholder.remove(); }, 12000);
   try {
     const urls = await GoogleMaps.getPlaceImages(placeName, lat, lng, context);
     const size = sizeClass || (placeholder?.classList.contains('hero-photo--lg') ? 'lg'
       : placeholder?.classList.contains('hero-photo--sm') ? 'sm' : 'md');
     const newHtml = buildHeroPhoto(urls, placeName, size);
+    clearTimeout(timer);
     if (!newHtml) {
       if (placeholder) placeholder.remove();
       return;
@@ -836,6 +839,7 @@ async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context, 
       containerEl.insertBefore(tmp.firstElementChild, containerEl.firstChild);
     }
   } catch (e) {
+    clearTimeout(timer);
     if (placeholder) placeholder.remove();
     if (typeof S !== 'undefined') {
       S.logs.push({ level: 'WARNING', agent: 'GoogleMaps', message: `_lazyLoadEntityImages fehlgeschlagen für «${placeName}»: ${e.message}` });
