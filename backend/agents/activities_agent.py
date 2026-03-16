@@ -254,6 +254,7 @@ Gib exakt dieses JSON zurück:
                 activity.update(images)
             if matched and matched.get("place_id"):
                 activity["place_id"] = matched["place_id"]
+                activity["google_maps_url"] = f"https://www.google.com/maps/place/?q=place_id:{matched['place_id']}"
 
         result["top_activities"] = activities
         return result

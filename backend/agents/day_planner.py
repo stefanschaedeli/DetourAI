@@ -99,7 +99,11 @@ class DayPlannerAgent:
                 s["lat"], s["lng"] = coords[i + 1][0], coords[i + 1][1]
                 s["place_id"] = coords[i + 1][2]
 
-            s["google_maps_url"] = build_maps_url([req.start_location, s.get("region", "")])
+            start_pid = getattr(self, "_start_place_id", None) or ""
+            s["google_maps_url"] = build_maps_url(
+                [req.start_location, s.get("region", "")],
+                place_ids=[start_pid, s.get("place_id", "")]
+            )
             enriched.append(s)
         return enriched
 
@@ -275,7 +279,8 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
 
         # Build overview Google Maps URL
         all_locations = [req.start_location] + [s.get("region", "") for s in stops]
-        overview_url = build_maps_url(all_locations)
+        all_place_ids = [getattr(self, "_start_place_id", "") or ""] + [s.get("place_id", "") for s in stops]
+        overview_url = build_maps_url(all_locations, place_ids=all_place_ids)
 
         # Prepare per-day contexts for parallel Claude calls
         start_date = req.start_date
@@ -335,10 +340,13 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
 
         # Sort by day number and add Google Maps route URLs
         day_plans = sorted(day_plan_results, key=lambda d: d.get("day", 0))
+        region_pid = {s.get("region", ""): s.get("place_id", "") for s in stops}
+        region_pid[req.start_location] = getattr(self, "_start_place_id", "") or ""
         for dp in day_plans:
             route_stops = dp.get("stops_on_route", [])
             if route_stops:
-                dp["google_maps_route_url"] = build_maps_url(route_stops)
+                route_pids = [region_pid.get(loc, "") for loc in route_stops]
+                dp["google_maps_route_url"] = build_maps_url(route_stops, place_ids=route_pids)
 
         cost_estimate = self._fallback_cost_estimate(stops)
 

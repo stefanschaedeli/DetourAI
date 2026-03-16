@@ -316,7 +316,7 @@ function renderFurtherActivities(activities) {
                 ${act.price_chf > 0 ? ` · CHF ${act.price_chf}` : ' · kostenlos'}
                 ${act.age_group ? ` · ${esc(act.age_group)}` : (act.suitable_for_children ? ' · familienfreundlich' : '')}
               </div>
-              ${act.google_maps_url ? `<a href="${safeUrl(act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
+              ${(act.place_id || act.google_maps_url) ? `<a href="${safeUrl(act.place_id ? `https://www.google.com/maps/place/?q=place_id:${act.place_id}` : act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
             </div>
           </div>
         `).join('')}
@@ -356,7 +356,7 @@ function renderDayTimeBlocks(dayPlan) {
               ${tb.price_chf ? `<span class="time-block-price">CHF ${tb.price_chf}</span>` : ''}
               <div class="time-block-links">
                 ${tb.google_search_url ? `<a href="${safeUrl(tb.google_search_url)}" target="_blank" class="tb-link">Google Suche</a>` : ''}
-                ${tb.google_maps_url ? `<a href="${safeUrl(tb.google_maps_url)}" target="_blank" class="tb-link maps-link">Maps</a>` : ''}
+                ${(tb.place_id || tb.google_maps_url) ? `<a href="${safeUrl(tb.place_id ? `https://www.google.com/maps/place/?q=place_id:${tb.place_id}` : tb.google_maps_url)}" target="_blank" class="tb-link maps-link">Maps</a>` : ''}
               </div>
             </div>
           </div>
@@ -459,7 +459,7 @@ function renderStops(plan) {
                     ${act.price_chf > 0 ? ` · CHF ${act.price_chf}` : ' · kostenlos'}
                     ${act.age_group ? ` · ${esc(act.age_group)}` : (act.suitable_for_children ? ' · familienfreundlich' : '')}
                   </div>
-                  ${act.google_maps_url ? `<a href="${safeUrl(act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
+                  ${(act.place_id || act.google_maps_url) ? `<a href="${safeUrl(act.place_id ? `https://www.google.com/maps/place/?q=place_id:${act.place_id}` : act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
                 </div>
               </div>
             `).join('')}

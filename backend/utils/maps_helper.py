@@ -244,15 +244,26 @@ def build_maps_url(locations: list[str], place_ids: list[str] = None) -> Optiona
         if pid:
             return f"https://www.google.com/maps/place/?q=place_id:{pid}"
         return f"https://maps.google.com/?q={quote(locs[0])}"
-    origin = quote(locs[0])
-    dest = quote(locs[-1])
-    wp = '|'.join(quote(l) for l in locs[1:-1])
+    # Helper: prefer place_id over text name for precision
+    def loc_str(idx: int) -> str:
+        if place_ids and idx < len(place_ids) and place_ids[idx]:
+            return quote(f"place_id:{place_ids[idx]}")
+        return quote(locs[idx])
+
+    origin = loc_str(0)
+    dest = loc_str(len(locs) - 1)
     url = f"https://www.google.com/maps/dir/?api=1&origin={origin}&destination={dest}"
+
+    # Also add place_id params for origin/dest (belt-and-suspenders)
     if place_ids:
         if len(place_ids) > 0 and place_ids[0]:
             url += f"&origin_place_id={place_ids[0]}"
         if len(place_ids) > len(locs) - 1 and place_ids[-1]:
             url += f"&destination_place_id={place_ids[-1]}"
-    if wp:
-        url += f"&waypoints={wp}"
+
+    # Waypoints with place_ids where available
+    if len(locs) > 2:
+        wp_parts = [loc_str(i) for i in range(1, len(locs) - 1)]
+        url += f"&waypoints={'|'.join(wp_parts)}"
+
     return url
