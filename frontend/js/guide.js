@@ -28,8 +28,8 @@ function renderGuide(plan, tab) {
     case 'stops':
       content.innerHTML = renderStops(plan);
       requestAnimationFrame(() => {
-        _lazyLoadStopImages(plan);
         _initStopsSidebar();
+        try { _lazyLoadStopImages(plan); } catch (e) { console.error('Stop images:', e); }
       });
       break;
     case 'calendar':
@@ -522,7 +522,7 @@ function renderStops(plan) {
           </div>
           <div class="stop-header-right">
             <button class="replace-stop-btn" onclick="event.stopPropagation(); openReplaceStopModal(${stop.id}, ${stop.nights})" title="Stopp ersetzen">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
               Ersetzen
             </button>
             ${(stop.place_id || stop.google_maps_url) ? `<a href="${safeUrl(stop.place_id ? `https://www.google.com/maps/place/?q=place_id:${stop.place_id}` : stop.google_maps_url)}" target="_blank" class="maps-link" onclick="event.stopPropagation()">Maps</a>` : ''}
@@ -573,6 +573,10 @@ function _initStopsSidebar() {
     item.addEventListener('click', () => {
       const targetId = item.dataset.target;
       const stopId = targetId.replace('guide-stop-', '');
+      // Update active state immediately
+      document.querySelectorAll('.stops-sidebar-item').forEach(si => {
+        si.classList.toggle('active', si === item);
+      });
       _expandOnlyStop(stopId);
       const el = document.getElementById(targetId);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
