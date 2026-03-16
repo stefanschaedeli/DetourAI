@@ -13,6 +13,9 @@ const GoogleMaps = (() => {
   // Cache: place name|lat|lng|context → [url, ...]
   const _imageCache = new Map();
 
+  // Cache: placeId → {lat, lng} — persists across stop expansions
+  const _coordCache = new Map();
+
   /** Push a message to the frontend debug log panel. */
   function _log(level, message) {
     if (typeof S !== 'undefined' && Array.isArray(S.logs)) {
@@ -341,6 +344,71 @@ const GoogleMaps = (() => {
     return createDivMarker(map, pos, html, onClick);
   }
 
+  /**
+   * Resolve lat/lng for entities via Place.fetchFields.
+   * @param {{placeId: string, name: string}[]} entities
+   * @returns {Promise<Map<string, {lat: number, lng: number}>>}
+   */
+  async function resolveEntityCoordinates(entities) {
+    const results = new Map();
+    const toFetch = [];
+
+    for (const ent of entities) {
+      if (!ent.placeId) continue;
+      if (_coordCache.has(ent.placeId)) {
+        results.set(ent.placeId, _coordCache.get(ent.placeId));
+      } else {
+        toFetch.push(ent);
+      }
+    }
+
+    if (toFetch.length === 0) return results;
+
+    const { Place } = await google.maps.importLibrary('places');
+    const settled = await Promise.allSettled(
+      toFetch.map(async (ent) => {
+        const place = new Place({ id: ent.placeId });
+        await place.fetchFields({ fields: ['location'] });
+        if (place.location) {
+          const coord = { lat: place.location.lat(), lng: place.location.lng() };
+          _coordCache.set(ent.placeId, coord);
+          results.set(ent.placeId, coord);
+        }
+      })
+    );
+
+    // Log failures
+    settled.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        _log('WARNING', `Koordinaten für «${toFetch[i].name}» (${toFetch[i].placeId}) fehlgeschlagen: ${r.reason}`);
+      }
+    });
+
+    return results;
+  }
+
+  /**
+   * Create an independent map instance for a stop overview.
+   * Unlike initGuideMap, this does NOT cache — multiple stop maps coexist.
+   */
+  function initStopOverviewMap(elId, opts) {
+    const el = document.getElementById(elId);
+    if (!el) { _log('WARNING', `initStopOverviewMap: Element #${elId} nicht gefunden`); return null; }
+    try {
+      return new google.maps.Map(el, {
+        center: (opts && opts.center) || { lat: 47, lng: 8 },
+        zoom:   (opts && opts.zoom)   || 13,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: true,
+      });
+    } catch (e) {
+      _log('ERROR', `initStopOverviewMap fehlgeschlagen: ${e.message}`);
+      return null;
+    }
+  }
+
   function _setApiKey(key) {
     _apiKey = key;
   }
@@ -438,11 +506,13 @@ const GoogleMaps = (() => {
     _setApiKey,
     initRouteMap,
     initGuideMap,
+    initStopOverviewMap,
     createDivMarker,
     createPlaceMarker,
     attachAutocomplete,
     getPlaceImages,
     renderDrivingRoute,
+    resolveEntityCoordinates,
     get routeMap() { return _routeMap; },
     get guideMap()  { return _guideMap; },
   };

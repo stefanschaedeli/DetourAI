@@ -3,6 +3,7 @@
 let activeTab = 'overview';
 let _guideMarkers = [];
 let _guidePolyline = null;
+let _initializedStopMaps = new Set();
 
 function showTravelGuide(plan) {
   S.result = plan;
@@ -26,10 +27,12 @@ function renderGuide(plan, tab) {
       _initGuideMap(plan);
       break;
     case 'stops':
+      _initializedStopMaps = new Set();
       content.innerHTML = renderStops(plan);
       requestAnimationFrame(() => {
         _initStopsSidebar();
         try { _lazyLoadStopImages(plan); } catch (e) { console.error('Stop images:', e); }
+        if (plan.stops && plan.stops.length) _initStopMap(plan.stops[0]);
       });
       break;
     case 'calendar':
@@ -534,6 +537,7 @@ function renderStops(plan) {
 
         <div class="stop-body"${isFirst ? '' : ' style="display:none"'}>
           ${buildHeroPhotoLoading('lg')}
+          <div class="stop-overview-map" id="stop-map-${stop.id}"></div>
           ${renderTravelGuide(stop.travel_guide)}
           ${accHtml}
           ${actsHtml}
@@ -626,6 +630,11 @@ function _toggleStop(stopId, scrollIntoView) {
   if (arrow) arrow.innerHTML = isOpen
     ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="9 6 15 12 9 18"/></svg>`
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>`;
+  // Init stop map when expanding
+  if (!isOpen && S.result && S.result.stops) {
+    const stop = S.result.stops.find(s => String(s.id) === String(stopId));
+    if (stop) _initStopMap(stop);
+  }
 }
 
 function _expandOnlyStop(stopId) {
@@ -641,6 +650,11 @@ function _expandOnlyStop(stopId) {
       ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>`
       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="9 6 15 12 9 18"/></svg>`;
   });
+  // Init stop map for newly expanded stop
+  if (S.result && S.result.stops) {
+    const stop = S.result.stops.find(s => String(s.id) === String(stopId));
+    if (stop) _initStopMap(stop);
+  }
 }
 
 function renderCalendar(plan) {
@@ -849,6 +863,172 @@ async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context, 
 }
 
 /** Walk the rendered stops section and lazy-load images for all entities. */
+// ---------------------------------------------------------------------------
+// Stop Overview Maps
+// ---------------------------------------------------------------------------
+
+function _getActivityIcon(name) {
+  const n = (name || '').toLowerCase();
+  if (/museum|galerie|gallery/.test(n)) return '🏛';
+  if (/wander|hiking|randonnée/.test(n)) return '🥾';
+  if (/see|lac|lake|schwimm|baignade|baden/.test(n)) return '🏊';
+  if (/schloss|castle|château|burg|palast|palace/.test(n)) return '🏰';
+  if (/park|garten|jardin|garden/.test(n)) return '🌿';
+  if (/markt|market|marché/.test(n)) return '🛍';
+  if (/kirche|church|église|dom|cathedral/.test(n)) return '⛪';
+  if (/ski|snowboard/.test(n)) return '⛷';
+  if (/strand|beach|plage/.test(n)) return '🏖';
+  if (/wein|vin|wine/.test(n)) return '🍷';
+  return '⭐';
+}
+
+function _buildStopMapPin(type, entity) {
+  if (type === 'hotel') return '<div class="stop-map-pin pin-hotel">🏨</div>';
+  if (type === 'activity') return `<div class="stop-map-pin pin-activity">${_getActivityIcon(entity.name)}</div>`;
+  if (type === 'restaurant') {
+    const pr = entity.price_range || '';
+    return `<div class="stop-map-pin pin-restaurant">🍽${pr ? ' ' + esc(pr) : ''}</div>`;
+  }
+  return '<div class="stop-map-pin pin-activity">📍</div>';
+}
+
+function _buildStopMapPopup(type, entity) {
+  if (type === 'hotel') {
+    const ratingStr = entity.rating ? `${entity.rating}★` : '';
+    return `<div class="stop-map-popup">
+      <strong>${esc(entity.name)}</strong>
+      <div class="popup-meta">
+        ${entity.type ? esc(entity.type) : ''}
+        ${entity.price_per_night_chf ? ` · CHF ${entity.price_per_night_chf}/Nacht` : ''}
+        ${ratingStr ? ` · ${ratingStr}` : ''}
+      </div>
+    </div>`;
+  }
+  if (type === 'activity') {
+    return `<div class="stop-map-popup">
+      <strong>${esc(entity.name)}</strong>
+      <div class="popup-meta">
+        ${entity.duration_hours ? entity.duration_hours + 'h' : ''}
+        ${entity.price_chf > 0 ? ' · CHF ' + entity.price_chf : ' · kostenlos'}
+      </div>
+      ${entity.description ? `<div class="popup-desc">${esc(entity.description)}</div>` : ''}
+    </div>`;
+  }
+  if (type === 'restaurant') {
+    return `<div class="stop-map-popup">
+      <strong>${esc(entity.name)}</strong>
+      <div class="popup-meta">
+        ${entity.cuisine ? esc(entity.cuisine) : ''}
+        ${entity.price_range ? ' · ' + esc(entity.price_range) : ''}
+      </div>
+      ${entity.family_friendly ? '<div class="popup-badge">Familienfreundlich</div>' : ''}
+    </div>`;
+  }
+  return `<div class="stop-map-popup"><strong>${esc(entity.name || '')}</strong></div>`;
+}
+
+function _scrollToAndHighlight(selector, stopId) {
+  const container = document.getElementById(`guide-stop-${stopId}`);
+  if (!container) return;
+  const el = container.querySelector(selector);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.remove('highlight-flash');
+  void el.offsetWidth; // reflow to restart animation
+  el.classList.add('highlight-flash');
+  el.addEventListener('animationend', () => el.classList.remove('highlight-flash'), { once: true });
+}
+
+async function _initStopMap(stop) {
+  if (!window.google || !google.maps) return;
+  if (_initializedStopMaps.has(stop.id)) return;
+  _initializedStopMaps.add(stop.id);
+
+  const elId = 'stop-map-' + stop.id;
+  const center = { lat: stop.lat || 47, lng: stop.lng || 8 };
+  const map = GoogleMaps.initStopOverviewMap(elId, { center, zoom: 13 });
+  if (!map) return;
+
+  // Collect entities from this stop
+  const entities = [];
+  const acc = stop.accommodation;
+  if (acc && acc.place_id) entities.push({ placeId: acc.place_id, name: acc.name, type: 'hotel', data: acc, index: 0 });
+
+  (stop.top_activities || []).forEach((act, i) => {
+    if (act.place_id) entities.push({ placeId: act.place_id, name: act.name, type: 'activity', data: act, index: i });
+  });
+
+  (stop.restaurants || []).forEach((r, i) => {
+    if (r.place_id) entities.push({ placeId: r.place_id, name: r.name, type: 'restaurant', data: r, index: i });
+  });
+
+  if (entities.length === 0) return; // No entities with place_id
+
+  let coords;
+  try {
+    coords = await GoogleMaps.resolveEntityCoordinates(entities);
+  } catch (e) {
+    console.error('Stop map coord resolve:', e);
+    return;
+  }
+
+  if (coords.size === 0) return;
+
+  const bounds = new google.maps.LatLngBounds();
+  let _openInfoWindow = null;
+
+  for (const ent of entities) {
+    const pos = coords.get(ent.placeId);
+    if (!pos) continue;
+
+    bounds.extend(pos);
+    const pinHtml = _buildStopMapPin(ent.type, ent.data);
+    const popupHtml = _buildStopMapPopup(ent.type, ent.data);
+    const infoWindow = new google.maps.InfoWindow({ content: popupHtml });
+
+    let hoverTimeout = null;
+
+    const overlay = GoogleMaps.createDivMarker(map, pos, pinHtml, () => {
+      // Click → scroll to corresponding section
+      if (ent.type === 'hotel') {
+        _scrollToAndHighlight('.stop-accommodation', stop.id);
+      } else if (ent.type === 'activity') {
+        _scrollToAndHighlight(`.activities-grid .activity-card:nth-child(${ent.index + 1})`, stop.id);
+      } else if (ent.type === 'restaurant') {
+        _scrollToAndHighlight(`.restaurants-list .restaurant-item:nth-child(${ent.index + 1})`, stop.id);
+      }
+    });
+
+    // Hover behavior — attach to overlay div after it's added
+    const origOnAdd = overlay.onAdd;
+    overlay.onAdd = function () {
+      origOnAdd.call(this);
+      const div = this._div;
+      if (!div) return;
+
+      div.addEventListener('mouseenter', () => {
+        clearTimeout(hoverTimeout);
+        if (_openInfoWindow) _openInfoWindow.close();
+        infoWindow.setPosition(pos);
+        infoWindow.open(map);
+        _openInfoWindow = infoWindow;
+      });
+
+      div.addEventListener('mouseleave', () => {
+        hoverTimeout = setTimeout(() => {
+          infoWindow.close();
+          if (_openInfoWindow === infoWindow) _openInfoWindow = null;
+        }, 150);
+      });
+    };
+  }
+
+  // Fit bounds with padding
+  if (coords.size > 1) {
+    map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+  }
+}
+
 function _lazyLoadStopImages(plan) {
   const stops = plan.stops || [];
   stops.forEach(stop => {
