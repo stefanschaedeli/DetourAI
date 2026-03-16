@@ -791,15 +791,12 @@ function _initGuideMap(plan) {
     routePoints.push(new google.maps.LatLng(sLat, sLng));
   });
 
-  // Solid polyline through all route points
+  // Driving route through all route points (falls back to straight line on error)
   if (routePoints.length >= 2) {
-    _guidePolyline = new google.maps.Polyline({
-      map,
-      path: routePoints,
-      strokeColor: '#0EA5E9',
-      strokeOpacity: 0.8,
-      strokeWeight: 3,
-    });
+    const guideWaypoints = routePoints.map(pt => ({ lat: pt.lat(), lng: pt.lng() }));
+    GoogleMaps.renderDrivingRoute(map, guideWaypoints, {
+      strokeColor: '#0EA5E9', strokeWeight: 3, strokeOpacity: 0.8,
+    }).then(r => { _guidePolyline = r; });
   }
 
   if (hasBounds) {

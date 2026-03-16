@@ -345,6 +345,94 @@ const GoogleMaps = (() => {
     _apiKey = key;
   }
 
+  // ---------------------------------------------------------------------------
+  // Driving route rendering via DirectionsService
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Render an actual driving route on the map using DirectionsService.
+   * Falls back to straight Polyline on error.
+   *
+   * @param {google.maps.Map} map
+   * @param {{lat:number, lng:number}[]} waypoints — at least 2 points
+   * @param {Object} opts — polylineOptions (strokeColor, strokeWeight, strokeOpacity, icons)
+   * @returns {Promise<{setMap: function}>} — object with setMap(null) for cleanup
+   */
+  async function renderDrivingRoute(map, waypoints, opts) {
+    if (!waypoints || waypoints.length < 2) return { setMap() {} };
+
+    const polyOpts = {
+      strokeColor: (opts && opts.strokeColor) || '#4a90d9',
+      strokeWeight: (opts && opts.strokeWeight) || 3,
+      strokeOpacity: opts && opts.strokeOpacity != null ? opts.strokeOpacity : 0.8,
+    };
+    if (opts && opts.icons) polyOpts.icons = opts.icons;
+
+    // DirectionsService supports max 25 waypoints (origin + dest + 23 intermediates).
+    // For longer routes, batch into segments and render each.
+    const MAX_WAYPOINTS = 25;
+    if (waypoints.length > MAX_WAYPOINTS) {
+      return _renderBatchedRoute(map, waypoints, polyOpts);
+    }
+    return _renderSingleRoute(map, waypoints, polyOpts);
+  }
+
+  async function _renderSingleRoute(map, waypoints, polyOpts) {
+    const origin = waypoints[0];
+    const destination = waypoints[waypoints.length - 1];
+    const intermediates = waypoints.slice(1, -1).map(wp => ({
+      location: new google.maps.LatLng(wp.lat, wp.lng),
+      stopover: true,
+    }));
+
+    try {
+      const ds = new google.maps.DirectionsService();
+      const result = await ds.route({
+        origin: new google.maps.LatLng(origin.lat, origin.lng),
+        destination: new google.maps.LatLng(destination.lat, destination.lng),
+        waypoints: intermediates,
+        travelMode: google.maps.TravelMode.DRIVING,
+      });
+
+      const renderer = new google.maps.DirectionsRenderer({
+        map,
+        directions: result,
+        suppressMarkers: true,
+        preserveViewport: true,
+        polylineOptions: polyOpts,
+      });
+      return renderer;
+    } catch (e) {
+      _log('WARNING', `DirectionsService fehlgeschlagen, Fallback auf gerade Linie: ${e.message || e}`);
+      return _straightLineFallback(map, waypoints, polyOpts);
+    }
+  }
+
+  async function _renderBatchedRoute(map, waypoints, polyOpts) {
+    const MAX_PER_BATCH = 25;
+    const renderers = [];
+    // Split into overlapping batches (last point of batch N = first point of batch N+1)
+    for (let i = 0; i < waypoints.length - 1; i += MAX_PER_BATCH - 1) {
+      const batch = waypoints.slice(i, i + MAX_PER_BATCH);
+      if (batch.length < 2) break;
+      try {
+        const r = await _renderSingleRoute(map, batch, polyOpts);
+        renderers.push(r);
+      } catch (_) {
+        renderers.push(_straightLineFallback(map, batch, polyOpts));
+      }
+    }
+    // Return composite object with setMap for cleanup
+    return {
+      setMap(val) { renderers.forEach(r => { if (r && typeof r.setMap === 'function') r.setMap(val); }); },
+    };
+  }
+
+  function _straightLineFallback(map, waypoints, polyOpts) {
+    const path = waypoints.map(wp => new google.maps.LatLng(wp.lat, wp.lng));
+    return new google.maps.Polyline({ map, path, ...polyOpts });
+  }
+
   return {
     _onApiReady,
     _setApiKey,
@@ -354,6 +442,7 @@ const GoogleMaps = (() => {
     createPlaceMarker,
     attachAutocomplete,
     getPlaceImages,
+    renderDrivingRoute,
     get routeMap() { return _routeMap; },
     get guideMap()  { return _guideMap; },
   };

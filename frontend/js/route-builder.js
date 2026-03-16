@@ -3,6 +3,7 @@
 let routeMeta = {};
 let _rbMarkers = [];
 let _rbPolylines = [];
+let _rbMapGeneration = 0;  // stale-request guard for async route rendering
 
 // SSE connection for route-building phase (progressive option streaming)
 let _routeSSE = null;
@@ -462,6 +463,9 @@ function _initMap(anchors, options) {
     scale: 3,
   };
 
+  const routePromises = [];
+  const genBefore = _rbMapGeneration;
+
   options.filter(o => o.lat && o.lon).forEach((opt, i) => {
     const pos = { lat: opt.lat, lng: opt.lon };
     const tooltipContent = `<div class="map-marker-tooltip">` +
@@ -479,31 +483,34 @@ function _initMap(anchors, options) {
     hasBounds = true;
 
     const color = branchColors[i] || '#888';
-    const optLatLng = new google.maps.LatLng(opt.lat, opt.lon);
+    const optPos = { lat: opt.lat, lng: opt.lon };
 
+    // Queue driving route requests (resolved below in parallel)
     if (startPt) {
-      const line = new google.maps.Polyline({
-        map,
-        path: [startPt, optLatLng],
-        strokeColor: color,
-        strokeOpacity: 0,
-        strokeWeight: 2,
-        icons: [{ icon: { ...dashedIcon, strokeColor: color, strokeOpacity: 0.8 }, offset: '0', repeat: '10px' }],
-      });
-      _rbPolylines.push(line);
+      routePromises.push(GoogleMaps.renderDrivingRoute(map,
+        [{ lat: startPt.lat(), lng: startPt.lng() }, optPos],
+        { strokeColor: color, strokeOpacity: 0, strokeWeight: 2,
+          icons: [{ icon: { ...dashedIcon, strokeColor: color, strokeOpacity: 0.8 }, offset: '0', repeat: '10px' }] }
+      ));
     }
     if (targetPt) {
-      const line = new google.maps.Polyline({
-        map,
-        path: [optLatLng, targetPt],
-        strokeColor: color,
-        strokeOpacity: 0,
-        strokeWeight: 2,
-        icons: [{ icon: { ...dashedIcon, strokeColor: color, strokeOpacity: 0.5 }, offset: '0', repeat: '10px' }],
-      });
-      _rbPolylines.push(line);
+      routePromises.push(GoogleMaps.renderDrivingRoute(map,
+        [optPos, { lat: targetPt.lat(), lng: targetPt.lng() }],
+        { strokeColor: color, strokeOpacity: 0, strokeWeight: 2,
+          icons: [{ icon: { ...dashedIcon, strokeColor: color, strokeOpacity: 0.5 }, offset: '0', repeat: '10px' }] }
+      ));
     }
   });
+
+  // Resolve driving route requests in parallel
+  if (routePromises.length > 0) {
+    Promise.allSettled(routePromises).then(results => {
+      if (_rbMapGeneration !== genBefore) return; // map was cleared, discard stale results
+      results.forEach(r => {
+        if (r.status === 'fulfilled' && r.value) _rbPolylines.push(r.value);
+      });
+    });
+  }
 
   if (hasBounds) {
     map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
@@ -514,6 +521,7 @@ function _initMap(anchors, options) {
 }
 
 function _clearMap() {
+  _rbMapGeneration++;
   _rbMarkers.forEach(m => { if (m && typeof m.setMap === 'function') m.setMap(null); });
   _rbPolylines.forEach(l => { if (l && typeof l.setMap === 'function') l.setMap(null); });
   _rbMarkers = [];
@@ -988,13 +996,13 @@ function _initRegionMap(regions) {
     _regionMarkers.push(marker);
   });
 
-  _regionPolyline = new google.maps.Polyline({
-    path,
-    strokeColor: '#4a90d9',
-    strokeWeight: 3,
-    strokeOpacity: 0.8,
-    map: _regionPlanMap,
-  });
+  // Render driving route; fallback to straight line on error
+  const regionWaypoints = path.map(p => ({ lat: p.lat, lng: p.lng || p.lon }));
+  if (regionWaypoints.length >= 2) {
+    GoogleMaps.renderDrivingRoute(_regionPlanMap, regionWaypoints, {
+      strokeColor: '#4a90d9', strokeWeight: 3, strokeOpacity: 0.8,
+    }).then(r => { _regionPolyline = r; });
+  }
 
   _regionPlanMap.fitBounds(bounds, 50);
 }
