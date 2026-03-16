@@ -65,7 +65,7 @@
 <main>
 
   <!-- ============================================================ Form section -->
-  <section class="section active" id="form-section">
+  <section class="section" id="form-section">
 
     <!-- Step indicators -->
     <div class="step-indicators">
@@ -460,7 +460,7 @@
     </div>
 
     <div style="margin-top:24px">
-      <button class="btn btn-secondary" onclick="showSection('form-section')">Neue Reise planen</button>
+      <button class="btn btn-secondary" onclick="Router.navigate('/')">Neue Reise planen</button>
     </div>
   </section>
 
@@ -552,6 +552,7 @@
 <script src="js/sse-overlay.js"></script>
 <script src="js/maps.js"></script>
 <script src="js/state.js"></script>
+<script src="js/router.js"></script>
 <script src="js/api.js"></script>
 <script src="js/form.js"></script>
 <script src="js/route-builder.js"></script>
@@ -569,6 +570,7 @@
       document.body.classList.add('debug-mode');
     }
     initForm();
+    Router.init();
     document.addEventListener('keydown', e => {
       if (document.getElementById('lightbox-overlay')?.style.display === 'flex') {
         if (e.key === 'ArrowLeft')  lightboxNav(-1);

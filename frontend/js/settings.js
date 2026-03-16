@@ -33,6 +33,9 @@ function openSettingsPage() {
     s.classList.remove('active');
   });
   document.getElementById('settings-section').classList.add('active');
+  if (location.pathname !== '/settings') {
+    Router.navigate('/settings');
+  }
   loadSettings();
 }
 
@@ -40,6 +43,7 @@ function closeSettingsPage() {
   document.getElementById('settings-section').classList.remove('active');
   const prev = document.getElementById(_previousSection);
   if (prev) prev.classList.add('active');
+  history.back();
 }
 
 async function loadSettings() {

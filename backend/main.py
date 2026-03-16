@@ -1949,9 +1949,20 @@ class UpdateTravelRequest(BaseModel):
     rating: Optional[int] = None
 
 
+def _slugify(text: str) -> str:
+    import unicodedata
+    text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode()
+    text = re.sub(r'[^\w\s-]', '', text.lower())
+    return re.sub(r'[-\s]+', '-', text).strip('-')[:50]
+
+
 @app.get("/api/travels")
 async def api_list_travels():
-    return {"travels": await list_travels()}
+    travels = await list_travels()
+    for t in travels:
+        name = t.get("custom_name") or t.get("title") or ""
+        t["slug"] = _slugify(name)
+    return {"travels": travels}
 
 
 @app.post("/api/travels", status_code=201)

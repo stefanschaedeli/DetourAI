@@ -705,6 +705,7 @@ async function confirmRoute() {
     // Show accommodation section and connect SSE BEFORE firing the prefetch,
     // so no accommodation_loaded events are missed.
     showSection('accommodation');
+    Router.navigate('/accommodation/' + S.jobId);
     startAccommodationPhase(data);
     progressOverlay.open('Unterkunftsoptionen werden gesucht…');
 
@@ -723,7 +724,7 @@ async function confirmRoute() {
 }
 
 function backToForm() {
-  showSection('form-section');
+  Router.navigate('/form');
 }
 
 function saveRouteState() {

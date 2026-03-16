@@ -160,7 +160,7 @@ function onAgentDone(data) {
   }
 }
 
-function onJobComplete(data) {
+async function onJobComplete(data) {
   if (progressSSE) { progressSSE.close(); progressSSE = null; }
 
   // Complete any still-open overlay lines before closing
@@ -176,17 +176,28 @@ function onJobComplete(data) {
   // Save to localStorage
   lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan: data });
 
-  // Persist to DB (non-blocking, non-fatal)
-  apiSaveTravel(data).catch(err => console.warn('DB-Speicherung:', err.message));
-
   markAllStopsDone();
 
+  // Persist to DB and navigate to the saved travel URL
   showLoading('Reiseführer wird aufbereitet…');
-  setTimeout(() => {
-    showTravelGuide(data);
-    showSection('travel-guide');
-    hideLoading();
-  }, 800);
+  try {
+    const saved = await apiSaveTravel(data);
+    if (saved && saved.id) {
+      data._saved_travel_id = saved.id;
+      S.result = data;
+      lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan: data });
+    }
+  } catch (err) {
+    console.warn('DB-Speicherung:', err.message);
+  }
+
+  const travelTitle = data.custom_name || data.title || '';
+  showTravelGuide(data);
+  showSection('travel-guide');
+  if (data._saved_travel_id) {
+    Router.navigate(Router.travelPath(data._saved_travel_id, travelTitle));
+  }
+  hideLoading();
 }
 
 function onJobError(data) {
@@ -262,5 +273,5 @@ function cancelPlanning() {
   if (!confirm('Planung abbrechen und zum Formular zurückkehren?')) return;
   // Close any open SSE connection
   if (S._sseSource) { S._sseSource.close(); S._sseSource = null; }
-  showSection('form-section');
+  Router.navigate('/');
 }

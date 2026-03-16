@@ -44,6 +44,7 @@ function goToStep(n) {
   document.querySelectorAll('.step-connector').forEach((el, i) => {
     el.classList.toggle('done', i + 1 < n);
   });
+  Router.navigate('/form/step/' + n, { replace: true });
   window.scrollTo(0, 0);
   // Re-bind click handlers on done steps
   document.querySelectorAll('.step-indicator .step').forEach((el, i) => {
@@ -832,6 +833,7 @@ async function submitTrip() {
 
     // 2. Show route-builder section with skeleton cards, then open SSE
     showSection('route-builder');
+    Router.navigate('/route-builder/' + preJobId);
     _showSkeletonCards();
     progressOverlay.open('Zwischenstopps werden gesucht…');
     openRouteSSE(preJobId);
@@ -984,6 +986,6 @@ function clearAppData() {
 
   // Return to form step 1
   goToStep(1);
-  showSection('form-section');
+  Router.navigate('/');
 }
 

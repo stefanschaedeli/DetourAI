@@ -72,6 +72,9 @@ function openTravelsDrawer() {
   document.getElementById('travels-drawer-overlay').classList.add('open');
   document.getElementById('travels-drawer').classList.add('open');
   document.body.style.overflow = 'hidden';
+  if (location.pathname !== '/travels') {
+    Router.navigate('/travels');
+  }
   loadTravelsList();
 }
 
@@ -79,6 +82,10 @@ function closeTravelsDrawer() {
   document.getElementById('travels-drawer-overlay').classList.remove('open');
   document.getElementById('travels-drawer').classList.remove('open');
   document.body.style.overflow = '';
+  // Navigate back if we came from /travels URL
+  if (location.pathname === '/travels') {
+    Router.navigate('/', { replace: true });
+  }
 }
 
 async function loadTravelsList() {
@@ -130,8 +137,10 @@ async function openSavedTravel(id) {
     S.jobId  = plan.job_id || null;
     lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan });
     closeTravelsDrawer();
+    const title = plan.custom_name || plan.title || '';
     showTravelGuide(plan);
     showSection('travel-guide');
+    Router.navigate(Router.travelPath(id, title));
   } catch (err) {
     alert('Fehler beim Laden: ' + err.message);
   } finally {
@@ -189,6 +198,7 @@ async function replanSavedTravel(id, btn) {
     closeTravelsDrawer();
 
     showSection('progress');
+    Router.navigate('/progress/' + job_id);
     document.getElementById('progress-error').style.display = 'none';
     const statusEl = document.getElementById('progress-agent-status');
     const timelineEl = document.getElementById('progress-timeline');

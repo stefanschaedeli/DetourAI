@@ -304,6 +304,7 @@ async function startPlanningWithAllSelections() {
 
     progressOverlay.open('Reiseplan wird erstellt…');
     showSection('progress');
+    Router.navigate('/progress/' + S.jobId);
     connectSSE(S.jobId);
 
   } catch (err) {
@@ -317,5 +318,5 @@ function redoRoute() {
   lsClear(LS_ACCOMMODATIONS);
   S.selectedStops = [];
   S.jobId = null;
-  showSection('form-section');
+  Router.navigate('/');
 }

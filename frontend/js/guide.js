@@ -54,6 +54,12 @@ function renderGuide(plan, tab) {
 
 function switchGuideTab(tab) {
   renderGuide(S.result, tab);
+  if (S.result && S.result._saved_travel_id) {
+    const title = S.result.custom_name || S.result.title || '';
+    const base = Router.travelPath(S.result._saved_travel_id, title);
+    const path = (tab && tab !== 'overview') ? base + '/' + tab : base;
+    Router.navigate(path, { replace: true });
+  }
 }
 
 function renderOverview(plan) {
@@ -1009,6 +1015,7 @@ async function replanCurrentTravel() {
     const { job_id } = await apiReplanTravel(savedId);
     S.jobId = job_id;
     showSection('progress');
+    Router.navigate('/progress/' + job_id);
     document.getElementById('progress-error').style.display = 'none';
     const statusEl = document.getElementById('progress-agent-status');
     if (statusEl) statusEl.textContent = 'Reiseführer und Tagespläne werden neu berechnet…';
