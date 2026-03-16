@@ -559,32 +559,47 @@ function renderStops(plan) {
   `;
 }
 
-function _initStopsSidebar() {
-  // Toggle stop cards on header click
-  document.querySelectorAll('.stop-toggle').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const stopId = btn.dataset.stopId;
-      _toggleStop(stopId, true);
-    });
-  });
+// One-time event delegation on #guide-content (set up in _initGuideDelegation)
+let _guideDelegationReady = false;
+let _stopsObserver = null;
 
-  // Sidebar item click: expand target, collapse others
-  document.querySelectorAll('.stops-sidebar-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const targetId = item.dataset.target;
+function _initGuideDelegation() {
+  if (_guideDelegationReady) return;
+  _guideDelegationReady = true;
+  const root = document.getElementById('guide-content');
+  if (!root) return;
+
+  root.addEventListener('click', (e) => {
+    // Sidebar item click
+    const sidebarItem = e.target.closest('.stops-sidebar-item');
+    if (sidebarItem) {
+      const targetId = sidebarItem.dataset.target;
       const stopId = targetId.replace('guide-stop-', '');
-      // Update active state immediately
       document.querySelectorAll('.stops-sidebar-item').forEach(si => {
-        si.classList.toggle('active', si === item);
+        si.classList.toggle('active', si === sidebarItem);
       });
       _expandOnlyStop(stopId);
       const el = document.getElementById(targetId);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+      return;
+    }
+
+    // Stop header toggle click
+    const toggleBtn = e.target.closest('.stop-toggle');
+    if (toggleBtn) {
+      const stopId = toggleBtn.dataset.stopId;
+      _toggleStop(stopId, true);
+    }
   });
+}
+
+function _initStopsSidebar() {
+  // Set up delegation (once)
+  _initGuideDelegation();
 
   // IntersectionObserver to highlight active stop in sidebar
-  const observer = new IntersectionObserver((entries) => {
+  if (_stopsObserver) _stopsObserver.disconnect();
+  _stopsObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         const stopId = entry.target.dataset.stopId;
@@ -595,7 +610,7 @@ function _initStopsSidebar() {
     });
   }, { threshold: 0.15, rootMargin: '-80px 0px -60% 0px' });
 
-  document.querySelectorAll('.stop-card').forEach(card => observer.observe(card));
+  document.querySelectorAll('.stop-card').forEach(card => _stopsObserver.observe(card));
 }
 
 function _toggleStop(stopId, scrollIntoView) {
