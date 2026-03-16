@@ -58,8 +58,13 @@ function switchGuideTab(tab) {
     const title = S.result.custom_name || S.result.title || '';
     const base = Router.travelPath(S.result._saved_travel_id, title);
     const path = (tab && tab !== 'overview') ? base + '/' + tab : base;
-    Router.navigate(path, { replace: true });
+    Router.navigate(path, { replace: true, skipDispatch: true });
   }
+}
+
+// Called by router only — render tab without URL update
+function activateGuideTab(tab) {
+  renderGuide(S.result, tab);
 }
 
 function renderOverview(plan) {

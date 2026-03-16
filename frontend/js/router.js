@@ -40,7 +40,7 @@ const Router = (() => {
     opts = opts || {};
     const method = opts.replace ? 'replaceState' : 'pushState';
     history[method](null, '', path + location.search);
-    if (_dispatching) return;  // URL updated but no re-dispatch
+    if (_dispatching || opts.skipDispatch) return;  // URL updated but no re-dispatch
     _dispatch(path);
   }
 
@@ -200,9 +200,8 @@ const Router = (() => {
 
       const title = S.result.custom_name || S.result.title || '';
       document.title = `Reise: ${title} — Travelman`;
-      showTravelGuide(S.result);
       showSection('travel-guide');
-      switchGuideTab(tab);
+      activateGuideTab(tab);
     },
 
     _travels() {
