@@ -815,14 +815,20 @@ function _initGuideMap(plan) {
  * via Google Places and fill the hero-photo skeleton container.
  */
 async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context, sizeClass) {
-  if (!containerEl || typeof GoogleMaps === 'undefined') return;
+  const placeholder = containerEl?.querySelector('.hero-photo-loading');
+  if (!containerEl || typeof GoogleMaps === 'undefined') {
+    if (placeholder) placeholder.remove();
+    return;
+  }
   try {
     const urls = await GoogleMaps.getPlaceImages(placeName, lat, lng, context);
-    const placeholder = containerEl.querySelector('.hero-photo-loading');
     const size = sizeClass || (placeholder?.classList.contains('hero-photo--lg') ? 'lg'
       : placeholder?.classList.contains('hero-photo--sm') ? 'sm' : 'md');
     const newHtml = buildHeroPhoto(urls, placeName, size);
-    if (!newHtml) return;
+    if (!newHtml) {
+      if (placeholder) placeholder.remove();
+      return;
+    }
     if (placeholder) {
       const tmp = document.createElement('div');
       tmp.innerHTML = newHtml;
@@ -833,6 +839,7 @@ async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context, 
       containerEl.insertBefore(tmp.firstElementChild, containerEl.firstChild);
     }
   } catch (e) {
+    if (placeholder) placeholder.remove();
     if (typeof S !== 'undefined') {
       S.logs.push({ level: 'WARNING', agent: 'GoogleMaps', message: `_lazyLoadEntityImages fehlgeschlagen für «${placeName}»: ${e.message}` });
       if (typeof updateDebugLog === 'function') updateDebugLog();
