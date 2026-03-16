@@ -949,20 +949,45 @@ async function _initStopMap(stop) {
   const map = GoogleMaps.initStopOverviewMap(elId, { center, zoom: 13 });
   if (!map) return;
 
-  // Collect entities from this stop
+  // Collect ALL entities from this stop (with or without place_id)
   const entities = [];
   const acc = stop.accommodation;
-  if (acc && acc.place_id) entities.push({ placeId: acc.place_id, name: acc.name, type: 'hotel', data: acc, index: 0 });
+  if (acc && acc.name) {
+    entities.push({
+      key: `hotel-${stop.id}`,
+      placeId: acc.place_id || null,
+      name: acc.name,
+      stopLat: stop.lat, stopLng: stop.lng,
+      searchType: 'hotel',
+      type: 'hotel', data: acc, index: 0,
+    });
+  }
 
   (stop.top_activities || []).forEach((act, i) => {
-    if (act.place_id) entities.push({ placeId: act.place_id, name: act.name, type: 'activity', data: act, index: i });
+    if (!act.name) return;
+    entities.push({
+      key: `act-${stop.id}-${i}`,
+      placeId: act.place_id || null,
+      name: act.name,
+      stopLat: stop.lat, stopLng: stop.lng,
+      searchType: 'activity',
+      type: 'activity', data: act, index: i,
+    });
   });
 
   (stop.restaurants || []).forEach((r, i) => {
-    if (r.place_id) entities.push({ placeId: r.place_id, name: r.name, type: 'restaurant', data: r, index: i });
+    if (!r.name) return;
+    entities.push({
+      key: `rest-${stop.id}-${i}`,
+      placeId: r.place_id || null,
+      name: r.name,
+      stopLat: stop.lat, stopLng: stop.lng,
+      searchType: 'restaurant',
+      type: 'restaurant', data: r, index: i,
+    });
   });
 
-  if (entities.length === 0) return; // No entities with place_id
+  if (entities.length === 0) return;
 
   let coords;
   try {
@@ -978,7 +1003,7 @@ async function _initStopMap(stop) {
   let _openInfoWindow = null;
 
   for (const ent of entities) {
-    const pos = coords.get(ent.placeId);
+    const pos = coords.get(ent.key);
     if (!pos) continue;
 
     bounds.extend(pos);

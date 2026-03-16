@@ -13,7 +13,7 @@ const GoogleMaps = (() => {
   // Cache: place name|lat|lng|context → [url, ...]
   const _imageCache = new Map();
 
-  // Cache: placeId → {lat, lng} — persists across stop expansions
+  // Cache: key → {lat, lng} — persists across stop expansions (key = placeId or name|lat|lng)
   const _coordCache = new Map();
 
   /** Push a message to the frontend debug log panel. */
@@ -345,44 +345,85 @@ const GoogleMaps = (() => {
   }
 
   /**
-   * Resolve lat/lng for entities via Place.fetchFields.
-   * @param {{placeId: string, name: string}[]} entities
+   * Resolve lat/lng for entities. Uses place_id when available, falls back
+   * to text search by name + location bias for entities without place_id.
+   * Results keyed by entity.key (caller-assigned unique key).
+   *
+   * @param {{key: string, placeId?: string, name: string, stopLat?: number, stopLng?: number, searchType?: string}[]} entities
    * @returns {Promise<Map<string, {lat: number, lng: number}>>}
    */
   async function resolveEntityCoordinates(entities) {
     const results = new Map();
-    const toFetch = [];
+    const toFetchById = [];
+    const toFetchByText = [];
 
     for (const ent of entities) {
-      if (!ent.placeId) continue;
-      if (_coordCache.has(ent.placeId)) {
-        results.set(ent.placeId, _coordCache.get(ent.placeId));
-      } else {
-        toFetch.push(ent);
+      if (_coordCache.has(ent.key)) {
+        results.set(ent.key, _coordCache.get(ent.key));
+        continue;
+      }
+      if (ent.placeId) {
+        toFetchById.push(ent);
+      } else if (ent.name) {
+        toFetchByText.push(ent);
       }
     }
 
-    if (toFetch.length === 0) return results;
+    if (toFetchById.length === 0 && toFetchByText.length === 0) return results;
 
     const { Place } = await google.maps.importLibrary('places');
-    const settled = await Promise.allSettled(
-      toFetch.map(async (ent) => {
-        const place = new Place({ id: ent.placeId });
-        await place.fetchFields({ fields: ['location'] });
-        if (place.location) {
-          const coord = { lat: place.location.lat(), lng: place.location.lng() };
-          _coordCache.set(ent.placeId, coord);
-          results.set(ent.placeId, coord);
-        }
-      })
-    );
 
-    // Log failures
-    settled.forEach((r, i) => {
-      if (r.status === 'rejected') {
-        _log('WARNING', `Koordinaten für «${toFetch[i].name}» (${toFetch[i].placeId}) fehlgeschlagen: ${r.reason}`);
-      }
-    });
+    // Strategy 1: Resolve by place_id (cheapest, most accurate)
+    if (toFetchById.length > 0) {
+      const settled = await Promise.allSettled(
+        toFetchById.map(async (ent) => {
+          const place = new Place({ id: ent.placeId });
+          await place.fetchFields({ fields: ['location'] });
+          if (place.location) {
+            const coord = { lat: place.location.lat(), lng: place.location.lng() };
+            _coordCache.set(ent.key, coord);
+            results.set(ent.key, coord);
+          }
+        })
+      );
+      settled.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          _log('WARNING', `Koordinaten (ID) für «${toFetchById[i].name}» fehlgeschlagen: ${r.reason}`);
+          // Fall back to text search
+          toFetchByText.push(toFetchById[i]);
+        }
+      });
+    }
+
+    // Strategy 2: Text search by name with location bias (for entities without place_id)
+    if (toFetchByText.length > 0) {
+      const typeMap = { hotel: 'lodging', activity: 'tourist_attraction', restaurant: 'restaurant' };
+      const settled = await Promise.allSettled(
+        toFetchByText.map(async (ent) => {
+          if (results.has(ent.key)) return; // Already resolved via fallback
+          const searchOpts = {
+            textQuery: ent.name,
+            fields: ['location'],
+            maxResultCount: 1,
+          };
+          if (typeMap[ent.searchType]) searchOpts.includedType = typeMap[ent.searchType];
+          if (ent.stopLat && ent.stopLng) {
+            searchOpts.locationBias = new google.maps.LatLng(ent.stopLat, ent.stopLng);
+          }
+          const { places } = await Place.searchByText(searchOpts);
+          if (places && places[0] && places[0].location) {
+            const coord = { lat: places[0].location.lat(), lng: places[0].location.lng() };
+            _coordCache.set(ent.key, coord);
+            results.set(ent.key, coord);
+          }
+        })
+      );
+      settled.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          _log('WARNING', `Koordinaten (Text) für «${toFetchByText[i].name}» fehlgeschlagen: ${r.reason}`);
+        }
+      });
+    }
 
     return results;
   }
