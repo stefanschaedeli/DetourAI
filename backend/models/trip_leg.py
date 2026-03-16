@@ -26,6 +26,7 @@ class ExploreStop(BaseModel):
     suggested_nights: int = Field(ge=1, le=14)
     significance: Literal["anchor", "scenic", "hidden_gem"]
     logistics_note: str = Field(default="", max_length=500)
+    place_id: Optional[str] = None
 
 
 class RegionPlanItem(BaseModel):
@@ -35,6 +36,7 @@ class RegionPlanItem(BaseModel):
     reason: str = Field(max_length=500)
     teaser: str = Field(default="", max_length=300)
     highlights: list[str] = Field(default_factory=list)
+    place_id: Optional[str] = None
 
 
 class RegionPlan(BaseModel):

@@ -48,9 +48,6 @@ DEFAULTS: dict[str, Any] = {
     "budget.acc_multiplier_max": 1.30,
 
     # ── API & Performance ──
-    "api.nominatim_delay_ms": 350,
-    "api.nominatim_timeout_s": 4,
-    "api.osrm_timeout_s": 6,
     "api.wikipedia_timeout_s": 8,
     "api.retry_max_attempts": 5,
     "api.accommodation_parallelism": 2,
@@ -84,9 +81,6 @@ _RANGES: dict[str, tuple[Any, Any]] = {
     "budget.fuel_chf_per_hour": (5, 50),
     "budget.acc_multiplier_min": (0.5, 2.0),
     "budget.acc_multiplier_max": (0.5, 2.0),
-    "api.nominatim_delay_ms": (100, 2000),
-    "api.nominatim_timeout_s": (1, 30),
-    "api.osrm_timeout_s": (1, 30),
     "api.wikipedia_timeout_s": (1, 30),
     "api.retry_max_attempts": (1, 10),
     "api.accommodation_parallelism": (1, 5),

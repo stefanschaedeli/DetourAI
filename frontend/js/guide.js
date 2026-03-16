@@ -514,7 +514,7 @@ function renderStops(plan) {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
               Ersetzen
             </button>
-            ${stop.google_maps_url ? `<a href="${safeUrl(stop.google_maps_url)}" target="_blank" class="maps-link" onclick="event.stopPropagation()">Maps</a>` : ''}
+            ${(stop.place_id || stop.google_maps_url) ? `<a href="${safeUrl(stop.place_id ? `https://www.google.com/maps/place/?q=place_id:${stop.place_id}` : stop.google_maps_url)}" target="_blank" class="maps-link" onclick="event.stopPropagation()">Maps</a>` : ''}
             <span class="stop-toggle-arrow">${isFirst
               ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>`
               : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="9 6 15 12 9 18"/></svg>`}</span>
@@ -752,10 +752,9 @@ function _initGuideMap(plan) {
       ? `<div class="map-marker-anchor target-pin">Z</div>`
       : `<div class="map-marker-num">${stop.id}</div>`;
     const stopId = stop.id;
-    const m = GoogleMaps.createDivMarker(map, pos, markerHtml, () => {
-      infoWin.open({ map, position: pos });
-      _scrollToGuideStop(stopId);
-    });
+    const m = (stop.place_id
+      ? GoogleMaps.createPlaceMarker(map, stop.place_id, pos, markerHtml, () => { infoWin.open({ map, position: pos }); _scrollToGuideStop(stopId); })
+      : GoogleMaps.createDivMarker(map, pos, markerHtml, () => { infoWin.open({ map, position: pos }); _scrollToGuideStop(stopId); }));
     _guideMarkers.push(m);
     bounds.extend(pos);
     hasBounds = true;

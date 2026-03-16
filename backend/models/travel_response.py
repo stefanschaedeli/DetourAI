@@ -21,6 +21,7 @@ class TimeBlock(BaseModel):
     google_search_url: Optional[str] = None
     google_maps_url: Optional[str] = None
     price_chf: Optional[float] = None
+    place_id: Optional[str] = None
 
 
 class StopAccommodation(BaseModel):
@@ -137,6 +138,7 @@ class TravelPlan(BaseModel):
     start_location: str
     start_lat: Optional[float] = None
     start_lng: Optional[float] = None
+    start_place_id: Optional[str] = None
     stops: List[TravelStop]
     day_plans: List[DayPlan]
     cost_estimate: CostEstimate

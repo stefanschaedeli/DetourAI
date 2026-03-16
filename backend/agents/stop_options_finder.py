@@ -250,7 +250,7 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
         response = await call_with_retry(call, job_id=self.job_id, agent_name="StopOptionsFinder")
         text = response.content[0].text
         # Return Claude's result immediately — drive_hours/drive_km are placeholders.
-        # Authoritative OSRM enrichment runs in main.py after this call.
+        # Authoritative Google Directions enrichment runs in main.py after this call.
         result = parse_agent_json(text)
 
         # Wikipedia-Anreicherung: echte Beschreibungen und Einwohnerzahlen

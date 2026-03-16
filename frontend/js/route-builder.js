@@ -471,10 +471,9 @@ function _initMap(anchors, options) {
       (opt.teaser ? `<div class="tooltip-teaser">${esc(opt.teaser)}</div>` : '') +
       `</div>`;
     const infoWin = new google.maps.InfoWindow({ content: tooltipContent });
-    const m = GoogleMaps.createDivMarker(map, pos,
-      `<div class="map-marker-num">${i + 1}</div>`,
-      () => { infoWin.open({ map, position: pos }); selectOption(i); }
-    );
+    const m = (opt.place_id
+      ? GoogleMaps.createPlaceMarker(map, opt.place_id, pos, `<div class="map-marker-num">${i + 1}</div>`, () => { infoWin.open({ map, position: pos }); selectOption(i); })
+      : GoogleMaps.createDivMarker(map, pos, `<div class="map-marker-num">${i + 1}</div>`, () => { infoWin.open({ map, position: pos }); selectOption(i); }));
     _rbMarkers.push(m);
     bounds.extend(pos);
     hasBounds = true;

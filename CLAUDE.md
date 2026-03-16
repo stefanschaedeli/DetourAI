@@ -77,7 +77,7 @@ travelman3/
 │   │   ├── accommodation_researcher.py  # claude-sonnet-4-5
 │   │   ├── activities_agent.py          # claude-sonnet-4-5 + WikipediaEnricher
 │   │   ├── restaurants_agent.py         # claude-sonnet-4-5
-│   │   ├── day_planner.py               # claude-opus-4-5 + OSRM
+│   │   ├── day_planner.py               # claude-opus-4-5 + Google Directions
 │   │   ├── travel_guide_agent.py        # claude-sonnet-4-5 (narrative guide)
 │   │   ├── trip_analysis_agent.py       # claude-sonnet-4-5 (replan analysis)
 │   │   └── output_generator.py          # PDF/PPTX (fpdf2 + pptx)
@@ -88,7 +88,7 @@ travelman3/
 │   │   └── accommodation_option.py      # AccommodationOption, BudgetState
 │   ├── utils/
 │   │   ├── debug_logger.py              # Singleton DebugLogger, SSE subscriber manager
-│   │   ├── maps_helper.py               # geocode_nominatim(), osrm_route(), build_maps_url()
+│   │   ├── maps_helper.py               # geocode_google(), google_directions(), build_maps_url()
 │   │   ├── retry_helper.py              # call_with_retry() with exponential backoff
 │   │   ├── json_parser.py               # parse_agent_json() strips markdown fences
 │   │   ├── travel_db.py                 # SQLite persistence for saved travels
@@ -137,8 +137,7 @@ travelman3/
 - **Job state in Redis** — key pattern `job:{job_id}`, TTL 24h
 - **SSE stream closes** on `job_complete` or `job_error` event
 - **Budget split:** 45% accommodation · 15% food · ~CHF 80/stop activities · CHF 12/h fuel
-- **OSRM replaces Claude drive estimates** — always enrich with real routing data
-- **Nominatim rate limit:** max 1 req/s — enforce 350ms sleep between geocode calls
+- **Google Maps APIs** for Geocoding, Directions, Places — `GOOGLE_MAPS_API_KEY` env var required
 - **Frontend API prefix:** `/api` (Nginx proxy to backend:8000) — never use `localhost:8000` in JS
 
 ---
@@ -215,6 +214,7 @@ backend/logs/
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...     # required
+GOOGLE_MAPS_API_KEY=...          # required — Geocoding, Directions, Places APIs
 TEST_MODE=true                   # true=haiku, false=opus/sonnet
 REDIS_URL=redis://localhost:6379 # job state store
 LOGS_DIR=/app/logs               # file logging dir (default: backend/logs/)

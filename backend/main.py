@@ -407,7 +407,7 @@ class RecomputeRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Haversine distance helper (no extra OSRM call needed)
+# Haversine distance helper
 # ---------------------------------------------------------------------------
 
 def _haversine_km(c1: tuple, c2: tuple) -> float:
@@ -433,25 +433,24 @@ async def _calc_route_geometry(
     proximity_target_pct: int = 15,
 ) -> dict:
     """
-    Geocodes from/to in parallel, queries OSRM for the full segment distance,
-    then calculates the ideal per-etappe distance given stops_remaining.
-    Returns a dict consumed by StopOptionsFinderAgent.find_options().
+    Geocodes from/to in parallel via Google, queries Google Directions for the
+    full segment distance, then calculates the ideal per-etappe distance given
+    stops_remaining. Returns a dict consumed by StopOptionsFinderAgent.find_options().
     """
-    async def _geocode_delayed(place: str, delay: float):
-        if delay > 0:
-            await asyncio.sleep(delay)
-        return await geocode_nominatim(place)
-
-    from_coords, to_coords = await asyncio.gather(
-        _geocode_delayed(from_location, 0.0),
-        _geocode_delayed(to_location, 0.1),
+    from_result, to_result = await asyncio.gather(
+        geocode_google(from_location),
+        geocode_google(to_location),
     )
-    await asyncio.sleep(0.25)  # Nominatim cool-down after parallel burst
 
-    if not from_coords or not to_coords:
+    if not from_result or not to_result:
         return {}
 
-    total_hours, total_km, geometry_str = await osrm_route_with_geometry([from_coords, to_coords])
+    from_coords = (from_result[0], from_result[1])
+    to_coords = (to_result[0], to_result[1])
+    from_place_id = from_result[2]
+    to_place_id = to_result[2]
+
+    total_hours, total_km, geometry_str = await google_directions(from_location, to_location)
     if total_km <= 0:
         return {}
 
@@ -473,6 +472,8 @@ async def _calc_route_geometry(
         # Cache coords so _find_and_stream_options can skip re-geocoding
         "_from_coords": from_coords,
         "_to_coords": to_coords,
+        "_from_place_id": from_place_id,
+        "_to_place_id": to_place_id,
     }
 
     # Corridor data for transit routes (not Rundreise)
@@ -486,8 +487,8 @@ async def _calc_route_geometry(
             if search_to_km > search_from_km:
                 result["corridor_target"] = point_along_route(route_points, ideal_km)
                 result["corridor_box"] = corridor_bbox(route_points, search_from_km, search_to_km)
-                ref_cities = await reference_cities_along_route(
-                    route_points, total_km, search_from_km, search_to_km, num_points=3,
+                ref_cities = await reference_cities_along_route_google(
+                    from_location, to_location, num_points=3,
                 )
                 if ref_cities:
                     result["corridor_reference_cities"] = ref_cities
@@ -524,22 +525,17 @@ async def _calc_route_geometry_cached(
 
 
 # ---------------------------------------------------------------------------
-# OSRM enrichment helper
+# Google Directions enrichment helper
 # ---------------------------------------------------------------------------
 
-async def _enrich_options_with_osrm(
+async def _enrich_options_with_google(
     options: list, prev_location: str, segment_target: str = "",
     max_drive_hours: float = 0.0,
 ) -> tuple[list, Optional[dict]]:
-    """Geocode all places in parallel (with small stagger), then run all OSRM
-    calls in parallel. Agent-supplied lat/lon are used as fallback when
-    Nominatim returns nothing. Sets drives_over_limit=True on options that
-    exceed max_drive_hours (if given). Returns (enriched_options, map_anchors)."""
-
-    async def _geocode_delayed(place: str, delay: float):
-        if delay > 0:
-            await asyncio.sleep(delay)
-        return await geocode_nominatim(place)
+    """Geocode all places via Google in parallel, then run Google Directions in
+    parallel. Agent-supplied lat/lon are used as fallback when geocoding returns
+    nothing. Sets place_id on each option. Sets drives_over_limit=True on options
+    that exceed max_drive_hours (if given). Returns (enriched_options, map_anchors)."""
 
     # Build ordered list of places: [prev, (target,) opt0, opt1, opt2]
     opt_places = [f"{o.get('region', '')}, {o.get('country', '')}" for o in options]
@@ -548,45 +544,52 @@ async def _enrich_options_with_osrm(
         all_places.append(segment_target)
     all_places.extend(opt_places)
 
-    # Phase 1: parallel geocoding (80 ms stagger to be polite to Nominatim)
+    # Phase 1: parallel geocoding (no rate limit needed for Google)
     coords_results = await asyncio.gather(
-        *[_geocode_delayed(p, i * 0.08) for i, p in enumerate(all_places)]
+        *[geocode_google(p) for p in all_places]
     )
-    # Brief cool-down after the burst
-    await asyncio.sleep(0.25)
 
-    prev_coords = coords_results[0]
+    prev_result = coords_results[0]
+    prev_coords = (prev_result[0], prev_result[1]) if prev_result else None
+    prev_place_id = prev_result[2] if prev_result else None
+
     if segment_target:
-        target_coords = coords_results[1]
+        target_result = coords_results[1]
+        target_coords = (target_result[0], target_result[1]) if target_result else None
+        target_place_id = target_result[2] if target_result else None
         opt_start = 2
     else:
         target_coords = None
+        target_place_id = None
         opt_start = 1
 
-    # Phase 2: parallel OSRM calls (no rate limit on self-hosted OSRM)
-    async def _osrm_for_opt(i: int, opt: dict):
-        nom_coords = coords_results[opt_start + i]
+    # Phase 2: parallel Google Directions calls
+    async def _directions_for_opt(i: int, opt: dict):
+        geo_result = coords_results[opt_start + i]
         agent_lat = opt.get("lat")
         agent_lon = opt.get("lon")
         agent_coords = (agent_lat, agent_lon) if agent_lat and agent_lon else None
-        coords = nom_coords or agent_coords
+        coords = (geo_result[0], geo_result[1]) if geo_result else agent_coords
+        place_id = geo_result[2] if geo_result else None
         if not coords:
-            return i, None, None, None
+            return i, None, None, None, None
         place = opt_places[i]
         maps_url = build_maps_url([prev_location, place])
         if prev_coords:
-            hours, km = await osrm_route([prev_coords, coords])
-            return i, coords, maps_url, (hours, km)
-        return i, coords, maps_url, None
+            hours, km = await google_directions_simple(prev_location, place)
+            return i, coords, maps_url, (hours, km), place_id
+        return i, coords, maps_url, None, place_id
 
-    osrm_results = await asyncio.gather(*[_osrm_for_opt(i, opt) for i, opt in enumerate(options)])
+    dir_results = await asyncio.gather(*[_directions_for_opt(i, opt) for i, opt in enumerate(options)])
 
     for i, opt in enumerate(options):
-        _, coords, maps_url, route_data = osrm_results[i]
+        _, coords, maps_url, route_data, place_id = dir_results[i]
         if coords:
             opt["lat"] = coords[0]
             opt["lon"] = coords[1]
             opt["maps_url"] = maps_url
+            if place_id:
+                opt["place_id"] = place_id
             if route_data:
                 hours, km = route_data
                 if hours > 0:
@@ -599,15 +602,17 @@ async def _enrich_options_with_osrm(
         "prev_lat": prev_coords[0] if prev_coords else None,
         "prev_lon": prev_coords[1] if prev_coords else None,
         "prev_label": prev_location,
+        "prev_place_id": prev_place_id,
         "target_lat": target_coords[0] if target_coords else None,
         "target_lon": target_coords[1] if target_coords else None,
         "target_label": segment_target,
+        "target_place_id": target_place_id,
     }
     return options, map_anchors
 
 
 # ---------------------------------------------------------------------------
-# Streaming helper: Claude → OSRM enrichment → SSE events per option
+# Streaming helper: Claude → Google enrichment → SSE events per option
 # ---------------------------------------------------------------------------
 
 async def _find_and_stream_options(
@@ -627,7 +632,7 @@ async def _find_and_stream_options(
 ) -> tuple[list, dict, int, bool]:
     """
     Runs StopOptionsFinder in streaming mode. Each option is individually
-    OSRM-enriched and pushed as a 'route_option_ready' SSE event as soon as
+    Google-enriched and pushed as a 'route_option_ready' SSE event as soon as
     it's available. Options too close to the trip origin or segment target are
     silently filtered; if < 3 valid options remain, the agent is retried once.
     Returns (enriched_options, map_anchors, estimated_total_stops,
@@ -641,11 +646,8 @@ async def _find_and_stream_options(
     # Reuse coords from route_geometry if available, otherwise geocode
     cached_from = geo.get("_from_coords")
     cached_to = geo.get("_to_coords")
-
-    async def _geocode_delayed(place: str, delay: float):
-        if delay > 0:
-            await asyncio.sleep(delay)
-        return await geocode_nominatim(place)
+    cached_from_place_id = geo.get("_from_place_id")
+    cached_to_place_id = geo.get("_to_place_id")
 
     async def _none_coro():
         return None
@@ -655,20 +657,29 @@ async def _find_and_stream_options(
         prev_coords = cached_from
         target_coords = cached_to
         origin_coords = cached_from
+        prev_place_id = cached_from_place_id
+        target_place_id = cached_to_place_id
     elif origin_location and origin_location != prev_location and min_km_from_origin > 0:
-        prev_coords, target_coords, origin_coords = await asyncio.gather(
-            _geocode_delayed(prev_location, 0.0),
-            _geocode_delayed(segment_target, 0.1) if segment_target else _none_coro(),
-            _geocode_delayed(origin_location, 0.2),
+        prev_result, target_result, origin_result = await asyncio.gather(
+            geocode_google(prev_location),
+            geocode_google(segment_target) if segment_target else _none_coro(),
+            geocode_google(origin_location),
         )
-        await asyncio.sleep(0.2)
+        prev_coords = (prev_result[0], prev_result[1]) if prev_result else None
+        target_coords = (target_result[0], target_result[1]) if target_result else None
+        origin_coords = (origin_result[0], origin_result[1]) if origin_result else None
+        prev_place_id = prev_result[2] if prev_result else None
+        target_place_id = target_result[2] if target_result else None
     else:
-        prev_coords, target_coords = await asyncio.gather(
-            _geocode_delayed(prev_location, 0.0),
-            _geocode_delayed(segment_target, 0.1) if segment_target else _none_coro(),
+        prev_result, target_result = await asyncio.gather(
+            geocode_google(prev_location),
+            geocode_google(segment_target) if segment_target else _none_coro(),
         )
+        prev_coords = (prev_result[0], prev_result[1]) if prev_result else None
+        target_coords = (target_result[0], target_result[1]) if target_result else None
         origin_coords = prev_coords  # origin == prev for first stop or no-origin case
-        await asyncio.sleep(0.2)
+        prev_place_id = prev_result[2] if prev_result else None
+        target_place_id = target_result[2] if target_result else None
 
     await debug_logger.log(
         LogLevel.INFO,
@@ -685,9 +696,11 @@ async def _find_and_stream_options(
         "prev_lat": prev_coords[0] if prev_coords else None,
         "prev_lon": prev_coords[1] if prev_coords else None,
         "prev_label": prev_location,
+        "prev_place_id": prev_place_id,
         "target_lat": target_coords[0] if target_coords else None,
         "target_lon": target_coords[1] if target_coords else None,
         "target_label": segment_target,
+        "target_place_id": target_place_id,
     }
 
     async def _run_one_pass(extra_instr: str) -> tuple[list, int, bool]:
@@ -715,25 +728,26 @@ async def _find_and_stream_options(
                 continue
             raw_options.append(item)
 
-        # Enrich options in parallel (geocode + OSRM + proximity filter)
+        # Enrich options in parallel (geocode + Google Directions + proximity filter)
         async def _enrich_one(i: int, opt: dict) -> Optional[dict]:
-            await asyncio.sleep(i * 0.35)  # stagger Nominatim calls (350ms apart)
             place = f"{opt.get('region', '')}, {opt.get('country', '')}"
-            nom_coords = await geocode_nominatim(place)
+            geo_result = await geocode_google(place)
             agent_lat = opt.get("lat")
             agent_lon = opt.get("lon")
             agent_coords = (agent_lat, agent_lon) if agent_lat and agent_lon else None
-            coords = nom_coords or agent_coords
+            coords = (geo_result[0], geo_result[1]) if geo_result else agent_coords
 
             if not coords:
                 return None
 
             opt["lat"] = coords[0]
             opt["lon"] = coords[1]
+            if geo_result:
+                opt["place_id"] = geo_result[2]
             opt["maps_url"] = build_maps_url([prev_location, place])
 
             if prev_coords:
-                hours, km = await osrm_route([prev_coords, coords])
+                hours, km = await google_directions_simple(prev_location, place)
                 if hours > 0:
                     opt["drive_hours"] = hours
                     opt["drive_km"] = km
@@ -941,7 +955,7 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
     if not route_geo:
         await debug_logger.log(
             LogLevel.WARNING,
-            f"route_geo leer — Geocoding/OSRM fehlgeschlagen für {request.start_location} → {segment_target}",
+            f"route_geo leer — Geocoding/Google Directions fehlgeschlagen für {request.start_location} → {segment_target}",
             job_id=job_id,
         )
     else:
@@ -2070,8 +2084,8 @@ async def api_replace_stop(travel_id: int, body: ReplaceStopRequest):
         if not body.manual_location or not body.manual_location.strip():
             raise HTTPException(400, detail="Ortsname darf nicht leer sein")
 
-        coords = await geocode_nominatim(body.manual_location.strip())
-        if not coords:
+        geo_result = await geocode_google(body.manual_location.strip())
+        if not geo_result:
             raise HTTPException(400, detail=f"Ort '{body.manual_location}' konnte nicht gefunden werden")
 
         nights = body.manual_nights if body.manual_nights and body.manual_nights > 0 else old_stop.get("nights", 1)
@@ -2083,8 +2097,8 @@ async def api_replace_stop(travel_id: int, body: ReplaceStopRequest):
             "stop_index": stop_index,
             "new_region": body.manual_location.strip(),
             "new_country": "XX",
-            "new_lat": coords[0],
-            "new_lng": coords[1],
+            "new_lat": geo_result[0],
+            "new_lng": geo_result[1],
             "new_nights": nights,
             "request": plan.get("request", {}),
         }
@@ -2134,7 +2148,7 @@ async def api_replace_stop(travel_id: int, body: ReplaceStopRequest):
             route_geometry=route_geo,
         )
 
-        # Enrich options with OSRM
+        # Enrich options with Google Directions
         for opt in options:
             opt["nights"] = old_stop.get("nights", 1)
 

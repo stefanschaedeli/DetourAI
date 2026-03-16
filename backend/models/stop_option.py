@@ -23,6 +23,7 @@ class StopOption(BaseModel):
     maps_url: Optional[str] = None
     lat: Optional[float] = None
     lon: Optional[float] = None
+    place_id: Optional[str] = None
 
 
 class StopOptionsResponse(BaseModel):

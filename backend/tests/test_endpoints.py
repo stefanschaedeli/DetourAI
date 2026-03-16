@@ -117,8 +117,11 @@ def test_plan_trip_success(client, mock_redis, sample_request, mocker):
         'agents.stop_options_finder.StopOptionsFinderAgent.find_options_streaming',
         side_effect=mock_find_options_streaming,
     )
-    mocker.patch('main.geocode_nominatim', return_value=(47.5, 7.6))
-    mocker.patch('main.osrm_route', return_value=(1.0, 80.0))
+    mocker.patch('main.geocode_google', return_value=(47.5, 7.6, 'ChIJMz5dPRdMkEcRjnz1cE6JLGU'))
+    mocker.patch('main.google_directions_simple', return_value=(1.0, 80.0))
+    mocker.patch('main.google_directions', return_value=(1.0, 80.0, 'encodedPolyline123'))
+    mocker.patch('main.reference_cities_along_route_google', return_value=['Bern', 'Fribourg', 'Lausanne'])
+    mocker.patch('main.reverse_geocode_google', return_value=('Bern', 'ChIJMz5dPRdMkEcR123'))
 
     r = client.post("/api/plan-trip", json=sample_request)
     assert r.status_code == 200

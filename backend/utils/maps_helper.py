@@ -1,67 +1,147 @@
+import os
 import asyncio
 import math
 import aiohttp
 from typing import Optional
 from urllib.parse import quote
-from utils.settings_store import get_setting
 
 
-async def geocode_nominatim(place: str, country_code: str = "") -> Optional[tuple[float, float]]:
-    """Returns (lat, lon) or None. Max 1 req/s — caller must sleep."""
-    params = {"q": place, "format": "json", "limit": 1}
+# In-memory LRU cache for geocoding (prevents duplicate API calls within a job)
+_geocode_cache: dict[str, tuple[float, float, str]] = {}
+
+
+def _google_api_key() -> Optional[str]:
+    return os.getenv("GOOGLE_MAPS_API_KEY")
+
+
+async def geocode_google(place: str, country_code: str = "") -> Optional[tuple[float, float, str]]:
+    """Google Geocoding API: place → (lat, lon, place_id) or None.
+    No rate-limit sleep needed (Google allows 50 QPS).
+    Uses in-memory cache to avoid duplicate calls."""
+    cache_key = f"{place}|{country_code}"
+    if cache_key in _geocode_cache:
+        return _geocode_cache[cache_key]
+    key = _google_api_key()
+    if not key:
+        return None
+    params = {"address": place, "key": key, "language": "de"}
     if country_code:
-        params["countrycodes"] = country_code.lower()
+        params["components"] = f"country:{country_code.upper()}"
     try:
         async with aiohttp.ClientSession() as s:
             async with s.get(
-                "https://nominatim.openstreetmap.org/search",
+                "https://maps.googleapis.com/maps/api/geocode/json",
                 params=params,
-                headers={"User-Agent": "Travelman2/1.0"},
-                timeout=aiohttp.ClientTimeout(total=get_setting("api.nominatim_timeout_s")),
+                timeout=aiohttp.ClientTimeout(total=8),
             ) as r:
                 data = await r.json()
-                if data:
-                    return float(data[0]["lat"]), float(data[0]["lon"])
+                if data.get("status") == "OK" and data.get("results"):
+                    result = data["results"][0]
+                    loc = result["geometry"]["location"]
+                    place_id = result.get("place_id", "")
+                    entry = (float(loc["lat"]), float(loc["lng"]), place_id)
+                    _geocode_cache[cache_key] = entry
+                    return entry
     except Exception:
         pass
     return None
 
 
-async def osrm_route(coords: list[tuple[float, float]]) -> tuple[float, float]:
-    """Returns (hours, km). coords = [(lat,lon), ...]"""
-    points = ";".join(f"{lon},{lat}" for lat, lon in coords)
-    url = f"http://router.project-osrm.org/route/v1/driving/{points}?overview=false"
+async def reverse_geocode_google(lat: float, lon: float) -> Optional[tuple[str, str]]:
+    """Google Reverse Geocoding: (lat, lon) → (place_name, place_id) or None."""
+    key = _google_api_key()
+    if not key:
+        return None
     try:
         async with aiohttp.ClientSession() as s:
-            async with s.get(url, timeout=aiohttp.ClientTimeout(total=get_setting("api.osrm_timeout_s"))) as r:
+            async with s.get(
+                "https://maps.googleapis.com/maps/api/geocode/json",
+                params={"latlng": f"{lat},{lon}", "key": key, "language": "de"},
+                timeout=aiohttp.ClientTimeout(total=8),
+            ) as r:
                 data = await r.json()
-                if data.get("routes"):
-                    route = data["routes"][0]
-                    hours = round(route["duration"] / 3600, 1)
-                    km    = round(route["distance"] / 1000, 0)
-                    return hours, km
+                if data.get("status") == "OK" and data.get("results"):
+                    result = data["results"][0]
+                    # Extract city-level name from address components
+                    name = None
+                    for comp in result.get("address_components", []):
+                        if "locality" in comp.get("types", []):
+                            name = comp["long_name"]
+                            break
+                        if "administrative_area_level_2" in comp.get("types", []) and not name:
+                            name = comp["long_name"]
+                    if not name:
+                        name = result.get("formatted_address", "").split(",")[0]
+                    place_id = result.get("place_id", "")
+                    return (name, place_id)
     except Exception:
         pass
-    return 0.0, 0.0
+    return None
 
 
-async def osrm_route_with_geometry(coords: list[tuple[float, float]]) -> tuple[float, float, str]:
-    """Like osrm_route() but returns (hours, km, polyline5_geometry)."""
-    points = ";".join(f"{lon},{lat}" for lat, lon in coords)
-    url = f"http://router.project-osrm.org/route/v1/driving/{points}?overview=simplified&geometries=polyline"
+async def google_directions(origin: str, destination: str, waypoints: list[str] = None) -> tuple[float, float, str]:
+    """Google Directions API: → (hours, km, encoded_polyline).
+    Accepts place_ids (prefix 'place_id:ChIJ...') or addresses."""
+    key = _google_api_key()
+    if not key:
+        return (0.0, 0.0, "")
+    params = {
+        "origin": origin,
+        "destination": destination,
+        "key": key,
+        "mode": "driving",
+        "language": "de",
+    }
+    if waypoints:
+        params["waypoints"] = "|".join(waypoints)
     try:
         async with aiohttp.ClientSession() as s:
-            async with s.get(url, timeout=aiohttp.ClientTimeout(total=get_setting("api.osrm_timeout_s"))) as r:
+            async with s.get(
+                "https://maps.googleapis.com/maps/api/directions/json",
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as r:
                 data = await r.json()
-                if data.get("routes"):
+                if data.get("status") == "OK" and data.get("routes"):
                     route = data["routes"][0]
-                    hours = round(route["duration"] / 3600, 1)
-                    km = round(route["distance"] / 1000, 0)
-                    geometry = route.get("geometry", "")
-                    return hours, km, geometry
+                    total_seconds = sum(leg["duration"]["value"] for leg in route["legs"])
+                    total_meters = sum(leg["distance"]["value"] for leg in route["legs"])
+                    hours = round(total_seconds / 3600, 1)
+                    km = round(total_meters / 1000, 0)
+                    polyline = route.get("overview_polyline", {}).get("points", "")
+                    return (hours, km, polyline)
     except Exception:
         pass
-    return 0.0, 0.0, ""
+    return (0.0, 0.0, "")
+
+
+async def google_directions_simple(origin: str, destination: str) -> tuple[float, float]:
+    """Convenience: only (hours, km) — no polyline needed."""
+    hours, km, _ = await google_directions(origin, destination)
+    return (hours, km)
+
+
+async def reference_cities_along_route_google(
+    origin: str, destination: str, num_points: int = 3,
+) -> list[str]:
+    """Find cities along route via Google Directions + Reverse Geocoding."""
+    hours, km, polyline = await google_directions(origin, destination)
+    if not polyline or km <= 0:
+        return []
+    points = decode_polyline5(polyline)
+    if not points:
+        return []
+    step = km / (num_points + 1)
+    cities: list[str] = []
+    for i in range(1, num_points + 1):
+        target_km = step * i
+        lat, lon = point_along_route(points, target_km)
+        result = await reverse_geocode_google(lat, lon)
+        if result:
+            name, _ = result
+            if name and name not in cities:
+                cities.append(name)
+    return cities
 
 
 def decode_polyline5(encoded: str) -> list[tuple[float, float]]:
@@ -117,47 +197,9 @@ def point_along_route(points: list[tuple[float, float]], target_km: float) -> tu
     return points[-1]
 
 
-async def reverse_geocode_nominatim(lat: float, lon: float) -> Optional[str]:
-    """Returns city/town name for a coordinate, or None."""
-    try:
-        async with aiohttp.ClientSession() as s:
-            async with s.get(
-                "https://nominatim.openstreetmap.org/reverse",
-                params={"lat": lat, "lon": lon, "format": "json", "zoom": 10},
-                headers={"User-Agent": "Travelman2/1.0"},
-                timeout=aiohttp.ClientTimeout(total=get_setting("api.nominatim_timeout_s")),
-            ) as r:
-                data = await r.json()
-                addr = data.get("address", {})
-                return addr.get("city") or addr.get("town") or addr.get("village") or addr.get("municipality") or data.get("name")
-    except Exception:
-        pass
-    return None
-
-
-async def reference_cities_along_route(
-    points: list[tuple[float, float]], total_km: float, from_km: float, to_km: float, num_points: int = 3,
-) -> list[str]:
-    """Sample points in [from_km, to_km] along the route, reverse-geocode them."""
-    if not points or total_km <= 0 or to_km <= from_km:
-        return []
-    step = (to_km - from_km) / (num_points + 1)
-    cities: list[str] = []
-    for i in range(1, num_points + 1):
-        km = from_km + step * i
-        lat, lon = point_along_route(points, km)
-        await asyncio.sleep(get_setting("api.nominatim_delay_ms") / 1000.0)  # Nominatim rate limit
-        name = await reverse_geocode_nominatim(lat, lon)
-        if name and name not in cities:
-            cities.append(name)
-    return cities
-
-
 def corridor_bbox(
-    points: list[tuple[float, float]], from_km: float, to_km: float, buffer_km: float = None,
+    points: list[tuple[float, float]], from_km: float, to_km: float, buffer_km: float = 50.0,
 ) -> dict:
-    if buffer_km is None:
-        buffer_km = float(get_setting("geo.corridor_buffer_km"))
     """Bounding box for the route section between from_km and to_km, plus buffer."""
     if not points:
         return {}
@@ -192,17 +234,25 @@ def corridor_bbox(
     }
 
 
-def build_maps_url(locations: list[str]) -> Optional[str]:
-    """Builds Google Maps Directions URL."""
+def build_maps_url(locations: list[str], place_ids: list[str] = None) -> Optional[str]:
+    """Builds Google Maps Directions URL. Uses Place IDs when available."""
     locs = [l for l in locations if l]
     if not locs:
         return None
     if len(locs) == 1:
+        pid = place_ids[0] if place_ids and place_ids[0] else None
+        if pid:
+            return f"https://www.google.com/maps/place/?q=place_id:{pid}"
         return f"https://maps.google.com/?q={quote(locs[0])}"
     origin = quote(locs[0])
-    dest   = quote(locs[-1])
-    wp     = '|'.join(quote(l) for l in locs[1:-1])
-    url    = f"https://www.google.com/maps/dir/?api=1&origin={origin}&destination={dest}"
+    dest = quote(locs[-1])
+    wp = '|'.join(quote(l) for l in locs[1:-1])
+    url = f"https://www.google.com/maps/dir/?api=1&origin={origin}&destination={dest}"
+    if place_ids:
+        if len(place_ids) > 0 and place_ids[0]:
+            url += f"&origin_place_id={place_ids[0]}"
+        if len(place_ids) > len(locs) - 1 and place_ids[-1]:
+            url += f"&destination_place_id={place_ids[-1]}"
     if wp:
         url += f"&waypoints={wp}"
     return url

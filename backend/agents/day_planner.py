@@ -4,7 +4,7 @@ from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
-from utils.maps_helper import geocode_nominatim, osrm_route, build_maps_url
+from utils.maps_helper import geocode_google, google_directions_simple, build_maps_url
 from utils.weather import get_forecast
 from utils.currency import detect_currency, get_chf_rate
 from agents._client import get_client, get_model, get_max_tokens
@@ -57,32 +57,30 @@ class DayPlannerAgent:
             enriched.append(enriched_stop)
         return enriched
 
-    async def _enrich_with_osrm(self, stops: list) -> list:
-        """Geocode all locations, then enrich stops with real drive times via OSRM."""
+    async def _enrich_with_google(self, stops: list) -> list:
+        """Geocode all locations, then enrich stops with real drive times via Google Directions."""
         req = self.request
         locations = [req.start_location] + [s.get("region", "") for s in stops]
 
-        # Geocode sequentially with 350ms delay
-        coords = []
-        for loc in locations:
-            coords.append(await geocode_nominatim(loc))
-            await asyncio.sleep(0.35)
+        # Geocode all in parallel (no rate limit needed for Google)
+        coords = await asyncio.gather(*[geocode_google(loc) for loc in locations])
 
-        # Store start coords for use in the final result
-        self._start_coords = coords[0] if coords else None
+        # Store start coords and place_id
+        self._start_coords = (coords[0][0], coords[0][1]) if coords[0] else None
+        self._start_place_id = coords[0][2] if coords[0] else None
 
-        # OSRM calls in parallel
-        osrm_tasks = []
-        for i in range(1, len(coords)):
-            prev = coords[i - 1]
-            curr = coords[i]
-            if prev and curr:
-                osrm_tasks.append(osrm_route([prev, curr]))
+        # Google Directions calls in parallel (using location strings)
+        dir_tasks = []
+        for i in range(1, len(locations)):
+            prev_result = coords[i - 1]
+            curr_result = coords[i]
+            if prev_result and curr_result:
+                dir_tasks.append(google_directions_simple(locations[i - 1], locations[i]))
             else:
                 async def _zero(): return (0.0, 0.0)
-                osrm_tasks.append(_zero())
+                dir_tasks.append(_zero())
 
-        results = await asyncio.gather(*[t if asyncio.iscoroutine(t) else t for t in osrm_tasks],
+        results = await asyncio.gather(*[t if asyncio.iscoroutine(t) else t for t in dir_tasks],
                                        return_exceptions=True)
 
         enriched = []
@@ -96,13 +94,12 @@ class DayPlannerAgent:
                 s.setdefault("drive_hours_from_prev", 0)
                 s.setdefault("drive_km_from_prev", 0)
 
-            # Store lat/lng
+            # Store lat/lng and place_id
             if i + 1 < len(coords) and coords[i + 1]:
-                s["lat"], s["lng"] = coords[i + 1]
+                s["lat"], s["lng"] = coords[i + 1][0], coords[i + 1][1]
+                s["place_id"] = coords[i + 1][2]
 
-            # Google Maps URL for stop
             s["google_maps_url"] = build_maps_url([req.start_location, s.get("region", "")])
-
             enriched.append(s)
         return enriched
 
@@ -269,8 +266,8 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
 
         stops = self._build_stops(route, accommodations, activities)
 
-        await debug_logger.log(LogLevel.INFO, "OSRM-Anreicherung startet", job_id=self.job_id, agent="DayPlanner")
-        stops = await self._enrich_with_osrm(stops)
+        await debug_logger.log(LogLevel.INFO, "Google-Anreicherung startet", job_id=self.job_id, agent="DayPlanner")
+        stops = await self._enrich_with_google(stops)
 
         # Wetter-Anreicherung für alle Stopps
         await debug_logger.log(LogLevel.INFO, "Wetter-Anreicherung startet", job_id=self.job_id, agent="DayPlanner")
@@ -353,6 +350,7 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
             "start_location": req.start_location,
             "start_lat": start_coords[0] if start_coords else None,
             "start_lng": start_coords[1] if start_coords else None,
+            "start_place_id": getattr(self, "_start_place_id", None),
             "stops": stops,
             "day_plans": day_plans,
             "cost_estimate": cost_estimate,

@@ -284,6 +284,8 @@ Gib exakt dieses JSON zurück:
                 actual_type = opt.get("type") or "unterkunft"
                 images = await fetch_unsplash_images(f"{region} {actual_type}", actual_type)
                 opt.update(images)
+            if gp_match and gp_match.get("place_id"):
+                opt["place_id"] = gp_match["place_id"]
             return opt
 
         options = await asyncio.gather(*[enrich_option(opt) for opt in result.get("options", [])])

@@ -351,6 +351,23 @@ def test_stop_option_types():
         assert opt.option_type == opt_type
 
 
+def test_stop_option_place_id():
+    opt = StopOption(
+        id=1, option_type="direct", region="Bern", country="Schweiz",
+        drive_hours=2.0, nights=2, teaser="Test",
+        place_id="ChIJMz5dPRdMkEcRjnz1cE6JLGU",
+    )
+    assert opt.place_id == "ChIJMz5dPRdMkEcRjnz1cE6JLGU"
+
+
+def test_stop_option_place_id_default_none():
+    opt = StopOption(
+        id=1, option_type="direct", region="Bern", country="Schweiz",
+        drive_hours=2.0, nights=2, teaser="Test",
+    )
+    assert opt.place_id is None
+
+
 # ---------------------------------------------------------------------------
 # CostEstimate
 # ---------------------------------------------------------------------------
@@ -421,6 +438,32 @@ def test_time_block_meal_with_search_url():
     assert tb.google_search_url is not None
     assert "google.com" in tb.google_search_url
     assert tb.price_chf == 35.0
+
+
+def test_time_block_place_id():
+    tb = TimeBlock(
+        time="09:00", activity_type="activity", title="Museum",
+        location="Bern", duration_minutes=120, description="Besuch",
+        place_id="ChIJABC123",
+    )
+    assert tb.place_id == "ChIJABC123"
+
+
+# ---------------------------------------------------------------------------
+# TravelPlan start_place_id
+# ---------------------------------------------------------------------------
+
+def test_travel_plan_start_place_id():
+    plan = TravelPlan(
+        job_id="test", start_location="Liestal",
+        start_place_id="ChIJMz5dPRdMkEcR123",
+        stops=[], day_plans=[],
+        cost_estimate=CostEstimate(
+            accommodations_chf=0, activities_chf=0, food_chf=0,
+            fuel_chf=0, total_chf=0, budget_remaining_chf=0,
+        ),
+    )
+    assert plan.start_place_id == "ChIJMz5dPRdMkEcR123"
 
 
 # ---------------------------------------------------------------------------

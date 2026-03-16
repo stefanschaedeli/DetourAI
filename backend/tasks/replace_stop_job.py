@@ -20,7 +20,7 @@ def _get_store():
 
 
 async def _replace_stop_job(job_id: str):
-    """Replaces a single stop: OSRM recalc, agent research, DB update."""
+    """Replaces a single stop: Google Directions recalc, agent research, DB update."""
     from agents.activities_agent import ActivitiesAgent
     from agents.restaurants_agent import RestaurantsAgent
     from agents.accommodation_researcher import AccommodationResearcherAgent
@@ -29,7 +29,7 @@ async def _replace_stop_job(job_id: str):
     from models.travel_request import TravelRequest
     from utils.debug_logger import debug_logger, LogLevel
     from utils.image_fetcher import fetch_unsplash_images
-    from utils.maps_helper import osrm_route, geocode_nominatim
+    from utils.maps_helper import geocode_google, google_directions_simple
     from utils.travel_db import get_travel, update_plan_json
     from utils.settings_store import get_setting
 
@@ -91,23 +91,21 @@ async def _replace_stop_job(job_id: str):
     }
 
     await debug_logger.push_event(job_id, "replace_stop_progress", None, {
-        "stop_id": stop_id, "phase": "osrm", "message": "Fahrzeiten werden berechnet…",
+        "stop_id": stop_id, "phase": "directions", "message": "Fahrzeiten werden berechnet…",
     })
 
-    # --- OSRM recalculation ---
-    new_coords = (new_lat, new_lng)
+    # --- Google Directions recalculation ---
+    new_place = f"{new_region}, {new_country}"
 
     # Previous stop or start_location
     if stop_index > 0:
         prev = stops[stop_index - 1]
-        prev_coords = (prev.get("lat"), prev.get("lon"))
-        if not prev_coords[0]:
-            prev_coords = await geocode_nominatim(f"{prev['region']}, {prev.get('country', '')}")
+        prev_place = f"{prev['region']}, {prev.get('country', '')}"
     else:
-        prev_coords = await geocode_nominatim(plan.get("start_location", ""))
+        prev_place = plan.get("start_location", "")
 
-    if prev_coords:
-        hours, km = await osrm_route([prev_coords, new_coords])
+    if prev_place:
+        hours, km = await google_directions_simple(prev_place, new_place)
         if hours > 0:
             new_stop["drive_hours_from_prev"] = round(hours, 1)
             new_stop["drive_km_from_prev"] = round(km)
@@ -115,15 +113,11 @@ async def _replace_stop_job(job_id: str):
     # Next stop recalc
     if stop_index < len(stops) - 1:
         nxt = stops[stop_index + 1]
-        nxt_coords = (nxt.get("lat"), nxt.get("lon"))
-        if not nxt_coords[0]:
-            await asyncio.sleep(0.35)
-            nxt_coords = await geocode_nominatim(f"{nxt['region']}, {nxt.get('country', '')}")
-        if nxt_coords:
-            hours, km = await osrm_route([new_coords, nxt_coords])
-            if hours > 0:
-                nxt["drive_hours_from_prev"] = round(hours, 1)
-                nxt["drive_km_from_prev"] = round(km)
+        nxt_place = f"{nxt['region']}, {nxt.get('country', '')}"
+        hours, km = await google_directions_simple(new_place, nxt_place)
+        if hours > 0:
+            nxt["drive_hours_from_prev"] = round(hours, 1)
+            nxt["drive_km_from_prev"] = round(km)
 
     # Recalculate arrival_day for this and all following stops
     if stop_index == 0:

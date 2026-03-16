@@ -114,5 +114,7 @@ Gib exakt dieses JSON zurück:
                     "restaurant",
                 )
                 restaurant.update(images)
+            if matched and matched.get("place_id"):
+                restaurant["place_id"] = matched["place_id"]
 
         return result

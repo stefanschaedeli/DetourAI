@@ -197,16 +197,30 @@ const GoogleMaps = (() => {
    *
    * Returns Promise<string[]> — 1–5 URLs.
    */
-  async function getPlaceImages(name, lat, lng, context) {
-    const cacheKey = name + '|' + (lat || '') + '|' + (lng || '') + '|' + (context || '');
+  async function getPlaceImages(name, lat, lng, context, placeId) {
+    const cacheKey = name + '|' + (lat || '') + '|' + (lng || '') + '|' + (context || '') + '|' + (placeId || '');
     if (_imageCache.has(cacheKey)) return _imageCache.get(cacheKey);
 
-    const urls = await _fetchImagesWithFallback(name, lat, lng, context);
+    const urls = await _fetchImagesWithFallback(name, lat, lng, context, placeId);
     _imageCache.set(cacheKey, urls);
     return urls;
   }
 
-  async function _fetchImagesWithFallback(name, lat, lng, context) {
+  async function _fetchImagesWithFallback(name, lat, lng, context, placeId) {
+    // Tier 0: Place Details by ID (most accurate, cheapest)
+    if (placeId) {
+      try {
+        const { Place } = await google.maps.importLibrary('places');
+        const place = new Place({ id: placeId });
+        await place.fetchFields({ fields: ['photos'] });
+        if (place.photos && place.photos.length >= 1) {
+          return place.photos.slice(0, 5).map(p => p.getURI({ maxWidth: 800, maxHeight: 600 }));
+        }
+      } catch (e) {
+        _log('WARNING', `Place Details Fotos fehlgeschlagen für ${placeId}: ${e.message}`);
+      }
+    }
+
     // Tier 1a: Nearby search by coordinates (city/region context)
     if (lat && lng && context !== 'hotel' && context !== 'restaurant' && context !== 'activity') {
       try {
@@ -314,6 +328,19 @@ const GoogleMaps = (() => {
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
+  /**
+   * Create a marker using Place ID. Falls back to createDivMarker if placeId is null.
+   * @param {google.maps.Map} map
+   * @param {string|null} placeId - Google Place ID
+   * @param {{lat: number, lng: number}} pos - fallback position
+   * @param {string} html - marker HTML content
+   * @param {Function} onClick - click handler
+   */
+  function createPlaceMarker(map, placeId, pos, html, onClick) {
+    // Always use div marker with known coordinates — Place ID just enriches the info
+    return createDivMarker(map, pos, html, onClick);
+  }
+
   function _setApiKey(key) {
     _apiKey = key;
   }
@@ -324,6 +351,7 @@ const GoogleMaps = (() => {
     initRouteMap,
     initGuideMap,
     createDivMarker,
+    createPlaceMarker,
     attachAutocomplete,
     getPlaceImages,
     get routeMap() { return _routeMap; },

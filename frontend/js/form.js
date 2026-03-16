@@ -255,10 +255,13 @@ function _attachLegAutocomplete(legIndex, field) {
     const place = ac.getPlace();
     if (place && place.formatted_address) {
       const val = place.formatted_address;
+      const placeId = (place.place && place.place.id) || null;
       if (field === 'start') {
         updateLegField(legIndex, 'start_location', val);
+        if (placeId) updateLegField(legIndex, 'start_place_id', placeId);
       } else {
         updateLegField(legIndex, 'end_location', val);
+        if (placeId) updateLegField(legIndex, 'end_place_id', placeId);
       }
     }
     saveFormToCache();

@@ -252,6 +252,8 @@ Gib exakt dieses JSON zurück:
                     f"{activity.get('name', '')} {region}", "activity"
                 )
                 activity.update(images)
+            if matched and matched.get("place_id"):
+                activity["place_id"] = matched["place_id"]
 
         result["top_activities"] = activities
         return result
