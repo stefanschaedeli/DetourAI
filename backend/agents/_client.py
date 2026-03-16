@@ -1,6 +1,7 @@
 """Shared Anthropic client factory — reads env vars at call time, not import time."""
 import os
 import anthropic
+from utils.settings_store import get_setting
 
 
 def get_client() -> anthropic.Anthropic:
@@ -14,7 +15,19 @@ def get_client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=api_key)
 
 
-def get_model(prod_model: str) -> str:
-    """Return the appropriate model based on TEST_MODE env var."""
-    test_mode = os.getenv("TEST_MODE", "true").lower() == "true"
-    return "claude-haiku-4-5" if test_mode else prod_model
+def get_model(prod_model: str, agent_key: str = None) -> str:
+    """Return the appropriate model based on settings or TEST_MODE env var."""
+    test_mode = get_setting("system.test_mode")
+    if test_mode is None:
+        test_mode = os.getenv("TEST_MODE", "true").lower() == "true"
+    if test_mode:
+        return "claude-haiku-4-5"
+    if agent_key:
+        return get_setting(f"agent.{agent_key}.model") or prod_model
+    return prod_model
+
+
+def get_max_tokens(agent_key: str, default: int) -> int:
+    """Return max_tokens from settings for the given agent."""
+    val = get_setting(f"agent.{agent_key}.max_tokens")
+    return int(val) if val is not None else default

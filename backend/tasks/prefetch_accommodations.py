@@ -37,11 +37,14 @@ async def _prefetch_all_accommodations(job_id: str):
     if not selected_stops:
         return
 
-    acc_budget = request.budget_chf * 0.45
+    from utils.settings_store import get_setting
+    acc_pct = get_setting("budget.accommodation_pct") / 100.0
+    acc_budget = request.budget_chf * acc_pct
     total_nights = sum(s.get("nights", request.min_nights_per_stop) for s in selected_stops)
     budget_per_night = acc_budget / total_nights if total_nights > 0 else 150.0
 
-    semaphore = asyncio.Semaphore(2)
+    parallelism = get_setting("api.accommodation_parallelism")
+    semaphore = asyncio.Semaphore(parallelism)
     prefetched = {}
 
     async def fetch_stop(stop):

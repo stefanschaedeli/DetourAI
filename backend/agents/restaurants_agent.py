@@ -5,7 +5,9 @@ from utils.json_parser import parse_agent_json
 from utils.image_fetcher import fetch_unsplash_images
 from utils.brave_search import search_places
 from utils.google_places import search_restaurants as gp_search_restaurants, place_photo_url
-from agents._client import get_client, get_model
+from agents._client import get_client, get_model, get_max_tokens
+
+AGENT_KEY = "restaurants"
 
 SYSTEM_PROMPT = (
     "Du bist ein Restaurantberater für Reisende. "
@@ -18,7 +20,7 @@ class RestaurantsAgent:
         self.request = request
         self.job_id = job_id
         self.client = get_client()
-        self.model = get_model("claude-sonnet-4-5")
+        self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
 
     async def run_stop(self, stop: dict) -> dict:
         req = self.request
@@ -84,7 +86,7 @@ Gib exakt dieses JSON zurück:
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=1024,
+                max_tokens=get_max_tokens(AGENT_KEY, 1024),
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )

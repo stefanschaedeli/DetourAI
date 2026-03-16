@@ -210,6 +210,43 @@ async function apiLogError(level, message, source, stack) {
   } catch (_) { /* best-effort — don't throw on logging failures */ }
 }
 
+async function apiGetSettings() {
+  return (await _fetchQuiet(`${API}/settings`)).json();
+}
+
+async function apiSaveSettings(settings) {
+  return (await _fetchQuiet(`${API}/settings`, {
+    method: 'PUT',
+    body: JSON.stringify({ settings }),
+  })).json();
+}
+
+async function apiResetSettings(section) {
+  return (await _fetchQuiet(`${API}/settings/reset`, {
+    method: 'POST',
+    body: JSON.stringify({ section }),
+  })).json();
+}
+
+async function apiReplaceStop(travelId, stopId, mode, manualLocation, manualNights) {
+  return (await _fetch(`${API}/travels/${travelId}/replace-stop`, {
+    method: 'POST',
+    body: JSON.stringify({
+      stop_id: stopId,
+      mode,
+      manual_location: manualLocation || null,
+      manual_nights: manualNights || null,
+    }),
+  }, 'Stopp wird ersetzt…')).json();
+}
+
+async function apiReplaceStopSelect(travelId, jobId, optionIndex) {
+  return (await _fetch(`${API}/travels/${travelId}/replace-stop-select`, {
+    method: 'POST',
+    body: JSON.stringify({ job_id: jobId, option_index: optionIndex }),
+  }, 'Option wird übernommen…')).json();
+}
+
 /**
  * Open SSE connection for a job.
  * @param {string} jobId
@@ -225,6 +262,7 @@ function openSSE(jobId, handlers) {
     'accommodations_all_loaded', 'stop_research_started', 'activities_loaded',
     'restaurants_loaded', 'route_option_ready', 'route_options_done', 'ping',
     'region_plan_ready', 'region_updated', 'leg_complete',
+    'replace_stop_progress', 'replace_stop_complete',
   ];
 
   events.forEach(evt => {

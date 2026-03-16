@@ -8,7 +8,9 @@ from utils.image_fetcher import fetch_unsplash_images
 from utils.brave_search import search_places
 from utils.google_places import search_attractions, place_photo_url
 from utils.weather import get_forecast
-from agents._client import get_client, get_model
+from agents._client import get_client, get_model, get_max_tokens
+
+AGENT_KEY = "activities"
 
 SYSTEM_PROMPT = (
     "Du bist ein erfahrener Aktivitätsberater für Reisende mit Expertise in "
@@ -129,7 +131,7 @@ class ActivitiesAgent:
         self.request = request
         self.job_id = job_id
         self.client = get_client()
-        self.model = get_model("claude-sonnet-4-5")
+        self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
 
     async def run_stop(self, stop: dict) -> dict:
         req = self.request
@@ -223,7 +225,7 @@ Gib exakt dieses JSON zurück:
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=2048,
+                max_tokens=get_max_tokens(AGENT_KEY, 2048),
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )

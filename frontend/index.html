@@ -54,6 +54,10 @@
           <option value="debug">Debug</option>
         </select>
       </div>
+      <div class="settings-divider"></div>
+      <button class="settings-full-btn" onclick="toggleSettings(); openSettingsPage();">
+        Alle Einstellungen öffnen
+      </button>
     </div>
   </div>
 </header>
@@ -460,6 +464,11 @@
     </div>
   </section>
 
+  <!-- ============================================================ Settings section -->
+  <section class="section" id="settings-section">
+    <!-- Dynamisch befüllt durch settings.js -->
+  </section>
+
 </main>
 
 <!-- ======================================================== Quick-submit bar -->
@@ -550,6 +559,7 @@
 <script src="js/progress.js"></script>
 <script src="js/guide.js"></script>
 <script src="js/travels.js"></script>
+<script src="js/settings.js"></script>
 
 <script>
   // Initialize on DOM ready

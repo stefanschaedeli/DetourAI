@@ -7,7 +7,10 @@ from utils.json_parser import parse_agent_json
 from utils.maps_helper import geocode_nominatim, osrm_route, build_maps_url
 from utils.weather import get_forecast
 from utils.currency import detect_currency, get_chf_rate
-from agents._client import get_client, get_model
+from agents._client import get_client, get_model, get_max_tokens
+from utils.settings_store import get_setting
+
+AGENT_KEY = "day_planner"
 
 SYSTEM_PROMPT = (
     "Du bist ein Reiseplaner. Erstelle einen detaillierten Tagesplan. "
@@ -20,7 +23,7 @@ class DayPlannerAgent:
         self.request = request
         self.job_id = job_id
         self.client = get_client()
-        self.model = get_model("claude-opus-4-5")
+        self.model = get_model("claude-opus-4-5", AGENT_KEY)
 
     def _build_stops(self, route: dict, accommodations: list, activities: list) -> list:
         """Merge route stops with accommodation and activity data."""
@@ -131,15 +134,15 @@ class DayPlannerAgent:
         for stop in stops:
             acc = stop.get("accommodation", {})
             if isinstance(acc, dict):
-                acc_total += acc.get("total_price_chf", 120 * stop.get("nights", 1))
+                acc_total += acc.get("total_price_chf", get_setting("budget.fallback_accommodation_chf") * stop.get("nights", 1))
             else:
-                acc_total += 120 * stop.get("nights", 1)
+                acc_total += get_setting("budget.fallback_accommodation_chf") * stop.get("nights", 1)
 
-        activities_chf = 80.0 * len(stops)
+        activities_chf = get_setting("budget.fallback_activities_chf") * len(stops)
         total_nights = sum(s.get("nights", 1) for s in stops)
-        food_chf = 50.0 * total_nights
+        food_chf = get_setting("budget.fallback_food_chf") * total_nights
         total_drive = sum(s.get("drive_hours_from_prev", 0) for s in stops)
-        fuel_chf = total_drive * 12.0
+        fuel_chf = total_drive * get_setting("budget.fuel_chf_per_hour")
 
         total = acc_total + activities_chf + food_chf + fuel_chf
         return {
@@ -234,7 +237,7 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=2048,
+                max_tokens=get_max_tokens(AGENT_KEY, 2048),
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )

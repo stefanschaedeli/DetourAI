@@ -9,7 +9,10 @@ from utils.image_fetcher import fetch_unsplash_images
 from utils.brave_search import search_places
 from utils.google_places import search_hotels, place_photo_url
 from utils.currency import detect_currency, get_chf_rate
-from agents._client import get_client, get_model
+from agents._client import get_client, get_model, get_max_tokens
+from utils.settings_store import get_setting
+
+AGENT_KEY = "accommodation_researcher"
 
 
 def _build_booking_url(hotel_name: str, region: str, checkin, nights: int, adults: int, children: int) -> str:
@@ -56,7 +59,7 @@ class AccommodationResearcherAgent:
         self.job_id = job_id
         self.extra_instructions = extra_instructions
         self.client = get_client()
-        self.model = get_model("claude-sonnet-4-5")
+        self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
 
     async def find_options(self, stop: dict, budget_per_night: float,
                            semaphore: asyncio.Semaphore = None) -> dict:
@@ -72,8 +75,8 @@ class AccommodationResearcherAgent:
         pref1 = preferences[1] if len(preferences) > 1 else "gemütliches Apartment"
         pref2 = preferences[2] if len(preferences) > 2 else "naturnahe Unterkunft"
 
-        budget_min = round(budget_per_night * 0.75, 0)
-        budget_max = round(budget_per_night * 1.30, 0)
+        budget_min = round(budget_per_night * get_setting("budget.acc_multiplier_min"), 0)
+        budget_max = round(budget_per_night * get_setting("budget.acc_multiplier_max"), 0)
 
         children_hint = ""
         if children_count > 0:
@@ -217,7 +220,7 @@ Gib exakt dieses JSON zurück:
                     def call():
                         return self.client.messages.create(
                             model=self.model,
-                            max_tokens=3500,
+                            max_tokens=get_max_tokens(AGENT_KEY, 3500),
                             system=SYSTEM_PROMPT,
                             messages=[{"role": "user", "content": prompt}],
                         )
@@ -226,7 +229,7 @@ Gib exakt dieses JSON zurück:
                 def call():
                     return self.client.messages.create(
                         model=self.model,
-                        max_tokens=3500,
+                        max_tokens=get_max_tokens(AGENT_KEY, 3500),
                         system=SYSTEM_PROMPT,
                         messages=[{"role": "user", "content": prompt}],
                     )

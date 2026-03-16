@@ -3,6 +3,7 @@ import math
 import aiohttp
 from typing import Optional
 from urllib.parse import quote
+from utils.settings_store import get_setting
 
 
 async def geocode_nominatim(place: str, country_code: str = "") -> Optional[tuple[float, float]]:
@@ -16,7 +17,7 @@ async def geocode_nominatim(place: str, country_code: str = "") -> Optional[tupl
                 "https://nominatim.openstreetmap.org/search",
                 params=params,
                 headers={"User-Agent": "Travelman2/1.0"},
-                timeout=aiohttp.ClientTimeout(total=4),
+                timeout=aiohttp.ClientTimeout(total=get_setting("api.nominatim_timeout_s")),
             ) as r:
                 data = await r.json()
                 if data:
@@ -32,7 +33,7 @@ async def osrm_route(coords: list[tuple[float, float]]) -> tuple[float, float]:
     url = f"http://router.project-osrm.org/route/v1/driving/{points}?overview=false"
     try:
         async with aiohttp.ClientSession() as s:
-            async with s.get(url, timeout=aiohttp.ClientTimeout(total=6)) as r:
+            async with s.get(url, timeout=aiohttp.ClientTimeout(total=get_setting("api.osrm_timeout_s"))) as r:
                 data = await r.json()
                 if data.get("routes"):
                     route = data["routes"][0]
@@ -50,7 +51,7 @@ async def osrm_route_with_geometry(coords: list[tuple[float, float]]) -> tuple[f
     url = f"http://router.project-osrm.org/route/v1/driving/{points}?overview=simplified&geometries=polyline"
     try:
         async with aiohttp.ClientSession() as s:
-            async with s.get(url, timeout=aiohttp.ClientTimeout(total=6)) as r:
+            async with s.get(url, timeout=aiohttp.ClientTimeout(total=get_setting("api.osrm_timeout_s"))) as r:
                 data = await r.json()
                 if data.get("routes"):
                     route = data["routes"][0]
@@ -124,7 +125,7 @@ async def reverse_geocode_nominatim(lat: float, lon: float) -> Optional[str]:
                 "https://nominatim.openstreetmap.org/reverse",
                 params={"lat": lat, "lon": lon, "format": "json", "zoom": 10},
                 headers={"User-Agent": "Travelman2/1.0"},
-                timeout=aiohttp.ClientTimeout(total=4),
+                timeout=aiohttp.ClientTimeout(total=get_setting("api.nominatim_timeout_s")),
             ) as r:
                 data = await r.json()
                 addr = data.get("address", {})
@@ -145,7 +146,7 @@ async def reference_cities_along_route(
     for i in range(1, num_points + 1):
         km = from_km + step * i
         lat, lon = point_along_route(points, km)
-        await asyncio.sleep(0.35)  # Nominatim rate limit
+        await asyncio.sleep(get_setting("api.nominatim_delay_ms") / 1000.0)  # Nominatim rate limit
         name = await reverse_geocode_nominatim(lat, lon)
         if name and name not in cities:
             cities.append(name)
@@ -153,8 +154,10 @@ async def reference_cities_along_route(
 
 
 def corridor_bbox(
-    points: list[tuple[float, float]], from_km: float, to_km: float, buffer_km: float = 30.0,
+    points: list[tuple[float, float]], from_km: float, to_km: float, buffer_km: float = None,
 ) -> dict:
+    if buffer_km is None:
+        buffer_km = float(get_setting("geo.corridor_buffer_km"))
     """Bounding box for the route section between from_km and to_km, plus buffer."""
     if not points:
         return {}

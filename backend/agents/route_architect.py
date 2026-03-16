@@ -2,7 +2,9 @@ from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
-from agents._client import get_client, get_model
+from agents._client import get_client, get_model, get_max_tokens
+
+AGENT_KEY = "route_architect"
 
 SYSTEM_PROMPT = (
     "Du bist ein Reiseplaner für Familien. "
@@ -16,7 +18,7 @@ class RouteArchitectAgent:
         self.request = request
         self.job_id = job_id
         self.client = get_client()
-        self.model = get_model("claude-opus-4-5")
+        self.model = get_model("claude-opus-4-5", AGENT_KEY)
 
     async def run(self) -> dict:
         await debug_logger.log(
@@ -76,7 +78,7 @@ Gib genau dieses JSON zurück:
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=2048,
+                max_tokens=get_max_tokens(AGENT_KEY, 2048),
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )

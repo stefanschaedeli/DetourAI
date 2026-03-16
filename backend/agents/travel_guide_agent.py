@@ -3,7 +3,9 @@ from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
 from utils.wikipedia import get_city_summary
-from agents._client import get_client, get_model
+from agents._client import get_client, get_model, get_max_tokens
+
+AGENT_KEY = "travel_guide"
 
 SYSTEM_PROMPT = (
     "Du bist ein erfahrener Reisejournalist. "
@@ -16,7 +18,7 @@ class TravelGuideAgent:
         self.request = request
         self.job_id = job_id
         self.client = get_client()
-        self.model = get_model("claude-sonnet-4-5")
+        self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
 
     async def run_stop(self, stop: dict, existing_activity_names: list) -> dict:
         req = self.request
@@ -76,7 +78,7 @@ Schreibe alle Texte auf Deutsch. Gib 3-5 weitere Aktivitäten zurück, die sich 
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=4096,
+                max_tokens=get_max_tokens(AGENT_KEY, 4096),
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )

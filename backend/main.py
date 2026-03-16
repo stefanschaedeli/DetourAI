@@ -83,6 +83,9 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
         elif task_name == "run_planning_job":
             from tasks.run_planning_job import run_planning_job_task
             run_planning_job_task.delay(job_id, **kwargs)
+        elif task_name == "replace_stop_job":
+            from tasks.replace_stop_job import replace_stop_job_task
+            replace_stop_job_task.delay(job_id)
     else:
         # Run inline as a fire-and-forget asyncio task
         if task_name == "prefetch_accommodations":
@@ -91,6 +94,9 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
         elif task_name == "run_planning_job":
             from tasks.run_planning_job import _run_job
             asyncio.ensure_future(_run_job(job_id, **kwargs))
+        elif task_name == "replace_stop_job":
+            from tasks.replace_stop_job import _replace_stop_job
+            asyncio.ensure_future(_replace_stop_job(job_id))
 
 
 app = FastAPI(title="Travelman2 API", version="1.0.0")
@@ -128,7 +134,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", str(Path(__file__).parent.parent / "outputs")))
 OUTPUTS_DIR.mkdir(exist_ok=True)
 
-from utils.travel_db import _init_db, save_travel, list_travels, get_travel, delete_travel, update_travel
+from utils.travel_db import _init_db, save_travel, list_travels, get_travel, delete_travel, update_travel, update_plan_json
+from utils.settings_store import (
+    get_setting, async_get_all_settings, async_reset_section,
+    validate_setting, set_setting, DEFAULTS, ALLOWED_MODELS,
+)
 _init_db()
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
@@ -323,7 +333,7 @@ def _leg_meta(request: TravelRequest, leg_index: int) -> dict:
 def _calc_budget_state(request: TravelRequest, selected_stops: list,
                        selected_accommodations: list) -> dict:
     """45% of total budget → accommodation."""
-    acc_budget = request.budget_chf * 0.45
+    acc_budget = request.budget_chf * (get_setting("budget.accommodation_pct") / 100.0)
     total_nights = sum(s.get("nights", request.min_nights_per_stop) for s in selected_stops)
     spent = sum(a.get("option", {}).get("total_price_chf", 0) for a in selected_accommodations)
     remaining = acc_budget - spent
@@ -1677,7 +1687,7 @@ async def research_accommodation(job_id: str, body: AccommodationResearchRequest
         raise HTTPException(status_code=404, detail=f"Stop {body.stop_id} nicht gefunden")
 
     total_nights = sum(s.get("nights", request.min_nights_per_stop) for s in selected_stops)
-    acc_budget = request.budget_chf * 0.45
+    acc_budget = request.budget_chf * (get_setting("budget.accommodation_pct") / 100.0)
     budget_per_night = acc_budget / max(1, total_nights)
 
     from agents.accommodation_researcher import AccommodationResearcherAgent
@@ -1838,6 +1848,54 @@ async def generate_output(job_id: str, file_type: str):
 
 
 # ---------------------------------------------------------------------------
+# Settings endpoints (SQLite key-value store)
+# ---------------------------------------------------------------------------
+
+class SettingsUpdateRequest(BaseModel):
+    settings: dict[str, object]
+
+class SettingsResetRequest(BaseModel):
+    section: str = Field(pattern="^(agent|budget|api|geo|system|all)$")
+
+
+@app.get("/api/settings")
+async def api_get_settings():
+    all_settings = await async_get_all_settings()
+    api_keys = {
+        "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
+        "google_maps": bool(os.getenv("GOOGLE_MAPS_API_KEY")),
+        "brave": bool(os.getenv("BRAVE_API_KEY")),
+    }
+    return {"settings": all_settings, "defaults": DEFAULTS, "api_keys": api_keys}
+
+
+@app.put("/api/settings")
+async def api_update_settings(body: SettingsUpdateRequest):
+    errors = []
+    for key, value in body.settings.items():
+        err = validate_setting(key, value)
+        if err:
+            errors.append(err)
+    if errors:
+        raise HTTPException(status_code=400, detail="; ".join(errors))
+    for key, value in body.settings.items():
+        # Coerce types to match defaults
+        default = DEFAULTS[key]
+        if isinstance(default, int) and not isinstance(default, bool):
+            value = int(value)
+        elif isinstance(default, float):
+            value = float(value)
+        set_setting(key, value)
+    return {"saved": True, "count": len(body.settings)}
+
+
+@app.post("/api/settings/reset")
+async def api_reset_settings(body: SettingsResetRequest):
+    count = await async_reset_section(body.section)
+    return {"reset": True, "section": body.section, "deleted": count}
+
+
+# ---------------------------------------------------------------------------
 # GET /health
 # ---------------------------------------------------------------------------
 
@@ -1978,6 +2036,169 @@ async def api_replan_travel(travel_id: int):
                pre_selected_accommodations=pre_selected_accommodations)
 
     return {"job_id": job_id, "status": "planning_started", "source_travel_id": travel_id}
+
+
+# ---------------------------------------------------------------------------
+# POST /api/travels/{travel_id}/replace-stop
+# Replace a stop in a finished travel plan (manual location or search mode)
+# ---------------------------------------------------------------------------
+
+class ReplaceStopRequest(BaseModel):
+    stop_id: int
+    mode: str  # "manual" | "search"
+    manual_location: Optional[str] = None
+    manual_nights: Optional[int] = None
+
+
+@app.post("/api/travels/{travel_id}/replace-stop")
+async def api_replace_stop(travel_id: int, body: ReplaceStopRequest):
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    plan = await get_travel(travel_id)
+    if plan is None:
+        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+
+    stops = plan.get("stops", [])
+    stop_index = next((i for i, s in enumerate(stops) if s.get("id") == body.stop_id), None)
+    if stop_index is None:
+        raise HTTPException(400, detail=f"Stop {body.stop_id} nicht gefunden")
+
+    old_stop = stops[stop_index]
+
+    if body.mode == "manual":
+        if not body.manual_location or not body.manual_location.strip():
+            raise HTTPException(400, detail="Ortsname darf nicht leer sein")
+
+        coords = await geocode_nominatim(body.manual_location.strip())
+        if not coords:
+            raise HTTPException(400, detail=f"Ort '{body.manual_location}' konnte nicht gefunden werden")
+
+        nights = body.manual_nights if body.manual_nights and body.manual_nights > 0 else old_stop.get("nights", 1)
+
+        job_id = uuid.uuid4().hex
+        job = {
+            "status": "replacing",
+            "travel_id": travel_id,
+            "stop_index": stop_index,
+            "new_region": body.manual_location.strip(),
+            "new_country": "XX",
+            "new_lat": coords[0],
+            "new_lng": coords[1],
+            "new_nights": nights,
+            "request": plan.get("request", {}),
+        }
+        save_job(job_id, job)
+        _fire_task("replace_stop_job", job_id)
+
+        return {"job_id": job_id, "status": "replacing"}
+
+    elif body.mode == "search":
+        req_data = plan.get("request", {})
+        request = TravelRequest(**req_data)
+
+        # Determine prev/next locations
+        if stop_index > 0:
+            prev_stop = stops[stop_index - 1]
+            prev_location = f"{prev_stop['region']}, {prev_stop.get('country', '')}"
+        else:
+            prev_location = plan.get("start_location", "")
+
+        if stop_index < len(stops) - 1:
+            next_stop = stops[stop_index + 1]
+            segment_target = f"{next_stop['region']}, {next_stop.get('country', '')}"
+        else:
+            segment_target = ""
+
+        # Calc route geometry for the segment
+        route_geo = {}
+        if prev_location and segment_target:
+            route_geo = await _calc_route_geometry(
+                prev_location, segment_target, 1,
+                request.max_drive_hours_per_day,
+            )
+
+        agent = StopOptionsFinderAgent(request, "search_" + uuid.uuid4().hex[:8])
+        options, map_anchors, _, _ = await _find_and_stream_options(
+            agent=agent,
+            job_id="search_" + uuid.uuid4().hex[:8],
+            selected_stops=[],
+            stop_number=1,
+            days_remaining=old_stop.get("nights", 2) + 2,
+            route_could_be_complete=False,
+            segment_target=segment_target,
+            segment_index=0,
+            segment_count=1,
+            prev_location=prev_location,
+            max_drive_hours=request.max_drive_hours_per_day,
+            route_geometry=route_geo,
+        )
+
+        # Enrich options with OSRM
+        for opt in options:
+            opt["nights"] = old_stop.get("nights", 1)
+
+        job_id = uuid.uuid4().hex
+        job = {
+            "status": "awaiting_selection",
+            "travel_id": travel_id,
+            "stop_index": stop_index,
+            "options": options,
+            "request": req_data,
+        }
+        save_job(job_id, job)
+
+        return {"job_id": job_id, "options": options, "map_anchors": map_anchors}
+
+    else:
+        raise HTTPException(400, detail=f"Unbekannter Modus: {body.mode}")
+
+
+# ---------------------------------------------------------------------------
+# POST /api/travels/{travel_id}/replace-stop-select
+# Select one of the search options for stop replacement
+# ---------------------------------------------------------------------------
+
+class ReplaceStopSelectRequest(BaseModel):
+    job_id: str
+    option_index: int
+
+
+@app.post("/api/travels/{travel_id}/replace-stop-select")
+async def api_replace_stop_select(travel_id: int, body: ReplaceStopSelectRequest):
+    job = get_job(body.job_id)
+    if job.get("travel_id") != travel_id:
+        raise HTTPException(400, detail="Job gehört nicht zu dieser Reise")
+
+    options = job.get("options", [])
+    if body.option_index < 0 or body.option_index >= len(options):
+        raise HTTPException(400, detail="Ungültiger option_index")
+
+    selected = options[body.option_index]
+    plan = await get_travel(travel_id)
+    if plan is None:
+        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+
+    stops = plan.get("stops", [])
+    stop_index = job["stop_index"]
+    old_stop = stops[stop_index] if stop_index < len(stops) else {}
+    nights = selected.get("nights", old_stop.get("nights", 1))
+
+    new_job_id = uuid.uuid4().hex
+    new_job = {
+        "status": "replacing",
+        "travel_id": travel_id,
+        "stop_index": stop_index,
+        "new_region": selected.get("region", ""),
+        "new_country": selected.get("country", "XX"),
+        "new_lat": selected.get("lat", 0),
+        "new_lng": selected.get("lon", 0),
+        "new_nights": nights,
+        "request": job.get("request", plan.get("request", {})),
+    }
+    save_job(new_job_id, new_job)
+    _fire_task("replace_stop_job", new_job_id)
+
+    return {"job_id": new_job_id, "status": "replacing", "selected": selected}
 
 
 # ---------------------------------------------------------------------------
