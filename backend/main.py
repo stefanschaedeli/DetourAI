@@ -2462,4 +2462,15 @@ async def serve_index():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
 
 if FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="frontend-js")
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend-assets")
+
+    # SPA catch-all: any non-API, non-static path → index.html for client-side routing
+    @app.get("/{path:path}")
+    async def spa_fallback(path: str):
+        # Serve actual static files if they exist (css, images, etc.)
+        file = FRONTEND_DIR / path
+        if file.is_file():
+            return FileResponse(str(file))
+        # Otherwise serve index.html for client-side router
+        return FileResponse(str(FRONTEND_DIR / "index.html"))
