@@ -1,7 +1,10 @@
 import json
+import os
+import sys
 import pytest
-import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+os.environ["JWT_SECRET"] = "test_secret_that_is_exactly_32chars!"
 
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch, AsyncMock
@@ -20,7 +23,11 @@ def mock_redis(mocker):
 @pytest.fixture
 def client(mock_redis):
     from main import app
-    return TestClient(app)
+    from utils.auth import CurrentUser, get_current_user
+    mock_user = CurrentUser(id=1, username="testuser", is_admin=False)
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    yield TestClient(app)
+    app.dependency_overrides.clear()
 
 
 def _transit_legs_payload(start="Liestal, Schweiz", end="Paris, Frankreich",

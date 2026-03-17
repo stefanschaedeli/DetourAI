@@ -57,7 +57,7 @@ class TokenPayload(BaseModel):
 def create_access_token(user_id: int, username: str, is_admin: bool) -> str:
     now = datetime.now(timezone.utc)
     payload = {
-        "sub": user_id,
+        "sub": str(user_id),
         "username": username,
         "is_admin": is_admin,
         "iat": now,
@@ -69,7 +69,7 @@ def create_access_token(user_id: int, username: str, is_admin: bool) -> str:
 def decode_access_token(token: str) -> Optional[TokenPayload]:
     try:
         data = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return TokenPayload(sub=data["sub"], username=data["username"], is_admin=data["is_admin"])
+        return TokenPayload(sub=int(data["sub"]), username=data["username"], is_admin=data["is_admin"])
     except jwt.ExpiredSignatureError:
         return None
     except jwt.InvalidTokenError:
