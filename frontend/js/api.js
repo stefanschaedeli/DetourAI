@@ -2,14 +2,45 @@
 
 const API = '/api';  // Nginx proxy — no localhost port
 
+/** Build Authorization header from current in-memory token. */
+function _authHeader() {
+  const token = authGetToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/** Core fetch wrapper with Bearer injection and 401 → silent-refresh retry. */
+async function _fetchWithAuth(url, opts = {}) {
+  const makeOpts = () => ({
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ..._authHeader(),
+      ...(opts.headers || {}),
+    },
+    ...opts,
+  });
+
+  let res = await fetch(url, makeOpts());
+
+  // On 401, try one silent token refresh then retry once
+  if (res.status === 401) {
+    const newToken = await authSilentRefresh();
+    if (!newToken) {
+      // Refresh failed — user must log in again
+      if (typeof showLoginRequired === 'function') showLoginRequired();
+      throw new Error('HTTP 401: Sitzung abgelaufen. Bitte erneut anmelden.');
+    }
+    res = await fetch(url, makeOpts());
+  }
+
+  return res;
+}
+
 async function _fetch(url, opts = {}, label) {
   S.apiCalls++;
   showLoading(label || 'Anfrage läuft…');
   try {
-    const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-      ...opts,
-    });
+    const res = await _fetchWithAuth(url, opts);
     if (!res.ok) {
       let detail = '';
       try { detail = (await res.json()).detail || ''; } catch (e) {}
@@ -24,16 +55,30 @@ async function _fetch(url, opts = {}, label) {
 /** Like _fetch but without the blocking loading overlay (skeleton cards provide feedback). */
 async function _fetchQuiet(url, opts = {}) {
   S.apiCalls++;
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-    ...opts,
-  });
+  const res = await _fetchWithAuth(url, opts);
   if (!res.ok) {
     let detail = '';
     try { detail = (await res.json()).detail || ''; } catch (e) {}
     throw new Error(`HTTP ${res.status}: ${detail || res.statusText}`);
   }
   return res;
+}
+
+// ---------------------------------------------------------------------------
+// Auth API helpers
+// ---------------------------------------------------------------------------
+
+async function apiLogin(username, password) {
+  return authLogin(username, password);
+}
+
+async function apiLogout() {
+  return authLogout();
+}
+
+async function apiGetMe() {
+  const res = await _fetchQuiet(`${API}/auth/me`);
+  return res.json();
 }
 
 async function apiInitJob(payload) {
@@ -266,7 +311,9 @@ async function apiReplaceStopSelect(travelId, jobId, optionIndex) {
  * @returns {EventSource}
  */
 function openSSE(jobId, handlers) {
-  const source = new EventSource(`${API}/progress/${jobId}`);
+  const token = authGetToken();
+  const qs = token ? `?token=${encodeURIComponent(token)}` : '';
+  const source = new EventSource(`${API}/progress/${jobId}${qs}`);
 
   const events = [
     'debug_log', 'route_ready', 'stop_done', 'agent_start', 'agent_done',

@@ -24,7 +24,7 @@ from models.travel_request import TravelRequest
 from models.stop_option import StopSelectRequest
 from models.accommodation_option import AccommodationSelectRequest, BudgetState, AccommodationResearchRequest
 from models.trip_leg import ReplaceRegionRequest, RecomputeRegionsRequest
-from utils.auth import get_current_user, CurrentUser, verify_jwt_secret, hash_password
+from utils.auth import get_current_user, get_current_user_sse, CurrentUser, verify_jwt_secret, hash_password
 from utils.auth_db import admin_exists, create_user, assign_orphan_trips, get_user_by_username
 from utils.migrations import run_migrations
 from routers.auth import router as auth_router
@@ -1783,7 +1783,7 @@ async def start_planning(job_id: str, current_user: CurrentUser = Depends(get_cu
 # ---------------------------------------------------------------------------
 
 @app.get("/api/progress/{job_id}")
-async def progress(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
+async def progress(job_id: str, request: Request, token: Optional[str] = None, current_user: CurrentUser = Depends(get_current_user_sse)):
     # Verify job exists and ownership
     raw = redis_client.get(f"job:{job_id}")
     if raw:

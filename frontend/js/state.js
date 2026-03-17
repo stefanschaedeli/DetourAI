@@ -44,6 +44,7 @@ const S = {
   apiCalls: 0,
   debugOpen: false,
   result: null,
+  currentUser: null,    // { id, username, is_admin } — populated after login/session restore
   // Route Builder
   selectedStops: [],
   currentOptions: [],

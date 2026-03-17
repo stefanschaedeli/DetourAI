@@ -95,6 +95,30 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> CurrentUser:
     return CurrentUser(id=payload.sub, username=payload.username, is_admin=payload.is_admin)
 
 
+async def get_current_user_sse(request: "Request", token: Optional[str] = None) -> CurrentUser:
+    """Like get_current_user but also accepts ?token= query param (needed for EventSource)."""
+    from fastapi import Request as _Request
+    raw_token = token
+    if raw_token is None:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            raw_token = auth_header[7:]
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Ungültiges oder abgelaufenes Token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    payload = decode_access_token(raw_token)
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Ungültiges oder abgelaufenes Token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return CurrentUser(id=payload.sub, username=payload.username, is_admin=payload.is_admin)
+
+
 async def require_admin(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
     if not user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff")
