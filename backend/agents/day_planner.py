@@ -156,6 +156,80 @@ class DayPlannerAgent:
             "budget_remaining_chf": round(req.budget_chf - total, 2),
         }
 
+    def _distribute_per_stop(self, day_contexts: list) -> None:
+        """Verteile Aktivitäten/Restaurants auf Tage am gleichen Stopp (Round-Robin).
+
+        Mutiert day_contexts in-place: reduziert activities/restaurants pro Tag
+        und fügt other_days_hint, day_of_stay, total_days_at_stop hinzu.
+        """
+        # Gruppiere nach Region
+        from collections import defaultdict
+        groups: dict[str, list[int]] = defaultdict(list)
+        for i, ctx in enumerate(day_contexts):
+            groups[ctx.get("region", "")].append(i)
+
+        for region, indices in groups.items():
+            if len(indices) <= 1:
+                continue
+
+            # Sortiere nach Tag-Nummer
+            indices.sort(key=lambda i: day_contexts[i]["day"])
+            total = len(indices)
+
+            # Alle Tage teilen sich denselben Pool (vom ersten Tag kopiert)
+            all_activities = list(day_contexts[indices[0]].get("activities", []))
+            all_restaurants = list(day_contexts[indices[0]].get("restaurants", []))
+
+            # Round-Robin: Ankunftstag (drive_hours > 0) bekommt letzte Priorität
+            arrival_indices = [i for i in indices if day_contexts[i].get("drive_hours", 0) > 0]
+            rest_indices = [i for i in indices if day_contexts[i].get("drive_hours", 0) <= 0]
+            ordered = rest_indices + arrival_indices  # Ruhetage zuerst
+
+            # Aktivitäten verteilen
+            act_buckets: dict[int, list] = {i: [] for i in indices}
+            for idx, act in enumerate(all_activities):
+                target = ordered[idx % len(ordered)]
+                act_buckets[target].append(act)
+
+            # Restaurants: mindestens 1 pro Tag, Rest Round-Robin
+            rest_buckets: dict[int, list] = {i: [] for i in indices}
+            if all_restaurants:
+                # Erst jedem Tag ein Restaurant geben
+                for j, i in enumerate(ordered):
+                    if j < len(all_restaurants):
+                        rest_buckets[i].append(all_restaurants[j])
+                # Übrige verteilen
+                remaining = all_restaurants[len(ordered):]
+                for idx, rest in enumerate(remaining):
+                    target = ordered[idx % len(ordered)]
+                    rest_buckets[target].append(rest)
+
+            # Zuweisen + Hints bauen
+            day_assignments: dict[int, dict] = {}
+            for rank, i in enumerate(indices):
+                ctx = day_contexts[i]
+                ctx["activities"] = act_buckets[i]
+                ctx["restaurants"] = rest_buckets[i]
+                ctx["day_of_stay"] = rank + 1
+                ctx["total_days_at_stop"] = total
+                # Sammle Namen für Hint
+                act_names = [a.get("name", "") for a in act_buckets[i] if a.get("name")]
+                day_assignments[i] = {
+                    "day": ctx["day"],
+                    "acts": act_names,
+                }
+
+            # other_days_hint für jeden Tag
+            for i in indices:
+                other_parts = []
+                for j in indices:
+                    if j == i:
+                        continue
+                    info = day_assignments[j]
+                    if info["acts"]:
+                        other_parts.append(f"Tag {info['day']}: {', '.join(info['acts'])}")
+                day_contexts[i]["other_days_hint"] = " | ".join(other_parts)
+
     async def _plan_single_day(self, day_ctx: dict) -> dict:
         """Plan one day with a stündlicher Zeitstrahl via one Claude call."""
         day_num = day_ctx["day"]
@@ -229,6 +303,20 @@ Gib exakt dieses JSON zurück:
 }}
 
 Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive, activity, meal, break, check_in."""
+
+        # Mehrtägiger Aufenthalt: Kontext zu anderen Tagen
+        other_days_hint = day_ctx.get("other_days_hint", "")
+        if other_days_hint:
+            prompt += (
+                f"\n\nAndere Tage in {region} decken ab: {other_days_hint}\n"
+                f"Plane NUR die dir zugewiesenen Aktivitäten/Restaurants. "
+                f"Keine Überschneidungen."
+            )
+
+        day_of_stay = day_ctx.get("day_of_stay")
+        total_days_at_stop = day_ctx.get("total_days_at_stop")
+        if total_days_at_stop and total_days_at_stop > 1:
+            prompt += f"\nDies ist Tag {day_of_stay} von {total_days_at_stop} in {region}."
 
         await debug_logger.log(
             LogLevel.API, f"→ Anthropic API call: {self.model} (Tagesplan Tag {day_num}: {region})",
@@ -333,6 +421,9 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
                     "prev_region": region,
                     "weather_forecast": weather_forecast,
                 })
+
+        # Aktivitäten/Restaurants auf Tage am gleichen Stopp verteilen
+        self._distribute_per_stop(day_contexts)
 
         # Plan all days in parallel
         await debug_logger.log(LogLevel.INFO, f"Erstelle {len(day_contexts)} Tagespläne parallel", job_id=self.job_id, agent="DayPlanner")
