@@ -19,6 +19,10 @@ services:
       - OUTPUTS_DIR=/app/outputs
       - DATA_DIR=/app/data
       - LOGS_DIR=/app/logs
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - COOKIE_SECURE=${COOKIE_SECURE:-true}
     depends_on: [redis]
     volumes:
       - ./outputs:/app/outputs
@@ -39,6 +43,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - DATA_DIR=/app/data
       - LOGS_DIR=/app/logs
+      - JWT_SECRET=${JWT_SECRET}
     depends_on: [redis]
     volumes:
       - travel_data:/app/data
