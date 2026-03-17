@@ -3,9 +3,9 @@ WORKDIR /app
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
-RUN addgroup --system appgroup \
- && adduser --system --ingroup appgroup appuser \
- && mkdir -p /app/outputs /app/data \
- && chown -R appuser:appgroup /app/outputs /app/data
+RUN addgroup --system --gid 568 appgroup \
+ && adduser --system --uid 568 --ingroup appgroup appuser \
+ && mkdir -p /app/outputs /app/data /app/logs \
+ && chown -R appuser:appgroup /app/outputs /app/data /app/logs
 USER appuser
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
