@@ -1,0 +1,98 @@
+name: Release & Deploy
+
+on:
+  push:
+    tags:
+      - 'release/v*'
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
+  build-and-push:
+    name: Build & Push Images
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/release/v}"
+          echo "app_version=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Released version: $TAG"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/Dockerfile.backend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-backend:${{ steps.version.outputs.app_version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-backend:latest
+          platforms: linux/amd64
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/Dockerfile.frontend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-frontend:${{ steps.version.outputs.app_version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-frontend:latest
+          platforms: linux/amd64
+
+      - name: Update TrueNAS catalog
+        env:
+          GITHUB_USER: ${{ github.repository_owner }}
+        run: |
+          eval "$(ssh-agent -s)"
+          echo "${{ secrets.CATALOG_DEPLOY_KEY }}" | ssh-add -
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          ./scripts/update-catalog.sh \
+            "${{ steps.version.outputs.app_version }}" \
+            "git@github.com:${{ github.repository_owner }}/travelman-catalog.git"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Travelman ${{ steps.version.outputs.app_version }}"
+          generate_release_notes: true
+          draft: false
