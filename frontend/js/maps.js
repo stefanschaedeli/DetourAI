@@ -529,8 +529,16 @@ const GoogleMaps = (() => {
         travelMode: google.maps.TravelMode.DRIVING,
       });
 
-      const encoded = result.routes[0].overview_polyline.points;
-      const path = _decodePolyline(encoded).map(p => new google.maps.LatLng(p.lat, p.lng));
+      const route = result.routes[0];
+      // JS SDK provides overview_path (LatLng[]) directly; fall back to decoding overview_polyline
+      let path;
+      if (route.overview_path && route.overview_path.length) {
+        path = route.overview_path;
+      } else {
+        const op = route.overview_polyline;
+        const encoded = typeof op === 'string' ? op : (op && op.points) || '';
+        path = _decodePolyline(encoded).map(p => new google.maps.LatLng(p.lat, p.lng));
+      }
       return new google.maps.Polyline({ map, path, ...polyOpts });
     } catch (e) {
       _log('WARNING', `DirectionsService fehlgeschlagen, Fallback auf gerade Linie: ${e.message || e}`);
