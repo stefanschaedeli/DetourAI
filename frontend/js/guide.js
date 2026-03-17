@@ -934,10 +934,7 @@ function _getActivityIcon(name) {
 function _buildStopMapPin(type, entity) {
   if (type === 'hotel') return '<div class="stop-map-pin pin-hotel">🏨</div>';
   if (type === 'activity') return `<div class="stop-map-pin pin-activity">${_getActivityIcon(entity.name)}</div>`;
-  if (type === 'restaurant') {
-    const pr = entity.price_range || '';
-    return `<div class="stop-map-pin pin-restaurant">🍽${pr ? ' ' + esc(pr) : ''}</div>`;
-  }
+  if (type === 'restaurant') return '<div class="stop-map-pin pin-restaurant">🍽 Restaurant</div>';
   return '<div class="stop-map-pin pin-activity">📍</div>';
 }
 
@@ -1024,6 +1021,19 @@ async function _initStopMap(stop) {
     });
   });
 
+  (stop.further_activities || []).forEach((act, i) => {
+    if (!act.name) return;
+    entities.push({
+      key: `fact-${stop.id}-${i}`,
+      placeId: act.place_id || null,
+      name: act.name,
+      stopLat: stop.lat, stopLng: stop.lng,
+      searchType: 'activity',
+      type: 'activity', data: act, index: i,
+      isFurther: true,
+    });
+  });
+
   (stop.restaurants || []).forEach((r, i) => {
     if (!r.name) return;
     entities.push({
@@ -1067,7 +1077,11 @@ async function _initStopMap(stop) {
       if (ent.type === 'hotel') {
         _scrollToAndHighlight('.stop-accommodation', stop.id);
       } else if (ent.type === 'activity') {
-        _scrollToAndHighlight(`.activities-grid .activity-card:nth-child(${ent.index + 1})`, stop.id);
+        if (ent.isFurther) {
+          _scrollToAndHighlight('.further-activities', stop.id);
+        } else {
+          _scrollToAndHighlight(`.activities-grid .activity-card:nth-child(${ent.index + 1})`, stop.id);
+        }
       } else if (ent.type === 'restaurant') {
         _scrollToAndHighlight(`.restaurants-list .restaurant-item:nth-child(${ent.index + 1})`, stop.id);
       }
