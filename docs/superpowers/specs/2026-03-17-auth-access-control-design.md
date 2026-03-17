@@ -162,12 +162,46 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
     return user
 ```
 
-### Admin bootstrap (runs on startup)
+### DB Migration System
+
+A versioned migration runner is introduced as `backend/utils/migrations.py`. It replaces all ad-hoc `ALTER TABLE` / `try/except` startup patches with a single, ordered, tracked system — safe to run on every startup, including container restarts and upgrades.
+
+**Schema: `schema_migrations` table (created on first run if absent)**
+
+```sql
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version  INTEGER PRIMARY KEY,
+    name     TEXT NOT NULL,
+    applied_at TEXT NOT NULL   -- ISO timestamp UTC
+);
+```
+
+**Migration runner contract:**
+- Migrations are a list of `(version: int, name: str, sql_or_callable)` tuples, ordered by version
+- On startup: query `MAX(version)` from `schema_migrations`; run all migrations with `version > current` in order
+- Each migration runs in a transaction; on failure → rollback + raise (startup aborts, container restarts)
+- Applied migrations are recorded in `schema_migrations` immediately after success
+- Migrations are **never modified** after being applied — only new entries are added
+
+**Initial migrations (v0 baseline):**
+
+| Version | Name | Action |
+|---------|------|--------|
+| 1 | `create_users` | Create `users` table |
+| 2 | `create_refresh_tokens` | Create `refresh_tokens` table |
+| 3 | `travels_add_user_id` | `ALTER TABLE travels ADD COLUMN user_id INTEGER REFERENCES users(id)` |
+
+All future schema changes (new columns, new tables, index additions) are added as new numbered migrations — never by modifying existing ones.
+
+**New file:** `backend/utils/migrations.py`
+
+**Integration:** `main.py` startup calls `run_migrations(db_path)` before admin bootstrap. All existing ad-hoc `ALTER TABLE` / `try/except` startup code is removed and replaced by the migration runner.
+
+### Admin bootstrap (runs on startup, after migrations)
 
 1. Check if `ADMIN_USERNAME` + `ADMIN_PASSWORD` env vars are set
 2. If no admin user exists → create one (Argon2id hash password)
-3. `ALTER TABLE travels ADD COLUMN user_id INTEGER` (idempotent, wrapped in try/except)
-4. `UPDATE travels SET user_id = <admin_id> WHERE user_id IS NULL`
+3. `UPDATE travels SET user_id = <admin_id> WHERE user_id IS NULL` (assign orphan trips)
 
 **Note:** Admin self-deletion is blocked by the `/api/admin/users/{id}` endpoint — it returns HTTP 400 if `user_id == current_user.id`. This prevents accidental lockout.
 
@@ -280,11 +314,14 @@ backend/
   utils/
     auth_db.py       # users + refresh_tokens DB layer
     auth.py          # JWT, Argon2id, FastAPI dependencies
+    migrations.py    # versioned migration runner + migration list
   routers/
+    __init__.py      # makes routers/ a package
     auth.py          # /api/auth/* endpoints
     admin.py         # /api/admin/users endpoints
   tests/
     test_auth.py     # 14 auth test cases
+    test_migrations.py  # migration runner tests (idempotency, ordering, rollback)
 frontend/
   js/
     auth.js          # token store + login/logout/silentRefresh (with refresh serialization)
@@ -294,7 +331,7 @@ frontend/
 
 ```
 backend/
-  main.py                    # auth deps on all endpoints, startup migration, routers, CORS update
+  main.py                    # auth deps on all endpoints, startup: run_migrations() then admin bootstrap, routers, CORS update
   utils/travel_db.py         # user_id filtering on all CRUD including update_travel + update_plan_json
   tasks/run_planning_job.py  # read user_id from Redis state, pass to save_travel
   tasks/replace_stop_job.py  # read user_id from Redis job state, pass to get_travel + update_plan_json
