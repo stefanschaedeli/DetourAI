@@ -1357,7 +1357,7 @@ function _getActivityIcon(name) {
 function _buildStopMapPin(type, entity) {
   if (type === 'hotel') return '<div class="stop-map-pin pin-hotel">🏨</div>';
   if (type === 'activity') return `<div class="stop-map-pin pin-activity">${_getActivityIcon(entity.name)}</div>`;
-  if (type === 'restaurant') return '<div class="stop-map-pin pin-restaurant">🍽 Restaurant</div>';
+  if (type === 'restaurant') return '<div class="stop-map-pin pin-restaurant">🍽</div>';
   return '<div class="stop-map-pin pin-activity">📍</div>';
 }
 
