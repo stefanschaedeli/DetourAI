@@ -198,6 +198,8 @@ Suchradius: {req.activities_radius_km} km
 Max. Aktivitäten: {req.max_activities_per_stop}
 Aktivitätenbudget: ca. CHF {budget_per_stop:.0f} für diesen Stopp — nutze das Budget möglichst aus{mandatory_line}{pref_line}{desc_line}{style_guidance}
 
+WICHTIG: Alle Aktivitäten müssen innerhalb des Suchradius von {req.activities_radius_km} km vom Übernachtungsort in {region} liegen. Keine Ausnahmen — empfehle lieber weniger Aktivitäten als solche außerhalb des Radius.
+
 Gib exakt dieses JSON zurück:
 {{
   "stop_id": {stop_id},

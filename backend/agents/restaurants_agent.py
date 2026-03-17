@@ -62,6 +62,8 @@ Suchradius: {req.activities_radius_km} km
 Max. Restaurants: {req.max_restaurants_per_stop}
 Budget pro Mahlzeit/Person: ca. CHF {budget_per_meal:.0f}
 
+WICHTIG: Alle Restaurants müssen innerhalb des Suchradius von {req.activities_radius_km} km vom Übernachtungsort in {region} liegen. Keine Ausnahmen.
+
 Gib exakt dieses JSON zurück:
 {{
   "stop_id": {stop_id},
