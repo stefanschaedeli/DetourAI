@@ -106,6 +106,29 @@ def test_users_table_schema():
         os.unlink(path)
 
 
+def test_failed_migration_rolls_back():
+    """If a migration raises, the DB must not have a partial schema_migrations row."""
+    import unittest.mock as mock
+    path = make_db()
+    try:
+        # Create a copy of MIGRATIONS with a failing 4th migration
+        failing_migrations = list(MIGRATIONS) + [(4, "fail_migration", "INVALID SQL !!!")]
+        with mock.patch("utils.migrations.MIGRATIONS", failing_migrations):
+            try:
+                run_migrations(path)
+            except RuntimeError:
+                pass
+        conn = sqlite3.connect(path)
+        cur = conn.execute("SELECT version FROM schema_migrations ORDER BY version")
+        applied = [row[0] for row in cur.fetchall()]
+        # Only versions 1-3 should be present, not 4
+        assert 4 not in applied
+        assert applied == [1, 2, 3]
+        conn.close()
+    finally:
+        os.unlink(path)
+
+
 def test_travels_user_id_column():
     path = make_db()
     try:

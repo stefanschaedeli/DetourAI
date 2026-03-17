@@ -46,6 +46,8 @@ MIGRATIONS: List[Tuple[int, str, Union[str, Callable]]] = [
 
 
 def _add_column_if_missing(conn: sqlite3.Connection, table: str, column: str, col_def: str) -> None:
+    # SECURITY: table, column, and col_def MUST be hardcoded constants — never pass
+    # user-supplied input here, as the values are interpolated directly into SQL.
     # If the table doesn't exist yet (fresh DB without legacy data), skip silently.
     cur = conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)
@@ -71,6 +73,12 @@ def _ensure_migrations_table(conn: sqlite3.Connection) -> None:
 
 def run_migrations(db_path: str) -> None:
     """Apply all pending migrations to the SQLite DB at db_path."""
+    # Assert migrations are in strictly ascending version order.
+    versions = [m[0] for m in MIGRATIONS]
+    assert versions == sorted(versions) and len(versions) == len(set(versions)), (
+        "MIGRATIONS must be in strictly ascending version order without duplicates"
+    )
+
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA foreign_keys = ON")
     conn.isolation_level = None  # manual transaction control
