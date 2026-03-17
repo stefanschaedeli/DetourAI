@@ -3316,17 +3316,76 @@ strong.req-keyword {
   box-shadow: 0 2px 6px rgba(0,0,0,.3);
 }
 
-/* Cross-link in day examples */
-.day-example-link {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--accent);
-  cursor: pointer;
-  font-weight: 500;
-  white-space: nowrap;
+/* Day CTA boxes in stop detail */
+.stop-day-cta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-.day-example-link:hover {
-  text-decoration: underline;
+.stop-day-cta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+}
+.stop-day-cta:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,.08);
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+.stop-day-cta-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.stop-day-cta-num {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.stop-day-cta-date {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.stop-day-cta-center {
+  flex: 1;
+  min-width: 0;
+}
+.stop-day-cta-center strong {
+  display: block;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stop-day-cta-center span {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.stop-day-cta-arrow {
+  flex-shrink: 0;
+  color: var(--text-sub);
+  transition: transform .15s ease, color .15s ease;
+}
+.stop-day-cta:hover .stop-day-cta-arrow {
+  color: var(--accent);
+  transform: translateX(3px);
+}
+@media (max-width: 600px) {
+  .stop-day-cta {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .stop-day-cta-center strong {
+    white-space: normal;
+  }
 }
 
 /* Tagesplan CTA box in overview */

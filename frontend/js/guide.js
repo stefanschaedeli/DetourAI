@@ -525,22 +525,33 @@ function _renderDayExamplesHtml(stop, dayPlans) {
     d.day >= arrivalDay && d.day < arrivalDay + (stop.nights || 1)
   );
   if (!stopDays.length) return '';
+
+  const typeLabel = { drive: 'Fahrt', rest: 'Entspannen', activity: 'Erlebnis', mixed: 'Gemischt' };
+  const typeColor = { drive: 'var(--accent)', rest: '#7C6BE0', activity: '#E8A84C', mixed: '#5AB8A0' };
+
   return `
     <div class="stop-day-examples">
-      <h4>Tagesbeispiele</h4>
-      ${stopDays.map(dp => `
-        <details class="day-example-collapse" open>
-          <summary>
-            <span class="day-example-label">Tag ${dp.day}${dp.date ? ' · ' + esc(dp.date) : ''}</span>
-            <span class="day-example-title">${esc(dp.title)}</span>
-            <span class="day-example-link" data-day-num="${dp.day}">\u2192 Tagesplan</span>
-          </summary>
-          <div class="day-example-body">
-            <p class="day-example-desc">${esc(dp.description)}</p>
-            ${renderDayTimeBlocks(dp)}
+      <h4>Tagespläne</h4>
+      <div class="stop-day-cta-list">
+        ${stopDays.map(dp => {
+          const type = (dp.type || 'mixed').toLowerCase();
+          const blockCount = (dp.time_blocks || []).length;
+          return `
+          <div class="stop-day-cta" data-day-num="${dp.day}" style="border-left-color: ${typeColor[type] || typeColor.mixed}">
+            <div class="stop-day-cta-left">
+              <span class="stop-day-cta-num">Tag ${dp.day}</span>
+              ${dp.date ? `<span class="stop-day-cta-date">${esc(dp.date)}</span>` : ''}
+              <span class="day-type-badge type-${esc(type)}">${typeLabel[type] || esc(dp.type)}</span>
+            </div>
+            <div class="stop-day-cta-center">
+              <strong>${esc(dp.title)}</strong>
+              <span>${blockCount} Zeitblöcke</span>
+            </div>
+            <svg class="stop-day-cta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><polyline points="9 6 15 12 9 18"/></svg>
           </div>
-        </details>
-      `).join('')}
+          `;
+        }).join('')}
+      </div>
     </div>
   `;
 }
@@ -1056,12 +1067,10 @@ function _initGuideDelegation() {
       return;
     }
 
-    // Day example link in stop detail → navigate to day detail
-    const dayExLink = e.target.closest('.day-example-link');
-    if (dayExLink) {
-      e.preventDefault();
-      e.stopPropagation();
-      const dayNum = dayExLink.dataset.dayNum;
+    // Day CTA box in stop detail → navigate to day detail
+    const dayCta = e.target.closest('.stop-day-cta');
+    if (dayCta) {
+      const dayNum = dayCta.dataset.dayNum;
       if (dayNum) navigateToDay(dayNum);
       return;
     }
