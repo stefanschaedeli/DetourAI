@@ -486,6 +486,32 @@ const GoogleMaps = (() => {
     return _renderSingleRoute(map, waypoints, polyOpts);
   }
 
+  /** Decode Google's encoded polyline format into [{lat, lng}] array. */
+  function _decodePolyline(encoded) {
+    const points = [];
+    let index = 0, lat = 0, lng = 0;
+    while (index < encoded.length) {
+      let shift = 0, result = 0, byte;
+      do {
+        byte = encoded.charCodeAt(index++) - 63;
+        result |= (byte & 0x1f) << shift;
+        shift += 5;
+      } while (byte >= 0x20);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+      shift = 0; result = 0;
+      do {
+        byte = encoded.charCodeAt(index++) - 63;
+        result |= (byte & 0x1f) << shift;
+        shift += 5;
+      } while (byte >= 0x20);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+      points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+    }
+    return points;
+  }
+
   async function _renderSingleRoute(map, waypoints, polyOpts) {
     const origin = waypoints[0];
     const destination = waypoints[waypoints.length - 1];
@@ -503,14 +529,9 @@ const GoogleMaps = (() => {
         travelMode: google.maps.TravelMode.DRIVING,
       });
 
-      const renderer = new google.maps.DirectionsRenderer({
-        map,
-        directions: result,
-        suppressMarkers: true,
-        preserveViewport: true,
-        polylineOptions: polyOpts,
-      });
-      return renderer;
+      const encoded = result.routes[0].overview_polyline;
+      const path = _decodePolyline(encoded).map(p => new google.maps.LatLng(p.lat, p.lng));
+      return new google.maps.Polyline({ map, path, ...polyOpts });
     } catch (e) {
       _log('WARNING', `DirectionsService fehlgeschlagen, Fallback auf gerade Linie: ${e.message || e}`);
       return _straightLineFallback(map, waypoints, polyOpts);
