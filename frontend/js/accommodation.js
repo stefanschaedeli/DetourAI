@@ -299,15 +299,26 @@ async function startPlanningWithAllSelections() {
       selections[String(stopId)] = idx;
     }
 
-    await apiConfirmAccommodations(S.jobId, selections);
-    await apiStartPlanning(S.jobId);
-
+    // Show progress overlay immediately — no loading screen
     progressOverlay.open('Reiseplan wird erstellt…');
     showSection('progress');
     Router.navigate('/progress/' + S.jobId);
+
+    // Step 1: confirm accommodations (quiet — no loading overlay)
+    progressOverlay.addLine('confirm_acc', 'Unterkünfte werden bestätigt…');
+    await apiConfirmAccommodationsQuiet(S.jobId, selections);
+    progressOverlay.completeLine('confirm_acc', 'bestätigt');
+
+    // Step 2: start planning (quiet — no loading overlay)
+    progressOverlay.addLine('start_plan', 'Planung wird gestartet…');
+    await apiStartPlanningQuiet(S.jobId);
+    progressOverlay.completeLine('start_plan', 'gestartet');
+
+    // Step 3: connect SSE for remaining progress
     connectSSE(S.jobId);
 
   } catch (err) {
+    progressOverlay.close();
     alert('Fehler beim Starten der Planung: ' + err.message);
     if (btn) { btn.disabled = false; btn.textContent = 'Planung starten'; }
   }

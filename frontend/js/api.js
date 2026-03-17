@@ -98,6 +98,18 @@ async function apiStartPlanning(jobId) {
   return res.json();
 }
 
+async function apiConfirmAccommodationsQuiet(jobId, selections) {
+  const res = await _fetchQuiet(`${API}/confirm-accommodations/${jobId}`, {
+    method: 'POST', body: JSON.stringify({ selections }),
+  });
+  return res.json();
+}
+
+async function apiStartPlanningQuiet(jobId) {
+  const res = await _fetchQuiet(`${API}/start-planning/${jobId}`, { method: 'POST' });
+  return res.json();
+}
+
 async function apiGetResult(jobId) {
   const res = await _fetch(`${API}/result/${jobId}`, {}, 'Ergebnisse werden geladen…');
   return res.json();
