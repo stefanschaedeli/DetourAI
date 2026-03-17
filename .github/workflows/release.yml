@@ -26,6 +26,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run tests
+        env:
+          ANTHROPIC_API_KEY: sk-ant-test-dummy
+          GOOGLE_MAPS_API_KEY: test-dummy
         run: python -m pytest tests/ -v
 
   build-and-push:
