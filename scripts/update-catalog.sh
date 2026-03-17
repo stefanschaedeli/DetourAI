@@ -30,7 +30,7 @@ APP_DIR="ix-dev/stable/travelman"
 TRAINS_DIR="trains/stable/travelman"
 
 # ── Read current catalog version and bump minor ──
-CURRENT_VERSION=$(grep '^version:' "$APP_DIR/app.yaml" | sed 's/version: *"\(.*\)"/\1/')
+CURRENT_VERSION=$(python3 -c "import yaml; d=yaml.safe_load(open('$APP_DIR/app.yaml')); print(d['version'])")
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 NEW_CATALOG_VERSION="$MAJOR.$((MINOR + 1)).0"
 
