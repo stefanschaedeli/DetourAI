@@ -116,3 +116,19 @@ async function authRestoreSession() {
   S.currentUser = await meRes.json();
   return S.currentUser;
 }
+
+// ---------------------------------------------------------------------------
+// Show login screen (called by api.js when session expires mid-flight)
+// ---------------------------------------------------------------------------
+function showLoginRequired() {
+  if (typeof showLoginScreen === 'function') showLoginScreen();
+}
+
+// ---------------------------------------------------------------------------
+// Short aliases for inline script use
+// ---------------------------------------------------------------------------
+const getToken = authGetToken;
+const login = authLogin;
+const logout = authLogout;
+const silentRefresh = authSilentRefresh;
+const initAuth = authRestoreSession;

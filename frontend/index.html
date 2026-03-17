@@ -20,6 +20,9 @@
   <div class="app-subtitle">KI-gestützter Reiseplaner</div>
   <button class="btn-my-travels" onclick="openTravelsDrawer()">Meine Reisen</button>
   <button class="btn-clear-data" onclick="clearAppData()" title="Daten löschen und neu starten">Neu starten</button>
+  <span id="header-username" style="display:none" class="header-username"></span>
+  <button id="btn-admin" onclick="showSection('admin-section')" style="display:none" class="btn-secondary">Admin</button>
+  <button id="btn-logout" onclick="handleLogout()" style="display:none" class="btn-secondary">Abmelden</button>
   <div class="header-settings">
     <button class="btn-icon settings-btn" onclick="toggleSettings()" title="Einstellungen" aria-label="Einstellungen" aria-expanded="false" aria-controls="settings-menu">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
@@ -63,6 +66,25 @@
 </header>
 
 <main>
+
+  <!-- ============================================================ Login Screen -->
+  <section id="login-section" class="section">
+    <div class="login-container">
+      <h2>Anmelden</h2>
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="login-field">
+          <label for="login-username">Benutzername</label>
+          <input type="text" id="login-username" autocomplete="username" required />
+        </div>
+        <div class="login-field">
+          <label for="login-password">Passwort</label>
+          <input type="password" id="login-password" autocomplete="current-password" required />
+        </div>
+        <div id="login-error" class="login-error" style="display:none"></div>
+        <button type="submit" class="btn btn-cta" id="login-submit">Anmelden</button>
+      </form>
+    </div>
+  </section>
 
   <!-- ============================================================ Form section -->
   <section class="section" id="form-section">
@@ -470,6 +492,33 @@
     <!-- Dynamisch befüllt durch settings.js -->
   </section>
 
+  <!-- ============================================================ Admin Panel -->
+  <section id="admin-section" class="section" style="display:none">
+    <div class="admin-container">
+      <h2>Benutzerverwaltung</h2>
+      <table class="admin-user-table" id="admin-user-table">
+        <thead>
+          <tr>
+            <th>Benutzername</th>
+            <th>Erstellt am</th>
+            <th>Rolle</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody id="admin-user-tbody"></tbody>
+      </table>
+      <div class="admin-create-user">
+        <h3>Neuen Benutzer erstellen</h3>
+        <form id="admin-create-form" onsubmit="handleAdminCreateUser(event)">
+          <input type="text" id="admin-new-username" placeholder="Benutzername" required minlength="1" />
+          <input type="password" id="admin-new-password" placeholder="Passwort (min. 8 Zeichen)" required minlength="8" />
+          <button type="submit" class="btn btn-cta">Erstellen</button>
+        </form>
+        <div id="admin-create-error" class="login-error" style="display:none"></div>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <!-- ======================================================== Quick-submit bar -->
@@ -553,6 +602,7 @@
 <script src="/js/sse-overlay.js"></script>
 <script src="/js/maps.js"></script>
 <script src="/js/state.js"></script>
+<script src="/js/auth.js"></script>
 <script src="/js/router.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/form.js"></script>
@@ -564,12 +614,107 @@
 <script src="/js/settings.js"></script>
 
 <script>
-  // Initialize on DOM ready
-  document.addEventListener('DOMContentLoaded', () => {
-    // Enable debug toggle only when ?debug=1 is in the URL
-    if (new URLSearchParams(window.location.search).get('debug') === '1') {
-      document.body.classList.add('debug-mode');
+  // ── Auth helpers ──────────────────────────────────────────────────────────────
+
+  function showLoginScreen() {
+    showSection('login-section');
+    document.getElementById('header-username').style.display = 'none';
+    document.getElementById('btn-admin').style.display = 'none';
+    document.getElementById('btn-logout').style.display = 'none';
+    document.querySelectorAll('.btn-my-travels, .btn-clear-data').forEach(b => b.style.display = 'none');
+  }
+
+  function showAppForUser(user) {
+    document.getElementById('header-username').textContent = esc(user.username);
+    document.getElementById('header-username').style.display = '';
+    document.getElementById('btn-logout').style.display = '';
+    if (user.is_admin) {
+      document.getElementById('btn-admin').style.display = '';
     }
+    document.querySelectorAll('.btn-my-travels, .btn-clear-data').forEach(b => b.style.display = '');
+    showSection('form-section');
+  }
+
+  async function handleLogin(event) {
+    event.preventDefault();
+    const username = document.getElementById('login-username').value;
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
+    const submitBtn = document.getElementById('login-submit');
+
+    submitBtn.disabled = true;
+    errEl.style.display = 'none';
+
+    try {
+      const user = await login(username, password);
+      showAppForUser(user);
+      if (user.is_admin) loadAdminUsers();
+      _initAppOnce();
+    } catch (err) {
+      errEl.textContent = err.message || 'Anmeldung fehlgeschlagen';
+      errEl.style.display = '';
+      submitBtn.disabled = false;
+    }
+  }
+
+  async function handleLogout() {
+    await logout();
+    showLoginScreen();
+  }
+
+  // ── Admin panel helpers ───────────────────────────────────────────────────────
+
+  async function loadAdminUsers() {
+    try {
+      const res = await _fetchQuiet('/api/admin/users');
+      const { users } = await res.json();
+      const tbody = document.getElementById('admin-user-tbody');
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td>${esc(u.username)}</td>
+          <td>${esc((u.created_at || '').slice(0, 10))}</td>
+          <td>${u.is_admin ? '<span class="badge-admin">Admin</span>' : 'Benutzer'}</td>
+          <td>${u.id !== S.currentUser.id ? `<button onclick="adminDeleteUser(${u.id})" class="btn-danger-sm">Löschen</button>` : '—'}</td>
+        </tr>
+      `).join('');
+    } catch (_) {}
+  }
+
+  async function adminDeleteUser(userId) {
+    if (!confirm('Benutzer wirklich löschen?')) return;
+    try {
+      await _fetchQuiet(`/api/admin/users/${userId}`, { method: 'DELETE' });
+      loadAdminUsers();
+    } catch (_) {}
+  }
+
+  async function handleAdminCreateUser(event) {
+    event.preventDefault();
+    const username = document.getElementById('admin-new-username').value;
+    const password = document.getElementById('admin-new-password').value;
+    const errEl = document.getElementById('admin-create-error');
+
+    try {
+      await _fetchQuiet('/api/admin/users', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
+      errEl.style.display = 'none';
+      document.getElementById('admin-new-username').value = '';
+      document.getElementById('admin-new-password').value = '';
+      loadAdminUsers();
+    } catch (err) {
+      errEl.textContent = err.message || 'Fehler beim Erstellen';
+      errEl.style.display = '';
+    }
+  }
+
+  // ── Page init ─────────────────────────────────────────────────────────────────
+
+  let _appInitialized = false;
+  function _initAppOnce() {
+    if (_appInitialized) return;
+    _appInitialized = true;
     initForm();
     Router.init();
     document.addEventListener('keydown', e => {
@@ -579,13 +724,29 @@
         if (e.key === 'Escape')     closeLightbox();
       }
     });
-    // Sync slider displays
     ['hotel-radius', 'activities-radius', 'max-drive-hours', 'proximity-origin', 'proximity-target'].forEach(id => {
       const s = document.getElementById(id);
       const d = document.getElementById(id + '-display');
       if (s && d) { d.textContent = s.value; s.oninput = () => { d.textContent = s.value; saveFormToCache(); }; }
     });
-    // Field error clearing is handled in leg card input event handlers
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Enable debug toggle only when ?debug=1 is in the URL
+    if (new URLSearchParams(window.location.search).get('debug') === '1') {
+      document.body.classList.add('debug-mode');
+    }
+
+    // Show login screen first, then try to restore session
+    showLoginScreen();
+
+    (async () => {
+      const user = await initAuth();
+      if (!user) return;
+      showAppForUser(user);
+      if (user.is_admin) loadAdminUsers();
+      _initAppOnce();
+    })();
   });
 </script>
 
