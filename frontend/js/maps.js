@@ -362,13 +362,6 @@ const GoogleMaps = (() => {
         results.set(ent.key, _coordCache.get(ent.key));
         continue;
       }
-      // Use pre-resolved coordinates from backend enrichment
-      if (ent.resolvedLat && ent.resolvedLng) {
-        const coord = { lat: () => ent.resolvedLat, lng: () => ent.resolvedLng };
-        _coordCache.set(ent.key, coord);
-        results.set(ent.key, coord);
-        continue;
-      }
       if (ent.placeId) {
         toFetchById.push(ent);
       } else if (ent.name) {

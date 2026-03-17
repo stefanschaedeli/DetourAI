@@ -766,14 +766,12 @@ async function _initDayDetailMap(plan, dayNum) {
   // Time block entities (skip drive/break — they never resolve to useful locations)
   timeBlocks.forEach((tb, i) => {
     if (tb.activity_type === 'drive' || tb.activity_type === 'break') return;
-    if (!tb.location && !tb.place_id && !tb.lat) return;
+    if (!tb.location && !tb.place_id) return;
     entities.push({
       key: `tb-${dayNum}-${i}`,
       placeId: tb.place_id || null,
       name: tb.location || tb.title,
       stopLat: centerLat, stopLng: centerLng,
-      resolvedLat: tb.lat || null,
-      resolvedLng: tb.lng || null,
       searchType: tb.activity_type === 'meal' ? 'restaurant' : 'activity',
       type: 'timeblock', data: tb, index: i,
     });
@@ -856,7 +854,7 @@ async function _initDayDetailMap(plan, dayNum) {
     const pos = coords.get(`tb-${dayNum}-${i}`);
     if (!pos) return;
     bounds.extend(pos);
-    routePoints.push({ lat: pos.lat(), lng: pos.lng() });
+    routePoints.push({ lat: pos.lat, lng: pos.lng });
     tbIndex++;
 
     const pinHtml = `<div class="stop-map-pin pin-timeblock">${tbIndex}</div>`;

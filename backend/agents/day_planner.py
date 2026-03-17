@@ -353,66 +353,6 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
                 "time_blocks": [],
             }
 
-    def _enrich_time_blocks(self, day_plan: dict, stop: dict, prev_stop: dict | None) -> None:
-        """Enrich time_blocks with lat/lng and place_id from matching stop data."""
-        if not stop:
-            return
-        time_blocks = day_plan.get("time_blocks", [])
-        activities = stop.get("top_activities", [])
-        restaurants = stop.get("restaurants", [])
-        accommodation = stop.get("accommodation", {}) or {}
-        stop_lat = stop.get("lat")
-        stop_lng = stop.get("lng")
-
-        for tb in time_blocks:
-            atype = tb.get("activity_type", "")
-            title = (tb.get("title") or "").lower()
-
-            if atype == "activity":
-                # Match against stop activities (case-insensitive substring)
-                for act in activities:
-                    act_name = (act.get("name") or "").lower()
-                    if act_name and (act_name in title or title in act_name):
-                        if act.get("place_id"):
-                            tb["place_id"] = act["place_id"]
-                        if not tb.get("lat") and stop_lat:
-                            tb["lat"] = stop_lat
-                            tb["lng"] = stop_lng
-                        break
-
-            elif atype == "meal":
-                # Match against stop restaurants
-                for rest in restaurants:
-                    rest_name = (rest.get("name") or "").lower()
-                    if rest_name and (rest_name in title or title in rest_name):
-                        if rest.get("place_id"):
-                            tb["place_id"] = rest["place_id"]
-                        if not tb.get("lat") and stop_lat:
-                            tb["lat"] = stop_lat
-                            tb["lng"] = stop_lng
-                        break
-
-            elif atype == "check_in":
-                if accommodation.get("place_id"):
-                    tb["place_id"] = accommodation["place_id"]
-                if not tb.get("lat") and stop_lat:
-                    tb["lat"] = stop_lat
-                    tb["lng"] = stop_lng
-
-            elif atype == "drive":
-                # Use departure point coords (previous stop or start)
-                if prev_stop:
-                    tb["lat"] = prev_stop.get("lat")
-                    tb["lng"] = prev_stop.get("lng")
-                elif hasattr(self, "_start_coords") and self._start_coords:
-                    tb["lat"] = self._start_coords[0]
-                    tb["lng"] = self._start_coords[1]
-
-            # Fallback: if still no coords, use stop coords
-            if not tb.get("lat") and stop_lat and atype not in ("drive",):
-                tb["lat"] = stop_lat
-                tb["lng"] = stop_lng
-
     async def run(self, route, accommodations: list, activities: list) -> dict:
         req = self.request
 
@@ -501,21 +441,6 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
                 route_pids = [region_pid.get(loc, "") for loc in route_stops]
                 dp["google_maps_route_url"] = build_maps_url(route_stops, place_ids=route_pids)
 
-        # Enrich time_blocks with lat/lng and place_id from stop data
-        for dp in day_plans:
-            day_num = dp.get("day", 0)
-            matching_stop = None
-            prev_stop = None
-            for s in stops:
-                arr = s.get("arrival_day", 1)
-                nights = s.get("nights", 1)
-                if day_num >= arr and day_num < arr + nights:
-                    matching_stop = s
-                    break
-            if matching_stop:
-                stop_idx = stops.index(matching_stop)
-                prev_stop = stops[stop_idx - 1] if stop_idx > 0 else None
-            self._enrich_time_blocks(dp, matching_stop, prev_stop)
 
         cost_estimate = self._fallback_cost_estimate(stops)
 
