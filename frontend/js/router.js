@@ -10,7 +10,8 @@ const Router = (() => {
     { pattern: /^\/accommodation\/([a-f0-9]+)$/,                    handler: '_accommodation',   section: 'accommodation' },
     { pattern: /^\/progress\/([a-f0-9]+)$/,                         handler: '_progress',        section: 'progress' },
     { pattern: /^\/travel\/(\d+)-[^/]+\/stops\/(\d+)$/,             handler: '_travelStopDetail', section: 'travel-guide' },
-    { pattern: /^\/travel\/(\d+)-[^/]+\/(stops|calendar|budget)$/,  handler: '_travelTab',       section: 'travel-guide' },
+    { pattern: /^\/travel\/(\d+)-[^/]+\/days\/(\d+)$/,              handler: '_travelDayDetail',  section: 'travel-guide' },
+    { pattern: /^\/travel\/(\d+)-[^/]+\/(stops|calendar|budget|days)$/,  handler: '_travelTab',       section: 'travel-guide' },
     { pattern: /^\/travel\/(\d+)(?:-[^/]*)?$/,                      handler: '_travel',          section: 'travel-guide' },
     { pattern: /^\/travels\/?$/,                                    handler: '_travels',         section: null },
     { pattern: /^\/settings\/?$/,                                   handler: '_settings',        section: 'settings-section' },
@@ -231,6 +232,34 @@ const Router = (() => {
       document.title = `Reise: ${title} — Travelman`;
       showSection('travel-guide');
       activateStopDetail(stopId);
+    },
+
+    async _travelDayDetail(m) {
+      const id = parseInt(m[1], 10);
+      const dayNum = parseInt(m[2], 10);
+
+      // Ensure travel is loaded first
+      if (!S.result || S.result._saved_travel_id !== id) {
+        showLoading('Reiseplan wird geladen…');
+        try {
+          const plan = await apiGetTravel(id);
+          plan._saved_travel_id = id;
+          S.result = plan;
+          S.jobId = plan.job_id || null;
+          lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan });
+        } catch (err) {
+          hideLoading();
+          _toast('Reise nicht gefunden.');
+          navigate('/travels', { replace: true });
+          return;
+        }
+        hideLoading();
+      }
+
+      const title = S.result.custom_name || S.result.title || '';
+      document.title = `Reise: ${title} — Travelman`;
+      showSection('travel-guide');
+      activateDayDetail(dayNum);
     },
 
     _travels() {

@@ -5,6 +5,7 @@ let _guideMarkers = [];
 let _guidePolyline = null;
 let _initializedStopMaps = new Set();
 let _activeStopId = null;
+let _activeDayNum = null;
 
 function showTravelGuide(plan) {
   S.result = plan;
@@ -51,6 +52,18 @@ function renderGuide(plan, tab) {
       content.innerHTML = renderCalendar(plan);
       _initCalendarClicks(plan);
       break;
+    case 'days':
+      if (_activeDayNum !== null) {
+        content.innerHTML = renderDayDetail(plan, _activeDayNum);
+        requestAnimationFrame(() => {
+          _initGuideDelegation();
+          _initDayDetailMap(plan, _activeDayNum);
+        });
+      } else {
+        content.innerHTML = renderDaysOverview(plan);
+        requestAnimationFrame(() => _initGuideDelegation());
+      }
+      break;
     case 'budget':     content.innerHTML = renderBudget(plan);    break;
     default:
       content.innerHTML = renderOverview(plan);
@@ -69,6 +82,7 @@ function renderGuide(plan, tab) {
 
 function switchGuideTab(tab) {
   if (tab !== 'stops') _activeStopId = null;
+  if (tab !== 'days') _activeDayNum = null;
   renderGuide(S.result, tab);
   if (S.result && S.result._saved_travel_id) {
     const title = S.result.custom_name || S.result.title || '';
@@ -506,6 +520,7 @@ function _renderDayExamplesHtml(stop, dayPlans) {
           <summary>
             <span class="day-example-label">Tag ${dp.day}${dp.date ? ' · ' + esc(dp.date) : ''}</span>
             <span class="day-example-title">${esc(dp.title)}</span>
+            <span class="day-example-link" data-day-num="${dp.day}">\u2192 Tagesplan</span>
           </summary>
           <div class="day-example-body">
             <p class="day-example-desc">${esc(dp.description)}</p>
@@ -515,6 +530,321 @@ function _renderDayExamplesHtml(stop, dayPlans) {
       `).join('')}
     </div>
   `;
+}
+
+// ---------------------------------------------------------------------------
+// Day Plan helpers
+// ---------------------------------------------------------------------------
+
+function _findStopsForDay(plan, dayNum) {
+  const stops = plan.stops || [];
+  return stops.filter(s => {
+    const arr = s.arrival_day || 1;
+    return dayNum >= arr && dayNum < arr + (s.nights || 1);
+  });
+}
+
+function renderDaysOverview(plan) {
+  const dayPlans = plan.day_plans || [];
+  const stops = plan.stops || [];
+  const typeLabel = { drive: 'Fahrt', rest: 'Entspannen', activity: 'Erlebnis', mixed: 'Gemischt' };
+  const typeColor = { drive: 'var(--accent)', rest: '#7C6BE0', activity: '#E8A84C', mixed: '#5AB8A0' };
+
+  const cards = dayPlans.map(dp => {
+    const type = (dp.type || 'mixed').toLowerCase();
+    const dayStops = _findStopsForDay(plan, dp.day);
+    const stopInfo = dayStops.map(s => `${FLAGS[s.country] || ''} ${esc(s.region)}`).join(', ');
+    const desc = (dp.description || '').length > 120 ? dp.description.substring(0, 120) + '…' : (dp.description || '');
+
+    return `
+      <div class="day-overview-card" data-day-num="${dp.day}" style="border-left-color: ${typeColor[type] || typeColor.mixed}">
+        <div class="day-overview-card-body">
+          <div class="day-overview-top">
+            <span class="day-overview-num">Tag ${dp.day}</span>
+            ${dp.date ? `<span class="day-overview-date">${esc(dp.date)}</span>` : ''}
+            <span class="day-type-badge type-${esc(type)}">${typeLabel[type] || esc(dp.type)}</span>
+          </div>
+          <h3>${esc(dp.title)}</h3>
+          <p class="day-overview-desc">${esc(desc)}</p>
+          ${stopInfo ? `<div class="day-overview-stop">${stopInfo}</div>` : ''}
+          ${dp.stops_on_route.length ? `<div class="day-overview-route">${dp.stops_on_route.map(s => `<span class="day-route-tag">${esc(s)}</span>`).join(' → ')}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="days-overview-grid">
+      ${cards}
+    </div>
+  `;
+}
+
+function renderDayDetail(plan, dayNum) {
+  const dayPlans = plan.day_plans || [];
+  const stops = plan.stops || [];
+  const idx = dayPlans.findIndex(dp => dp.day === dayNum);
+  const dp = dayPlans[idx];
+  if (!dp) return renderDaysOverview(plan);
+
+  const type = (dp.type || 'mixed').toLowerCase();
+  const typeLabel = { drive: 'Fahrt', rest: 'Entspannen', activity: 'Erlebnis', mixed: 'Gemischt' };
+  const prev = idx > 0 ? dayPlans[idx - 1] : null;
+  const next = idx < dayPlans.length - 1 ? dayPlans[idx + 1] : null;
+  const dayStops = _findStopsForDay(plan, dayNum);
+
+  // Sidebar
+  const sidebarItems = dayPlans.map(d => `
+    <div class="days-sidebar-item${d.day === dayNum ? ' active' : ''}" data-day-num="${d.day}">
+      <span class="sidebar-day-num">${d.day}</span>
+      <span class="sidebar-day-label">${esc((d.title || '').substring(0, 30))}</span>
+    </div>
+  `).join('');
+
+  // POIs from matching stops
+  let poisHtml = '';
+  if (dayStops.length) {
+    const acts = dayStops.flatMap(s => s.top_activities || []);
+    const rests = dayStops.flatMap(s => s.restaurants || []);
+    if (acts.length || rests.length) {
+      poisHtml = `
+        <div class="day-pois">
+          <h4>Aktivitäten &amp; Restaurants am Stopp</h4>
+          ${acts.length ? `<div class="activities-grid">${acts.map(act => `
+            <div class="activity-card">
+              <div class="activity-content">
+                <strong>${esc(act.name)}</strong>
+                <p>${esc(act.description)}</p>
+                <div class="activity-meta">
+                  ${act.duration_hours}h
+                  ${act.price_chf > 0 ? ` · CHF ${act.price_chf}` : ' · kostenlos'}
+                </div>
+                ${(act.place_id || act.google_maps_url) ? `<a href="${safeUrl(act.place_id ? 'https://www.google.com/maps/place/?q=place_id:' + act.place_id : act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
+              </div>
+            </div>
+          `).join('')}</div>` : ''}
+          ${rests.length ? `<div class="restaurants-list">${rests.map(r => `
+            <div class="restaurant-item">
+              <div style="padding: 10px">
+                <strong>${esc(r.name)}</strong>
+                <span class="cuisine-tag">${esc(r.cuisine)}</span>
+                <span class="price-range">${esc(r.price_range)}</span>
+                ${r.family_friendly ? '<span class="family-tag">Familienfreundlich</span>' : ''}
+              </div>
+            </div>
+          `).join('')}</div>` : ''}
+        </div>
+      `;
+    }
+  }
+
+  return `
+    <div class="days-layout">
+      <aside class="days-sidebar">
+        <div class="days-sidebar-inner">
+          ${sidebarItems}
+        </div>
+      </aside>
+      <div class="days-main">
+        <div class="day-detail-nav">
+          <button class="day-detail-back">\u2190 Alle Tage</button>
+          <span class="day-detail-breadcrumb">Tag ${dp.day}: ${esc(dp.title)}</span>
+        </div>
+
+        <div class="day-detail-card">
+          <div class="day-detail-header">
+            <div class="day-detail-header-left">
+              <span class="day-overview-num">Tag ${dp.day}</span>
+              ${dp.date ? `<span class="day-overview-date">${esc(dp.date)}</span>` : ''}
+              <span class="day-type-badge type-${esc(type)}">${typeLabel[type] || esc(dp.type)}</span>
+            </div>
+            <h3>${esc(dp.title)}</h3>
+            <p>${esc(dp.description)}</p>
+            ${dp.stops_on_route.length ? `<div class="day-overview-route">${dp.stops_on_route.map(s => `<span class="day-route-tag">${esc(s)}</span>`).join(' → ')}</div>` : ''}
+            ${dp.google_maps_route_url ? `<a href="${safeUrl(dp.google_maps_route_url)}" target="_blank" class="btn btn-secondary btn-sm" style="margin-top:8px">Route in Google Maps</a>` : ''}
+          </div>
+
+          <div class="day-detail-map" id="day-map-${dayNum}"></div>
+
+          ${renderDayTimeBlocks(dp)}
+
+          ${poisHtml}
+        </div>
+
+        <div class="day-detail-prevnext">
+          ${prev ? `<button class="btn btn-secondary day-nav-prev" data-day-num="${prev.day}">\u2190 Tag ${prev.day}</button>` : '<span></span>'}
+          ${next ? `<button class="btn btn-secondary day-nav-next" data-day-num="${next.day}">Tag ${next.day} \u2192</button>` : '<span></span>'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// Day navigation helpers
+// ---------------------------------------------------------------------------
+
+function navigateToDay(dayNum) {
+  _activeDayNum = Number(dayNum);
+  const plan = S.result;
+  if (!plan) return;
+  renderGuide(plan, 'days');
+  if (plan._saved_travel_id) {
+    const title = plan.custom_name || plan.title || '';
+    const base = Router.travelPath(plan._saved_travel_id, title);
+    Router.navigate(base + '/days/' + dayNum, { skipDispatch: true });
+  }
+}
+
+function navigateToDaysOverview() {
+  _activeDayNum = null;
+  const plan = S.result;
+  if (!plan) return;
+  renderGuide(plan, 'days');
+  if (plan._saved_travel_id) {
+    const title = plan.custom_name || plan.title || '';
+    const base = Router.travelPath(plan._saved_travel_id, title);
+    Router.navigate(base + '/days', { skipDispatch: true });
+  }
+}
+
+function activateDayDetail(dayNum) {
+  _activeDayNum = Number(dayNum);
+  renderGuide(S.result, 'days');
+}
+
+// ---------------------------------------------------------------------------
+// Day Detail Map
+// ---------------------------------------------------------------------------
+
+async function _initDayDetailMap(plan, dayNum) {
+  if (!window.google || !google.maps) return;
+
+  const elId = 'day-map-' + dayNum;
+  const el = document.getElementById(elId);
+  if (!el) return;
+
+  const dayPlans = plan.day_plans || [];
+  const dp = dayPlans.find(d => d.day === dayNum);
+  if (!dp) return;
+
+  const dayStops = _findStopsForDay(plan, dayNum);
+  const refStop = dayStops[0];
+  const centerLat = refStop?.lat || 47;
+  const centerLng = refStop?.lng || 8;
+
+  const map = GoogleMaps.initStopOverviewMap(elId, { center: { lat: centerLat, lng: centerLng }, zoom: 13 });
+  if (!map) return;
+
+  const entities = [];
+  const timeBlocks = dp.time_blocks || [];
+
+  // Time block entities
+  timeBlocks.forEach((tb, i) => {
+    if (!tb.location && !tb.place_id) return;
+    entities.push({
+      key: `tb-${dayNum}-${i}`,
+      placeId: tb.place_id || null,
+      name: tb.location || tb.title,
+      stopLat: centerLat, stopLng: centerLng,
+      searchType: tb.activity_type === 'meal' ? 'restaurant' : 'activity',
+      type: 'timeblock', data: tb, index: i,
+    });
+  });
+
+  // Activities from matching stops
+  dayStops.forEach(stop => {
+    (stop.top_activities || []).forEach((act, i) => {
+      if (!act.name) return;
+      entities.push({
+        key: `day-act-${stop.id}-${i}`,
+        placeId: act.place_id || null,
+        name: act.name,
+        stopLat: stop.lat, stopLng: stop.lng,
+        searchType: 'activity',
+        type: 'activity', data: act, index: i,
+      });
+    });
+    (stop.restaurants || []).forEach((r, i) => {
+      if (!r.name) return;
+      entities.push({
+        key: `day-rest-${stop.id}-${i}`,
+        placeId: r.place_id || null,
+        name: r.name,
+        stopLat: stop.lat, stopLng: stop.lng,
+        searchType: 'restaurant',
+        type: 'restaurant', data: r, index: i,
+      });
+    });
+    // Accommodation marker
+    const acc = stop.accommodation;
+    if (acc && acc.name) {
+      entities.push({
+        key: `day-hotel-${stop.id}`,
+        placeId: acc.place_id || null,
+        name: acc.name,
+        stopLat: stop.lat, stopLng: stop.lng,
+        searchType: 'hotel',
+        type: 'hotel', data: acc, index: 0,
+      });
+    }
+  });
+
+  if (entities.length === 0) return;
+
+  let coords;
+  try {
+    coords = await GoogleMaps.resolveEntityCoordinates(entities);
+  } catch (e) {
+    console.error('Day map coord resolve:', e);
+    return;
+  }
+
+  if (coords.size === 0) return;
+
+  const bounds = new google.maps.LatLngBounds();
+  const routePoints = [];
+
+  // Time block numbered markers + collect route points
+  timeBlocks.forEach((tb, i) => {
+    const pos = coords.get(`tb-${dayNum}-${i}`);
+    if (!pos) return;
+    bounds.extend(pos);
+    routePoints.push({ lat: pos.lat(), lng: pos.lng() });
+
+    const pinHtml = `<div class="stop-map-pin pin-timeblock">${i + 1}</div>`;
+    const popupHtml = `<div class="stop-map-popup"><strong>${esc(tb.time)} — ${esc(tb.title)}</strong>${tb.description ? `<p>${esc(tb.description)}</p>` : ''}</div>`;
+    const infoWindow = new google.maps.InfoWindow({ content: popupHtml });
+    GoogleMaps.createDivMarker(map, pos, pinHtml, () => {
+      infoWindow.open({ map, position: pos });
+    });
+  });
+
+  // POI markers (activities, restaurants, hotel)
+  for (const ent of entities) {
+    if (ent.type === 'timeblock') continue;
+    const pos = coords.get(ent.key);
+    if (!pos) continue;
+    bounds.extend(pos);
+
+    const pinHtml = _buildStopMapPin(ent.type, ent.data);
+    const popupHtml = _buildStopMapPopup(ent.type, ent.data);
+    const infoWindow = new google.maps.InfoWindow({ content: popupHtml });
+    GoogleMaps.createDivMarker(map, pos, pinHtml, () => {
+      infoWindow.open({ map, position: pos });
+    });
+  }
+
+  // Render driving route through time block locations
+  if (routePoints.length >= 2) {
+    GoogleMaps.renderDrivingRoute(map, routePoints, {
+      strokeColor: '#0EA5E9', strokeWeight: 3, strokeOpacity: 0.8,
+    }).catch(() => {});
+  }
+
+  if (coords.size > 1) {
+    map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -712,6 +1042,47 @@ function _initGuideDelegation() {
       if (stopId) navigateToStop(stopId);
       return;
     }
+
+    // Day example link in stop detail → navigate to day detail
+    const dayExLink = e.target.closest('.day-example-link');
+    if (dayExLink) {
+      e.preventDefault();
+      e.stopPropagation();
+      const dayNum = dayExLink.dataset.dayNum;
+      if (dayNum) navigateToDay(dayNum);
+      return;
+    }
+
+    // Day overview card → navigate to day detail
+    const dayCard = e.target.closest('.day-overview-card');
+    if (dayCard) {
+      const dayNum = dayCard.dataset.dayNum;
+      if (dayNum) navigateToDay(dayNum);
+      return;
+    }
+
+    // Day detail back → days overview
+    const dayBack = e.target.closest('.day-detail-back');
+    if (dayBack) {
+      navigateToDaysOverview();
+      return;
+    }
+
+    // Day prev/next navigation
+    const dayNav = e.target.closest('.day-nav-prev, .day-nav-next');
+    if (dayNav) {
+      const dayNum = dayNav.dataset.dayNum;
+      if (dayNum) navigateToDay(dayNum);
+      return;
+    }
+
+    // Days sidebar item → navigate to that day
+    const daySidebarItem = e.target.closest('.days-sidebar-item');
+    if (daySidebarItem) {
+      const dayNum = daySidebarItem.dataset.dayNum;
+      if (dayNum) navigateToDay(dayNum);
+      return;
+    }
   });
 }
 
@@ -750,7 +1121,7 @@ function renderCalendar(plan) {
     const stopId = stop ? stop.id : null;
 
     return `
-      <div class="cal-day-cell" data-type="${esc(type)}" data-stop-id="${stopId || ''}"
+      <div class="cal-day-cell" data-type="${esc(type)}" data-stop-id="${stopId || ''}" data-day-num="${dp.day}"
            title="${esc(dp.title)}" tabindex="0" role="button">
         <div class="cal-day-num">${dp.day}</div>
         <div class="cal-day-icon">${typeIcon[type] || _pinIcon}</div>
@@ -764,7 +1135,7 @@ function renderCalendar(plan) {
   return `
     <div class="calendar-section">
       <h3 class="calendar-title">Reise-Kalender</h3>
-      <p class="calendar-hint">Klick auf einen Tag öffnet den Stop im Reiseführer.</p>
+      <p class="calendar-hint">Klick auf einen Tag öffnet den Tagesplan.</p>
       <div class="calendar-scroll-wrap">
         <div class="calendar-timeline">
           ${cells}
@@ -780,11 +1151,11 @@ function renderCalendar(plan) {
 }
 
 function _initCalendarClicks(plan) {
-  document.querySelectorAll('.cal-day-cell[data-stop-id]').forEach(cell => {
-    const stopId = cell.dataset.stopId;
-    if (!stopId) return;
+  document.querySelectorAll('.cal-day-cell[data-day-num]').forEach(cell => {
+    const dayNum = cell.dataset.dayNum;
+    if (!dayNum) return;
     cell.addEventListener('click', () => {
-      navigateToStop(stopId);
+      navigateToDay(dayNum);
     });
     cell.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cell.click(); }
