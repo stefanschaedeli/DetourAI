@@ -417,9 +417,11 @@ function _renderAccommodationHtml(stop) {
             ${buildHeroPhotoLoading('sm')}
             <div class="acc-alt-summary">
               <strong>${esc(o.name)}</strong>
-              ${o.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
-              <span class="acc-type-tag">${esc(o.type || '')}</span>
-              <span class="acc-price-tag">ca. CHF ${(o.total_price_chf || 0).toLocaleString('de-CH')}</span>
+              <div class="acc-alt-badges">
+                ${o.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
+                <span class="acc-type-tag">${esc(o.type || '')}</span>
+                <span class="acc-price-tag">ca. CHF ${(o.total_price_chf || 0).toLocaleString('de-CH')}</span>
+              </div>
             </div>
             <div class="acc-guide-links">
               ${o.booking_url ? `<a href="${safeUrl(o.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
