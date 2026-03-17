@@ -121,11 +121,12 @@ REGELN:
 1. Option 1 (preference_index: 0): Entspricht diesem Wunsch des Gastes: "{pref0}"
 2. Option 2 (preference_index: 1): Entspricht diesem Wunsch des Gastes: "{pref1}"
 3. Option 3 (preference_index: 2): Entspricht diesem Wunsch des Gastes: "{pref2}"
-4. Option 4 (is_geheimtipp: true, preference_index: null): Ein echter Geheimtipp — etwas Besonderes/Ungewöhnliches für die Region (Glamping, Baumhaus, Boutique-Hotel, Weingut, Bauernhof, etc.)
+4. Option 4 (is_geheimtipp: true, preference_index: null): Ein echter Geheimtipp — etwas Besonderes/Ungewöhnliches für die Region (Glamping, Baumhaus, Boutique-Hotel, Weingut, Bauernhof, etc.). MUSS innerhalb von {req.hotel_radius_km} km vom Zentrum von {region} liegen.
 5. Verwende realistische, tatsächlich existierende Unterkunftsnamen für {region}.
 6. Beschreibung: 1-2 Absätze auf Deutsch mit Zimmerausstattung, Aktivitäten und spezifischen Services.
 7. matched_must_haves: Immer leeres Array [].
 8. hotel_website_url: Echte Hotelwebseite falls bekannt, sonst null.
+9. WICHTIG: Alle 4 Optionen (inkl. Geheimtipp) müssen innerhalb des Suchradius von {req.hotel_radius_km} km vom Zentrum von {region} liegen. Keine Ausnahmen.
 
 Gib exakt dieses JSON zurück:
 {{
