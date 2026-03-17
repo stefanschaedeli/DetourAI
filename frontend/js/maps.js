@@ -455,11 +455,11 @@ const GoogleMaps = (() => {
   }
 
   // ---------------------------------------------------------------------------
-  // Driving route rendering via DirectionsService
+  // Driving route rendering via Routes API (Route.computeRoutes)
   // ---------------------------------------------------------------------------
 
   /**
-   * Render an actual driving route on the map using DirectionsService.
+   * Render an actual driving route on the map using the Routes library.
    * Falls back to straight Polyline on error.
    *
    * @param {google.maps.Map} map
@@ -477,77 +477,44 @@ const GoogleMaps = (() => {
     };
     if (opts && opts.icons) polyOpts.icons = opts.icons;
 
-    // DirectionsService supports max 25 waypoints (origin + dest + 23 intermediates).
+    // Routes API supports max 25 intermediates.
     // For longer routes, batch into segments and render each.
-    const MAX_WAYPOINTS = 25;
+    const MAX_WAYPOINTS = 27; // origin + destination + 25 intermediates
     if (waypoints.length > MAX_WAYPOINTS) {
       return _renderBatchedRoute(map, waypoints, polyOpts);
     }
     return _renderSingleRoute(map, waypoints, polyOpts);
   }
 
-  /** Decode Google's encoded polyline format into [{lat, lng}] array. */
-  function _decodePolyline(encoded) {
-    const points = [];
-    let index = 0, lat = 0, lng = 0;
-    while (index < encoded.length) {
-      let shift = 0, result = 0, byte;
-      do {
-        byte = encoded.charCodeAt(index++) - 63;
-        result |= (byte & 0x1f) << shift;
-        shift += 5;
-      } while (byte >= 0x20);
-      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
-
-      shift = 0; result = 0;
-      do {
-        byte = encoded.charCodeAt(index++) - 63;
-        result |= (byte & 0x1f) << shift;
-        shift += 5;
-      } while (byte >= 0x20);
-      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
-
-      points.push({ lat: lat / 1e5, lng: lng / 1e5 });
-    }
-    return points;
-  }
-
   async function _renderSingleRoute(map, waypoints, polyOpts) {
     const origin = waypoints[0];
     const destination = waypoints[waypoints.length - 1];
-    const intermediates = waypoints.slice(1, -1).map(wp => ({
-      location: new google.maps.LatLng(wp.lat, wp.lng),
-      stopover: true,
-    }));
+    const intermediates = waypoints.slice(1, -1).map(wp => ({ lat: wp.lat, lng: wp.lng }));
 
     try {
-      const ds = new google.maps.DirectionsService();
-      const result = await ds.route({
-        origin: new google.maps.LatLng(origin.lat, origin.lng),
-        destination: new google.maps.LatLng(destination.lat, destination.lng),
-        waypoints: intermediates,
-        travelMode: google.maps.TravelMode.DRIVING,
-      });
+      const { Route } = await google.maps.importLibrary('routes');
+      const request = {
+        origin: { lat: origin.lat, lng: origin.lng },
+        destination: { lat: destination.lat, lng: destination.lng },
+        travelMode: 'DRIVING',
+        fields: ['path'],
+      };
+      if (intermediates.length) request.intermediates = intermediates;
 
-      const route = result.routes[0];
-      // JS SDK provides overview_path (LatLng[]) directly; fall back to decoding overview_polyline
-      let path;
-      if (route.overview_path && route.overview_path.length) {
-        path = route.overview_path;
-      } else {
-        const op = route.overview_polyline;
-        const encoded = typeof op === 'string' ? op : (op && op.points) || '';
-        path = _decodePolyline(encoded).map(p => new google.maps.LatLng(p.lat, p.lng));
+      const { routes } = await Route.computeRoutes(request);
+      if (!routes || !routes.length || !routes[0].path || !routes[0].path.length) {
+        _log('WARNING', 'Route.computeRoutes lieferte keinen Pfad, Fallback auf gerade Linie');
+        return _straightLineFallback(map, waypoints, polyOpts);
       }
-      return new google.maps.Polyline({ map, path, ...polyOpts });
+      return new google.maps.Polyline({ map, path: routes[0].path, ...polyOpts });
     } catch (e) {
-      _log('WARNING', `DirectionsService fehlgeschlagen, Fallback auf gerade Linie: ${e.message || e}`);
+      _log('WARNING', `Route.computeRoutes fehlgeschlagen, Fallback auf gerade Linie: ${e.message || e}`);
       return _straightLineFallback(map, waypoints, polyOpts);
     }
   }
 
   async function _renderBatchedRoute(map, waypoints, polyOpts) {
-    const MAX_PER_BATCH = 25;
+    const MAX_PER_BATCH = 27; // origin + destination + 25 intermediates
     const renderers = [];
     // Split into overlapping batches (last point of batch N = first point of batch N+1)
     for (let i = 0; i < waypoints.length - 1; i += MAX_PER_BATCH - 1) {
