@@ -38,6 +38,7 @@ async def _replace_stop_job(job_id: str):
     if not raw:
         return
     job = json.loads(raw)
+    user_id: int = job.get("user_id", 1)  # fallback to 1 (admin) for pre-auth trips
 
     travel_id: int = job["travel_id"]
     stop_index: int = job["stop_index"]
@@ -52,7 +53,7 @@ async def _replace_stop_job(job_id: str):
         job_id=job_id, agent="ReplaceStop",
     )
 
-    plan = await get_travel(travel_id)
+    plan = await get_travel(travel_id, user_id)
     if not plan:
         await debug_logger.log(LogLevel.ERROR, f"Reise {travel_id} nicht gefunden", job_id=job_id, agent="ReplaceStop")
         await debug_logger.push_event(job_id, "job_error", None, {"error": f"Reise {travel_id} nicht gefunden"})
@@ -237,7 +238,7 @@ async def _replace_stop_job(job_id: str):
     plan["stops"] = stops
 
     # --- Save to DB ---
-    await update_plan_json(travel_id, plan)
+    await update_plan_json(travel_id, user_id, plan)
 
     await debug_logger.log(
         LogLevel.SUCCESS, f"Stopp {stop_id} erfolgreich durch {new_region} ersetzt",

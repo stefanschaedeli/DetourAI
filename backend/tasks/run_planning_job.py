@@ -31,6 +31,7 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
         return
 
     job = json.loads(raw)
+    user_id: int = job.get("user_id", 1)  # fallback to 1 (admin) for pre-auth trips
 
     # Skip if paused waiting for region confirmation
     if job.get("status") == "awaiting_region_confirmation":
@@ -59,7 +60,7 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
 
         try:
             from utils.travel_db import save_travel as _db_save
-            await _db_save(result)
+            await _db_save(result, user_id)
         except Exception as db_err:
             await debug_logger.log(
                 LogLevel.WARNING, f"DB-Speicherung fehlgeschlagen: {db_err}",
