@@ -3328,3 +3328,55 @@ strong.req-keyword {
 .day-example-link:hover {
   text-decoration: underline;
 }
+
+/* Tagesplan CTA box in overview */
+.overview-dayplan-cta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  margin-top: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+}
+.overview-dayplan-cta:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+.overview-dayplan-cta-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-subtle);
+  border-radius: 12px;
+  color: var(--accent);
+}
+.overview-dayplan-cta-text {
+  flex: 1;
+  min-width: 0;
+}
+.overview-dayplan-cta-text strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+.overview-dayplan-cta-text span {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.overview-dayplan-cta-arrow {
+  flex-shrink: 0;
+  color: var(--text-sub);
+  transition: transform .15s ease, color .15s ease;
+}
+.overview-dayplan-cta:hover .overview-dayplan-cta-arrow {
+  color: var(--accent);
+  transform: translateX(3px);
+}

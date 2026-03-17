@@ -147,6 +147,19 @@ function renderOverview(plan) {
 
       <div id="guide-map"></div>
 
+      ${(plan.day_plans && plan.day_plans.length) ? `
+      <div class="overview-dayplan-cta" onclick="switchGuideTab('days')">
+        <div class="overview-dayplan-cta-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="overview-dayplan-cta-text">
+          <strong>Tagesplan</strong>
+          <span>${plan.day_plans.length} Tage mit stündlichen Zeitblöcken, Karte und Aktivitäten</span>
+        </div>
+        <svg class="overview-dayplan-cta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="9 6 15 12 9 18"/></svg>
+      </div>
+      ` : ''}
+
       ${renderTripAnalysis(plan.trip_analysis, plan.request)}
     </div>
   `;
@@ -1528,33 +1541,6 @@ function _lazyLoadSingleStopImages(plan, stop) {
     const rest = (stop.restaurants || [])[i];
     if (rest) _lazyLoadEntityImages(el, rest.name, lat, lng, 'restaurant');
   });
-}
-
-function renderDayPlan(plan) {
-  const dayPlans = plan.day_plans || [];
-  return `
-    <div class="dayplan-section">
-      ${dayPlans.map(dp => `
-        <div class="day-card type-${esc(dp.type)}">
-          <div class="day-header">
-            <div class="day-number">Tag ${dp.day}</div>
-            ${dp.date ? `<div class="day-date">${esc(dp.date)}</div>` : ''}
-            <div class="day-type-badge">${esc(dp.type)}</div>
-          </div>
-          <h3>${esc(dp.title)}</h3>
-          <p>${esc(dp.description)}</p>
-          ${dp.stops_on_route.length ? `
-            <div class="day-route">
-              <strong>Route:</strong> ${dp.stops_on_route.map(s => esc(s)).join(' → ')}
-            </div>
-          ` : ''}
-          ${dp.google_maps_route_url ? `
-            <a href="${safeUrl(dp.google_maps_route_url)}" target="_blank" class="btn btn-sm">Route in Maps</a>
-          ` : ''}
-        </div>
-      `).join('')}
-    </div>
-  `;
 }
 
 function renderBudget(plan) {
