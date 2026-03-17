@@ -529,7 +529,7 @@ const GoogleMaps = (() => {
         travelMode: google.maps.TravelMode.DRIVING,
       });
 
-      const encoded = result.routes[0].overview_polyline;
+      const encoded = result.routes[0].overview_polyline.points;
       const path = _decodePolyline(encoded).map(p => new google.maps.LatLng(p.lat, p.lng));
       return new google.maps.Polyline({ map, path, ...polyOpts });
     } catch (e) {
