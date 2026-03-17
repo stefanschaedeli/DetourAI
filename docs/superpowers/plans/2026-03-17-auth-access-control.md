@@ -1571,29 +1571,35 @@ git push && git push --tags
 
 - [ ] **Step 11.1: Create `frontend/js/auth.js`**
 
+> **IMPORTANT:** This file uses plain global functions — NO `export` keywords. The project uses plain `<script>` tags (not ES modules). All functions are globals accessible from other scripts and inline `<script>` blocks.
+
 ```javascript
 /**
  * auth.js — In-memory token store, login/logout, silent refresh.
  *
- * Access token lives in _accessToken (JS module variable).
- * Lost on page refresh intentionally — silentRefresh() re-acquires from cookie.
+ * Access token lives in _accessToken (closure variable, NOT localStorage).
+ * Lost on page refresh intentionally — initAuth() re-acquires from cookie.
  *
  * Refresh is serialized: concurrent 401s queue on a single in-flight refresh
  * promise instead of each issuing a parallel refresh request.
+ *
+ * All functions are GLOBAL (no export) — consistent with project JS style.
  */
+
+/* global S */  // S is defined in state.js, loaded before auth.js
 
 let _accessToken = null;
 let _refreshPromise = null;  // serialization lock
 
-export function getToken() {
+function getToken() {
   return _accessToken;
 }
 
-export function setToken(token) {
+function setToken(token) {
   _accessToken = token;
 }
 
-export function clearToken() {
+function clearToken() {
   _accessToken = null;
 }
 
@@ -1602,7 +1608,7 @@ export function clearToken() {
  * Returns true on success, false on failure.
  * Serialized: only one refresh runs at a time.
  */
-export async function silentRefresh() {
+async function silentRefresh() {
   if (_refreshPromise) return _refreshPromise;
 
   _refreshPromise = (async () => {
@@ -1627,10 +1633,10 @@ export async function silentRefresh() {
 
 /**
  * Login with username + password.
- * On success: stores token, fetches /me, populates S.currentUser, shows app.
- * On failure: returns error message string.
+ * On success: stores token, fetches /me, populates S.currentUser.
+ * Returns null on success, error string on failure.
  */
-export async function login(username, password) {
+async function login(username, password) {
   const resp = await fetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1651,16 +1657,14 @@ export async function login(username, password) {
   });
   if (!meResp.ok) return 'Fehler beim Laden der Benutzerdaten';
 
-  const user = await meResp.json();
-  S.currentUser = user;
-
+  S.currentUser = await meResp.json();
   return null;  // null = success
 }
 
 /**
  * Logout: clear server-side token + local state.
  */
-export async function logout() {
+async function logout() {
   try {
     await fetch('/api/auth/logout', {
       method: 'POST',
@@ -1678,7 +1682,7 @@ export async function logout() {
  * Tries a silent refresh; if successful, fetches /me and populates S.currentUser.
  * Returns true if authenticated, false if login screen should be shown.
  */
-export async function initAuth() {
+async function initAuth() {
   const ok = await silentRefresh();
   if (!ok) return false;
 
@@ -1899,7 +1903,10 @@ function showLoginScreen() {
   document.getElementById('header-username').style.display = 'none';
   document.getElementById('btn-admin').style.display = 'none';
   document.getElementById('btn-logout').style.display = 'none';
-  document.querySelector('.app-header .header-main-buttons').style.display = 'none';
+  // Hide the existing header action buttons (Meine Reisen, Neu starten)
+  // Use IDs: read them from index.html — typically btn-my-travels or the actual button IDs
+  const headerBtns = document.querySelectorAll('.app-header button:not(#btn-admin):not(#btn-logout)');
+  headerBtns.forEach(b => b.style.display = 'none');
 }
 
 function showAppForUser(user) {
@@ -1909,7 +1916,9 @@ function showAppForUser(user) {
   if (user.is_admin) {
     document.getElementById('btn-admin').style.display = '';
   }
-  document.querySelector('.app-header .header-main-buttons').style.display = '';
+  // Restore existing header buttons
+  const headerBtns = document.querySelectorAll('.app-header button:not(#btn-admin):not(#btn-logout)');
+  headerBtns.forEach(b => b.style.display = '');
   showSection('form-section');
 }
 
