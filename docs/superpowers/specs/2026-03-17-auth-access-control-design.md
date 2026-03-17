@@ -136,6 +136,11 @@ request returns 401
 - Celery task reads `user_id` from Redis job state and passes it to `save_travel(plan, user_id=...)`
 - **Also update the asyncio fallback path** (`_run_job` function) which also calls `save_travel(result)` — this must be updated identically, otherwise the fallback path writes trips without `user_id`
 
+**`backend/tasks/replace_stop_job.py`:**
+- The `travel_id` is read from Redis job state (already in place)
+- `user_id` must also be stored in Redis job state at job creation time (consistent with `run_planning_job.py`)
+- Both `get_travel(travel_id, user_id)` and `update_plan_json(travel_id, user_id, plan)` calls must be updated to pass `user_id`
+
 **`backend/requirements.txt`:**
 - Add `PyJWT` (actively maintained; replaces `python-jose` which has known CVEs and is unmaintained)
 - Add `passlib[argon2]`
@@ -292,6 +297,7 @@ backend/
   main.py                    # auth deps on all endpoints, startup migration, routers, CORS update
   utils/travel_db.py         # user_id filtering on all CRUD including update_travel + update_plan_json
   tasks/run_planning_job.py  # read user_id from Redis state, pass to save_travel
+  tasks/replace_stop_job.py  # read user_id from Redis job state, pass to get_travel + update_plan_json
   requirements.txt           # PyJWT, passlib[argon2]
 frontend/
   index.html         # #login-section, #admin-section, header auth UI
