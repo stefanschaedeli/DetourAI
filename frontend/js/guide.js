@@ -763,14 +763,17 @@ async function _initDayDetailMap(plan, dayNum) {
   const entities = [];
   const timeBlocks = dp.time_blocks || [];
 
-  // Time block entities
+  // Time block entities (skip drive/break — they never resolve to useful locations)
   timeBlocks.forEach((tb, i) => {
-    if (!tb.location && !tb.place_id) return;
+    if (tb.activity_type === 'drive' || tb.activity_type === 'break') return;
+    if (!tb.location && !tb.place_id && !tb.lat) return;
     entities.push({
       key: `tb-${dayNum}-${i}`,
       placeId: tb.place_id || null,
       name: tb.location || tb.title,
       stopLat: centerLat, stopLng: centerLng,
+      resolvedLat: tb.lat || null,
+      resolvedLng: tb.lng || null,
       searchType: tb.activity_type === 'meal' ? 'restaurant' : 'activity',
       type: 'timeblock', data: tb, index: i,
     });
@@ -829,20 +832,49 @@ async function _initDayDetailMap(plan, dayNum) {
   const bounds = new google.maps.LatLngBounds();
   const routePoints = [];
 
+  // Build route anchors from stop coordinates
+  // Start anchor: previous stop or plan start location
+  const prevStop = plan.stops.find(s => {
+    const arr = s.arrival_day || 1;
+    return dayNum === arr && s.drive_hours_from_prev > 0;
+  });
+  if (prevStop) {
+    // This is an arrival day — add departure point
+    const stopIdx = plan.stops.indexOf(prevStop);
+    const departure = stopIdx > 0 ? plan.stops[stopIdx - 1] : null;
+    if (departure && departure.lat && departure.lng) {
+      routePoints.push({ lat: departure.lat, lng: departure.lng });
+    } else if (plan.start_lat && plan.start_lng) {
+      routePoints.push({ lat: plan.start_lat, lng: plan.start_lng });
+    }
+  }
+
   // Time block numbered markers + collect route points
+  let tbIndex = 0;
   timeBlocks.forEach((tb, i) => {
+    if (tb.activity_type === 'drive' || tb.activity_type === 'break') return;
     const pos = coords.get(`tb-${dayNum}-${i}`);
     if (!pos) return;
     bounds.extend(pos);
     routePoints.push({ lat: pos.lat(), lng: pos.lng() });
+    tbIndex++;
 
-    const pinHtml = `<div class="stop-map-pin pin-timeblock">${i + 1}</div>`;
+    const pinHtml = `<div class="stop-map-pin pin-timeblock">${tbIndex}</div>`;
     const popupHtml = `<div class="stop-map-popup"><strong>${esc(tb.time)} — ${esc(tb.title)}</strong>${tb.description ? `<p>${esc(tb.description)}</p>` : ''}</div>`;
     const infoWindow = new google.maps.InfoWindow({ content: popupHtml });
     GoogleMaps.createDivMarker(map, pos, pinHtml, () => {
       infoWindow.open({ map, position: pos });
     });
   });
+
+  // End anchor: current stop coordinates
+  if (refStop && refStop.lat && refStop.lng) {
+    const lastRp = routePoints[routePoints.length - 1];
+    // Only add if different from last route point
+    if (!lastRp || Math.abs(lastRp.lat - refStop.lat) > 0.001 || Math.abs(lastRp.lng - refStop.lng) > 0.001) {
+      routePoints.push({ lat: refStop.lat, lng: refStop.lng });
+    }
+  }
 
   // POI markers (activities, restaurants, hotel)
   for (const ent of entities) {
@@ -859,7 +891,7 @@ async function _initDayDetailMap(plan, dayNum) {
     });
   }
 
-  // Render driving route through time block locations
+  // Render driving route through time block locations with stop anchors
   if (routePoints.length >= 2) {
     GoogleMaps.renderDrivingRoute(map, routePoints, {
       strokeColor: '#0EA5E9', strokeWeight: 3, strokeOpacity: 0.8,

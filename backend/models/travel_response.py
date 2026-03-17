@@ -22,6 +22,8 @@ class TimeBlock(BaseModel):
     google_maps_url: Optional[str] = None
     price_chf: Optional[float] = None
     place_id: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 
 class StopAccommodation(BaseModel):
