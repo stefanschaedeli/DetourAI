@@ -10,7 +10,7 @@ from typing import Optional
 
 import redis as redis_lib
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,6 +24,11 @@ from models.travel_request import TravelRequest
 from models.stop_option import StopSelectRequest
 from models.accommodation_option import AccommodationSelectRequest, BudgetState, AccommodationResearchRequest
 from models.trip_leg import ReplaceRegionRequest, RecomputeRegionsRequest
+from utils.auth import get_current_user, CurrentUser, verify_jwt_secret, hash_password
+from utils.auth_db import admin_exists, create_user, assign_orphan_trips, get_user_by_username
+from utils.migrations import run_migrations
+from routers.auth import router as auth_router
+from routers.admin import router as admin_router
 from utils.debug_logger import debug_logger, LogLevel
 from utils.maps_helper import (
     geocode_google, google_directions, google_directions_simple,
@@ -111,8 +116,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_CORS_ORIGINS,
     allow_methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "Authorization"],
 )
+
+app.include_router(auth_router)
+app.include_router(admin_router)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -140,6 +148,25 @@ from utils.settings_store import (
     get_setting, async_get_all_settings, async_reset_section,
     validate_setting, set_setting, DEFAULTS, ALLOWED_MODELS,
 )
+
+# ── Startup: validate JWT secret, run DB migrations, bootstrap admin ──────────
+verify_jwt_secret()
+
+_data_dir = os.getenv("DATA_DIR", "data")
+_db_path = os.path.join(_data_dir, "travels.db")
+os.makedirs(_data_dir, exist_ok=True)
+run_migrations(_db_path)
+
+_admin_username = os.getenv("ADMIN_USERNAME", "")
+_admin_password = os.getenv("ADMIN_PASSWORD", "")
+if _admin_username and _admin_password:
+    if not admin_exists():
+        _admin_id = create_user(_admin_username, hash_password(_admin_password), is_admin=True)
+    else:
+        _u = get_user_by_username(_admin_username)
+        _admin_id = _u["id"] if _u else 1
+    assign_orphan_trips(_admin_id)
+
 _init_db()
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
@@ -900,9 +927,10 @@ async def _find_and_stream_options(
 # ---------------------------------------------------------------------------
 
 @app.post("/api/init-job")
-async def init_job(request: TravelRequest):
+async def init_job(request: TravelRequest, current_user: CurrentUser = Depends(get_current_user)):
     job_id = uuid.uuid4().hex
     job = _new_job(job_id, request)
+    job["user_id"] = current_user.id
     save_job(job_id, job)
     return {"job_id": job_id}
 
@@ -912,7 +940,7 @@ async def init_job(request: TravelRequest):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/plan-trip")
-async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
+async def plan_trip(request: TravelRequest, job_id: Optional[str] = None, current_user: CurrentUser = Depends(get_current_user)):
     from agents.stop_options_finder import StopOptionsFinderAgent
 
     if job_id and _JOB_ID_RE.match(job_id):
@@ -923,6 +951,7 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
     else:
         job_id = uuid.uuid4().hex
         job = _new_job(job_id, request)
+    job["user_id"] = current_user.id
     save_job(job_id, job)
 
     await debug_logger.log(LogLevel.INFO, f"Neue Reise: {request.start_location} → {request.main_destination}",
@@ -1024,7 +1053,7 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/select-stop/{job_id}")
-async def select_stop(job_id: str, body: StopSelectRequest):
+async def select_stop(job_id: str, body: StopSelectRequest, current_user: CurrentUser = Depends(get_current_user)):
     from agents.stop_options_finder import StopOptionsFinderAgent
 
     job = get_job(job_id)
@@ -1276,7 +1305,7 @@ async def select_stop(job_id: str, body: StopSelectRequest):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/recompute-options/{job_id}")
-async def recompute_options(job_id: str, body: RecomputeRequest):
+async def recompute_options(job_id: str, body: RecomputeRequest, current_user: CurrentUser = Depends(get_current_user)):
     from agents.stop_options_finder import StopOptionsFinderAgent
 
     job = get_job(job_id)
@@ -1364,7 +1393,7 @@ class PatchJobRequest(BaseModel):
 
 
 @app.post("/api/patch-job/{job_id}")
-async def patch_job(job_id: str, body: PatchJobRequest):
+async def patch_job(job_id: str, body: PatchJobRequest, current_user: CurrentUser = Depends(get_current_user)):
     from agents.stop_options_finder import StopOptionsFinderAgent
 
     job = get_job(job_id)
@@ -1492,7 +1521,7 @@ async def patch_job(job_id: str, body: PatchJobRequest):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/confirm-route/{job_id}")
-async def confirm_route(job_id: str):
+async def confirm_route(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
     from tasks.prefetch_accommodations import prefetch_accommodations_task
 
     job = get_job(job_id)
@@ -1569,7 +1598,7 @@ async def confirm_route(job_id: str):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/start-accommodations/{job_id}")
-async def start_accommodations(job_id: str):
+async def start_accommodations(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
     job = get_job(job_id)
     if job.get("status") != "loading_accommodations":
         raise HTTPException(status_code=400, detail="Job nicht im Status loading_accommodations")
@@ -1584,7 +1613,7 @@ async def start_accommodations(job_id: str):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/confirm-accommodations/{job_id}")
-async def confirm_accommodations(job_id: str, body: dict):
+async def confirm_accommodations(job_id: str, body: dict, current_user: CurrentUser = Depends(get_current_user)):
     job = get_job(job_id)
     request = TravelRequest(**job["request"])
 
@@ -1627,7 +1656,7 @@ async def confirm_accommodations(job_id: str, body: dict):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/select-accommodation/{job_id}")
-async def select_accommodation(job_id: str, body: AccommodationSelectRequest):
+async def select_accommodation(job_id: str, body: AccommodationSelectRequest, current_user: CurrentUser = Depends(get_current_user)):
     job = get_job(job_id)
     request = TravelRequest(**job["request"])
     selected_stops = job["selected_stops"]
@@ -1690,7 +1719,7 @@ async def select_accommodation(job_id: str, body: AccommodationSelectRequest):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/research-accommodation/{job_id}")
-async def research_accommodation(job_id: str, body: AccommodationResearchRequest):
+async def research_accommodation(job_id: str, body: AccommodationResearchRequest, current_user: CurrentUser = Depends(get_current_user)):
     """Re-research accommodations for a single stop with optional extra instructions."""
     job = get_job(job_id)
     request = TravelRequest(**job["request"])
@@ -1728,7 +1757,7 @@ async def research_accommodation(job_id: str, body: AccommodationResearchRequest
 # ---------------------------------------------------------------------------
 
 @app.post("/api/start-planning/{job_id}")
-async def start_planning(job_id: str):
+async def start_planning(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
     from tasks.run_planning_job import run_planning_job_task
 
     job = get_job(job_id)
@@ -1754,8 +1783,14 @@ async def start_planning(job_id: str):
 # ---------------------------------------------------------------------------
 
 @app.get("/api/progress/{job_id}")
-async def progress(job_id: str):
-    # Verify job exists
+async def progress(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
+    # Verify job exists and ownership
+    raw = redis_client.get(f"job:{job_id}")
+    if raw:
+        _job_check = json.loads(raw)
+        _job_user_id = _job_check.get("user_id")
+        if _job_user_id is not None and _job_user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Kein Zugriff auf diesen Job")
     get_job(job_id)
 
     queue = debug_logger.subscribe(job_id)
@@ -1820,7 +1855,7 @@ async def progress(job_id: str):
 # ---------------------------------------------------------------------------
 
 @app.get("/api/result/{job_id}")
-async def get_result(job_id: str):
+async def get_result(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
     job = get_job(job_id)
     return job
 
@@ -1830,7 +1865,7 @@ async def get_result(job_id: str):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/generate-output/{job_id}/{file_type}")
-async def generate_output(job_id: str, file_type: str):
+async def generate_output(job_id: str, file_type: str, current_user: CurrentUser = Depends(get_current_user)):
     from agents.output_generator import OutputGeneratorAgent
 
     if file_type not in ("pdf", "pptx"):
@@ -1874,7 +1909,7 @@ class SettingsResetRequest(BaseModel):
 
 
 @app.get("/api/settings")
-async def api_get_settings():
+async def api_get_settings(current_user: CurrentUser = Depends(get_current_user)):
     all_settings = await async_get_all_settings()
     api_keys = {
         "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
@@ -1885,7 +1920,7 @@ async def api_get_settings():
 
 
 @app.put("/api/settings")
-async def api_update_settings(body: SettingsUpdateRequest):
+async def api_update_settings(body: SettingsUpdateRequest, current_user: CurrentUser = Depends(get_current_user)):
     errors = []
     for key, value in body.settings.items():
         err = validate_setting(key, value)
@@ -1905,7 +1940,7 @@ async def api_update_settings(body: SettingsUpdateRequest):
 
 
 @app.post("/api/settings/reset")
-async def api_reset_settings(body: SettingsResetRequest):
+async def api_reset_settings(body: SettingsResetRequest, current_user: CurrentUser = Depends(get_current_user)):
     count = await async_reset_section(body.section)
     return {"reset": True, "section": body.section, "deleted": count}
 
@@ -1957,8 +1992,8 @@ def _slugify(text: str) -> str:
 
 
 @app.get("/api/travels")
-async def api_list_travels():
-    travels = await list_travels()
+async def api_list_travels(current_user: CurrentUser = Depends(get_current_user)):
+    travels = await list_travels(current_user.id)
     for t in travels:
         name = t.get("custom_name") or t.get("title") or ""
         t["slug"] = _slugify(name)
@@ -1966,32 +2001,32 @@ async def api_list_travels():
 
 
 @app.post("/api/travels", status_code=201)
-async def api_save_travel(body: SaveTravelRequest):
-    travel_id = await save_travel(body.plan)
+async def api_save_travel(body: SaveTravelRequest, current_user: CurrentUser = Depends(get_current_user)):
+    travel_id = await save_travel(body.plan, current_user.id)
     if travel_id is None:
         return {"saved": False, "id": None}
     return {"saved": True, "id": travel_id}
 
 
 @app.patch("/api/travels/{travel_id}")
-async def api_update_travel(travel_id: int, body: UpdateTravelRequest):
-    updated = await update_travel(travel_id, body.custom_name, body.rating)
+async def api_update_travel(travel_id: int, body: UpdateTravelRequest, current_user: CurrentUser = Depends(get_current_user)):
+    updated = await update_travel(travel_id, current_user.id, body.custom_name, body.rating)
     if not updated:
         raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
     return {"updated": True, "id": travel_id}
 
 
 @app.get("/api/travels/{travel_id}")
-async def api_get_travel(travel_id: int):
-    plan = await get_travel(travel_id)
+async def api_get_travel(travel_id: int, current_user: CurrentUser = Depends(get_current_user)):
+    plan = await get_travel(travel_id, current_user.id)
     if plan is None:
         raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
     return plan
 
 
 @app.delete("/api/travels/{travel_id}")
-async def api_delete_travel(travel_id: int):
-    if not await delete_travel(travel_id):
+async def api_delete_travel(travel_id: int, current_user: CurrentUser = Depends(get_current_user)):
+    if not await delete_travel(travel_id, current_user.id):
         raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
     return {"deleted": True, "id": travel_id}
 
@@ -2003,8 +2038,8 @@ async def api_delete_travel(travel_id: int):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/travels/{travel_id}/replan")
-async def api_replan_travel(travel_id: int):
-    plan = await get_travel(travel_id)
+async def api_replan_travel(travel_id: int, current_user: CurrentUser = Depends(get_current_user)):
+    plan = await get_travel(travel_id, current_user.id)
     if plan is None:
         raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
 
@@ -2054,6 +2089,7 @@ async def api_replan_travel(travel_id: int):
         "selected_stops": pre_built_stops,
         "selected_accommodations": pre_selected_accommodations,
         "replan_source_id": travel_id,
+        "user_id": current_user.id,
     }
     save_job(job_id, job)
 
@@ -2077,10 +2113,10 @@ class ReplaceStopRequest(BaseModel):
 
 
 @app.post("/api/travels/{travel_id}/replace-stop")
-async def api_replace_stop(travel_id: int, body: ReplaceStopRequest):
+async def api_replace_stop(travel_id: int, body: ReplaceStopRequest, current_user: CurrentUser = Depends(get_current_user)):
     from agents.stop_options_finder import StopOptionsFinderAgent
 
-    plan = await get_travel(travel_id)
+    plan = await get_travel(travel_id, current_user.id)
     if plan is None:
         raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
 
@@ -2112,6 +2148,7 @@ async def api_replace_stop(travel_id: int, body: ReplaceStopRequest):
             "new_lng": geo_result[1],
             "new_nights": nights,
             "request": plan.get("request", {}),
+            "user_id": current_user.id,
         }
         save_job(job_id, job)
         _fire_task("replace_stop_job", job_id)
@@ -2170,6 +2207,7 @@ async def api_replace_stop(travel_id: int, body: ReplaceStopRequest):
             "stop_index": stop_index,
             "options": options,
             "request": req_data,
+            "user_id": current_user.id,
         }
         save_job(job_id, job)
 
@@ -2190,7 +2228,7 @@ class ReplaceStopSelectRequest(BaseModel):
 
 
 @app.post("/api/travels/{travel_id}/replace-stop-select")
-async def api_replace_stop_select(travel_id: int, body: ReplaceStopSelectRequest):
+async def api_replace_stop_select(travel_id: int, body: ReplaceStopSelectRequest, current_user: CurrentUser = Depends(get_current_user)):
     job = get_job(body.job_id)
     if job.get("travel_id") != travel_id:
         raise HTTPException(400, detail="Job gehört nicht zu dieser Reise")
@@ -2200,7 +2238,7 @@ async def api_replace_stop_select(travel_id: int, body: ReplaceStopSelectRequest
         raise HTTPException(400, detail="Ungültiger option_index")
 
     selected = options[body.option_index]
-    plan = await get_travel(travel_id)
+    plan = await get_travel(travel_id, current_user.id)
     if plan is None:
         raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
 
@@ -2232,7 +2270,7 @@ async def api_replace_stop_select(travel_id: int, body: ReplaceStopSelectRequest
 # ---------------------------------------------------------------------------
 
 @app.post("/api/skip-to-leg-end/{job_id}")
-async def skip_to_leg_end(job_id: str):
+async def skip_to_leg_end(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
     """Skip remaining stops in current leg — add end_location as stop and advance to next leg."""
     job = get_job(job_id)
     request = TravelRequest(**job["request"])
@@ -2301,7 +2339,7 @@ async def skip_to_leg_end(job_id: str):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/replace-region/{job_id}")
-async def replace_region(job_id: str, body: ReplaceRegionRequest):
+async def replace_region(job_id: str, body: ReplaceRegionRequest, current_user: CurrentUser = Depends(get_current_user)):
     from agents.region_planner import RegionPlannerAgent
     from models.trip_leg import RegionPlan
 
@@ -2339,7 +2377,7 @@ async def replace_region(job_id: str, body: ReplaceRegionRequest):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/recompute-regions/{job_id}")
-async def recompute_regions(job_id: str, body: RecomputeRegionsRequest):
+async def recompute_regions(job_id: str, body: RecomputeRegionsRequest, current_user: CurrentUser = Depends(get_current_user)):
     from agents.region_planner import RegionPlannerAgent
     from models.trip_leg import RegionPlan
 
@@ -2373,7 +2411,7 @@ async def recompute_regions(job_id: str, body: RecomputeRegionsRequest):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/confirm-regions/{job_id}")
-async def confirm_regions(job_id: str):
+async def confirm_regions(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
     from models.trip_leg import RegionPlan
 
     job = get_job(job_id)
