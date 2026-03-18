@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from pydantic import BaseModel
@@ -95,9 +95,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> CurrentUser:
     return CurrentUser(id=payload.sub, username=payload.username, is_admin=payload.is_admin)
 
 
-async def get_current_user_sse(request: "Request", token: Optional[str] = None) -> CurrentUser:
+async def get_current_user_sse(request: Request, token: Optional[str] = None) -> CurrentUser:
     """Like get_current_user but also accepts ?token= query param (needed for EventSource)."""
-    from fastapi import Request as _Request
     raw_token = token
     if raw_token is None:
         auth_header = request.headers.get("Authorization", "")
