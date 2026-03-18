@@ -152,7 +152,8 @@ from utils.settings_store import (
 # ── Startup: validate JWT secret, run DB migrations, bootstrap admin ──────────
 verify_jwt_secret()
 
-_data_dir = os.getenv("DATA_DIR", "data")
+_default_data_dir = str(Path(__file__).parent.parent / "data")
+_data_dir = os.getenv("DATA_DIR", _default_data_dir)
 _db_path = os.path.join(_data_dir, "travels.db")
 os.makedirs(_data_dir, exist_ok=True)
 run_migrations(_db_path)
