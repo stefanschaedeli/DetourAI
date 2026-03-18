@@ -493,8 +493,8 @@ async def _calc_route_geometry(
         "stops_remaining": n,
         "ideal_km_from_prev": ideal_km,
         "ideal_hours_from_prev": min(ideal_hours, max_drive_hours),
-        "min_km_from_origin": max(50.0, total_km * proximity_origin_pct / 100) if proximity_origin_pct > 0 else 0.0,
-        "min_km_from_target": max(50.0, total_km * proximity_target_pct / 100) if proximity_target_pct > 0 else 0.0,
+        "min_km_from_origin": round(total_km * proximity_origin_pct / 100, 1) if proximity_origin_pct > 0 else 0.0,
+        "min_km_from_target": round(total_km * proximity_target_pct / 100, 1) if proximity_target_pct > 0 else 0.0,
         "origin_location": origin_location or from_location,
         # Cache coords so _find_and_stream_options can skip re-geocoding
         "_from_coords": from_coords,

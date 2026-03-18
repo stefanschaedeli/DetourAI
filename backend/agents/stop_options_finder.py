@@ -148,7 +148,7 @@ class StopOptionsFinderAgent:
                 f"2. Distanz: ~{geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80):.0f} km von {prev_stop}\n"
                 f"   (Toleranz ±40% — bewusst größerer Bereich als normal)\n"
                 f"3. NICHT zu nahe am Reise-Startpunkt {geo.get('origin_location', req.start_location)}: "
-                f"min {geo.get('min_km_from_origin', 50):.0f} km Luftlinie\n"
+                f"min {geo.get('min_km_from_origin', 0):.0f} km Luftlinie\n"
                 f"4. Gehe BEWUSST NICHT Richtung {segment_target} — wähle Orte seitlich oder entgegengesetzt\n"
             )
         else:
@@ -157,8 +157,8 @@ class StopOptionsFinderAgent:
                 f"1. drive_hours von {prev_stop} zu diesem Stop: ≤ {req.max_drive_hours_per_day}h\n"
                 f"2. Distanz: ~{geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80):.0f} km von {prev_stop}\n"
                 f"   (Toleranz ±30%; NICHT unter {geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80) * 0.5:.0f} km — zu nahe am letzten Stop)\n"
-                f"3. NICHT zu nahe am Reise-Startpunkt {geo.get('origin_location', req.start_location)}: min {geo.get('min_km_from_origin', 50):.0f} km Luftlinie\n"
-                f"4. NICHT zu nahe am Ziel {segment_target}: min {geo.get('min_km_from_target', 50):.0f} km Luftlinie\n"
+                f"3. NICHT zu nahe am Reise-Startpunkt {geo.get('origin_location', req.start_location)}: min {geo.get('min_km_from_origin', 0):.0f} km Luftlinie\n"
+                f"4. NICHT zu nahe am Ziel {segment_target}: min {geo.get('min_km_from_target', 0):.0f} km Luftlinie\n"
                 f"5. Teile lange Strecken auf — niemals direkt zum Ziel springen wenn noch {geo.get('stops_remaining', 1)} Etappe(n) geplant sind\n"
                 f"6. RICHTUNG: Der Stop muss geographisch ZWISCHEN {prev_stop} und {segment_target} liegen — "
                 f"NICHT hinter dem Ziel und NICHT in die entgegengesetzte Richtung. "
