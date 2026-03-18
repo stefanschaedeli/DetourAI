@@ -156,6 +156,7 @@ _data_dir = os.getenv("DATA_DIR", "data")
 _db_path = os.path.join(_data_dir, "travels.db")
 os.makedirs(_data_dir, exist_ok=True)
 run_migrations(_db_path)
+_init_db()
 
 _admin_username = os.getenv("ADMIN_USERNAME", "")
 _admin_password = os.getenv("ADMIN_PASSWORD", "")
@@ -166,8 +167,6 @@ if _admin_username and _admin_password:
         _u = get_user_by_username(_admin_username)
         _admin_id = _u["id"] if _u else 1
     assign_orphan_trips(_admin_id)
-
-_init_db()
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
