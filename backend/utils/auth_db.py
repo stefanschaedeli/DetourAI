@@ -6,11 +6,13 @@ import hashlib
 import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Optional
 
 
 def _db_path() -> str:
-    data_dir = os.getenv("DATA_DIR", "data")
+    default = str(Path(__file__).parent.parent.parent / "data")
+    data_dir = os.getenv("DATA_DIR", default)
     return os.path.join(data_dir, "travels.db")
 
 
