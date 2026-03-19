@@ -68,7 +68,7 @@ Gib exakt dieses JSON zurück:
   ]
 }}
 
-Schreibe alle Texte auf Deutsch. Gib 3-5 weitere Aktivitäten zurück, die sich von den bereits geplanten unterscheiden.{wiki_block}"""
+Schreibe alle Texte auf Deutsch. Gib 3-5 weitere Aktivitäten zurück, die sich von den bereits geplanten unterscheiden. WICHTIG: Alle weiteren Aktivitäten müssen innerhalb von {req.activities_radius_km * 2} km vom Übernachtungsort in {region} liegen.{wiki_block}"""
 
         await debug_logger.log(
             LogLevel.API, f"→ Anthropic API call: {self.model} (Reiseführer: {region})",
