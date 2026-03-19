@@ -925,7 +925,21 @@ async def _find_and_stream_options(
 # Quota helper
 # ---------------------------------------------------------------------------
 
-async def _check_user_quota(user_id: int) -> None:
+def estimate_trip_tokens(request: TravelRequest) -> int:
+    """Conservative upper-bound token estimate for a trip before it starts."""
+    avg_nights = (request.min_nights_per_stop + request.max_nights_per_stop) / 2
+    num_stops = max(1, round(request.total_days / avg_nights))
+    num_legs = len(request.legs)
+
+    route_cost   = num_legs * 6_000
+    per_stop     = num_stops * 8_000
+    planner_cost = 10_000
+    analysis     = 5_000
+    raw = route_cost + per_stop + planner_cost + analysis
+    return int(raw * 1.25)  # 25% safety buffer
+
+
+async def _check_user_quota(user_id: int, estimated_cost: int = 0) -> None:
     from utils.auth_db import get_quota
     from utils.travel_db import get_user_token_total
     quota = await asyncio.to_thread(get_quota, user_id)
@@ -937,6 +951,16 @@ async def _check_user_quota(user_id: int) -> None:
             status_code=402,
             detail=f"Token-Kontingent erschöpft ({used:,} / {quota:,} Tokens verwendet). Bitte kontaktieren Sie den Administrator.",
         )
+    if estimated_cost > 0 and used + estimated_cost > quota:
+        remaining = quota - used
+        raise HTTPException(
+            status_code=402,
+            detail=(
+                f"Nicht genügend Token-Kontingent für diese Reise. "
+                f"Verbleibend: {remaining:,} | Geschätzt benötigt: {estimated_cost:,}. "
+                "Bitte kontaktieren Sie den Administrator."
+            ),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -946,7 +970,7 @@ async def _check_user_quota(user_id: int) -> None:
 
 @app.post("/api/init-job")
 async def init_job(request: TravelRequest, current_user: CurrentUser = Depends(get_current_user)):
-    await _check_user_quota(current_user.id)
+    await _check_user_quota(current_user.id, estimate_trip_tokens(request))
     job_id = uuid.uuid4().hex
     job = _new_job(job_id, request)
     job["user_id"] = current_user.id
@@ -960,7 +984,7 @@ async def init_job(request: TravelRequest, current_user: CurrentUser = Depends(g
 
 @app.post("/api/plan-trip")
 async def plan_trip(request: TravelRequest, job_id: Optional[str] = None, current_user: CurrentUser = Depends(get_current_user)):
-    await _check_user_quota(current_user.id)
+    await _check_user_quota(current_user.id, estimate_trip_tokens(request))
     from agents.stop_options_finder import StopOptionsFinderAgent
 
     if job_id and _JOB_ID_RE.match(job_id):
