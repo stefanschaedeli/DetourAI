@@ -106,9 +106,24 @@
   --shadow: 0 4px 24px rgba(124, 107, 224, 0.10);
 }
 
+@keyframes pastel-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 body {
   font-family: var(--font-primary);
-  background: var(--bg-primary);
+  background: linear-gradient(
+    135deg,
+    #FAF8FF 0%,
+    #EEF6FF 25%,
+    #F0FBF4 50%,
+    #FFF4F4 75%,
+    #FAF8FF 100%
+  );
+  background-size: 400% 400%;
+  animation: pastel-shift 18s ease infinite;
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100dvh;
