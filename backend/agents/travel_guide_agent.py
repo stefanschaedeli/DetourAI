@@ -14,9 +14,10 @@ SYSTEM_PROMPT = (
 
 
 class TravelGuideAgent:
-    def __init__(self, request: TravelRequest, job_id: str):
+    def __init__(self, request: TravelRequest, job_id: str, token_accumulator: list = None):
         self.request = request
         self.job_id = job_id
+        self.token_accumulator = token_accumulator
         self.client = get_client()
         self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
 
@@ -83,7 +84,8 @@ Schreibe alle Texte auf Deutsch. Gib 3-5 weitere Aktivitäten zurück, die sich 
                 messages=[{"role": "user", "content": prompt}],
             )
 
-        response = await call_with_retry(call, job_id=self.job_id, agent_name="TravelGuideAgent")
+        response = await call_with_retry(call, job_id=self.job_id, agent_name="TravelGuideAgent",
+                                         token_accumulator=self.token_accumulator)
         text = response.content[0].text
         result = parse_agent_json(text)
         return result

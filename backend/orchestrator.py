@@ -22,6 +22,7 @@ class TravelPlannerOrchestrator:
     def __init__(self, request: TravelRequest, job_id: str):
         self.request = request
         self.job_id = job_id
+        self._token_accumulator: list = []
 
     def _get_store(self):
         try:
@@ -49,6 +50,7 @@ class TravelPlannerOrchestrator:
         job_id = self.job_id
 
         debug_logger.set_verbosity(job_id, req.log_verbosity)
+        self._token_accumulator = []
 
         try:
             await debug_logger.log(LogLevel.INFO, "Orchestrator startet", job_id=job_id)
@@ -122,7 +124,7 @@ class TravelPlannerOrchestrator:
             return existing_stops   # Already built interactively
 
         await debug_logger.log(LogLevel.AGENT, f"RouteArchitect für Leg {leg_index}", job_id=self.job_id)
-        route = await RouteArchitectAgent(req, self.job_id).run()
+        route = await RouteArchitectAgent(req, self.job_id, token_accumulator=self._token_accumulator).run()
         stops = route.get("stops", [])
 
         # Safety net: ensure destination is included as last stop
@@ -181,7 +183,7 @@ class TravelPlannerOrchestrator:
         if not job.get("region_plan"):
             # First call: generate region plan
             description = leg.explore_description or f"{leg.start_location} bis {leg.end_location} erkunden"
-            agent = RegionPlannerAgent(self.request, self.job_id)
+            agent = RegionPlannerAgent(self.request, self.job_id, token_accumulator=self._token_accumulator)
             region_plan = await agent.plan(description=description, leg_index=leg_index)
             job = self._load_job()
             job["region_plan"] = region_plan.model_dump()
@@ -221,7 +223,7 @@ class TravelPlannerOrchestrator:
             region = stop.get("region", "")
             await debug_logger.push_event(job_id, "stop_research_started", None,
                                            {"stop_id": sid, "region": region, "section": "activities"})
-            result = await ActivitiesAgent(req, job_id).run_stop(stop)
+            result = await ActivitiesAgent(req, job_id, token_accumulator=self._token_accumulator).run_stop(stop)
             act_map[sid] = result
             await debug_logger.push_event(job_id, "activities_loaded", None,
                                            {"stop_id": sid, "region": region,
@@ -232,7 +234,7 @@ class TravelPlannerOrchestrator:
             region = stop.get("region", "")
             await debug_logger.push_event(job_id, "stop_research_started", None,
                                            {"stop_id": sid, "region": region, "section": "restaurants"})
-            result = await RestaurantsAgent(req, job_id).run_stop(stop)
+            result = await RestaurantsAgent(req, job_id, token_accumulator=self._token_accumulator).run_stop(stop)
             rest_map[sid] = result
             await debug_logger.push_event(job_id, "restaurants_loaded", None,
                                            {"stop_id": sid, "region": region,
@@ -279,7 +281,7 @@ class TravelPlannerOrchestrator:
         async def research_travel_guide(stop):
             sid = stop.get("id")
             existing_acts = [a["name"] for a in act_map.get(sid, {}).get("top_activities", [])]
-            result = await TravelGuideAgent(req, job_id).run_stop(stop, existing_acts)
+            result = await TravelGuideAgent(req, job_id, token_accumulator=self._token_accumulator).run_stop(stop, existing_acts)
             guide_map[sid] = result
 
         await asyncio.gather(*[research_travel_guide(s) for s in stops])
@@ -302,7 +304,7 @@ class TravelPlannerOrchestrator:
 
         # Phase 3: Day Planner
         route_for_planner = {"stops": stops}
-        plan = await DayPlannerAgent(req, job_id).run(
+        plan = await DayPlannerAgent(req, job_id, token_accumulator=self._token_accumulator).run(
             route=route_for_planner,
             accommodations=all_accommodations,
             activities=all_research,
@@ -318,12 +320,21 @@ class TravelPlannerOrchestrator:
         # Phase 4: Reise-Analyse
         await debug_logger.log(LogLevel.INFO, "Reise-Analyse wird erstellt…", job_id=job_id)
         try:
-            analysis_result = await TripAnalysisAgent(req, job_id).run(plan, req)
+            analysis_result = await TripAnalysisAgent(req, job_id, token_accumulator=self._token_accumulator).run(plan, req)
             plan["trip_analysis"] = analysis_result
         except Exception as exc:
             await debug_logger.log(LogLevel.WARNING,
                 f"Reise-Analyse fehlgeschlagen (nicht kritisch): {exc}", job_id=job_id)
             plan["trip_analysis"] = None
+
+        # Inject token counts as internal metadata
+        total_in  = sum(e["input"]  for e in self._token_accumulator)
+        total_out = sum(e["output"] for e in self._token_accumulator)
+        plan["_token_counts"] = {
+            "total_input_tokens":  total_in,
+            "total_output_tokens": total_out,
+            "total_tokens":        total_in + total_out,
+        }
 
         # Send job_complete
         await self.progress("job_complete", None, plan, 100)

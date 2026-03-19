@@ -502,6 +502,8 @@
             <th>Benutzername</th>
             <th>Erstellt am</th>
             <th>Rolle</th>
+            <th>Token-Verbrauch</th>
+            <th>Kontingent</th>
             <th>Aktionen</th>
           </tr>
         </thead>
@@ -669,14 +671,37 @@
       const res = await _fetchQuiet('/api/admin/users');
       const { users } = await res.json();
       const tbody = document.getElementById('admin-user-tbody');
-      tbody.innerHTML = users.map(u => `
-        <tr>
-          <td>${esc(u.username)}</td>
-          <td>${esc((u.created_at || '').slice(0, 10))}</td>
-          <td>${u.is_admin ? '<span class="badge-admin">Admin</span>' : 'Benutzer'}</td>
-          <td>${u.id !== S.currentUser.id ? `<button onclick="adminDeleteUser(${u.id})" class="btn-danger-sm">Löschen</button>` : '—'}</td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = users.map(u => {
+        const tokenTotal = (u.token_total || 0).toLocaleString('de-CH');
+        const quotaVal = u.token_quota != null ? u.token_quota : '';
+        const exceeded = u.token_quota != null && (u.token_total || 0) >= u.token_quota;
+        return `
+          <tr${exceeded ? ' class="quota-exceeded"' : ''}>
+            <td>${esc(u.username)}</td>
+            <td>${esc((u.created_at || '').slice(0, 10))}</td>
+            <td>${u.is_admin ? '<span class="badge-admin">Admin</span>' : 'Benutzer'}</td>
+            <td>${tokenTotal}</td>
+            <td>
+              <input type="number" id="quota-input-${u.id}" value="${quotaVal}" placeholder="3000000" min="0" style="width:110px" />
+              <button onclick="adminSetQuota(${u.id})" class="btn-secondary" style="padding:2px 8px;font-size:0.85em">Speichern</button>
+            </td>
+            <td>${u.id !== S.currentUser.id ? `<button onclick="adminDeleteUser(${u.id})" class="btn-danger-sm">Löschen</button>` : '—'}</td>
+          </tr>
+        `;
+      }).join('');
+    } catch (_) {}
+  }
+
+  async function adminSetQuota(userId) {
+    const input = document.getElementById(`quota-input-${userId}`);
+    const val = input.value.trim();
+    const token_quota = val === '' ? null : parseInt(val, 10);
+    try {
+      await _fetchQuiet(`/api/admin/users/${userId}/quota`, {
+        method: 'PATCH',
+        body: JSON.stringify({ token_quota }),
+      });
+      loadAdminUsers();
     } catch (_) {}
   }
 

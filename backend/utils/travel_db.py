@@ -21,18 +21,21 @@ def _init_db() -> None:
     with _get_conn() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS travels (
-                id             INTEGER PRIMARY KEY AUTOINCREMENT,
-                job_id         TEXT    NOT NULL,
-                title          TEXT    NOT NULL,
-                created_at     TEXT    NOT NULL,
-                start_location TEXT    NOT NULL,
-                destination    TEXT    NOT NULL,
-                total_days     INTEGER NOT NULL,
-                num_stops      INTEGER NOT NULL,
-                total_cost_chf REAL    NOT NULL,
-                plan_json      TEXT    NOT NULL,
-                has_travel_guide INTEGER NOT NULL DEFAULT 0,
-                user_id        INTEGER REFERENCES users(id),
+                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                job_id              TEXT    NOT NULL,
+                title               TEXT    NOT NULL,
+                created_at          TEXT    NOT NULL,
+                start_location      TEXT    NOT NULL,
+                destination         TEXT    NOT NULL,
+                total_days          INTEGER NOT NULL,
+                num_stops           INTEGER NOT NULL,
+                total_cost_chf      REAL    NOT NULL,
+                plan_json           TEXT    NOT NULL,
+                has_travel_guide    INTEGER NOT NULL DEFAULT 0,
+                user_id             INTEGER REFERENCES users(id),
+                total_input_tokens  INTEGER NOT NULL DEFAULT 0,
+                total_output_tokens INTEGER NOT NULL DEFAULT 0,
+                total_tokens        INTEGER NOT NULL DEFAULT 0,
                 UNIQUE(job_id)
             )
         """)
@@ -62,23 +65,28 @@ def _build_title(plan: dict) -> str:
     return f"{plan.get('start_location', '?')} → {dest} ({days} Tage)"
 
 
-def _sync_save(plan: dict, user_id: int) -> Optional[int]:
+def _sync_save(plan: dict, user_id: int, token_counts: Optional[dict] = None) -> Optional[int]:
     """INSERT OR IGNORE — duplicate job_ids silently skipped."""
     stops = plan.get("stops", [])
     cost  = plan.get("cost_estimate", {})
     has_guide = int(any(s.get("travel_guide") for s in stops))
+    tc = token_counts or {}
     with _get_conn() as conn:
         cur = conn.execute(
             """INSERT OR IGNORE INTO travels
                (job_id,title,created_at,start_location,destination,
-                total_days,num_stops,total_cost_chf,plan_json,has_travel_guide,user_id)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                total_days,num_stops,total_cost_chf,plan_json,has_travel_guide,user_id,
+                total_input_tokens,total_output_tokens,total_tokens)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (plan.get("job_id", ""), _build_title(plan),
              datetime.utcnow().isoformat(),
              plan.get("start_location", ""),
              stops[-1]["region"] if stops else "",
              len(plan.get("day_plans", [])), len(stops),
-             cost.get("total_chf", 0.0), json.dumps(plan), has_guide, user_id),
+             cost.get("total_chf", 0.0), json.dumps(plan), has_guide, user_id,
+             tc.get("total_input_tokens", 0),
+             tc.get("total_output_tokens", 0),
+             tc.get("total_tokens", 0)),
         )
         return cur.lastrowid if cur.rowcount else None
 
@@ -155,8 +163,19 @@ def _sync_update(travel_id: int, user_id: int, custom_name: Optional[str], ratin
 
 
 # Async wrappers
-async def save_travel(plan: dict, user_id: int) -> Optional[int]:
-    return await asyncio.to_thread(_sync_save, plan, user_id)
+async def save_travel(plan: dict, user_id: int, token_counts: Optional[dict] = None) -> Optional[int]:
+    return await asyncio.to_thread(_sync_save, plan, user_id, token_counts)
+
+
+async def get_user_token_total(user_id: int) -> int:
+    def _sync():
+        with _get_conn() as conn:
+            row = conn.execute(
+                "SELECT COALESCE(SUM(total_tokens), 0) FROM travels WHERE user_id = ?",
+                (user_id,)
+            ).fetchone()
+        return row[0] if row else 0
+    return await asyncio.to_thread(_sync)
 
 
 async def list_travels(user_id: int) -> list:

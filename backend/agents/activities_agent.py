@@ -127,9 +127,10 @@ def _build_style_guidance(req: TravelRequest) -> str:
 
 
 class ActivitiesAgent:
-    def __init__(self, request: TravelRequest, job_id: str):
+    def __init__(self, request: TravelRequest, job_id: str, token_accumulator: list = None):
         self.request = request
         self.job_id = job_id
+        self.token_accumulator = token_accumulator
         self.client = get_client()
         self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
 
@@ -232,7 +233,8 @@ Gib exakt dieses JSON zurück:
                 messages=[{"role": "user", "content": prompt}],
             )
 
-        response = await call_with_retry(call, job_id=self.job_id, agent_name="ActivitiesAgent")
+        response = await call_with_retry(call, job_id=self.job_id, agent_name="ActivitiesAgent",
+                                         token_accumulator=self.token_accumulator)
         text = response.content[0].text
         result = parse_agent_json(text)
 

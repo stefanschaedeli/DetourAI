@@ -52,6 +52,10 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
 
         result["request"] = job["request"]
 
+        token_counts = result.pop("_token_counts", {
+            "total_input_tokens": 0, "total_output_tokens": 0, "total_tokens": 0
+        })
+
         raw2 = redis_client.get(f"job:{job_id}")
         job2 = json.loads(raw2) if raw2 else job
         job2["status"] = "complete"
@@ -60,7 +64,7 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
 
         try:
             from utils.travel_db import save_travel as _db_save
-            await _db_save(result, user_id)
+            await _db_save(result, user_id, token_counts=token_counts)
         except Exception as db_err:
             await debug_logger.log(
                 LogLevel.WARNING, f"DB-Speicherung fehlgeschlagen: {db_err}",

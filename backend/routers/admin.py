@@ -3,6 +3,7 @@ Admin-only endpoints: user management.
 All routes require is_admin = True.
 """
 import asyncio
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, field_validator
@@ -13,6 +14,7 @@ from utils.auth_db import (
     delete_user,
     get_user_by_id,
     list_users,
+    set_quota,
     update_password,
 )
 
@@ -37,6 +39,17 @@ class CreateUserRequest(BaseModel):
         if not v.strip():
             raise ValueError("Benutzername darf nicht leer sein")
         return v.strip()
+
+
+class SetQuotaRequest(BaseModel):
+    token_quota: Optional[int] = None
+
+    @field_validator("token_quota")
+    @classmethod
+    def quota_non_negative(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and v < 0:
+            raise ValueError("Quota muss positiv sein")
+        return v
 
 
 class PasswordResetRequest(BaseModel):
@@ -85,6 +98,19 @@ async def delete_existing_user(
     deleted = await asyncio.to_thread(delete_user, user_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Benutzer nicht gefunden")
+
+
+@router.patch("/users/{user_id}/quota")
+async def set_user_quota(
+    user_id: int,
+    body: SetQuotaRequest,
+    admin: CurrentUser = Depends(require_admin),
+) -> dict:
+    user = await asyncio.to_thread(get_user_by_id, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    await asyncio.to_thread(set_quota, user_id, body.token_quota)
+    return {"ok": True, "token_quota": body.token_quota}
 
 
 @router.patch("/users/{user_id}/password")

@@ -57,10 +57,40 @@ def create_user(username: str, password_hash: str, is_admin: bool = False) -> in
 
 def list_users() -> list:
     with _conn() as conn:
-        rows = conn.execute(
-            "SELECT id, username, is_admin, created_at FROM users ORDER BY id"
-        ).fetchall()
+        # Check if travels table exists before trying to JOIN
+        has_travels = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='travels'"
+        ).fetchone() is not None
+        if has_travels:
+            rows = conn.execute(
+                """SELECT u.id, u.username, u.is_admin, u.created_at, u.token_quota,
+                          COALESCE(SUM(t.total_tokens), 0) AS token_total
+                   FROM users u
+                   LEFT JOIN travels t ON t.user_id = u.id
+                   GROUP BY u.id
+                   ORDER BY u.id"""
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, username, is_admin, created_at, token_quota, 0 AS token_total FROM users ORDER BY id"
+            ).fetchall()
     return [dict(r) for r in rows]
+
+
+def get_quota(user_id: int) -> Optional[int]:
+    try:
+        with _conn() as conn:
+            row = conn.execute("SELECT token_quota FROM users WHERE id = ?", (user_id,)).fetchone()
+        return row["token_quota"] if row else None
+    except Exception:
+        return None
+
+
+def set_quota(user_id: int, quota: Optional[int]) -> bool:
+    with _conn() as conn:
+        cur = conn.execute("UPDATE users SET token_quota = ? WHERE id = ?", (quota, user_id))
+        conn.commit()
+    return cur.rowcount > 0
 
 
 def delete_user(user_id: int) -> bool:

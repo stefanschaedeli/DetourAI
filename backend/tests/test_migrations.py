@@ -87,7 +87,7 @@ def test_partial_run_resumes():
         conn = sqlite3.connect(path)
         cur = conn.execute("SELECT version FROM schema_migrations ORDER BY version")
         applied = [row[0] for row in cur.fetchall()]
-        assert applied == [1, 2, 3]
+        assert applied == [1, 2, 3, 4, 5]
         conn.close()
     finally:
         os.unlink(path)
@@ -111,8 +111,9 @@ def test_failed_migration_rolls_back():
     import unittest.mock as mock
     path = make_db()
     try:
-        # Create a copy of MIGRATIONS with a failing 4th migration
-        failing_migrations = list(MIGRATIONS) + [(4, "fail_migration", "INVALID SQL !!!")]
+        # Create a copy of MIGRATIONS with a failing 6th migration
+        next_ver = max(m[0] for m in MIGRATIONS) + 1
+        failing_migrations = list(MIGRATIONS) + [(next_ver, "fail_migration", "INVALID SQL !!!")]
         with mock.patch("utils.migrations.MIGRATIONS", failing_migrations):
             try:
                 run_migrations(path)
@@ -121,9 +122,9 @@ def test_failed_migration_rolls_back():
         conn = sqlite3.connect(path)
         cur = conn.execute("SELECT version FROM schema_migrations ORDER BY version")
         applied = [row[0] for row in cur.fetchall()]
-        # Only versions 1-3 should be present, not 4
-        assert 4 not in applied
-        assert applied == [1, 2, 3]
+        # The failing migration should not be present
+        assert next_ver not in applied
+        assert applied == [m[0] for m in MIGRATIONS]
         conn.close()
     finally:
         os.unlink(path)

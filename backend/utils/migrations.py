@@ -42,6 +42,20 @@ MIGRATIONS: List[Tuple[int, str, Union[str, Callable]]] = [
         # Callable migration: ALTER TABLE fails if column already exists
         lambda conn: _add_column_if_missing(conn, "travels", "user_id", "INTEGER REFERENCES users(id)"),
     ),
+    (
+        4,
+        "travels_add_token_columns",
+        lambda conn: [
+            _add_column_if_missing(conn, "travels", "total_input_tokens",  "INTEGER NOT NULL DEFAULT 0"),
+            _add_column_if_missing(conn, "travels", "total_output_tokens", "INTEGER NOT NULL DEFAULT 0"),
+            _add_column_if_missing(conn, "travels", "total_tokens",        "INTEGER NOT NULL DEFAULT 0"),
+        ],
+    ),
+    (
+        5,
+        "users_add_token_quota",
+        lambda conn: _add_column_if_missing(conn, "users", "token_quota", "INTEGER"),
+    ),
 ]
 
 

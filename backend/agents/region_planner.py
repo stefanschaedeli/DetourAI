@@ -37,9 +37,10 @@ REGION_SCHEMA = """{
 
 
 class RegionPlannerAgent:
-    def __init__(self, request: TravelRequest, job_id: str):
+    def __init__(self, request: TravelRequest, job_id: str, token_accumulator: list = None):
         self.request = request
         self.job_id = job_id
+        self.token_accumulator = token_accumulator
         self.client = get_client()
         self.model = get_model("claude-opus-4-5", AGENT_KEY)
 
@@ -99,7 +100,8 @@ class RegionPlannerAgent:
                 messages=[{"role": "user", "content": prompt}],
             )
 
-        response = await call_with_retry(call, job_id=self.job_id, agent_name="RegionPlannerAgent")
+        response = await call_with_retry(call, job_id=self.job_id, agent_name="RegionPlannerAgent",
+                                         token_accumulator=self.token_accumulator)
         data = await self._extract_json(response)
         return RegionPlan(**data)
 
@@ -136,7 +138,8 @@ class RegionPlannerAgent:
                 messages=[{"role": "user", "content": prompt}],
             )
 
-        response = await call_with_retry(call, job_id=self.job_id, agent_name="RegionPlannerAgent")
+        response = await call_with_retry(call, job_id=self.job_id, agent_name="RegionPlannerAgent",
+                                         token_accumulator=self.token_accumulator)
         data = await self._extract_json(response)
         return RegionPlan(**data)
 
@@ -173,6 +176,7 @@ class RegionPlannerAgent:
                 messages=[{"role": "user", "content": prompt}],
             )
 
-        response = await call_with_retry(call, job_id=self.job_id, agent_name="RegionPlannerAgent")
+        response = await call_with_retry(call, job_id=self.job_id, agent_name="RegionPlannerAgent",
+                                         token_accumulator=self.token_accumulator)
         data = await self._extract_json(response)
         return RegionPlan(**data)

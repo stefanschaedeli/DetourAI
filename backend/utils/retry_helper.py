@@ -7,7 +7,7 @@ from utils.settings_store import get_setting
 
 
 async def call_with_retry(fn, *, job_id: str = None, agent_name: str = None,
-                          max_attempts: int = None):
+                          max_attempts: int = None, token_accumulator: list = None):
     if max_attempts is None:
         max_attempts = get_setting("api.retry_max_attempts")
     """Wraps a blocking Anthropic SDK call with exponential backoff on 429."""
@@ -30,6 +30,9 @@ async def call_with_retry(fn, *, job_id: str = None, agent_name: str = None,
                 )
             else:
                 token_str = ""
+
+            if token_accumulator is not None and isinstance(input_tok, int) and isinstance(output_tok, int):
+                token_accumulator.append({"input": input_tok, "output": output_tok})
 
             model_str = getattr(response, "model", "")
             await debug_logger.log(
