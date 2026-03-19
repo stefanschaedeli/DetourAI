@@ -815,8 +815,18 @@ function renderSummary() {
 // Submit
 // ---------------------------------------------------------------------------
 
+function _showFormError(msg) {
+  const el = document.getElementById('submit-error');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = '';
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 async function submitTrip() {
   const btn = document.getElementById('submit-btn');
+  const errEl = document.getElementById('submit-error');
+  if (errEl) errEl.style.display = 'none';
   btn.disabled = true;
   btn.innerHTML = '<span class="btn-spinner"></span> Plane Reise…';
 
@@ -845,7 +855,12 @@ async function submitTrip() {
     startRouteBuilding(data);
 
   } catch (err) {
-    alert('Fehler beim Starten der Reiseplanung: ' + err.message);
+    const msg = err.message || '';
+    if (msg.startsWith('HTTP 402:')) {
+      _showFormError(msg.replace('HTTP 402: ', ''));
+    } else {
+      alert('Fehler beim Starten der Reiseplanung: ' + msg);
+    }
     btn.disabled = false;
     btn.textContent = 'Reise planen';
   }

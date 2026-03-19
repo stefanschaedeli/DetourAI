@@ -48,6 +48,7 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
             pre_built_stops=pre_built_stops or job.get("selected_stops"),
             pre_selected_accommodations=pre_selected_accommodations or job.get("selected_accommodations"),
             pre_all_accommodation_options=job.get("all_accommodation_options", {}),
+            user_id=user_id,
         )
 
         result["request"] = job["request"]

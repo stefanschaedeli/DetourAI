@@ -44,8 +44,26 @@ class TravelPlannerOrchestrator:
     async def progress(self, event_type: str, agent_id, data: dict, percent: int = 0):
         await debug_logger.push_event(self.job_id, event_type, agent_id, data, percent)
 
+    async def _check_quota_mid_job(self, user_id: Optional[int]) -> None:
+        if user_id is None:
+            return
+        from utils.auth_db import get_quota
+        from utils.travel_db import get_user_token_total
+        quota = await asyncio.to_thread(get_quota, user_id)
+        if quota is None:
+            return
+        saved = await get_user_token_total(user_id)
+        current = sum(e["input"] + e["output"] for e in self._token_accumulator)
+        total = saved + current
+        if total >= quota:
+            raise Exception(
+                f"Token-Kontingent erschöpft ({total:,} / {quota:,} Tokens verwendet). "
+                "Bitte kontaktieren Sie den Administrator."
+            )
+
     async def run(self, pre_built_stops=None, pre_selected_accommodations=None,
-                  pre_all_accommodation_options=None) -> dict:
+                  pre_all_accommodation_options=None, user_id: Optional[int] = None) -> dict:
+        self._user_id = user_id
         req = self.request
         job_id = self.job_id
 
@@ -253,6 +271,7 @@ class TravelPlannerOrchestrator:
             tasks.append(research_restaurants(stop))
             tasks.append(research_location_images(stop))
         await asyncio.gather(*tasks)
+        await self._check_quota_mid_job(getattr(self, '_user_id', None))
 
         # Merge research results
         for stop in stops:
@@ -285,6 +304,7 @@ class TravelPlannerOrchestrator:
             guide_map[sid] = result
 
         await asyncio.gather(*[research_travel_guide(s) for s in stops])
+        await self._check_quota_mid_job(getattr(self, '_user_id', None))
 
         # Merge travel guide results into stops
         for stop in stops:
