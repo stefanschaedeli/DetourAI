@@ -135,7 +135,8 @@ def _sync_update_plan_json(travel_id: int, user_id: int, plan: dict) -> bool:
 
 
 def _sync_update(travel_id: int, user_id: int, custom_name: Optional[str], rating: Optional[int]) -> bool:
-    fields, values = [], []
+    fields: list = []
+    values: list = []
     if custom_name is not None:
         fields.append("custom_name = ?")
         values.append(custom_name.strip() or None)

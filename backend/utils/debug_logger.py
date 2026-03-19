@@ -105,7 +105,7 @@ class DebugLogger:
                 pass
 
     def subscribe(self, job_id: str) -> asyncio.Queue:
-        q = asyncio.Queue(maxsize=1000)
+        q: asyncio.Queue = asyncio.Queue(maxsize=1000)
         self._subscribers.setdefault(job_id, []).append(q)
         return q
 

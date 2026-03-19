@@ -365,9 +365,10 @@ def _calc_budget_state(request: TravelRequest, selected_stops: list,
     total_nights = sum(s.get("nights", request.min_nights_per_stop) for s in selected_stops)
     spent = sum(a.get("option", {}).get("total_price_chf", 0) for a in selected_accommodations)
     remaining = acc_budget - spent
+    def _stop_for_acc(a: dict) -> dict:
+        return next((x for x in selected_stops if x.get("id") == a.get("stop_id")), {})  # type: ignore[return-value]
     avg_per_night = spent / max(1, sum(
-        s.get("nights", 1) for a in selected_accommodations
-        for s in [next((x for x in selected_stops if x.get("id") == a.get("stop_id")), {})]
+        _stop_for_acc(a).get("nights", 1) for a in selected_accommodations
     ))
     return {
         "total_budget_chf": request.budget_chf,
@@ -375,8 +376,7 @@ def _calc_budget_state(request: TravelRequest, selected_stops: list,
         "spent_chf": spent,
         "remaining_chf": remaining,
         "nights_confirmed": sum(
-            s.get("nights", 1) for a in selected_accommodations
-            for s in [next((x for x in selected_stops if x.get("id") == a.get("stop_id")), {})]
+            _stop_for_acc(a).get("nights", 1) for a in selected_accommodations
         ),
         "total_nights": total_nights,
         "avg_per_night_chf": round(avg_per_night, 2) if selected_accommodations else 0,
@@ -1932,9 +1932,9 @@ async def api_update_settings(body: SettingsUpdateRequest, current_user: Current
         # Coerce types to match defaults
         default = DEFAULTS[key]
         if isinstance(default, int) and not isinstance(default, bool):
-            value = int(value)
+            value = int(value)  # type: ignore[call-overload]
         elif isinstance(default, float):
-            value = float(value)
+            value = float(value)  # type: ignore[arg-type]
         set_setting(key, value)
     return {"saved": True, "count": len(body.settings)}
 

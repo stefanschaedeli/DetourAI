@@ -86,8 +86,8 @@ class DayPlannerAgent:
         enriched = []
         for i, stop in enumerate(stops):
             s = dict(stop)
-            if i < len(results) and not isinstance(results[i], Exception):
-                hours, km = results[i]
+            if i < len(results) and not isinstance(results[i], BaseException):
+                hours, km = results[i]  # type: ignore[misc]
                 s["drive_hours_from_prev"] = hours if hours > 0 else s.get("drive_hours_from_prev", 0)
                 s["drive_km_from_prev"] = km if km > 0 else s.get("drive_km_from_prev", 0)
             else:
