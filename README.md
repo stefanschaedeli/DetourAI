@@ -2,7 +2,7 @@
 
 > An AI-powered road trip planner that builds a personalised day-by-day travel guide through an interactive, multi-agent conversation with Claude.
 
-[![Current Version](https://img.shields.io/badge/version-v6.1.0-blue)](#releases)
+[![Current Version](https://img.shields.io/badge/version-v9.2.1-blue)](#releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](#license)
 [![Stack](https://img.shields.io/badge/stack-FastAPI%20·%20Vanilla%20JS%20·%20Redis%20·%20Docker-orange)](#tech-stack)
 [![Agents](https://img.shields.io/badge/AI%20agents-10%20Claude%20agents-purple)](#ai-agents)
@@ -31,17 +31,19 @@
 Travelman lets you plan a complete road trip in minutes. You describe where you want to go and what matters to you; ten specialised Claude agents then collaboratively research the route, stops, accommodations, activities, restaurants, and driving schedule — and hand you back a structured, budget-aware travel guide.
 
 ```
-You fill a 5-step form  →  define trip legs (Transit / Explore)
+Du füllst ein 5-Schritte-Formular  →  Login/Register (Auth)
         ↓
-AI proposes stop options per leg — you pick the ones you want
-  (short segments: DetourOptionsAgent suggests scenic detours)
-  (explore legs: ExploreZoneAgent discovers hidden gems in a zone)
+AI plant Regionen (RegionPlannerAgent) → du bestätigst
         ↓
-AI finds 3 accommodation options per stop — you choose
+AI schlägt Stop-Optionen pro Segment vor — du wählst
+  (kurze Segmente: DetourOptionsAgent schlägt Umwege vor)
+  (Explore-Legs: ExploreZoneAgent entdeckt versteckte Orte)
         ↓
-10 agents run to research every detail
+AI findet 3 Unterkunfts-Optionen pro Stop — du wählst
         ↓
-Day-by-day travel guide  ·  PDF export  ·  PPTX export
+10 Agenten recherchieren alle Details
+        ↓
+Tag-für-Tag Reiseführer · PDF · PPTX · interaktive Tageskarten
 ```
 
 ---
@@ -52,6 +54,7 @@ Day-by-day travel guide  ·  PDF export  ·  PPTX export
 - **Leg-based trip architecture** — build trips from Transit legs (A → B routing) and Explore legs (discover a geographic zone)
 - **Interactive route building** — Claude suggests stops segment by segment; you pick the ones you want
 - **Explore mode** — define a zone on the map and let ExploreZoneAgent discover anchor points, scenic spots, and hidden gems via a guided questionnaire
+- **Region planning** — RegionPlannerAgent autonomously plans multi-region sequences after route confirmation
 - **Geometry-aware stop placement** — OSRM measures the full remaining distance; stops are placed evenly along the route
 - **Detour fallback** — when a segment is too short for classic stops, DetourOptionsAgent proposes scenic side-trips
 - **"Direkt weiterfahren" option** — skip a stop and add freed nights to the next destination
@@ -64,25 +67,43 @@ Day-by-day travel guide  ·  PDF export  ·  PPTX export
 - **Configurable proximity filter** — set minimum distance from start/target to prevent stop bunching
 - **Real driving times** — OSRM replaces AI estimates with actual road distances
 
+### Authentication & Users
+- **JWT-based authentication** — secure login/register with Argon2id password hashing
+- **Admin panel** — full user management UI for creating, editing, and deleting users
+- **Token quota per user** — configurable daily token limit with enforcement and inline error messages
+- **Pre-flight token estimation** — estimates job cost before starting; blocks if quota would be exceeded
+
 ### Accommodation & Budget
 - **Parallel accommodation research** — budget / comfort / premium options per stop loaded simultaneously
 - **Configurable budget split** — set % allocation for accommodation, food, and activities with live CHF preview
 - **Budget tracking** — remaining budget updates live after every accommodation selection
 
 ### AI & Agents
-- **10 specialised AI agents** — route architect, stop finder, detour finder, explore zone, accommodation researcher, activities, restaurants, day planner, travel guide, trip analysis
+- **10 specialised AI agents** — route architect, region planner, stop finder, detour finder, explore zone, accommodation researcher, activities, restaurants, day planner, travel guide, trip analysis
 - **Real-time progress** — Server-Sent Events stream every agent action to the browser
 - **Live progress overlay** — spinner log with green checkmarks during all wait phases
+
+### Day Details & Maps
+- **Interactive day maps** — route polylines connecting all stops per day
+- **POI markers** — accommodation, restaurant, and activity pins on each day map
+- **Google Places details** — photos, opening hours, and ratings via Google Places API
 
 ### Output & Persistence
 - **Travel guide with 4 tabs** — overview map, stops & details, day-by-day plan, budget breakdown
 - **Export** — download as PDF or PPTX
 - **Trip analysis** — AI-powered post-planning analysis with requirement tags and keyword highlighting
 - **Saved trips** — SQLite persistence with rename, star rating (0–5), replan, and delete
+- **Replace stop** — swap out any stop in a saved trip and re-run research for the new destination
 - **Resume** — browser-local state so you can pick up where you left off
 
+### Observability
+- **File-based logging** — daily rotating log files in `backend/logs/` with 30-day retention
+- **Per-component log files** — separate log files for each agent and backend component
+- **Token tracking per agent** — token usage persisted per-job and rolled up to user quotas
+- **Frontend error reporting** — `window.onerror` and unhandled rejections auto-reported to backend
+
 ### UX & Design
-- **Travel-Forward design** — sky-blue + adventure-orange branded UI
+- **Travel-Forward design** — sky-blue + adventure-orange branded UI with animated pastel background
 - **Lucide SVG icons** — no emoji, consistent icon set throughout
 - **Full accessibility** — focus rings, aria labels, screen-reader compatibility, keyboard navigation
 - **Mobile-responsive** — dynamic viewport height, visible step labels on small screens
@@ -112,6 +133,7 @@ Edit `backend/.env`:
 ANTHROPIC_API_KEY=sk-ant-...   # required
 TEST_MODE=true                  # true = cheap haiku; false = opus/sonnet
 REDIS_URL=redis://redis:6379
+JWT_SECRET=your-secret-here    # required for auth
 ```
 
 ### 2 — Start
@@ -143,15 +165,17 @@ docker compose logs -f backend  # follow backend logs
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Browser  (Vanilla JS, no build step)                   │
-│  5-step form → legs builder → route builder →           │
+│  Auth → 5-step form → region confirm → route builder →  │
 │  acc grid → guide tabs                                  │
 └──────────────────┬──────────────────────────────────────┘
                    │  HTTP + SSE  (via Nginx proxy)
 ┌──────────────────▼──────────────────────────────────────┐
-│  FastAPI  (25+ endpoints)                                │
+│  FastAPI  (routers/auth.py, routers/admin.py + main)    │
+│  JWT middleware                                         │
 │  ┌──────────────────────────────────────────────────┐   │
 │  │  TravelPlannerOrchestrator                       │   │
 │  │  ├── RouteArchitectAgent      (claude-opus-4-5)  │   │
+│  │  ├── RegionPlannerAgent       (claude-opus-4-5)  │   │
 │  │  ├── StopOptionsFinderAgent   (claude-sonnet-4-5)│   │
 │  │  ├── DetourOptionsAgent       (claude-haiku-4-5) │   │
 │  │  ├── ExploreZoneAgent         (claude-sonnet-4-5)│   │
@@ -180,6 +204,7 @@ docker compose logs -f backend  # follow backend logs
 | Real-time | Server-Sent Events (sse-starlette) |
 | Job queue | Redis + Celery |
 | AI | Anthropic SDK — 10 Claude agents |
+| Auth | Argon2id (passlib) + JWT (python-jose) |
 | Maps | Google Maps JS SDK + Places API |
 | Routing | OSRM (open-source road routing) |
 | Geocoding | OpenStreetMap Nominatim |
@@ -193,6 +218,7 @@ docker compose logs -f backend  # follow backend logs
 |-------|-----------|----------|---------|
 | **Job state** | Redis | 24h TTL | Live planning sessions, SSE queues, agent results |
 | **Travel history** | SQLite (`data/travels.db`) | Permanent | Saved trips with metadata and full plan JSON |
+| **Auth DB** | SQLite (`data/auth.db`) | Permanent | Users, refresh tokens, migrations |
 
 ---
 
@@ -205,6 +231,7 @@ Travelman uses ten specialised Claude agents. Each has a single, clearly scoped 
 | Agent | Production | TEST_MODE=true |
 |-------|-----------|----------------|
 | RouteArchitectAgent | claude-opus-4-5 | claude-haiku-4-5 |
+| RegionPlannerAgent | claude-opus-4-5 | claude-haiku-4-5 |
 | StopOptionsFinderAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
 | DetourOptionsAgent | claude-haiku-4-5 | claude-haiku-4-5 |
 | ExploreZoneAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
@@ -218,6 +245,8 @@ Travelman uses ten specialised Claude agents. Each has a single, clearly scoped 
 ### Agent Details
 
 **RouteArchitectAgent** (`claude-opus-4-5`) — Analyses the full trip and produces a high-level multi-segment route plan: which cities to pass through, how many days per segment, and the logical order of all waypoints. Uses Opus for its ability to reason across the entire trip simultaneously.
+
+**RegionPlannerAgent** (`claude-opus-4-5`) — Analyses all confirmed legs and plans a region sequence: which stops belong to which region, how many nights per region, and the logical region order. Runs immediately after RouteArchitect and before StopOptionsFinder. The user reviews and confirms the region plan before stop selection begins.
 
 **StopOptionsFinderAgent** (`claude-sonnet-4-5`) — For each route segment, proposes 3 stop options: `direct` (shortest path), `scenic` (landscape-first), and `cultural` (historically interesting). In explore mode, types become `anker` (anchor point), `landschaft` (scenic), and `geheimtipp` (hidden gem). Streams partial JSON so cards appear incrementally. All options are OSRM-enriched with real drive times.
 
@@ -233,7 +262,7 @@ Travelman uses ten specialised Claude agents. Each has a single, clearly scoped 
 
 **DayPlannerAgent** (`claude-opus-4-5`) — Assembles the day-by-day travel plan from all agent outputs: schedules driving legs, distributes activities, ensures rest days, and writes narrative summaries. Uses Opus for cross-trip reasoning.
 
-**TravelGuideAgent** (`claude-sonnet-4-5`) — Generates a narrative travel guide with storytelling descriptions for each stop and day.
+**TravelGuideAgent** (`claude-sonnet-4-5`) — Generates a narrative travel guide with storytelling descriptions for each stop and day. Radius-limited to stay within the confirmed travel area.
 
 **TripAnalysisAgent** (`claude-sonnet-4-5`) — Post-planning analysis that evaluates how well the generated plan meets the original requirements, with requirement tags and keyword highlighting.
 
@@ -250,6 +279,10 @@ Travelman uses ten specialised Claude agents. Each has a single, clearly scoped 
 | `POST` | `/api/recompute-options/{job_id}` | Re-run StopOptionsFinder with custom instructions |
 | `POST` | `/api/patch-job/{job_id}` | Adjust job (add days or via-point) |
 | `POST` | `/api/confirm-route/{job_id}` | Confirm route, begin accommodation loading |
+| `POST` | `/api/skip-to-leg-end/{job_id}` | Skip remaining stops and jump to leg end |
+| `POST` | `/api/replace-region/{job_id}` | Replace a region with an alternative |
+| `POST` | `/api/recompute-regions/{job_id}` | Re-run RegionPlannerAgent from scratch |
+| `POST` | `/api/confirm-regions/{job_id}` | Confirm region plan, proceed to stops |
 | `POST` | `/api/start-accommodations/{job_id}` | Trigger parallel accommodation fetch |
 | `POST` | `/api/select-accommodation/{job_id}` | Select accommodation for one stop |
 | `POST` | `/api/confirm-accommodations/{job_id}` | Confirm all accommodation selections |
@@ -259,6 +292,24 @@ Travelman uses ten specialised Claude agents. Each has a single, clearly scoped 
 | `GET` | `/api/result/{job_id}` | Fetch completed travel plan (JSON) |
 | `POST` | `/api/generate-output/{job_id}/{type}` | Generate PDF or PPTX |
 | `GET` | `/health` | Health check + active job count |
+
+### Auth
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/auth/login` | Login, receive JWT access + refresh tokens |
+| `POST` | `/api/auth/refresh` | Exchange refresh token for new access token |
+| `POST` | `/api/auth/logout` | Invalidate refresh token |
+| `GET` | `/api/auth/me` | Get current authenticated user info |
+
+### Admin
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/admin/users` | List all users (admin only) |
+| `POST` | `/api/admin/users` | Create a new user (admin only) |
+| `PATCH` | `/api/admin/users/{user_id}` | Update user details or quota (admin only) |
+| `DELETE` | `/api/admin/users/{user_id}` | Delete a user (admin only) |
 
 ### Travel History (SQLite)
 
@@ -270,10 +321,16 @@ Travelman uses ten specialised Claude agents. Each has a single, clearly scoped 
 | `PATCH` | `/api/travels/{id}` | Update name and/or rating |
 | `DELETE` | `/api/travels/{id}` | Delete a saved trip |
 | `POST` | `/api/travels/{id}/replan` | Re-run agents against saved route |
+| `POST` | `/api/travels/{id}/replace-stop` | Start async stop replacement job |
+| `POST` | `/api/travels/{id}/replace-stop-select` | Select replacement stop from options |
 
 ---
 
 ## Using the App
+
+### Step 0 — Login / Register
+
+Create an account or log in. Admins can manage users and token quotas via the admin panel.
 
 ### Step 1 — Route
 
@@ -299,6 +356,10 @@ Define your trip legs as **Transit** (drive from A to B with stops) or **Explore
 - Total budget in CHF with % split sliders (accommodation / food / activities)
 - Review summary and submit
 
+### Region Planning
+
+After route confirmation, RegionPlannerAgent proposes a region sequence. Review which stops belong to which region, adjust if needed, and confirm before stop selection begins.
+
 ### Route Builder
 
 Claude proposes **3 stop options** per segment, evenly spaced via OSRM geometry. Pick options to build the route iteratively. Features:
@@ -317,7 +378,7 @@ Four tabs in the finished plan:
 |-----|---------|
 | **Übersicht** | Route map, key stats, Google Maps link, downloads |
 | **Stops & Details** | Per-stop card: accommodation, activities, restaurants |
-| **Tagesplan** | Day-by-day breakdown with driving legs and highlights |
+| **Tagesplan** | Day-by-day breakdown with interactive day maps, driving legs, and highlights |
 | **Budget** | Itemised: accommodation · fuel · activities · food · total vs. budget |
 
 ---
@@ -369,9 +430,15 @@ python3 -m pytest tests/test_travel_db.py          # travel persistence
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `ANTHROPIC_API_KEY` | Yes | — | Anthropic API key |
+| `JWT_SECRET` | Yes | — | Secret key for JWT signing |
 | `TEST_MODE` | No | `true` | `true` = haiku (cheap dev); `false` = opus/sonnet |
 | `REDIS_URL` | No | `redis://localhost:6379` | Redis connection string |
 | `GOOGLE_MAPS_API_KEY` | No | — | Google Maps JS SDK + Places API |
+| `ADMIN_USERNAME` | No | `admin` | Initial admin username |
+| `ADMIN_PASSWORD` | No | — | Initial admin password |
+| `MAX_DAILY_TOKENS_PER_USER` | No | unbegrenzt | Daily token limit per user |
+| `LOGS_DIR` | No | `backend/logs/` | Log file directory |
+| `BRAVE_SEARCH_API_KEY` | No | — | Brave Search API (optional enrichment) |
 
 ### Budget Model
 
@@ -394,6 +461,7 @@ travelman3/
 │   ├── agents/
 │   │   ├── _client.py                 # shared Anthropic client + model selector
 │   │   ├── route_architect.py         # RouteArchitectAgent (opus)
+│   │   ├── region_planner.py          # RegionPlannerAgent (opus)
 │   │   ├── stop_options_finder.py     # StopOptionsFinderAgent (sonnet, streaming)
 │   │   ├── detour_options_agent.py    # DetourOptionsAgent (haiku, fallback)
 │   │   ├── explore_zone_agent.py      # ExploreZoneAgent (sonnet, two-pass)
@@ -411,15 +479,23 @@ travelman3/
 │   │   ├── accommodation_option.py    # AccommodationOption, BudgetState
 │   │   ├── trip_leg.py                # TripLeg, Transit/Explore modes
 │   │   └── via_point.py               # ViaPoint, ZoneBBox, ExploreStop
+│   ├── routers/
+│   │   ├── auth.py                    # JWT Auth endpoints
+│   │   └── admin.py                   # Admin user management
 │   ├── tasks/
 │   │   ├── run_planning_job.py        # Celery: full orchestration + explore pause
-│   │   └── prefetch_accommodations.py # Celery: parallel acc fetch
+│   │   ├── prefetch_accommodations.py # Celery: parallel acc fetch
+│   │   └── replace_stop_job.py        # Celery: async stop replacement
 │   ├── utils/
 │   │   ├── debug_logger.py            # DebugLogger + SSE subscriber manager
 │   │   ├── maps_helper.py             # geocode, OSRM routing, Maps URLs
 │   │   ├── retry_helper.py            # call_with_retry() + exponential backoff
 │   │   ├── json_parser.py             # parse_agent_json()
-│   │   ├── travel_db.py               # SQLite persistence
+│   │   ├── travel_db.py               # SQLite travel persistence
+│   │   ├── auth.py                    # JWT generation & validation
+│   │   ├── auth_db.py                 # SQLite user CRUD + Argon2id
+│   │   ├── migrations.py              # Versioned DB migration runner
+│   │   ├── settings_store.py          # Persistent settings storage
 │   │   ├── hotel_price_fetcher.py     # hotel price fetching
 │   │   └── image_fetcher.py           # destination image fetching
 │   ├── tests/
@@ -428,6 +504,7 @@ travelman3/
 │   │   ├── test_endpoints.py          # API route tests
 │   │   ├── test_agents_mock.py        # agent tests with mocked Anthropic
 │   │   └── test_travel_db.py          # travel persistence tests
+│   ├── logs/                          # daily rotating log files (auto-created)
 │   ├── .env.example
 │   └── requirements.txt
 ├── frontend/
@@ -445,6 +522,9 @@ travelman3/
 │       ├── maps.js                    # map rendering helpers
 │       ├── loading.js                 # loading state UI
 │       ├── sse-overlay.js             # SSE progress overlay
+│       ├── auth.js                    # frontend auth token management
+│       ├── router.js                  # client-side SPA routing
+│       ├── settings.js                # user settings + quota UI
 │       └── types.d.ts                 # generated from OpenAPI
 ├── docs/
 │   └── database.md                    # DB schema + API reference
@@ -455,7 +535,8 @@ travelman3/
 ├── scripts/
 │   └── generate-types.sh             # OpenAPI → TypeScript types
 ├── data/
-│   └── travels.db                     # SQLite (auto-created)
+│   ├── travels.db                     # SQLite travels (auto-created)
+│   └── auth.db                        # SQLite users & tokens (auto-created)
 ├── docker-compose.yml
 └── outputs/                           # generated PDF / PPTX files
 ```
@@ -463,6 +544,31 @@ travelman3/
 ---
 
 ## Releases
+
+### v9.x — Token Tracking & Quota Enforcement
+
+- **Pre-flight token estimation** — estimates job cost before starting; blocks if user quota would be exceeded
+- **Token tracking per agent** — token usage captured and persisted per-job
+- **User quota enforcement** — daily token limits with inline error messages on quota exhaustion
+- **Mid-job quota handling** — graceful error display if quota is exceeded during an active job
+
+### v8.x — Authentication & Admin Panel
+
+- **JWT-based authentication** — login/register with Argon2id password hashing
+- **Refresh tokens** — silent session renewal without re-login
+- **Admin panel** — full user management UI (create, edit, delete users)
+- **Per-user token quotas** — configurable daily limits, visible in user settings
+- **Client-side SPA routing** — `router.js` handles auth-guarded page transitions
+- **Settings UI** — `settings.js` exposes quota usage and user preferences
+
+### v7.x — Region Planning, Day Details & Logging
+
+- **RegionPlannerAgent** — autonomous multi-region planning after route confirmation; user reviews and confirms before stop selection
+- **Region UI** — interactive region plan with replace, recalculate, and confirm actions
+- **Interactive day maps** — route polylines with accommodation, restaurant, and activity POI markers per day
+- **Replace stop** — swap any stop in a saved trip; async Celery job re-runs all research for the new destination
+- **File-based logging** — daily rotating log files in `backend/logs/` with 30-day retention; separate files per agent
+- **Frontend error reporting** — `window.onerror` and unhandled rejections auto-reported to backend log
 
 ### v6.1.0 — Trip Legs & Explore Mode (2026-03-11)
 
