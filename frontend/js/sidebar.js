@@ -259,7 +259,8 @@ const Sidebar = (() => {
           imgUrl = _imageCache.get(cacheKey);
         } else {
           if (typeof GoogleMaps === 'undefined' || !GoogleMaps.getPlaceImages) continue;
-          imgUrl = await GoogleMaps.getPlaceImages(node.name, node.lat, node.lng, 'city', node.placeId);
+          const imgs = await GoogleMaps.getPlaceImages(node.name, node.lat, node.lng, 'city', node.placeId);
+          imgUrl = Array.isArray(imgs) ? imgs[0] : imgs;
           _imageCache.set(cacheKey, imgUrl);
         }
 
@@ -278,15 +279,11 @@ const Sidebar = (() => {
         img.style.transition = 'opacity 0.3s ease';
         img.onload = () => {
           img.style.opacity = '1';
+          const fallback = avatarEl.querySelector('.sb-avatar-fallback');
+          if (fallback) avatarEl.replaceChild(img, fallback);
+          else if (!avatarEl.contains(img)) avatarEl.appendChild(img);
         };
         img.src = imgUrl;
-
-        const fallback = avatarEl.querySelector('.sb-avatar-fallback');
-        if (fallback) {
-          avatarEl.replaceChild(img, fallback);
-        } else {
-          avatarEl.appendChild(img);
-        }
       } catch (_err) {
         // Silently ignore image loading errors
       }

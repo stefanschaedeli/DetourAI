@@ -4243,7 +4243,7 @@ strong.req-keyword {
 .sb-connector-above, .sb-connector-below {
   width: 2px;
   background: linear-gradient(to bottom, rgba(124, 107, 224, 0.15), rgba(124, 107, 224, 0.25));
-  margin-left: 23px; flex-shrink: 0;
+  margin-left: 21px; flex-shrink: 0;
 }
 .sb-connector-above { height: 8px; }
 .sb-connector-below { height: 8px; flex: 1; min-height: 8px; }
