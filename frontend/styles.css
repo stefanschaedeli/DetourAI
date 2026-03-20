@@ -187,7 +187,6 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 /* ============================================================ Login Screen */
 #login-section {
   min-height: calc(100dvh - 64px);
-  display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
