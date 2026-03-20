@@ -72,6 +72,13 @@
   /* Animation */
   --transition-default: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
+  /* 3D Lift Micro-Interaction System */
+  --lift-transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --lift-y:          -3px;
+  --lift-shadow:     0 8px 24px rgba(124, 107, 224, 0.18), 0 2px 8px rgba(0,0,0,0.06);
+  --lift-shadow-sm:  0 4px 14px rgba(124, 107, 224, 0.14), 0 1px 4px rgba(0,0,0,0.05);
+  --press-scale:     0.97;
+
   /* ── Legacy-Aliases (alt → neu) ── */
   --bg:          var(--bg-primary);
   --card:        var(--bg-elevated);
@@ -129,6 +136,36 @@ body {
   min-height: 100dvh;
 }
 
+/* ============================================================ 3D Lift Micro-Interactions
+   Rules:
+   - transform: translateY + scale only (GPU, no reflow)
+   - spring-like cubic-bezier overshoot for tactile feel
+   - prefers-reduced-motion: skip translate/scale, keep shadow only
+   - will-change set only during hover to avoid memory waste
+   ============================================================ */
+
+/* Base lift class — applied to cards and interactive surfaces */
+.lift {
+  transition: var(--lift-transition);
+  will-change: auto;
+}
+.lift:hover {
+  transform: translateY(var(--lift-y));
+  box-shadow: var(--lift-shadow);
+  will-change: transform;
+}
+.lift:active {
+  transform: translateY(0) scale(var(--press-scale));
+  box-shadow: var(--lift-shadow-sm);
+  transition-duration: 0.08s;
+}
+
+/* Reduced-motion override */
+@media (prefers-reduced-motion: reduce) {
+  .lift:hover  { transform: none; }
+  .lift:active { transform: none; }
+}
+
 /* ============================================================ Layout */
 .app-header {
   background: rgba(250, 248, 255, 0.88);
@@ -145,9 +182,14 @@ body {
   padding: 6px 14px; font-size: 13px; font-weight: 500;
   border: 1px solid var(--accent); border-radius: 8px;
   background: transparent; color: var(--accent); cursor: pointer;
-  transition: background .15s, color .15s;
+  transition: background 0.15s, color 0.15s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s;
 }
-.btn-my-travels:hover { background: var(--accent); color: #fff; }
+.btn-my-travels:hover { background: var(--accent); color: #fff; transform: translateY(-2px); box-shadow: var(--lift-shadow-sm); }
+.btn-my-travels:active { transform: scale(var(--press-scale)); transition-duration: 0.08s; }
+@media (prefers-reduced-motion: reduce) {
+  .btn-my-travels:hover  { transform: none; }
+  .btn-my-travels:active { transform: none; }
+}
 
 .btn-clear-data {
   padding: 6px 14px;
@@ -322,11 +364,14 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   overflow: hidden;
 }
 .login-submit-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(124, 107, 224, 0.36);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 32px rgba(124, 107, 224, 0.40);
+  transition: var(--lift-transition), opacity 0.15s;
 }
 .login-submit-btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(var(--press-scale));
+  box-shadow: 0 2px 8px rgba(124, 107, 224, 0.20);
+  transition-duration: 0.08s;
 }
 .login-submit-btn:disabled {
   opacity: 0.7;
@@ -418,29 +463,66 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   display: inline-flex; align-items: center; gap: 6px;
   padding: 10px 20px; border-radius: 8px;
   font-size: 15px; font-weight: 500; cursor: pointer;
-  border: none; text-decoration: none; transition: all .15s;
+  border: none; text-decoration: none;
+  transition: var(--lift-transition), background 0.15s, color 0.15s, border-color 0.15s;
+  will-change: auto;
 }
 .btn-primary   { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); }
+.btn-primary:hover {
+  background: var(--accent-dark);
+  transform: translateY(var(--lift-y));
+  box-shadow: 0 6px 20px rgba(124, 107, 224, 0.30);
+}
 .btn-secondary { background: var(--bg-subtle); border: 1px solid var(--border); color: var(--accent-dark); }
-.btn-secondary:hover { background: var(--border); }
+.btn-secondary:hover {
+  background: var(--border);
+  transform: translateY(var(--lift-y));
+  box-shadow: var(--lift-shadow-sm);
+}
 .btn-cta { background: var(--cta); color: #fff; box-shadow: 0 2px 10px var(--cta-glow); }
-.btn-cta:hover { background: var(--cta-dark); transform: translateY(-1px); }
+.btn-cta:hover {
+  background: var(--cta-dark);
+  transform: translateY(var(--lift-y));
+  box-shadow: 0 8px 24px rgba(124, 107, 224, 0.30);
+}
 .btn-sm { padding: 6px 14px; font-size: 13px; }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(var(--press-scale));
+  box-shadow: none;
+  transition-duration: 0.08s;
+}
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn-danger  { background: var(--danger); color: #fff; }
 .btn-warning { background: var(--warning); color: #fff; }
 
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover  { transform: none; }
+  .btn:active { transform: none; }
+}
+
 .btn-icon {
   background: none; border: none; cursor: pointer; padding: 10px;
   border-radius: 6px; display: inline-flex; align-items: center;
-  color: var(--text-sub); transition: background .1s;
+  color: var(--text-sub);
+  transition: background 0.15s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.15s;
   min-width: 44px; min-height: 44px; justify-content: center;
 }
-.btn-icon:hover { background: var(--border); }
+.btn-icon:hover {
+  background: var(--border);
+  transform: translateY(-2px);
+}
+.btn-icon:active {
+  transform: scale(0.92);
+  transition-duration: 0.08s;
+}
 .btn-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn-icon.btn-danger { color: var(--danger); }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-icon:hover  { transform: none; }
+  .btn-icon:active { transform: none; }
+}
 
 /* ============================================================ Step indicators */
 .step-indicators { display: flex; gap: 0; margin-bottom: 32px; }
@@ -508,9 +590,18 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 
 /* Adults/children counter */
 .adults-counter { display: flex; align-items: center; gap: 16px; }
-.adults-counter button { width: 44px; height: 44px; border-radius: 50%; background: var(--border); border: none; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
-.adults-counter button:hover { background: var(--accent); color: #fff; }
+.adults-counter button {
+  width: 44px; height: 44px; border-radius: 50%; background: var(--border); border: none;
+  cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s;
+}
+.adults-counter button:hover { background: var(--accent); color: #fff; transform: translateY(-2px) scale(1.08); box-shadow: 0 4px 12px rgba(124,107,224,0.25); }
+.adults-counter button:active { transform: scale(0.90); box-shadow: none; transition-duration: 0.08s; }
 .adults-counter button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .adults-counter button:hover  { transform: none; }
+  .adults-counter button:active { transform: none; }
+}
 .adults-count { font-size: 20px; font-weight: 600; min-width: 24px; text-align: center; }
 .child-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
 
@@ -519,11 +610,21 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 .style-card {
   border: 2px solid var(--border); border-radius: var(--radius);
   padding: 14px 10px; cursor: pointer; text-align: center;
-  transition: all .15s; background: #fff;
+  transition: var(--lift-transition), border-color 0.15s, background 0.15s;
+  background: #fff; will-change: auto;
 }
-.style-card:hover { border-color: var(--accent); background: var(--bg-subtle); }
+.style-card:hover {
+  border-color: var(--accent); background: var(--bg-subtle);
+  transform: translateY(-2px);
+  box-shadow: var(--lift-shadow-sm);
+}
+.style-card:active { transform: scale(var(--press-scale)); transition-duration: 0.08s; }
 .style-card.selected { border-color: var(--accent); background: var(--bg-subtle); }
 .style-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .style-card:hover  { transform: none; }
+  .style-card:active { transform: none; }
+}
 .style-icon { width: 28px; height: 28px; margin: 0 auto 8px; color: var(--accent); }
 .style-label { font-size: 12px; font-weight: 500; }
 
@@ -555,10 +656,25 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 .acc-style-grid, .must-have-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .acc-style, .must-have {
   padding: 8px 16px; border: 2px solid var(--border); border-radius: 999px;
-  cursor: pointer; font-size: 14px; background: #fff; transition: all .15s;
+  cursor: pointer; font-size: 14px; background: #fff;
+  transition: var(--lift-transition), border-color 0.15s, background 0.15s, color 0.15s;
+  will-change: auto;
 }
-.acc-style.selected, .must-have.selected { border-color: var(--accent); background: var(--bg-subtle); color: var(--accent-dark); }
+.acc-style:hover, .must-have:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--lift-shadow-sm);
+  border-color: var(--accent);
+}
+.acc-style:active, .must-have:active {
+  transform: scale(var(--press-scale));
+  transition-duration: 0.08s;
+}
+.acc-style.selected, .must-have.selected { border-color: var(--accent); background: var(--bg-subtle); color: var(--accent-dark); transform: none; }
 .acc-style:focus-visible, .must-have:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .acc-style:hover, .must-have:hover   { transform: none; }
+  .acc-style:active, .must-have:active { transform: none; }
+}
 
 /* Summary */
 .summary-grid { display: grid; gap: 12px; }
@@ -737,12 +853,22 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   border: 2px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
-  transition: border-color .15s, box-shadow .15s;
+  transition: var(--lift-transition), border-color 0.15s;
   position: relative;
+  will-change: auto;
 }
 .region-card:hover {
   border-color: var(--accent);
-  box-shadow: var(--shadow);
+  box-shadow: var(--lift-shadow);
+  transform: translateY(var(--lift-y));
+}
+.region-card:not([draggable="true"]):active {
+  transform: translateY(0) scale(var(--press-scale));
+  transition-duration: 0.08s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .region-card:hover  { transform: none; }
+  .region-card:active { transform: none; }
 }
 .region-card[draggable="true"] { cursor: grab; }
 .region-card[draggable="true"]:active { cursor: grabbing; }
@@ -882,7 +1008,9 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 }
 .option-card {
   background: var(--card); border: 2px solid var(--border); border-radius: var(--radius);
-  padding: 0; overflow: hidden; cursor: default; transition: all .15s;
+  padding: 0; overflow: hidden; cursor: default;
+  transition: var(--lift-transition), border-color 0.15s, background 0.15s;
+  will-change: auto;
 }
 .option-card-body { padding: 20px; cursor: pointer; }
 /* Progressive streaming: cards fade in one by one */
@@ -906,8 +1034,12 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
 }
-.option-card:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-2px); }
-.option-card.selected { background: var(--bg-subtle); border: 2px solid var(--accent); box-shadow: 0 0 0 4px var(--accent-glow); }
+.option-card:hover { border-color: var(--accent); box-shadow: var(--lift-shadow); transform: translateY(var(--lift-y)); }
+.option-card-body:active { transform: scale(var(--press-scale)); transition: transform 0.08s; }
+.option-card.selected { background: var(--bg-subtle); border: 2px solid var(--accent); box-shadow: 0 0 0 4px var(--accent-glow); transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .option-card:hover { transform: none; }
+}
 .option-type-badge {
   display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px;
   font-weight: 600; text-transform: uppercase;
@@ -1056,7 +1188,21 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 .modal-option {
   border: 2px solid var(--border); border-radius: 10px;
   padding: 14px 16px; margin-bottom: 12px; cursor: pointer;
-  transition: border-color .15s;
+  transition: var(--lift-transition), border-color 0.15s;
+  will-change: auto;
+}
+.modal-option:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--lift-shadow-sm);
+}
+.modal-option:active {
+  transform: scale(var(--press-scale));
+  transition-duration: 0.08s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-option:hover  { transform: none; }
+  .modal-option:active { transform: none; }
 }
 .modal-option:has(input:checked) { border-color: var(--accent); background: var(--bg-subtle); }
 .modal-option-header {
@@ -1100,11 +1246,25 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 .acc-option-card {
   display: flex; flex-direction: column;
   border: 1px solid var(--border); border-radius: var(--radius);
-  box-shadow: var(--shadow); cursor: pointer; transition: background .15s, box-shadow .15s;
+  box-shadow: var(--shadow); cursor: pointer;
+  transition: var(--lift-transition), background 0.15s, border-color 0.15s;
   overflow: hidden;
+  will-change: auto;
 }
-.acc-option-card:hover { background: var(--bg); box-shadow: 0 4px 24px rgba(0,0,0,.12); }
-.acc-option-card.selected { background: var(--bg-subtle); outline: 2px solid var(--accent); outline-offset: -2px; box-shadow: 0 0 0 4px var(--accent-glow); }
+.acc-option-card:hover {
+  background: var(--bg);
+  transform: translateY(var(--lift-y));
+  box-shadow: var(--lift-shadow);
+}
+.acc-option-card:active {
+  transform: translateY(0) scale(var(--press-scale));
+  transition-duration: 0.08s;
+}
+.acc-option-card.selected { background: var(--bg-subtle); outline: 2px solid var(--accent); outline-offset: -2px; box-shadow: 0 0 0 4px var(--accent-glow); transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .acc-option-card:hover  { transform: none; }
+  .acc-option-card:active { transform: none; }
+}
 
 /* Hero photo: top panel inside hotel cards */
 .acc-option-card .hero-photo,
@@ -1233,14 +1393,26 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 .guide-tab {
   padding: 10px 20px; border-radius: 0; font-size: 14px; font-weight: 500; cursor: pointer;
   background: none; border: none; color: var(--text-sub);
-  border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: color 0.15s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.15s;
   white-space: nowrap;
 }
-.guide-tab:hover { color: var(--accent-dark); }
+.guide-tab:hover {
+  color: var(--accent-dark);
+  transform: translateY(-1px);
+}
+.guide-tab:active {
+  transform: scale(0.95);
+  transition-duration: 0.08s;
+}
 .guide-tab.active {
   color: var(--accent-dark); font-weight: 600;
   border-bottom-color: var(--accent);
-  background: none; box-shadow: none;
+  background: none; box-shadow: none; transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide-tab:hover  { transform: none; }
+  .guide-tab:active { transform: none; }
 }
 
 /* Overview */
@@ -1786,6 +1958,16 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
 .travel-card {
   background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);
   padding:16px; display:flex; align-items:center; gap:12px;
+  transition: var(--lift-transition), border-color 0.15s;
+  will-change: auto;
+}
+.travel-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--lift-shadow-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  .travel-card:hover { transform: none; }
 }
 .travel-card-body { flex:1; min-width:0; }
 .travel-card-title {
