@@ -282,6 +282,7 @@ function updateLegField(index, field, value) {
   }
   saveFormToCache();
   updateQuickSubmitBar();
+  if (typeof updateSidebar === 'function') updateSidebar();
 }
 
 function updateLegDate(index, field, value) {

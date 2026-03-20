@@ -86,7 +86,7 @@ const Sidebar = (() => {
         lat: stop.lat || null,
         lng: stop.lng || stop.lon || null,
         placeId: stop.place_id || stop.placeId || null,
-        state: 'loading',
+        state: S.result?.stops?.length > 0 ? 'done' : 'loading',
         nights: stop.nights || null,
         days: null,
         accName: null,

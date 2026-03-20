@@ -4184,7 +4184,7 @@ strong.req-keyword {
 
 /* Sidebar — Liquid Glass */
 .trip-sidebar {
-  width: 240px;
+  width: clamp(160px, 15vw, 220px);
   flex-shrink: 0;
   position: sticky;
   top: 60px;
@@ -4200,7 +4200,7 @@ strong.req-keyword {
   transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
 }
 .trip-sidebar[hidden] { display: none; }
-.trip-sidebar.collapsed { width: 56px; }
+.trip-sidebar.collapsed { width: 52px; }
 .trip-sidebar.collapsed .sb-node-body,
 .trip-sidebar.collapsed .sb-detail-pills,
 .trip-sidebar.collapsed .sidebar-title {
