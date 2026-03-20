@@ -4177,7 +4177,7 @@ strong.req-keyword {
   align-items: flex-start;
   min-height: calc(100dvh - 60px);
 }
-.app-layout[data-sidebar-visible="true"] #app-main {
+#app-main {
   flex: 1;
   min-width: 0;
 }
