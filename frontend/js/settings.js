@@ -72,6 +72,7 @@ function renderSettingsPage() {
         <h2>Einstellungen</h2>
       </div>
 
+      ${_renderAccountSection()}
       ${_renderCategory('KI-Agenten', 'agent', _renderAgentCards(settings, defaults))}
       ${_renderCategory('Budget-Standardwerte', 'budget', _renderBudgetSection(settings, defaults))}
       ${_renderCategory('API & Performance', 'api', _renderApiSection(settings, defaults))}
@@ -79,6 +80,78 @@ function renderSettingsPage() {
     </div>
     <div class="settings-toast" id="settings-toast">Gespeichert</div>
   `;
+
+  _bindAccountSection();
+}
+
+function _renderAccountSection() {
+  return `
+    <div class="settings-category" id="cat-account">
+      <div class="settings-category-header" onclick="toggleSettingsCategory('account')">
+        <h3>Konto</h3>
+        <div class="settings-category-actions">
+          <svg class="settings-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </div>
+      </div>
+      <div class="settings-category-body open">
+        <div class="settings-card">
+          <h3>Passwort ändern</h3>
+          <div class="settings-field">
+            <label>Aktuelles Passwort</label>
+            <input type="password" id="current-password" placeholder="Aktuelles Passwort" autocomplete="current-password">
+          </div>
+          <div class="settings-field">
+            <input type="password" id="new-password" placeholder="Neues Passwort (mind. 8 Zeichen)" autocomplete="new-password">
+          </div>
+          <div class="settings-field">
+            <input type="password" id="confirm-password" placeholder="Neues Passwort bestätigen" autocomplete="new-password">
+          </div>
+          <button id="change-password-btn" class="btn-primary">Passwort ändern</button>
+          <p id="password-change-msg" class="settings-msg" style="display:none"></p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function _bindAccountSection() {
+  document.getElementById('change-password-btn')?.addEventListener('click', async () => {
+    const current = document.getElementById('current-password').value;
+    const newPw = document.getElementById('new-password').value;
+    const confirm = document.getElementById('confirm-password').value;
+    const msg = document.getElementById('password-change-msg');
+
+    if (newPw !== confirm) {
+      msg.textContent = 'Passwörter stimmen nicht überein.';
+      msg.className = 'settings-msg error';
+      msg.style.display = '';
+      return;
+    }
+
+    const btn = document.getElementById('change-password-btn');
+    btn.disabled = true;
+    btn.textContent = 'Wird gespeichert…';
+
+    try {
+      await apiChangePassword(current, newPw);
+      msg.textContent = 'Passwort erfolgreich geändert.';
+      msg.className = 'settings-msg success';
+      ['current-password', 'new-password', 'confirm-password'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+    } catch (err) {
+      // Extract detail from HTTP error message (format: "HTTP 400: <detail>")
+      const detail = err.message.replace(/^HTTP \d+:\s*/, '');
+      msg.textContent = detail || 'Fehler beim Ändern des Passworts.';
+      msg.className = 'settings-msg error';
+    } finally {
+      msg.style.display = '';
+      btn.disabled = false;
+      btn.textContent = 'Passwort ändern';
+    }
+  });
 }
 
 function _renderCategory(title, section, content) {

@@ -170,3 +170,9 @@ def delete_refresh_token(raw_token: str) -> None:
     with _conn() as conn:
         conn.execute("DELETE FROM refresh_tokens WHERE token_hash = ?", (token_hash,))
         conn.commit()
+
+
+def delete_all_refresh_tokens_for_user(user_id: int) -> None:
+    with _conn() as conn:
+        conn.execute("DELETE FROM refresh_tokens WHERE user_id = ?", (user_id,))
+        conn.commit()

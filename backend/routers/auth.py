@@ -8,7 +8,7 @@ import uuid
 import asyncio
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from utils.auth import (
     CurrentUser,
@@ -18,9 +18,11 @@ from utils.auth import (
     verify_password,
 )
 from utils.auth_db import (
+    delete_all_refresh_tokens_for_user,
     delete_refresh_token,
     get_user_by_username,
     store_refresh_token,
+    update_password,
     validate_and_rotate_refresh_token,
 )
 
@@ -34,6 +36,18 @@ REFRESH_TOKEN_TTL_DAYS = 7
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Passwort muss mindestens 8 Zeichen haben")
+        return v
 
 
 class TokenResponse(BaseModel):
@@ -115,3 +129,17 @@ async def logout(
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: CurrentUser = Depends(get_current_user)) -> UserResponse:
     return UserResponse(id=current_user.id, username=current_user.username, is_admin=current_user.is_admin)
+
+
+@router.post("/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> dict:
+    user = await asyncio.to_thread(get_user_by_username, current_user.username)
+    if not verify_password(body.current_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Aktuelles Passwort ist falsch")
+    new_hash = hash_password(body.new_password)
+    await asyncio.to_thread(update_password, current_user.id, new_hash)
+    await asyncio.to_thread(delete_all_refresh_tokens_for_user, current_user.id)
+    return {"ok": True}

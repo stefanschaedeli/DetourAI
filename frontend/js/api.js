@@ -81,6 +81,14 @@ async function apiGetMe() {
   return res.json();
 }
 
+async function apiChangePassword(currentPassword, newPassword) {
+  const res = await _fetchQuiet(`${API}/auth/change-password`, {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+  return res.json();
+}
+
 async function apiInitJob(payload) {
   // No loading overlay — skeleton cards provide visual feedback
   const res = await _fetchQuiet(`${API}/init-job`, {
