@@ -829,6 +829,30 @@ async function _initDayDetailMap(plan, dayNum) {
 
   const bounds = new google.maps.LatLngBounds();
   const routePoints = [];
+  let _openInfoWindow = null;
+
+  function attachHover(overlay, infoWindow, pos) {
+    let hoverTimeout = null;
+    const origOnAdd = overlay.onAdd;
+    overlay.onAdd = function () {
+      origOnAdd.call(this);
+      const div = this._div;
+      if (!div) return;
+      div.addEventListener('mouseenter', () => {
+        clearTimeout(hoverTimeout);
+        if (_openInfoWindow) _openInfoWindow.close();
+        infoWindow.setPosition(pos);
+        infoWindow.open(map);
+        _openInfoWindow = infoWindow;
+      });
+      div.addEventListener('mouseleave', () => {
+        hoverTimeout = setTimeout(() => {
+          infoWindow.close();
+          if (_openInfoWindow === infoWindow) _openInfoWindow = null;
+        }, 150);
+      });
+    };
+  }
 
   // Build route anchors from stop coordinates
   // Start anchor: previous stop or plan start location
@@ -860,9 +884,13 @@ async function _initDayDetailMap(plan, dayNum) {
     const pinHtml = `<div class="stop-map-pin pin-timeblock">${tbIndex}</div>`;
     const popupHtml = `<div class="stop-map-popup"><strong>${esc(tb.time)} — ${esc(tb.title)}</strong>${tb.description ? `<p>${esc(tb.description)}</p>` : ''}</div>`;
     const infoWindow = new google.maps.InfoWindow({ content: popupHtml });
-    GoogleMaps.createDivMarker(map, pos, pinHtml, () => {
-      infoWindow.open({ map, position: pos });
+    const overlay = GoogleMaps.createDivMarker(map, pos, pinHtml, () => {
+      if (_openInfoWindow) _openInfoWindow.close();
+      infoWindow.setPosition(pos);
+      infoWindow.open(map);
+      _openInfoWindow = infoWindow;
     });
+    attachHover(overlay, infoWindow, pos);
   });
 
   // End anchor: current stop coordinates
@@ -884,9 +912,13 @@ async function _initDayDetailMap(plan, dayNum) {
     const pinHtml = _buildStopMapPin(ent.type, ent.data);
     const popupHtml = _buildStopMapPopup(ent.type, ent.data);
     const infoWindow = new google.maps.InfoWindow({ content: popupHtml });
-    GoogleMaps.createDivMarker(map, pos, pinHtml, () => {
-      infoWindow.open({ map, position: pos });
+    const overlay = GoogleMaps.createDivMarker(map, pos, pinHtml, () => {
+      if (_openInfoWindow) _openInfoWindow.close();
+      infoWindow.setPosition(pos);
+      infoWindow.open(map);
+      _openInfoWindow = infoWindow;
     });
+    attachHover(overlay, infoWindow, pos);
   }
 
   // Render driving route through time block locations with stop anchors
