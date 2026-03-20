@@ -69,20 +69,48 @@
 
   <!-- ============================================================ Login Screen -->
   <section id="login-section" class="section">
-    <div class="login-container">
-      <h2>Anmelden</h2>
-      <form id="login-form" onsubmit="handleLogin(event)">
-        <div class="login-field">
-          <label for="login-username">Benutzername</label>
-          <input type="text" id="login-username" autocomplete="username" required />
+    <div class="login-card" id="login-card">
+      <div class="login-logo">
+        <div class="login-logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28" aria-hidden="true">
+            <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
         </div>
-        <div class="login-field">
-          <label for="login-password">Passwort</label>
-          <input type="password" id="login-password" autocomplete="current-password" required />
+      </div>
+      <h1 class="login-title">Travelman</h1>
+      <p class="login-subtitle">KI-gestützter Reiseplaner</p>
+
+      <div id="login-form-body">
+        <form id="login-form" onsubmit="handleLogin(event)" novalidate>
+          <div class="login-field">
+            <label for="login-username">Benutzername</label>
+            <input type="text" id="login-username" autocomplete="username" required />
+          </div>
+          <div class="login-field">
+            <label for="login-password">Passwort</label>
+            <input type="password" id="login-password" autocomplete="current-password" required />
+          </div>
+          <div id="login-error" class="login-error" role="alert" aria-live="polite" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" flex-shrink="0" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="login-error-text"></span>
+          </div>
+          <button type="submit" class="login-submit-btn" id="login-submit">
+            <span id="login-btn-label">Anmelden</span>
+          </button>
+        </form>
+      </div>
+
+      <div id="login-success-body" style="display:none">
+        <div class="login-success-overlay">
+          <div class="login-checkmark-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="30" height="30">
+              <path d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <p class="login-success-text" id="login-success-greeting">Willkommen!</p>
+          <p class="login-success-sub">Wird geladen…</p>
         </div>
-        <div id="login-error" class="login-error" style="display:none"></div>
-        <button type="submit" class="btn btn-cta" id="login-submit">Anmelden</button>
-      </form>
+      </div>
     </div>
   </section>
 
@@ -643,19 +671,51 @@
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
     const errEl = document.getElementById('login-error');
+    const errText = document.getElementById('login-error-text');
     const submitBtn = document.getElementById('login-submit');
+    const btnLabel = document.getElementById('login-btn-label');
 
     submitBtn.disabled = true;
     errEl.style.display = 'none';
 
+    // Show loading spinner in button
+    btnLabel.innerHTML = '<span class="login-spinner"></span>';
+
     try {
       const user = await login(username, password);
+
+      // Success animation sequence
+      const card = document.getElementById('login-card');
+      const formBody = document.getElementById('login-form-body');
+      const successBody = document.getElementById('login-success-body');
+      const greeting = document.getElementById('login-success-greeting');
+
+      greeting.textContent = `Willkommen, ${user.username}!`;
+
+      card.classList.add('login-success');
+      formBody.style.display = 'none';
+      successBody.style.display = '';
+
+      // Wait for success animation, then transition to app
+      await new Promise(r => setTimeout(r, 900));
+
       showAppForUser(user);
       if (user.is_admin) loadAdminUsers();
       _initAppOnce();
+
+      // Reset card for next logout
+      card.classList.remove('login-success');
+      formBody.style.display = '';
+      successBody.style.display = 'none';
+      btnLabel.textContent = 'Anmelden';
     } catch (err) {
-      errEl.textContent = err.message || 'Anmeldung fehlgeschlagen';
-      errEl.style.display = '';
+      btnLabel.textContent = 'Anmelden';
+      errText.textContent = err.message || 'Anmeldung fehlgeschlagen';
+      errEl.style.display = 'flex';
+      // Re-trigger shake animation on repeated errors
+      errEl.style.animation = 'none';
+      errEl.offsetWidth; // reflow
+      errEl.style.animation = '';
       submitBtn.disabled = false;
     }
   }
