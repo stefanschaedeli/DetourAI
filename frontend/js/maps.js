@@ -362,6 +362,13 @@ const GoogleMaps = (() => {
         results.set(ent.key, _coordCache.get(ent.key));
         continue;
       }
+      // Strategy 0: Use pre-resolved coordinates from backend (most accurate)
+      if (ent.lat && ent.lng) {
+        const coord = { lat: ent.lat, lng: ent.lng };
+        _coordCache.set(ent.key, coord);
+        results.set(ent.key, coord);
+        continue;
+      }
       if (ent.placeId) {
         toFetchById.push(ent);
       } else if (ent.name) {
@@ -408,7 +415,10 @@ const GoogleMaps = (() => {
           };
           if (typeMap[ent.searchType]) searchOpts.includedType = typeMap[ent.searchType];
           if (ent.stopLat && ent.stopLng) {
-            searchOpts.locationBias = new google.maps.LatLng(ent.stopLat, ent.stopLng);
+            searchOpts.locationRestriction = new google.maps.Circle({
+              center: new google.maps.LatLng(ent.stopLat, ent.stopLng),
+              radius: 100000,  // 100km hard cap — prevents continent-spanning results
+            });
           }
           const { places } = await Place.searchByText(searchOpts);
           if (places && places[0] && places[0].location) {

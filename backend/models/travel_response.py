@@ -59,6 +59,8 @@ class StopActivity(BaseModel):
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None
     place_id: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
 
 
 class Restaurant(BaseModel):

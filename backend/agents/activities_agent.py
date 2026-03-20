@@ -1,4 +1,5 @@
 import asyncio
+import difflib
 from collections import defaultdict
 from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
@@ -239,26 +240,43 @@ Gib exakt dieses JSON zurück:
         result = parse_agent_json(text)
 
         activities = result.get("top_activities", [])
-        if lat and lon:
-            gp_results = await search_attractions(lat, lon, radius_m=req.activities_radius_km * 1000)
-            gp_map = {a["name"].lower(): a for a in gp_results} if gp_results else {}
+        if lat and lon and gp_results:
+            gp_map = {a["name"].lower(): a for a in gp_results}
         else:
             gp_map = {}
+        gp_names = list(gp_map.keys())
 
         for activity in activities:
-            matched = gp_map.get(activity.get("name", "").lower())
-            if matched and matched.get("photo_reference"):
-                activity["image_overview"] = place_photo_url(matched["photo_reference"])
-                activity["image_mood"] = None
-                activity["image_customer"] = None
+            name_lower = activity.get("name", "").lower()
+
+            # Exact match first, then fuzzy fallback
+            matched = gp_map.get(name_lower)
+            if not matched and gp_names:
+                close = difflib.get_close_matches(name_lower, gp_names, n=1, cutoff=0.6)
+                if close:
+                    matched = gp_map[close[0]]
+
+            if matched:
+                if matched.get("photo_reference"):
+                    activity["image_overview"] = place_photo_url(matched["photo_reference"])
+                    activity["image_mood"] = None
+                    activity["image_customer"] = None
+                else:
+                    images = await fetch_unsplash_images(
+                        f"{activity.get('name', '')} {region}", "activity"
+                    )
+                    activity.update(images)
+                if matched.get("place_id"):
+                    activity["place_id"] = matched["place_id"]
+                    activity["google_maps_url"] = f"https://www.google.com/maps/place/?q=place_id:{matched['place_id']}"
+                if matched.get("lat") and matched.get("lon"):
+                    activity["lat"] = matched["lat"]
+                    activity["lon"] = matched["lon"]
             else:
                 images = await fetch_unsplash_images(
                     f"{activity.get('name', '')} {region}", "activity"
                 )
                 activity.update(images)
-            if matched and matched.get("place_id"):
-                activity["place_id"] = matched["place_id"]
-                activity["google_maps_url"] = f"https://www.google.com/maps/place/?q=place_id:{matched['place_id']}"
 
         result["top_activities"] = activities
         return result

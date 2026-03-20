@@ -784,6 +784,8 @@ async function _initDayDetailMap(plan, dayNum) {
       entities.push({
         key: `day-act-${stop.id}-${i}`,
         placeId: act.place_id || null,
+        lat: act.lat || null,
+        lng: act.lon || null,
         name: act.name,
         stopLat: stop.lat, stopLng: stop.lng,
         searchType: 'activity',
@@ -1469,6 +1471,8 @@ async function _initStopMap(stop) {
     entities.push({
       key: `act-${stop.id}-${i}`,
       placeId: act.place_id || null,
+      lat: act.lat || null,
+      lng: act.lon || null,
       name: act.name,
       stopLat: stop.lat, stopLng: stop.lng,
       searchType: 'activity',
@@ -1481,6 +1485,8 @@ async function _initStopMap(stop) {
     entities.push({
       key: `fact-${stop.id}-${i}`,
       placeId: act.place_id || null,
+      lat: act.lat || null,
+      lng: act.lon || null,
       name: act.name,
       stopLat: stop.lat, stopLng: stop.lng,
       searchType: 'activity',
