@@ -65,6 +65,7 @@ function onRouteReady(data) {
   const stops = data.stops || [];
   progressOverlay.completeLine('route_arch', 'Route festgelegt');
   buildStopsTimeline(stops);
+  if (typeof updateSidebar === 'function') updateSidebar();
 }
 
 function buildStopsTimeline(stops) {
@@ -144,6 +145,7 @@ function onStopDone(data) {
   const stopId = data.stop_id;
   const stopEl = document.getElementById(`timeline-stop-${stopId}`);
   if (stopEl) stopEl.classList.add('done');
+  if (typeof updateSidebar === 'function') updateSidebar();
 }
 
 function onAgentStart(data) {
@@ -172,6 +174,7 @@ async function onJobComplete(data) {
   progressOverlay.close();
 
   S.result = data;
+  if (typeof updateSidebar === 'function') updateSidebar();
 
   // Save to localStorage
   lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan: data });

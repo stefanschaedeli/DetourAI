@@ -9,6 +9,7 @@ let _activeDayNum = null;
 
 function showTravelGuide(plan) {
   S.result = plan;
+  if (typeof updateSidebar === 'function') updateSidebar();
   renderGuide(plan, activeTab);
 }
 

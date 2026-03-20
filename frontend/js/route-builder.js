@@ -610,6 +610,7 @@ async function selectOption(idx) {
       routeMeta = { ...routeMeta, ...meta };
       _updateRouteStatus(meta);
       renderBuiltStops();
+      if (typeof updateSidebar === 'function') updateSidebar();
       _initMap(meta.map_anchors || _streamingMeta || {}, options);
       _appendSkipCardFromMeta();
       const confirmBtn = document.getElementById('confirm-route-btn');

@@ -727,6 +727,7 @@
 <script src="/js/guide.js"></script>
 <script src="/js/travels.js"></script>
 <script src="/js/settings.js"></script>
+<script src="/js/sidebar.js"></script>
 
 <script>
   // ── Auth helpers ──────────────────────────────────────────────────────────────
@@ -928,6 +929,7 @@
   function _initAppOnce() {
     if (_appInitialized) return;
     _appInitialized = true;
+    initSidebar();
     initForm();
     Router.init();
     document.addEventListener('keydown', e => {

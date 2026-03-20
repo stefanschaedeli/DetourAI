@@ -63,6 +63,7 @@ function goToStep(n) {
     }
   });
   updateQuickSubmitBar();
+  if (typeof updateSidebar === 'function') updateSidebar();
 }
 
 function nextStep() {

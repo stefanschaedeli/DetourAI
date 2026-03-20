@@ -31,6 +31,7 @@ function onAccDebugLog(data) {
 
 function startAccommodationPhase(data) {
   S.allStops = data.selected_stops || [];
+  if (typeof updateSidebar === 'function') updateSidebar();
   S.pendingSelections = {};
   S.accSelectionCount = 0;
   allStopPanels = {};
@@ -192,6 +193,7 @@ function selectAccommodationInPanel(stopId, optionIdx) {
 
   S.pendingSelections[stopId] = optionIdx;
   S.accSelectionCount = Object.keys(S.pendingSelections).length;
+  if (typeof updateSidebar === 'function') updateSidebar();
 
   lsSet(LS_ACCOMMODATIONS, {
     jobId: S.jobId,
