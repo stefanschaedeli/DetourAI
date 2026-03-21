@@ -229,7 +229,7 @@ Gib exakt dieses JSON zurück:
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=get_max_tokens(AGENT_KEY, 2048),
+                max_tokens=get_max_tokens(AGENT_KEY, 4096),
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )
