@@ -121,19 +121,73 @@
 
 body {
   font-family: var(--font-primary);
-  background: linear-gradient(
-    135deg,
-    #FAF8FF 0%,
-    #EEF6FF 25%,
-    #F0FBF4 50%,
-    #FFF4F4 75%,
-    #FAF8FF 100%
-  );
-  background-size: 400% 400%;
-  animation: pastel-shift 18s ease infinite;
+  background: transparent;
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100dvh;
+}
+
+/* ============================================================ Background Slideshow */
+/* Slideshow sits at z:1; pastel wash at z:2; all real UI at z:3+
+   (header is z:100 so there's plenty of headroom) */
+#bg-slideshow {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bg-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1.8s ease-in-out;
+  /* Soft pastel overlay: desaturate + lighten to keep colours gentle */
+  filter: saturate(0.65) brightness(1.15);
+  will-change: opacity;
+}
+
+.bg-slide.active {
+  opacity: 0.30;
+}
+
+/* Gentle white vignette to soften edges */
+#bg-slideshow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center,
+    transparent 40%,
+    rgba(250, 248, 255, 0.45) 100%
+  );
+  pointer-events: none;
+}
+
+/* Animated pastel colour wash — above photos, below all UI */
+#bg-pastel-wash {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    rgba(250, 248, 255, 0.72) 0%,
+    rgba(238, 246, 255, 0.72) 25%,
+    rgba(240, 251, 244, 0.72) 50%,
+    rgba(255, 244, 244, 0.72) 75%,
+    rgba(250, 248, 255, 0.72) 100%
+  );
+  background-size: 400% 400%;
+  animation: pastel-shift 18s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-slide { transition: none; }
+  #bg-pastel-wash { animation: none; }
 }
 
 /* ============================================================ 3D Lift Micro-Interactions
@@ -4411,6 +4465,8 @@ strong.req-keyword {
   display: flex;
   align-items: flex-start;
   min-height: calc(100dvh - 60px);
+  position: relative;
+  z-index: 3;
 }
 #app-main {
   flex: 1;
