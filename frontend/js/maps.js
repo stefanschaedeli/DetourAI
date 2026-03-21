@@ -210,8 +210,11 @@ const GoogleMaps = (() => {
   }
 
   async function _fetchImagesWithFallback(name, lat, lng, context, placeId) {
+    // Guard: Google Maps JS SDK not yet loaded — skip to static/placeholder tiers
+    const googleReady = typeof google !== 'undefined' && google.maps;
+
     // Tier 0: Place Details by ID (most accurate, cheapest)
-    if (placeId) {
+    if (googleReady && placeId) {
       try {
         const { Place } = await google.maps.importLibrary('places');
         const place = new Place({ id: placeId });
@@ -225,7 +228,7 @@ const GoogleMaps = (() => {
     }
 
     // Tier 1a: Nearby search by coordinates (city/region context)
-    if (lat && lng && context !== 'hotel' && context !== 'restaurant' && context !== 'activity') {
+    if (googleReady && lat && lng && context !== 'hotel' && context !== 'restaurant' && context !== 'activity') {
       try {
         const photos = await _nearbyPhotosByLatLng(lat, lng);
         if (photos.length >= 1) return photos;
@@ -235,7 +238,7 @@ const GoogleMaps = (() => {
     }
 
     // Tier 1b: Text search by name (specific POIs or fallback for cities)
-    if (name) {
+    if (googleReady && name) {
       try {
         const photos = await _photosByTextSearch(name, lat, lng, context);
         if (photos.length >= 1) return photos;
