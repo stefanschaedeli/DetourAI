@@ -54,3 +54,11 @@ settings.json
 .claude/
 .superpowers/
 .worktrees/
+
+# Runtime data (SQLite DBs — created on first use)
+data/
+backend/data/
+
+# Claude Code skill cache (reinstallable)
+.agents/
+skills-lock.json

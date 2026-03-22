@@ -68,7 +68,8 @@ travelman3/
 │   ├── orchestrator.py                  # TravelPlannerOrchestrator
 │   ├── tasks/
 │   │   ├── run_planning_job.py          # Celery task: full orchestration
-│   │   └── prefetch_accommodations.py   # Celery task: parallel acc fetch
+│   │   ├── prefetch_accommodations.py   # Celery task: parallel acc fetch
+│   │   └── replace_stop_job.py          # Celery task: stop replacement
 │   ├── agents/
 │   │   ├── _client.py                   # shared Anthropic client factory
 │   │   ├── route_architect.py           # claude-opus-4-5
@@ -85,7 +86,9 @@ travelman3/
 │   │   ├── travel_request.py            # TravelRequest Pydantic model
 │   │   ├── travel_response.py           # TravelPlan, TravelStop, DayPlan, CostEstimate
 │   │   ├── stop_option.py               # StopOption, StopOptionsResponse
-│   │   └── accommodation_option.py      # AccommodationOption, BudgetState
+│   │   ├── accommodation_option.py      # AccommodationOption, BudgetState
+│   │   ├── trip_leg.py                  # TripLeg model
+│   │   └── via_point.py                 # ViaPoint model
 │   ├── utils/
 │   │   ├── debug_logger.py              # Singleton DebugLogger, SSE subscriber manager
 │   │   ├── maps_helper.py               # geocode_google(), google_directions(), build_maps_url()
@@ -93,7 +96,16 @@ travelman3/
 │   │   ├── json_parser.py               # parse_agent_json() strips markdown fences
 │   │   ├── travel_db.py                 # SQLite persistence for saved travels
 │   │   ├── hotel_price_fetcher.py       # hotel price scraping/fetching
-│   │   └── image_fetcher.py             # destination image fetching
+│   │   ├── image_fetcher.py             # destination image fetching
+│   │   ├── auth.py                      # authentication logic
+│   │   ├── auth_db.py                   # authentication database
+│   │   ├── brave_search.py              # Brave search integration
+│   │   ├── currency.py                  # currency conversion
+│   │   ├── google_places.py             # Google Places API
+│   │   ├── migrations.py               # database migrations
+│   │   ├── settings_store.py            # settings persistence
+│   │   ├── weather.py                   # weather data fetching
+│   │   └── wikipedia.py                 # Wikipedia enrichment
 │   ├── tests/
 │   │   ├── conftest.py
 │   │   ├── test_models.py               # 38 Pydantic validation tests
@@ -118,7 +130,12 @@ travelman3/
 │       ├── maps.js          # map rendering helpers
 │       ├── loading.js       # loading state UI
 │       ├── sse-overlay.js   # SSE progress overlay component
+│       ├── auth.js          # authentication / access control
+│       ├── router.js        # client-side routing
+│       ├── sidebar.js       # sidebar navigation component
+│       ├── settings.js      # settings page / preferences
 │       └── types.d.ts       # generated from OpenAPI — do not edit manually
+├── DESIGN_GUIDELINE.md              # Apple-inspired design system
 ├── scripts/
 │   └── generate-types.sh
 └── outputs/                 # generated PDF/PPTX files
@@ -245,7 +262,7 @@ After **every** change, commit immediately as a patch release and push:
 
 ```bash
 git add <changed files>
-git commit -m "type: beschreibung\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git commit -m "type: beschreibung"
 git tag vX.X.Y        # increment patch number from latest tag
 git push && git push --tags
 ```
