@@ -420,10 +420,10 @@ const GoogleMaps = (() => {
           if (ent.searchType === 'restaurant') searchOpts.includedType = 'restaurant';
           else if (ent.searchType === 'hotel') searchOpts.includedType = 'lodging';
           if (ent.stopLat && ent.stopLng) {
-            searchOpts.locationRestriction = new google.maps.Circle({
-              center: new google.maps.LatLng(ent.stopLat, ent.stopLng),
-              radius: 100000,  // 100km hard cap — prevents continent-spanning results
-            });
+            searchOpts.locationBias = {
+              center: { lat: ent.stopLat, lng: ent.stopLng },
+              radius: 100000,  // 100km bias — prefers nearby results
+            };
           }
           const { places } = await Place.searchByText(searchOpts);
           if (places && places[0] && places[0].location) {
