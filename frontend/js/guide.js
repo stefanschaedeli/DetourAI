@@ -773,7 +773,8 @@ async function _initDayDetailMap(plan, dayNum) {
       placeId: tb.place_id || null,
       name: tb.location || tb.title,
       stopLat: centerLat, stopLng: centerLng,
-      searchType: tb.activity_type === 'meal' ? 'restaurant' : 'activity',
+      searchType: tb.activity_type === 'meal' ? 'restaurant'
+                : tb.activity_type === 'check_in' ? 'hotel' : 'activity',
       type: 'timeblock', data: tb, index: i,
     });
   });

@@ -407,7 +407,6 @@ const GoogleMaps = (() => {
 
     // Strategy 2: Text search by name with location bias (for entities without place_id)
     if (toFetchByText.length > 0) {
-      const typeMap = { hotel: 'lodging', activity: 'tourist_attraction', restaurant: 'restaurant' };
       const settled = await Promise.allSettled(
         toFetchByText.map(async (ent) => {
           if (results.has(ent.key)) return; // Already resolved via fallback
@@ -416,7 +415,10 @@ const GoogleMaps = (() => {
             fields: ['location'],
             maxResultCount: 1,
           };
-          if (typeMap[ent.searchType]) searchOpts.includedType = typeMap[ent.searchType];
+          // Only restrict type for restaurants/hotels where it helps accuracy.
+          // Activities span too many Google types (museum, park, church…) — no filter.
+          if (ent.searchType === 'restaurant') searchOpts.includedType = 'restaurant';
+          else if (ent.searchType === 'hotel') searchOpts.includedType = 'lodging';
           if (ent.stopLat && ent.stopLng) {
             searchOpts.locationRestriction = new google.maps.Circle({
               center: new google.maps.LatLng(ent.stopLat, ent.stopLng),
