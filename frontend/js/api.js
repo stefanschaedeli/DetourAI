@@ -228,9 +228,17 @@ async function recomputeRegions(jobId, instruction) {
   }).then(r => r.json());
 }
 
-async function confirmRegions(jobId) {
+async function confirmRegions(jobId, regions) {
   return await _fetchQuiet(`${API}/confirm-regions/${jobId}`, {
     method: 'POST',
+    body: JSON.stringify(regions ? { regions } : {}),
+  }).then(r => r.json());
+}
+
+async function geocodeRegion(jobId, name) {
+  return await _fetchQuiet(`${API}/geocode-region/${jobId}`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
   }).then(r => r.json());
 }
 

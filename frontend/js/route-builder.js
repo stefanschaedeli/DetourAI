@@ -891,6 +891,7 @@ function _buildRegionCardHtml(r, i) {
           <span class="region-card-number">${i + 1}</span>
           <h3>${esc(r.name)}</h3>
           <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); _toggleReplaceRegion(${i})">Ersetzen</button>
+          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); _deleteRegion(${i})" ${window._currentRegions && window._currentRegions.length <= 1 ? 'disabled' : ''}>Entfernen</button>
         </div>
         ${teaserHtml}
         ${highlightsHtml}
@@ -930,6 +931,7 @@ function showRegionPlanUI(regions, summary, legId) {
     <div class="route-panel-header">
       <h3>Regionen-Plan</h3>
       <div class="region-actions">
+        <button class="btn btn-secondary btn-sm" onclick="_toggleAddRegion()">Region hinzufügen</button>
         <button class="btn btn-secondary btn-sm" onclick="_toggleRecompute()">Neu berechnen</button>
         <button class="btn btn-primary btn-sm" onclick="_confirmRegions()">Route bestätigen</button>
       </div>
@@ -947,6 +949,13 @@ function showRegionPlanUI(regions, summary, legId) {
           <input type="text" id="recompute-text"
             placeholder="Was soll geändert werden?" style="flex:1">
           <button class="btn btn-sm btn-primary" onclick="_doRecompute()">Neu berechnen</button>
+        </div>
+      </div>
+      <div id="add-region-form" style="display:none;margin-top:12px">
+        <div class="recompute-bar">
+          <input type="text" id="add-region-text"
+            placeholder="Name der Region oder Stadt eingeben" style="flex:1">
+          <button class="btn btn-sm btn-primary" onclick="_doAddRegion()">Hinzufügen</button>
         </div>
       </div>
     </div>
@@ -1069,6 +1078,39 @@ async function _doReplaceRegion(index) {
   }
 }
 
+function _deleteRegion(index) {
+  const regions = window._currentRegions;
+  if (!regions || regions.length <= 1) return;
+  regions.splice(index, 1);
+  const summary = document.querySelector('.region-summary')?.textContent || '';
+  updateRegionPlanUI(regions, summary);
+}
+
+function _toggleAddRegion() {
+  const form = document.getElementById('add-region-form');
+  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function _doAddRegion() {
+  const input = document.getElementById('add-region-text');
+  if (!input || !input.value.trim()) return;
+  progressOverlay.open('Region wird gesucht…');
+  try {
+    const data = await geocodeRegion(S.jobId, input.value.trim());
+    progressOverlay.close();
+    if (data.region) {
+      window._currentRegions.push(data.region);
+      const summary = document.querySelector('.region-summary')?.textContent || '';
+      updateRegionPlanUI(window._currentRegions, summary);
+      input.value = '';
+      document.getElementById('add-region-form').style.display = 'none';
+    }
+  } catch (err) {
+    progressOverlay.close();
+    console.error('Region hinzufügen fehlgeschlagen:', err);
+  }
+}
+
 function _toggleRecompute() {
   const form = document.getElementById('recompute-form');
   if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
@@ -1094,7 +1136,7 @@ async function _confirmRegions() {
   progressOverlay.open('Regionen werden bestätigt…');
   openRouteSSE(S.jobId);
   try {
-    const data = await confirmRegions(S.jobId);
+    const data = await confirmRegions(S.jobId, window._currentRegions);
     startRouteBuilding(data);
   } catch (err) {
     progressOverlay.close();

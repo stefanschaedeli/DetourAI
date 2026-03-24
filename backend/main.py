@@ -25,7 +25,7 @@ load_dotenv()
 from models.travel_request import TravelRequest
 from models.stop_option import StopSelectRequest
 from models.accommodation_option import AccommodationSelectRequest, BudgetState, AccommodationResearchRequest
-from models.trip_leg import ReplaceRegionRequest, RecomputeRegionsRequest
+from models.trip_leg import ReplaceRegionRequest, RecomputeRegionsRequest, GeocodeRegionRequest, ConfirmRegionsBody
 from utils.auth import get_current_user, get_current_user_sse, CurrentUser, verify_jwt_secret, hash_password
 from utils.auth_db import admin_exists, create_user, assign_orphan_trips, get_user_by_username
 from utils.migrations import run_migrations
@@ -2476,11 +2476,36 @@ async def recompute_regions(job_id: str, body: RecomputeRegionsRequest, current_
 
 
 # ---------------------------------------------------------------------------
+# POST /api/geocode-region/{job_id}
+# ---------------------------------------------------------------------------
+
+@app.post("/api/geocode-region/{job_id}")
+async def geocode_region_endpoint(job_id: str, body: GeocodeRegionRequest, current_user: CurrentUser = Depends(get_current_user)):
+    get_job(job_id)  # validate job exists
+
+    geo_result = await geocode_google(body.name.strip())
+    if not geo_result:
+        raise HTTPException(status_code=400, detail=f"Ort '{body.name}' konnte nicht gefunden werden")
+
+    lat, lon, place_id = geo_result
+    region = {
+        "name": body.name.strip(),
+        "lat": lat,
+        "lon": lon,
+        "place_id": place_id,
+        "reason": "Manuell hinzugefügt",
+        "teaser": "",
+        "highlights": [],
+    }
+    return {"status": "ok", "region": region}
+
+
+# ---------------------------------------------------------------------------
 # POST /api/confirm-regions/{job_id}
 # ---------------------------------------------------------------------------
 
 @app.post("/api/confirm-regions/{job_id}")
-async def confirm_regions(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
+async def confirm_regions(job_id: str, body: ConfirmRegionsBody = None, current_user: CurrentUser = Depends(get_current_user)):
     from models.trip_leg import RegionPlan
 
     job = get_job(job_id)
@@ -2488,6 +2513,12 @@ async def confirm_regions(job_id: str, current_user: CurrentUser = Depends(get_c
         raise HTTPException(status_code=409, detail="Kein Regionen-Plan vorhanden")
 
     region_plan = RegionPlan(**job["region_plan"])
+
+    # Frontend kann geänderte Regionen senden (Drag-Reorder, Löschen, Hinzufügen)
+    if body and body.regions:
+        region_plan = RegionPlan(regions=body.regions, summary=region_plan.summary)
+        job["region_plan"] = region_plan.model_dump()
+        save_job(job_id, job)
     request = TravelRequest(**job["request"])
     leg_index = job["leg_index"]
     leg = request.legs[leg_index]
