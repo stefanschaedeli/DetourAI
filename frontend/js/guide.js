@@ -1345,7 +1345,10 @@ async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context, 
     const urls = await GoogleMaps.getPlaceImages(placeName, lat, lng, context);
     const size = sizeClass || (placeholder?.classList.contains('hero-photo--lg') ? 'lg'
       : placeholder?.classList.contains('hero-photo--sm') ? 'sm' : 'md');
-    const newHtml = buildHeroPhoto(urls, placeName, size);
+    const isGallery = placeholder?.classList.contains('hero-gallery');
+    const newHtml = isGallery
+      ? buildHeroPhotoGallery(urls, placeName, size)
+      : buildHeroPhoto(urls, placeName, size);
     clearTimeout(timer);
     if (!newHtml) {
       if (placeholder) placeholder.remove();

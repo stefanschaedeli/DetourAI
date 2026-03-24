@@ -139,7 +139,7 @@ function _buildOptionCardHTML(opt, i) {
     classes: `option-card${overLimit ? ' over-limit' : ''}`,
     id: `option-card-${i}`,
     html: `
-      ${buildHeroPhotoLoading('md')}
+      ${buildHeroPhotoGalleryLoading('md')}
       <div class="option-card-body" onclick="selectOption(${i})">
         <div class="option-card-header">
           <span class="option-card-number">${i + 1}</span>

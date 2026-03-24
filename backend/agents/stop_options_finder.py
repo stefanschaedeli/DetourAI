@@ -200,13 +200,17 @@ Befülle folgende Felder kontextabhängig:
 - climate_note: Klimahinweis passend zur Reisezeit ({getattr(req, 'start_date', 'unbekannt')})
 - must_see: Top 2-3 Sehenswürdigkeiten passend zu den Reisestilen {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
 {('- family_friendly: true/false (Kinder reisen mit)' if has_children else '')}
+- teaser: WICHTIG — 3-4 Sätze (~100-150 Wörter). Erkläre WARUM dieser Stopp perfekt zur Reise passt.
+  Beziehe dich konkret auf die Reisestile ({', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}),
+  die Reisenden ({req.adults} Erwachsene{', Kinder' if req.children else ''}) und was diesen Ort besonders macht.
+  Keine generischen Floskeln — überzeugend und spezifisch begründen.
 
 Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PFLICHT – keine null):
 {{
   "options": [
-    {{"id": 1, "option_type": "{ex1_type}", "region": "...", "country": "FR", "lat": 45.7640, "lon": 4.8357, "drive_hours": 3.5, "drive_km": 280, "nights": 2, "highlights": ["...", "..."], "teaser": "...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}},
-    {{"id": 2, "option_type": "{ex2_type}", "region": "...", "country": "FR", "lat": 45.9237, "lon": 6.8694, "drive_hours": 4.0, "drive_km": 320, "nights": 2, "highlights": ["...", "..."], "teaser": "...", "population": "...", "altitude_m": 1200, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}},
-    {{"id": 3, "option_type": "{ex3_type}", "region": "...", "country": "FR", "lat": 43.2965, "lon": 5.3698, "drive_hours": 3.0, "drive_km": 250, "nights": 2, "highlights": ["...", "..."], "teaser": "...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}}
+    {{"id": 1, "option_type": "{ex1_type}", "region": "...", "country": "FR", "lat": 45.7640, "lon": 4.8357, "drive_hours": 3.5, "drive_km": 280, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}},
+    {{"id": 2, "option_type": "{ex2_type}", "region": "...", "country": "FR", "lat": 45.9237, "lon": 6.8694, "drive_hours": 4.0, "drive_km": 320, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": 1200, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}},
+    {{"id": 3, "option_type": "{ex3_type}", "region": "...", "country": "FR", "lat": 43.2965, "lon": 5.3698, "drive_hours": 3.0, "drive_km": 250, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}}
   ],
   "estimated_total_stops": 4,
   "route_could_be_complete": false
@@ -242,7 +246,7 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=get_max_tokens(AGENT_KEY, 1500),
+                max_tokens=get_max_tokens(AGENT_KEY, 2500),
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -337,7 +341,7 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
             results = []
             with self.client.messages.stream(
                 model=self.model,
-                max_tokens=get_max_tokens(AGENT_KEY, 1500),
+                max_tokens=get_max_tokens(AGENT_KEY, 2500),
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             ) as stream:

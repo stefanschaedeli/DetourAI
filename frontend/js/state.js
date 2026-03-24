@@ -148,6 +148,42 @@ function buildHeroPhotoLoading(sizeClass = 'md') {
   return `<div class="hero-photo hero-photo--${sizeClass} hero-photo-loading"><div class="hero-photo-shimmer shimmer-elem"></div></div>`;
 }
 
+/**
+ * Build a hero photo gallery — 1 large image + 2 smaller stacked images.
+ * Falls back to single hero photo if fewer than 3 URLs available.
+ * @param {string[]} urls - Array of image URLs
+ * @param {string} altText - Alt text for images
+ * @param {'lg'|'md'|'sm'} sizeClass - Size variant
+ * @returns {string} HTML string
+ */
+function buildHeroPhotoGallery(urls, altText, sizeClass = 'md') {
+  if (!urls || urls.length < 3) return buildHeroPhoto(urls, altText, sizeClass);
+  const alt = esc(altText || '');
+  const urlsJson = JSON.stringify(urls.map(u => esc(u)));
+  const extraCount = urls.length > 3
+    ? `<span class="hero-photo-count">+${urls.length - 3} Fotos</span>` : '';
+  return `<div class="hero-gallery hero-gallery--${sizeClass}" data-photo-urls='${urlsJson}'>` +
+    `<div class="hero-gallery-main"><img src="${esc(urls[0])}" alt="${alt}" loading="lazy" onerror="this.parentElement.classList.add('hero-photo-error')"></div>` +
+    `<div class="hero-gallery-side">` +
+      `<div class="hero-gallery-thumb"><img src="${esc(urls[1])}" alt="${alt}" loading="lazy" onerror="this.parentElement.classList.add('hero-photo-error')"></div>` +
+      `<div class="hero-gallery-thumb"><img src="${esc(urls[2])}" alt="${alt}" loading="lazy" onerror="this.parentElement.classList.add('hero-photo-error')">${extraCount}</div>` +
+    `</div></div>`;
+}
+
+/**
+ * Build a hero photo gallery loading placeholder with shimmer grid.
+ * @param {'lg'|'md'|'sm'} sizeClass - Size variant
+ * @returns {string} HTML string
+ */
+function buildHeroPhotoGalleryLoading(sizeClass = 'md') {
+  return `<div class="hero-gallery hero-gallery--${sizeClass} hero-photo-loading">` +
+    `<div class="hero-gallery-main"><div class="hero-photo-shimmer shimmer-elem"></div></div>` +
+    `<div class="hero-gallery-side">` +
+      `<div class="hero-gallery-thumb"><div class="hero-photo-shimmer shimmer-elem"></div></div>` +
+      `<div class="hero-gallery-thumb"><div class="hero-photo-shimmer shimmer-elem"></div></div>` +
+    `</div></div>`;
+}
+
 // Lightbox gallery state
 let _lbUrls = [];
 let _lbIndex = 0;
@@ -192,7 +228,7 @@ function closeLightbox() {
 // Event delegation for lightbox open/close
 document.addEventListener('click', e => {
   // Hero-photo click → open lightbox with all photos from data-photo-urls
-  const hero = e.target.closest('.hero-photo[data-photo-urls]');
+  const hero = e.target.closest('.hero-photo[data-photo-urls], .hero-gallery[data-photo-urls]');
   if (hero && !e.target.closest('button')) {
     e.stopPropagation();
     try {
