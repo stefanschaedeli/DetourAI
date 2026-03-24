@@ -242,13 +242,19 @@ const Sidebar = (() => {
         _renderedIds.add(node.id);
       }
     }
+
+    // Reorder DOM to match _nodes array order
+    for (const node of _nodes) {
+      const el = container.querySelector(`[data-id="${CSS.escape(node.id)}"]`);
+      if (el) container.appendChild(el);
+    }
   }
 
   // ─── Lazy Image Loading ────────────────────────────────────────────────────
 
   async function _lazyLoadImages(nodes) {
     for (const node of nodes) {
-      if (!node.lat || !node.lng) continue;
+      if (!node.lat && !node.lng && !node.placeId && !node.name) continue;
 
       const cacheKey = node.id;
 
