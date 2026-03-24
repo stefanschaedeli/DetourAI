@@ -451,8 +451,8 @@ def test_travel_guide_agent_json_parsing(mocker):
 # RegionPlannerAgent — region-based route planning
 # ---------------------------------------------------------------------------
 
-from unittest.mock import MagicMock, patch
-from agents.region_planner import RegionPlannerAgent
+from unittest.mock import MagicMock, patch, AsyncMock
+from agents.region_planner import RegionPlannerAgent, _reorder_regions
 from models.trip_leg import RegionPlan, RegionPlanItem
 from models.travel_request import TravelRequest
 from models.trip_leg import TripLeg
@@ -493,9 +493,10 @@ class TestRegionPlannerAgent:
         msg.usage = MagicMock(input_tokens=100, output_tokens=50)
         return msg
 
+    @patch("agents.region_planner.geocode_google", new_callable=AsyncMock, return_value=(47.37, 8.54, "ch1"))
     @patch("agents.region_planner.get_client")
     @patch("agents.region_planner.call_with_retry")
-    def test_plan_returns_region_plan(self, mock_retry, mock_get_client):
+    def test_plan_returns_region_plan(self, mock_retry, mock_get_client, mock_geo):
         import asyncio
         mock_get_client.return_value = MagicMock()
         mock_retry.return_value = self._mock_response(PLAN_JSON)
@@ -508,12 +509,12 @@ class TestRegionPlannerAgent:
         ))
         assert isinstance(result, RegionPlan)
         assert len(result.regions) == 2
-        assert result.regions[0].name == "Tessin"
         assert "Rundreise" in result.summary
 
+    @patch("agents.region_planner.geocode_google", new_callable=AsyncMock, return_value=(47.37, 8.54, "ch1"))
     @patch("agents.region_planner.get_client")
     @patch("agents.region_planner.call_with_retry")
-    def test_replace_region(self, mock_retry, mock_get_client):
+    def test_replace_region(self, mock_retry, mock_get_client, mock_geo):
         import asyncio
         mock_get_client.return_value = MagicMock()
         mock_retry.return_value = self._mock_response(REPLACE_JSON)
@@ -536,9 +537,10 @@ class TestRegionPlannerAgent:
         assert isinstance(result, RegionPlan)
         assert result.regions[0].name == "Wallis"
 
+    @patch("agents.region_planner.geocode_google", new_callable=AsyncMock, return_value=(47.37, 8.54, "ch1"))
     @patch("agents.region_planner.get_client")
     @patch("agents.region_planner.call_with_retry")
-    def test_recalculate(self, mock_retry, mock_get_client):
+    def test_recalculate(self, mock_retry, mock_get_client, mock_geo):
         import asyncio
         mock_get_client.return_value = MagicMock()
         mock_retry.return_value = self._mock_response(PLAN_JSON)
@@ -556,3 +558,92 @@ class TestRegionPlannerAgent:
         ))
         assert isinstance(result, RegionPlan)
         assert len(result.regions) == 2
+
+
+# ---------------------------------------------------------------------------
+# _reorder_regions — pure function tests (no mocks needed)
+# ---------------------------------------------------------------------------
+
+class TestReorderRegions:
+    """Test the nearest-neighbor + 2-opt route optimization."""
+
+    @staticmethod
+    def _r(name: str, lat: float, lon: float) -> RegionPlanItem:
+        return RegionPlanItem(name=name, lat=lat, lon=lon, reason="test")
+
+    def test_circular_route_no_zigzag(self):
+        """Regions in zigzag order should be reordered into a logical loop."""
+        # Greece example: start in Athens, regions scattered around Greece
+        athens = (37.98, 23.73)
+        regions = [
+            self._r("Thessalien", 39.6, 22.4),     # north-east
+            self._r("Epirus", 39.6, 20.8),          # north-west
+            self._r("Peloponnes", 37.5, 22.3),      # south
+            self._r("Ionische Inseln", 38.5, 20.5),  # west
+            self._r("Meteora", 39.7, 21.6),          # north-center
+        ]
+        result = _reorder_regions(regions, athens, None, circular=True)
+        names = [r.name for r in result]
+        # The exact order depends on the heuristic, but key properties:
+        # 1. Peloponnes should be near start (closest to Athens)
+        assert names[0] == "Peloponnes"
+        # 2. No zigzag — consecutive regions should be geographically close
+        # Verify total route distance is less than original zigzag
+        from utils.maps_helper import haversine_km
+        def route_dist(regs):
+            d = haversine_km(athens, (regs[0].lat, regs[0].lon))
+            for i in range(len(regs) - 1):
+                d += haversine_km((regs[i].lat, regs[i].lon), (regs[i+1].lat, regs[i+1].lon))
+            d += haversine_km((regs[-1].lat, regs[-1].lon), athens)
+            return d
+        assert route_dist(result) <= route_dist(regions)
+
+    def test_oneway_route_anchors(self):
+        """One-way: first region near start, last near end."""
+        zurich = (47.37, 8.54)
+        geneva = (46.20, 6.14)
+        regions = [
+            self._r("Bern", 46.95, 7.44),
+            self._r("Luzern", 47.05, 8.31),
+            self._r("Lausanne", 46.52, 6.63),
+            self._r("Interlaken", 46.69, 7.85),
+        ]
+        result = _reorder_regions(regions, zurich, geneva, circular=False)
+        # Luzern closest to Zürich → first
+        assert result[0].name == "Luzern"
+        # Lausanne closest to Geneva → last
+        assert result[-1].name == "Lausanne"
+
+    def test_single_region_unchanged(self):
+        regions = [self._r("Tessin", 46.2, 8.95)]
+        result = _reorder_regions(regions, (47.37, 8.54), None, circular=True)
+        assert len(result) == 1
+        assert result[0].name == "Tessin"
+
+    def test_two_regions_unchanged(self):
+        regions = [
+            self._r("A", 46.0, 8.0),
+            self._r("B", 47.0, 9.0),
+        ]
+        result = _reorder_regions(regions, (47.37, 8.54), None, circular=True)
+        assert len(result) == 2
+
+    def test_optimized_distance_shorter(self):
+        """Optimized route should never be longer than original."""
+        start = (47.37, 8.54)  # Zürich
+        # Deliberately zigzag regions
+        regions = [
+            self._r("Süd", 45.5, 8.5),
+            self._r("Nord", 48.0, 9.0),
+            self._r("Mitte-Süd", 46.5, 8.0),
+            self._r("Mitte-Nord", 47.5, 8.5),
+        ]
+        result = _reorder_regions(regions, start, None, circular=True)
+        from utils.maps_helper import haversine_km
+        def route_dist(regs):
+            d = haversine_km(start, (regs[0].lat, regs[0].lon))
+            for i in range(len(regs) - 1):
+                d += haversine_km((regs[i].lat, regs[i].lon), (regs[i+1].lat, regs[i+1].lon))
+            d += haversine_km((regs[-1].lat, regs[-1].lon), start)
+            return d
+        assert route_dist(result) <= route_dist(regions)

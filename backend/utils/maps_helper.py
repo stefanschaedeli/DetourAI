@@ -170,7 +170,7 @@ def decode_polyline5(encoded: str) -> list[tuple[float, float]]:
     return points
 
 
-def _haversine_km_points(c1: tuple[float, float], c2: tuple[float, float]) -> float:
+def haversine_km(c1: tuple[float, float], c2: tuple[float, float]) -> float:
     """Great-circle distance in km between two (lat, lon) tuples."""
     lat1, lon1 = math.radians(c1[0]), math.radians(c1[1])
     lat2, lon2 = math.radians(c2[0]), math.radians(c2[1])
@@ -185,7 +185,7 @@ def point_along_route(points: list[tuple[float, float]], target_km: float) -> tu
         return (0.0, 0.0)
     accumulated = 0.0
     for i in range(1, len(points)):
-        seg_km = _haversine_km_points(points[i - 1], points[i])
+        seg_km = haversine_km(points[i - 1], points[i])
         if accumulated + seg_km >= target_km:
             # Interpolate on this segment
             remaining = target_km - accumulated
@@ -210,7 +210,7 @@ def corridor_bbox(
     if from_km == 0:
         in_range.append(prev)
     for i in range(1, len(points)):
-        seg_km = _haversine_km_points(points[i - 1], points[i])
+        seg_km = haversine_km(points[i - 1], points[i])
         new_acc = accumulated + seg_km
         if new_acc >= from_km and accumulated <= to_km:
             in_range.append(points[i])
