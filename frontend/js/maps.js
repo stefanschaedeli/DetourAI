@@ -422,7 +422,7 @@ const GoogleMaps = (() => {
           if (ent.stopLat && ent.stopLng) {
             searchOpts.locationBias = {
               center: { lat: ent.stopLat, lng: ent.stopLng },
-              radius: 100000,  // 100km bias — prefers nearby results
+              radius: 50000,  // 50km max allowed by Places API
             };
           }
           const { places } = await Place.searchByText(searchOpts);
