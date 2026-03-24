@@ -7,7 +7,7 @@ from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
 from utils.image_fetcher import fetch_unsplash_images
 from utils.brave_search import search_places
-from utils.google_places import search_attractions, place_photo_url
+from utils.google_places import search_attractions, place_photo_url, find_place_from_text
 from utils.weather import get_forecast
 from agents._client import get_client, get_model, get_max_tokens
 
@@ -277,6 +277,20 @@ Gib exakt dieses JSON zurück:
                     f"{activity.get('name', '')} {region}", "activity"
                 )
                 activity.update(images)
+
+        # Fallback: geocode unmatched activities via Find Place API
+        unresolved = [a for a in activities if not a.get("place_id")]
+        if unresolved:
+            geo_tasks = [find_place_from_text(f"{a['name']}, {region}") for a in unresolved]
+            geo_results = await asyncio.gather(*geo_tasks)
+            for act, geo in zip(unresolved, geo_results):
+                if geo:
+                    act["place_id"] = geo.get("place_id")
+                    if geo.get("lat") and geo.get("lon"):
+                        act["lat"] = geo["lat"]
+                        act["lon"] = geo["lon"]
+                    if geo.get("place_id"):
+                        act["google_maps_url"] = f"https://www.google.com/maps/place/?q=place_id:{geo['place_id']}"
 
         result["top_activities"] = activities
         return result
