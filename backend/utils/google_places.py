@@ -2,6 +2,8 @@ import os
 import aiohttp
 from typing import Optional
 
+from utils.http_session import get_session
+
 
 def _api_key() -> Optional[str]:
     return os.getenv("GOOGLE_MAPS_API_KEY")
@@ -25,33 +27,33 @@ async def nearby_search(
         }
         if keyword:
             params["keyword"] = keyword
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
-                params=params,
-                timeout=aiohttp.ClientTimeout(total=8),
-            ) as resp:
-                if resp.status != 200:
-                    return []
-                data = await resp.json()
-                if data.get("status") not in ("OK", "ZERO_RESULTS"):
-                    return []
-                results = []
-                for place in data.get("results", []):
-                    photos = place.get("photos", [])
-                    results.append({
-                        "place_id": place.get("place_id"),
-                        "name": place.get("name", ""),
-                        "rating": place.get("rating"),
-                        "user_ratings_total": place.get("user_ratings_total", 0),
-                        "price_level": place.get("price_level"),
-                        "address": place.get("vicinity", ""),
-                        "lat": place.get("geometry", {}).get("location", {}).get("lat"),
-                        "lon": place.get("geometry", {}).get("location", {}).get("lng"),
-                        "photo_reference": photos[0].get("photo_reference") if photos else None,
-                        "opening_hours": place.get("opening_hours", {}).get("open_now"),
-                    })
-                return results
+        session = await get_session()
+        async with session.get(
+            "https://maps.googleapis.com/maps/api/place/nearbysearch/json",
+            params=params,
+            timeout=aiohttp.ClientTimeout(total=8),
+        ) as resp:
+            if resp.status != 200:
+                return []
+            data = await resp.json()
+            if data.get("status") not in ("OK", "ZERO_RESULTS"):
+                return []
+            results = []
+            for place in data.get("results", []):
+                photos = place.get("photos", [])
+                results.append({
+                    "place_id": place.get("place_id"),
+                    "name": place.get("name", ""),
+                    "rating": place.get("rating"),
+                    "user_ratings_total": place.get("user_ratings_total", 0),
+                    "price_level": place.get("price_level"),
+                    "address": place.get("vicinity", ""),
+                    "lat": place.get("geometry", {}).get("location", {}).get("lat"),
+                    "lon": place.get("geometry", {}).get("location", {}).get("lng"),
+                    "photo_reference": photos[0].get("photo_reference") if photos else None,
+                    "opening_hours": place.get("opening_hours", {}).get("open_now"),
+                })
+            return results
     except Exception:
         return []
 
@@ -68,16 +70,16 @@ async def place_details(place_id: str) -> dict:
             "key": key,
             "language": "de",
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                "https://maps.googleapis.com/maps/api/place/details/json",
-                params=params,
-                timeout=aiohttp.ClientTimeout(total=8),
-            ) as resp:
-                if resp.status != 200:
-                    return {}
-                data = await resp.json()
-                return data.get("result", {})
+        session = await get_session()
+        async with session.get(
+            "https://maps.googleapis.com/maps/api/place/details/json",
+            params=params,
+            timeout=aiohttp.ClientTimeout(total=8),
+        ) as resp:
+            if resp.status != 200:
+                return {}
+            data = await resp.json()
+            return data.get("result", {})
     except Exception:
         return {}
 
@@ -109,27 +111,27 @@ async def find_place_from_text(input_text: str) -> Optional[dict]:
             "key": key,
             "language": "de",
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                "https://maps.googleapis.com/maps/api/place/findplacefromtext/json",
-                params=params,
-                timeout=aiohttp.ClientTimeout(total=8),
-            ) as resp:
-                if resp.status != 200:
-                    return None
-                data = await resp.json()
-                candidates = data.get("candidates", [])
-                if not candidates:
-                    return None
-                place = candidates[0]
-                loc = place.get("geometry", {}).get("location", {})
-                return {
-                    "place_id": place.get("place_id"),
-                    "name": place.get("name", ""),
-                    "lat": loc.get("lat"),
-                    "lon": loc.get("lng"),
-                    "address": place.get("formatted_address", ""),
-                }
+        session = await get_session()
+        async with session.get(
+            "https://maps.googleapis.com/maps/api/place/findplacefromtext/json",
+            params=params,
+            timeout=aiohttp.ClientTimeout(total=8),
+        ) as resp:
+            if resp.status != 200:
+                return None
+            data = await resp.json()
+            candidates = data.get("candidates", [])
+            if not candidates:
+                return None
+            place = candidates[0]
+            loc = place.get("geometry", {}).get("location", {})
+            return {
+                "place_id": place.get("place_id"),
+                "name": place.get("name", ""),
+                "lat": loc.get("lat"),
+                "lon": loc.get("lng"),
+                "address": place.get("formatted_address", ""),
+            }
     except Exception:
         return None
 
@@ -148,32 +150,32 @@ async def text_search(query: str, location_bias: tuple[float, float] = None) -> 
         if location_bias:
             params["location"] = f"{location_bias[0]},{location_bias[1]}"
             params["radius"] = "50000"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                "https://maps.googleapis.com/maps/api/place/textsearch/json",
-                params=params,
-                timeout=aiohttp.ClientTimeout(total=8),
-            ) as resp:
-                if resp.status != 200:
-                    return []
-                data = await resp.json()
-                if data.get("status") not in ("OK", "ZERO_RESULTS"):
-                    return []
-                results = []
-                for place in data.get("results", []):
-                    photos = place.get("photos", [])
-                    loc = place.get("geometry", {}).get("location", {})
-                    results.append({
-                        "place_id": place.get("place_id"),
-                        "name": place.get("name", ""),
-                        "rating": place.get("rating"),
-                        "user_ratings_total": place.get("user_ratings_total", 0),
-                        "address": place.get("formatted_address", ""),
-                        "lat": loc.get("lat"),
-                        "lon": loc.get("lng"),
-                        "photo_reference": photos[0].get("photo_reference") if photos else None,
-                    })
-                return results
+        session = await get_session()
+        async with session.get(
+            "https://maps.googleapis.com/maps/api/place/textsearch/json",
+            params=params,
+            timeout=aiohttp.ClientTimeout(total=8),
+        ) as resp:
+            if resp.status != 200:
+                return []
+            data = await resp.json()
+            if data.get("status") not in ("OK", "ZERO_RESULTS"):
+                return []
+            results = []
+            for place in data.get("results", []):
+                photos = place.get("photos", [])
+                loc = place.get("geometry", {}).get("location", {})
+                results.append({
+                    "place_id": place.get("place_id"),
+                    "name": place.get("name", ""),
+                    "rating": place.get("rating"),
+                    "user_ratings_total": place.get("user_ratings_total", 0),
+                    "address": place.get("formatted_address", ""),
+                    "lat": loc.get("lat"),
+                    "lon": loc.get("lng"),
+                    "photo_reference": photos[0].get("photo_reference") if photos else None,
+                })
+            return results
     except Exception:
         return []
 

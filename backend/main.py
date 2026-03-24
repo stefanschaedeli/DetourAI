@@ -3,7 +3,9 @@ import json
 import math
 import os
 import re
+import time as _time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
@@ -105,7 +107,30 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
             asyncio.ensure_future(_replace_stop_job(job_id))
 
 
-app = FastAPI(title="Travelman2 API", version="1.0.0")
+async def _periodic_subscriber_cleanup():
+    """Bereinigt verwaiste SSE-Subscriber alle 10 Minuten."""
+    while True:
+        await asyncio.sleep(600)
+        now = _time.time()
+        stale = [
+            jid for jid, qs in list(debug_logger._subscribers.items())
+            if not qs  # leere Listen
+        ]
+        for jid in stale:
+            debug_logger._subscribers.pop(jid, None)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup/Shutdown für gemeinsame Ressourcen."""
+    cleanup_task = asyncio.create_task(_periodic_subscriber_cleanup())
+    yield
+    cleanup_task.cancel()
+    from utils.http_session import close_session
+    await close_session()
+
+
+app = FastAPI(title="Travelman2 API", version="1.0.0", lifespan=lifespan)
 
 _CORS_ORIGINS = os.getenv(
     "CORS_ORIGINS",

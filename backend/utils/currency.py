@@ -3,6 +3,8 @@ import aiohttp
 import xml.etree.ElementTree as ET
 from typing import Optional
 
+from utils.http_session import get_session
+
 # Cache: {currency: (rate_to_chf, timestamp)}
 _rate_cache: dict[str, tuple[float, float]] = {}
 _CACHE_TTL = 86400  # 24h
@@ -67,23 +69,23 @@ _COUNTRY_CURRENCY: dict[str, str] = {
 async def _fetch_ecb_rates() -> dict[str, float]:
     """ECB-Wechselkurse laden (EUR-basiert). Kostenlos, kein API-Key."""
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml",
-                timeout=aiohttp.ClientTimeout(total=8),
-            ) as resp:
-                if resp.status != 200:
-                    return {}
-                text = await resp.text()
-                root = ET.fromstring(text)
-                ns = {"ecb": "http://www.ecb.int/vocabulary/2002-08-01/eurofxref"}
-                rates = {"EUR": 1.0}
-                for cube in root.findall(".//ecb:Cube[@currency]", ns):
-                    currency = cube.get("currency", "")
-                    rate = cube.get("rate", "")
-                    if currency and rate:
-                        rates[currency] = float(rate)
-                return rates
+        session = await get_session()
+        async with session.get(
+            "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml",
+            timeout=aiohttp.ClientTimeout(total=8),
+        ) as resp:
+            if resp.status != 200:
+                return {}
+            text = await resp.text()
+            root = ET.fromstring(text)
+            ns = {"ecb": "http://www.ecb.int/vocabulary/2002-08-01/eurofxref"}
+            rates = {"EUR": 1.0}
+            for cube in root.findall(".//ecb:Cube[@currency]", ns):
+                currency = cube.get("currency", "")
+                rate = cube.get("rate", "")
+                if currency and rate:
+                    rates[currency] = float(rate)
+            return rates
     except Exception:
         return {}
 

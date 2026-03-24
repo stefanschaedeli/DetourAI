@@ -4,6 +4,13 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   backend:
     image: travelman/backend:latest
@@ -23,7 +30,16 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - COOKIE_SECURE=${COOKIE_SECURE:-true}
-    depends_on: [redis]
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     volumes:
       - ./outputs:/app/outputs
       - travel_data:/app/data
@@ -34,7 +50,7 @@ services:
     build:
       context: .
       dockerfile: infra/Dockerfile.backend
-    command: celery -A tasks worker --loglevel=info
+    command: celery -A tasks worker --loglevel=info --max-tasks-per-child=50 --max-memory-per-child=512000
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
@@ -44,7 +60,10 @@ services:
       - DATA_DIR=/app/data
       - LOGS_DIR=/app/logs
       - JWT_SECRET=${JWT_SECRET}
-    depends_on: [redis]
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
     volumes:
       - travel_data:/app/data
       - ./logs:/app/logs
@@ -56,6 +75,7 @@ services:
       dockerfile: infra/Dockerfile.frontend
     ports: ["80:8080"]
     depends_on: [backend]
+    restart: unless-stopped
 
 volumes:
   travel_data:

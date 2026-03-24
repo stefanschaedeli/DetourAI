@@ -2,12 +2,16 @@ import os
 import asyncio
 import math
 import aiohttp
+from collections import OrderedDict
 from typing import Optional
 from urllib.parse import quote
 
+from utils.http_session import get_session
 
-# In-memory LRU cache for geocoding (prevents duplicate API calls within a job)
-_geocode_cache: dict[str, tuple[float, float, str]] = {}
+
+# Bounded geocode cache (max 2000 entries, FIFO eviction)
+_GEOCODE_CACHE_MAX = 2000
+_geocode_cache: OrderedDict[str, tuple[float, float, str]] = OrderedDict()
 
 
 def _google_api_key() -> Optional[str]:
@@ -28,20 +32,22 @@ async def geocode_google(place: str, country_code: str = "") -> Optional[tuple[f
     if country_code:
         params["components"] = f"country:{country_code.upper()}"
     try:
-        async with aiohttp.ClientSession() as s:
-            async with s.get(
-                "https://maps.googleapis.com/maps/api/geocode/json",
-                params=params,
-                timeout=aiohttp.ClientTimeout(total=8),
-            ) as r:
-                data = await r.json()
-                if data.get("status") == "OK" and data.get("results"):
-                    result = data["results"][0]
-                    loc = result["geometry"]["location"]
-                    place_id = result.get("place_id", "")
-                    entry = (float(loc["lat"]), float(loc["lng"]), place_id)
-                    _geocode_cache[cache_key] = entry
-                    return entry
+        s = await get_session()
+        async with s.get(
+            "https://maps.googleapis.com/maps/api/geocode/json",
+            params=params,
+            timeout=aiohttp.ClientTimeout(total=8),
+        ) as r:
+            data = await r.json()
+            if data.get("status") == "OK" and data.get("results"):
+                result = data["results"][0]
+                loc = result["geometry"]["location"]
+                place_id = result.get("place_id", "")
+                entry = (float(loc["lat"]), float(loc["lng"]), place_id)
+                _geocode_cache[cache_key] = entry
+                if len(_geocode_cache) > _GEOCODE_CACHE_MAX:
+                    _geocode_cache.popitem(last=False)
+                return entry
     except Exception:
         pass
     return None
@@ -53,27 +59,27 @@ async def reverse_geocode_google(lat: float, lon: float) -> Optional[tuple[str, 
     if not key:
         return None
     try:
-        async with aiohttp.ClientSession() as s:
-            async with s.get(
-                "https://maps.googleapis.com/maps/api/geocode/json",
-                params={"latlng": f"{lat},{lon}", "key": key, "language": "de"},
-                timeout=aiohttp.ClientTimeout(total=8),
-            ) as r:
-                data = await r.json()
-                if data.get("status") == "OK" and data.get("results"):
-                    result = data["results"][0]
-                    # Extract city-level name from address components
-                    name = None
-                    for comp in result.get("address_components", []):
-                        if "locality" in comp.get("types", []):
-                            name = comp["long_name"]
-                            break
-                        if "administrative_area_level_2" in comp.get("types", []) and not name:
-                            name = comp["long_name"]
-                    if not name:
-                        name = result.get("formatted_address", "").split(",")[0]
-                    place_id = result.get("place_id", "")
-                    return (name, place_id)
+        s = await get_session()
+        async with s.get(
+            "https://maps.googleapis.com/maps/api/geocode/json",
+            params={"latlng": f"{lat},{lon}", "key": key, "language": "de"},
+            timeout=aiohttp.ClientTimeout(total=8),
+        ) as r:
+            data = await r.json()
+            if data.get("status") == "OK" and data.get("results"):
+                result = data["results"][0]
+                # Extract city-level name from address components
+                name = None
+                for comp in result.get("address_components", []):
+                    if "locality" in comp.get("types", []):
+                        name = comp["long_name"]
+                        break
+                    if "administrative_area_level_2" in comp.get("types", []) and not name:
+                        name = comp["long_name"]
+                if not name:
+                    name = result.get("formatted_address", "").split(",")[0]
+                place_id = result.get("place_id", "")
+                return (name, place_id)
     except Exception:
         pass
     return None
@@ -95,21 +101,21 @@ async def google_directions(origin: str, destination: str, waypoints: list[str] 
     if waypoints:
         params["waypoints"] = "|".join(waypoints)
     try:
-        async with aiohttp.ClientSession() as s:
-            async with s.get(
-                "https://maps.googleapis.com/maps/api/directions/json",
-                params=params,
-                timeout=aiohttp.ClientTimeout(total=10),
-            ) as r:
-                data = await r.json()
-                if data.get("status") == "OK" and data.get("routes"):
-                    route = data["routes"][0]
-                    total_seconds = sum(leg["duration"]["value"] for leg in route["legs"])
-                    total_meters = sum(leg["distance"]["value"] for leg in route["legs"])
-                    hours = round(total_seconds / 3600, 1)
-                    km = round(total_meters / 1000, 0)
-                    polyline = route.get("overview_polyline", {}).get("points", "")
-                    return (hours, km, polyline)
+        s = await get_session()
+        async with s.get(
+            "https://maps.googleapis.com/maps/api/directions/json",
+            params=params,
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as r:
+            data = await r.json()
+            if data.get("status") == "OK" and data.get("routes"):
+                route = data["routes"][0]
+                total_seconds = sum(leg["duration"]["value"] for leg in route["legs"])
+                total_meters = sum(leg["distance"]["value"] for leg in route["legs"])
+                hours = round(total_seconds / 3600, 1)
+                km = round(total_meters / 1000, 0)
+                polyline = route.get("overview_polyline", {}).get("points", "")
+                return (hours, km, polyline)
     except Exception:
         pass
     return (0.0, 0.0, "")

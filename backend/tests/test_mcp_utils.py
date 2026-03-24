@@ -8,6 +8,16 @@ from unittest.mock import AsyncMock, patch, MagicMock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 
+def _mock_get_session(mock_resp):
+    """Erzeugt einen get_session-Mock, der eine Session mit gemocktem .get() zurückgibt."""
+    mock_ctx = AsyncMock()
+    mock_ctx.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_ctx.__aexit__ = AsyncMock(return_value=False)
+    mock_session = MagicMock()
+    mock_session.get.return_value = mock_ctx
+    return AsyncMock(return_value=mock_session)
+
+
 # ──────────────── brave_search ────────────────
 
 class TestBraveSearch:
@@ -34,20 +44,11 @@ class TestBraveSearch:
                 },
             ]
         }
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.json = AsyncMock(return_value=mock_response)
         with patch.dict(os.environ, {"BRAVE_API_KEY": "test-key"}):
-            with patch("utils.brave_search.aiohttp.ClientSession") as mock_session:
-                mock_resp = AsyncMock()
-                mock_resp.status = 200
-                mock_resp.json = AsyncMock(return_value=mock_response)
-                mock_ctx = AsyncMock()
-                mock_ctx.__aenter__ = AsyncMock(return_value=mock_resp)
-                mock_ctx.__aexit__ = AsyncMock(return_value=False)
-                mock_session_inst = MagicMock()
-                mock_session_inst.get.return_value = mock_ctx
-                mock_session_inst.__aenter__ = AsyncMock(return_value=mock_session_inst)
-                mock_session_inst.__aexit__ = AsyncMock(return_value=False)
-                mock_session.return_value = mock_session_inst
-
+            with patch("utils.brave_search.get_session", new=_mock_get_session(mock_resp)):
                 from utils.brave_search import search_local
                 result = await search_local("restaurants Annecy")
                 assert len(result) == 1
@@ -69,8 +70,7 @@ class TestBraveSearch:
     async def test_search_local_error_graceful(self):
         """Bei HTTP-Fehler gibt search_local leere Liste zurück."""
         with patch.dict(os.environ, {"BRAVE_API_KEY": "test-key"}):
-            with patch("utils.brave_search.aiohttp.ClientSession") as mock_session:
-                mock_session.side_effect = Exception("Connection failed")
+            with patch("utils.brave_search.get_session", new=AsyncMock(side_effect=Exception("Connection failed"))):
                 from utils.brave_search import search_local
                 result = await search_local("test")
                 assert result == []
@@ -91,19 +91,10 @@ class TestWeather:
                 "weathercode": [0, 63],
             }
         }
-        with patch("utils.weather.aiohttp.ClientSession") as mock_session:
-            mock_resp = AsyncMock()
-            mock_resp.status = 200
-            mock_resp.json = AsyncMock(return_value=mock_response)
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_resp)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_session_inst = MagicMock()
-            mock_session_inst.get.return_value = mock_ctx
-            mock_session_inst.__aenter__ = AsyncMock(return_value=mock_session_inst)
-            mock_session_inst.__aexit__ = AsyncMock(return_value=False)
-            mock_session.return_value = mock_session_inst
-
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.json = AsyncMock(return_value=mock_response)
+        with patch("utils.weather.get_session", new=_mock_get_session(mock_resp)):
             from utils.weather import get_forecast
             result = await get_forecast(45.899, 6.129, "2026-06-01", "2026-06-02")
             assert len(result) == 2
@@ -115,8 +106,7 @@ class TestWeather:
     @pytest.mark.asyncio
     async def test_get_forecast_error(self):
         """Bei Fehler gibt get_forecast leere Liste zurück."""
-        with patch("utils.weather.aiohttp.ClientSession") as mock_session:
-            mock_session.side_effect = Exception("Timeout")
+        with patch("utils.weather.get_session", new=AsyncMock(side_effect=Exception("Timeout"))):
             from utils.weather import get_forecast
             result = await get_forecast(0.0, 0.0, "2026-01-01", "2026-01-02")
             assert result == []
@@ -160,20 +150,11 @@ class TestGooglePlaces:
                 }
             ],
         }
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.json = AsyncMock(return_value=mock_response)
         with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "test-key"}):
-            with patch("utils.google_places.aiohttp.ClientSession") as mock_session:
-                mock_resp = AsyncMock()
-                mock_resp.status = 200
-                mock_resp.json = AsyncMock(return_value=mock_response)
-                mock_ctx = AsyncMock()
-                mock_ctx.__aenter__ = AsyncMock(return_value=mock_resp)
-                mock_ctx.__aexit__ = AsyncMock(return_value=False)
-                mock_session_inst = MagicMock()
-                mock_session_inst.get.return_value = mock_ctx
-                mock_session_inst.__aenter__ = AsyncMock(return_value=mock_session_inst)
-                mock_session_inst.__aexit__ = AsyncMock(return_value=False)
-                mock_session.return_value = mock_session_inst
-
+            with patch("utils.google_places.get_session", new=_mock_get_session(mock_resp)):
                 from utils.google_places import nearby_search
                 result = await nearby_search(45.9, 6.1, "lodging")
                 assert len(result) == 1
@@ -211,19 +192,10 @@ class TestWikipedia:
             "thumbnail": {"source": "https://upload.wikimedia.org/annecy.jpg"},
             "coordinates": {"lat": 45.899, "lon": 6.129},
         }
-        with patch("utils.wikipedia.aiohttp.ClientSession") as mock_session:
-            mock_resp = AsyncMock()
-            mock_resp.status = 200
-            mock_resp.json = AsyncMock(return_value=mock_response)
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_resp)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_session_inst = MagicMock()
-            mock_session_inst.get.return_value = mock_ctx
-            mock_session_inst.__aenter__ = AsyncMock(return_value=mock_session_inst)
-            mock_session_inst.__aexit__ = AsyncMock(return_value=False)
-            mock_session.return_value = mock_session_inst
-
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.json = AsyncMock(return_value=mock_response)
+        with patch("utils.wikipedia.get_session", new=_mock_get_session(mock_resp)):
             from utils.wikipedia import get_city_summary
             result = await get_city_summary("Annecy")
             assert result is not None
@@ -234,18 +206,9 @@ class TestWikipedia:
     @pytest.mark.asyncio
     async def test_get_city_summary_not_found(self):
         """Bei 404 gibt get_city_summary None zurück."""
-        with patch("utils.wikipedia.aiohttp.ClientSession") as mock_session:
-            mock_resp = AsyncMock()
-            mock_resp.status = 404
-            mock_ctx = AsyncMock()
-            mock_ctx.__aenter__ = AsyncMock(return_value=mock_resp)
-            mock_ctx.__aexit__ = AsyncMock(return_value=False)
-            mock_session_inst = MagicMock()
-            mock_session_inst.get.return_value = mock_ctx
-            mock_session_inst.__aenter__ = AsyncMock(return_value=mock_session_inst)
-            mock_session_inst.__aexit__ = AsyncMock(return_value=False)
-            mock_session.return_value = mock_session_inst
-
+        mock_resp = AsyncMock()
+        mock_resp.status = 404
+        with patch("utils.wikipedia.get_session", new=_mock_get_session(mock_resp)):
             from utils.wikipedia import get_city_summary
             result = await get_city_summary("NonexistentCity12345")
             assert result is None
@@ -253,8 +216,7 @@ class TestWikipedia:
     @pytest.mark.asyncio
     async def test_get_city_summary_error(self):
         """Bei Netzwerkfehler gibt get_city_summary None zurück."""
-        with patch("utils.wikipedia.aiohttp.ClientSession") as mock_session:
-            mock_session.side_effect = Exception("DNS failed")
+        with patch("utils.wikipedia.get_session", new=AsyncMock(side_effect=Exception("DNS failed"))):
             from utils.wikipedia import get_city_summary
             result = await get_city_summary("Annecy")
             assert result is None
