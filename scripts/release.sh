@@ -3,6 +3,9 @@
 # Default: patch — increments the last version number
 set -euo pipefail
 
+# Navigate to repo root (script may be called from scripts/ dir)
+cd "$(dirname "$0")/.."
+
 BUMP="${1:-patch}"
 
 # Get latest version tag (vX.Y.Z)
