@@ -31,11 +31,14 @@ function _showSkeletonCards() {
   if (!container) return;
   container.innerHTML = [0, 1, 2].map(i => `
     <div class="option-card option-skeleton" id="option-slot-${i}">
-      <div class="skeleton-badge shimmer-elem"></div>
-      <div class="skeleton-title shimmer-elem"></div>
-      <div class="skeleton-meta shimmer-elem"></div>
-      <div class="skeleton-line shimmer-elem"></div>
-      <div class="skeleton-line shimmer-elem short"></div>
+      <div class="skeleton-hero shimmer-elem"></div>
+      <div style="padding:20px">
+        <div class="skeleton-badge shimmer-elem"></div>
+        <div class="skeleton-title shimmer-elem"></div>
+        <div class="skeleton-meta shimmer-elem"></div>
+        <div class="skeleton-line shimmer-elem"></div>
+        <div class="skeleton-line shimmer-elem short"></div>
+      </div>
     </div>
   `).join('');
 }
@@ -139,7 +142,7 @@ function _buildOptionCardHTML(opt, i) {
     classes: `option-card${overLimit ? ' over-limit' : ''}`,
     id: `option-card-${i}`,
     html: `
-      ${buildHeroPhotoGalleryLoading('md')}
+      ${buildHeroPhotoGalleryCompactLoading()}
       <div class="option-card-body" onclick="selectOption(${i})">
         <div class="option-card-header">
           <span class="option-card-number">${i + 1}</span>

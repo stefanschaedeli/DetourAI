@@ -929,6 +929,56 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   .hero-gallery-side { display: none; }
 }
 
+/* Hero gallery compact: tall hero + horizontal thumb strip (for option cards in grid) */
+.hero-gallery-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg-subtle);
+}
+.hero-gallery-compact-main {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+}
+.hero-gallery-compact-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .2s;
+}
+.hero-gallery-compact-main:hover img { transform: scale(1.03); }
+.hero-gallery-compact-thumbs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  height: 48px;
+}
+.hero-gallery-compact-thumbs .hero-gallery-thumb {
+  position: relative;
+  overflow: hidden;
+}
+.hero-gallery-compact-thumbs .hero-gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .2s;
+}
+.hero-gallery-compact-thumbs .hero-gallery-thumb:hover img { transform: scale(1.03); }
+.hero-gallery-compact.hero-photo-loading { cursor: default; }
+.hero-gallery-compact.hero-photo-loading .hero-gallery-compact-main,
+.hero-gallery-compact.hero-photo-loading .hero-gallery-thumb {
+  background: var(--border);
+}
+@media (max-width: 767px) {
+  .hero-gallery-compact-thumbs { height: 60px; }
+}
+
 /* ============================================================ Route Builder Panels */
 .route-panel {
   background: var(--card);
@@ -1118,12 +1168,18 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   margin-top: 16px;
 }
 
-/* Option cards: flex-column, full width */
+/* Option cards: responsive grid */
 .options-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-bottom: 24px;
+}
+@media (max-width: 1023px) {
+  .options-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 767px) {
+  .options-grid { grid-template-columns: 1fr; }
 }
 .option-card {
   background: var(--card); border: 2px solid var(--border); border-radius: var(--radius);
@@ -1143,6 +1199,7 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   cursor: default; pointer-events: none;
   opacity: 1; transform: none;
 }
+.skeleton-hero   { aspect-ratio: 4 / 3; width: 100%; background: var(--border); }
 .skeleton-badge  { height: 20px; width: 70px; border-radius: 999px; background: var(--border); margin-bottom: 10px; }
 .skeleton-title  { height: 22px; width: 55%; border-radius: 4px; background: var(--border); margin-bottom: 10px; }
 .skeleton-meta   { height: 14px; width: 40%; border-radius: 4px; background: var(--border); margin-bottom: 12px; }

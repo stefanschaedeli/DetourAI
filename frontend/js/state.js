@@ -184,6 +184,40 @@ function buildHeroPhotoGalleryLoading(sizeClass = 'md') {
     `</div></div>`;
 }
 
+/**
+ * Build a compact hero gallery — 1 tall image + 2 horizontal thumbnails below.
+ * Falls back to single hero photo if fewer than 3 URLs available.
+ * @param {string[]} urls - Array of image URLs
+ * @param {string} altText - Alt text for images
+ * @returns {string} HTML string
+ */
+function buildHeroPhotoGalleryCompact(urls, altText) {
+  if (!urls || urls.length < 3) return buildHeroPhoto(urls, altText, 'md');
+  const alt = esc(altText || '');
+  const urlsJson = JSON.stringify(urls.map(u => esc(u)));
+  const extraCount = urls.length > 3
+    ? `<span class="hero-photo-count">+${urls.length - 3} Fotos</span>` : '';
+  return `<div class="hero-gallery-compact" data-photo-urls='${urlsJson}'>` +
+    `<div class="hero-gallery-compact-main"><img src="${esc(urls[0])}" alt="${alt}" loading="lazy" onerror="this.parentElement.classList.add('hero-photo-error')"></div>` +
+    `<div class="hero-gallery-compact-thumbs">` +
+      `<div class="hero-gallery-thumb"><img src="${esc(urls[1])}" alt="${alt}" loading="lazy" onerror="this.parentElement.classList.add('hero-photo-error')"></div>` +
+      `<div class="hero-gallery-thumb"><img src="${esc(urls[2])}" alt="${alt}" loading="lazy" onerror="this.parentElement.classList.add('hero-photo-error')">${extraCount}</div>` +
+    `</div></div>`;
+}
+
+/**
+ * Build a compact hero gallery loading placeholder.
+ * @returns {string} HTML string
+ */
+function buildHeroPhotoGalleryCompactLoading() {
+  return `<div class="hero-gallery-compact hero-photo-loading">` +
+    `<div class="hero-gallery-compact-main"><div class="hero-photo-shimmer shimmer-elem"></div></div>` +
+    `<div class="hero-gallery-compact-thumbs">` +
+      `<div class="hero-gallery-thumb"><div class="hero-photo-shimmer shimmer-elem"></div></div>` +
+      `<div class="hero-gallery-thumb"><div class="hero-photo-shimmer shimmer-elem"></div></div>` +
+    `</div></div>`;
+}
+
 // Lightbox gallery state
 let _lbUrls = [];
 let _lbIndex = 0;
@@ -228,7 +262,7 @@ function closeLightbox() {
 // Event delegation for lightbox open/close
 document.addEventListener('click', e => {
   // Hero-photo click → open lightbox with all photos from data-photo-urls
-  const hero = e.target.closest('.hero-photo[data-photo-urls], .hero-gallery[data-photo-urls]');
+  const hero = e.target.closest('.hero-photo[data-photo-urls], .hero-gallery[data-photo-urls], .hero-gallery-compact[data-photo-urls]');
   if (hero && !e.target.closest('button')) {
     e.stopPropagation();
     try {
