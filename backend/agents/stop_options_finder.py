@@ -379,7 +379,22 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
                 yield payload
 
         # Parse the complete response for metadata + any options not yet emitted
-        full_parsed = parse_agent_json(final_text)
+        try:
+            full_parsed = parse_agent_json(final_text)
+        except (ValueError, json.JSONDecodeError) as exc:
+            await debug_logger.log(
+                LogLevel.WARNING,
+                f"JSON-Antwort abgeschnitten, verwende {emitted_count} im Stream erkannte Optionen. Fehler: {exc}",
+                job_id=self.job_id, agent="StopOptionsFinder",
+            )
+            # Fall back to streamed options — already yielded above
+            yield {
+                "_all_options": [p for k, p in partial_results if k == "option"],
+                "estimated_total_stops": 4,
+                "route_could_be_complete": False,
+            }
+            return
+
         all_options = full_parsed.get("options", [])
         # Emit any options that weren't caught during streaming (edge cases)
         for opt in all_options[emitted_count:]:
