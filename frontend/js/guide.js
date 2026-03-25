@@ -27,6 +27,18 @@ function renderGuide(plan, tab) {
   const content = document.getElementById('guide-content');
   if (!content) return;
 
+  // Update stats bar -- show on overview, clear on other tabs
+  // Note: renderStatsBar output uses esc() for all user content (XSS-safe)
+  const statsBarEl = document.getElementById('guide-stats-bar');
+  if (statsBarEl) {
+    statsBarEl.textContent = '';
+    if (activeTab === 'overview') {
+      const tmp = document.createElement('div');
+      tmp.insertAdjacentHTML('afterbegin', renderStatsBar(plan));
+      while (tmp.firstChild) statsBarEl.appendChild(tmp.firstChild);
+    }
+  }
+
   switch (activeTab) {
     case 'overview':
       content.innerHTML = renderOverview(plan);
@@ -48,7 +60,7 @@ function renderGuide(plan, tab) {
         content.innerHTML = renderStopsOverview(plan);
         requestAnimationFrame(() => {
           _initGuideDelegation();
-          _lazyLoadOverviewImages(plan);
+          _lazyLoadCardImages(plan);
         });
       }
       break;
@@ -941,57 +953,146 @@ async function _initDayDetailMap(plan, dayNum) {
 }
 
 // ---------------------------------------------------------------------------
-// Stops Overview (card grid)
+// Stats Bar (D-04) — 4 pill widgets at top of overview
+// ---------------------------------------------------------------------------
+
+function renderStatsBar(plan) {
+  const stops = plan.stops || [];
+  const cost = plan.cost_estimate || {};
+  const totalDays = plan.day_plans ? plan.day_plans.length : 0;
+  const totalStops = stops.length;
+  const totalKm = stops.reduce(function (sum, s) {
+    return sum + (typeof s.drive_km_from_prev === 'number' ? s.drive_km_from_prev : 0);
+  }, 0);
+  const budgetRemaining = typeof cost.budget_remaining_chf === 'number' ? cost.budget_remaining_chf : null;
+  const budgetNeg = budgetRemaining !== null && budgetRemaining < 0;
+
+  return '<div class="stats-bar">' +
+    '<div class="stat-pill"><span class="stat-num">' + totalDays + '</span><span class="stat-label">Tage</span></div>' +
+    '<div class="stat-pill"><span class="stat-num">' + totalStops + '</span><span class="stat-label">Stopps</span></div>' +
+    '<div class="stat-pill"><span class="stat-num">' + totalKm.toLocaleString('de-CH') + '</span><span class="stat-label">km</span></div>' +
+    '<div class="stat-pill' + (budgetNeg ? ' stat-negative' : '') + '"><span class="stat-num">' +
+      (budgetRemaining !== null ? 'CHF ' + budgetRemaining.toLocaleString('de-CH') : '\u2013') +
+    '</span><span class="stat-label">Budget</span></div>' +
+  '</div>';
+}
+
+// ---------------------------------------------------------------------------
+// Stop Card Row (D-05 through D-08)
+// ---------------------------------------------------------------------------
+
+function renderStopCard(stop, i, totalStops) {
+  var flag = FLAGS[stop.country] || '';
+  var driveInfo = '';
+  if (stop.drive_hours_from_prev > 0) {
+    driveInfo = esc(String(stop.drive_hours_from_prev)) + 'h Fahrt';
+    if (stop.drive_km_from_prev > 0) driveInfo += ' \u00b7 ' + esc(String(stop.drive_km_from_prev)) + ' km';
+  }
+  var nightsText = stop.nights + ' Nacht' + (stop.nights !== 1 ? 'e' : '');
+
+  var tagsHtml = '';
+  if (stop.tags && stop.tags.length > 0) {
+    tagsHtml = '<div class="stop-card-tags">' +
+      stop.tags.map(function (t) { return '<span class="stop-tag-pill">' + esc(t) + '</span>'; }).join('') +
+    '</div>';
+  }
+
+  var descHtml = '';
+  if (stop.teaser) {
+    descHtml = '<p class="stop-card-desc">' + esc(stop.teaser) + '</p>';
+  }
+
+  // Edit action buttons — always visible (D-08)
+  var removeBtn = totalStops > 1
+    ? '<button class="stop-edit-icon stop-edit-remove" aria-label="Stopp entfernen" ' +
+      'onclick="event.stopPropagation(); _confirmRemoveStop(' + stop.id + ')">' +
+      '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+      '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
+    : '';
+
+  var replaceBtn = '<button class="stop-edit-icon stop-edit-replace" aria-label="Stopp ersetzen" ' +
+    'onclick="event.stopPropagation(); openReplaceStopModal(' + stop.id + ', ' + stop.nights + ')">' +
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
+    '<path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>';
+
+  var dragBtn = '<button class="stop-edit-icon stop-edit-drag" aria-label="Stopp verschieben">' +
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">' +
+    '<circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>' +
+    '<circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>' +
+    '<circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></button>';
+
+  return '<div class="stop-card-row" data-stop-id="' + stop.id + '" data-stop-index="' + i + '" draggable="true" ' +
+    'ondragstart="_onStopDragStart(event, ' + i + ')" ' +
+    'ondragend="_onStopDragEnd(event)" ' +
+    'ondragover="event.preventDefault(); this.classList.add(\'drag-over\')" ' +
+    'ondragleave="this.classList.remove(\'drag-over\')" ' +
+    'ondrop="_onStopDrop(event, ' + i + ')">' +
+    '<div class="stop-card-photo">' + buildHeroPhotoLoading('sm') + '</div>' +
+    '<div class="stop-card-info">' +
+      '<div class="stop-card-title">' +
+        '<span class="stop-num-badge">' + (i + 1) + '</span>' +
+        '<h3>' + flag + ' ' + esc(stop.region) + '</h3>' +
+      '</div>' +
+      '<div class="stop-card-meta">' +
+        (driveInfo ? '<span>' + driveInfo + '</span>' : '') +
+        '<span>' + esc(nightsText) + '</span>' +
+      '</div>' +
+      tagsHtml +
+      descHtml +
+      '<div class="stop-card-actions">' + removeBtn + replaceBtn + dragBtn + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+// ---------------------------------------------------------------------------
+// Stops Overview (card list)
 // ---------------------------------------------------------------------------
 
 function renderStopsOverview(plan) {
-  const stops = plan.stops || [];
-  const cards = stops.map((stop, i) => {
-    const flag = FLAGS[stop.country] || '';
-    const acc = stop.accommodation || {};
-    const actCount = (stop.top_activities || []).length;
-    const restCount = (stop.restaurants || []).length;
-    return `
-      <div class="stop-overview-card" data-stop-id="${stop.id}" draggable="true"
-        ondragstart="_onStopDragStart(event, ${i})"
-        ondragend="_onStopDragEnd(event)"
-        ondragover="event.preventDefault(); this.classList.add('drag-over')"
-        ondragleave="this.classList.remove('drag-over')"
-        ondrop="_onStopDrop(event, ${i})">
-        <div class="stop-overview-card-inner">
-          <div class="drag-handle" title="Ziehen zum Sortieren">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
-          </div>
-          <div class="stop-overview-card-main">
-            ${buildHeroPhotoLoading('sm')}
-            <div class="stop-overview-card-body">
-              <div class="stop-number">Stop ${stop.id}</div>
-              <h3>${flag} ${esc(stop.region)}, ${esc(stop.country)}</h3>
-              <div class="stop-meta">
-                ${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}
-                ${stop.drive_hours_from_prev > 0 ? ` \u00b7 ${stop.drive_hours_from_prev}h Fahrt` : ''}
-                ${stop.drive_km_from_prev > 0 ? ` \u00b7 ${stop.drive_km_from_prev} km` : ''}
-              </div>
-              <div class="stop-overview-highlights">
-                ${acc.name ? `<span class="stop-overview-chip chip-acc">${esc(acc.name)} \u00b7 CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>` : ''}
-                ${actCount ? `<span class="stop-overview-chip chip-act">${actCount} Aktivit\u00e4t${actCount !== 1 ? 'en' : ''}</span>` : ''}
-                ${restCount ? `<span class="stop-overview-chip chip-rest">${restCount} Restaurant${restCount !== 1 ? 's' : ''}</span>` : ''}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+  var stops = plan.stops || [];
+  var cards = stops.map(function (stop, i) {
+    return renderStopCard(stop, i, stops.length);
   }).join('');
 
-  return `
-    <div class="stops-overview-grid">
-      ${cards}
-    </div>
-    <div class="stops-overview-actions">
-      <button class="btn btn-primary add-stop-btn" onclick="_openAddStopModal()">+ Stopp hinzuf\u00fcgen</button>
-    </div>
-  `;
+  return '<div class="stop-cards-list">' + cards + '</div>' +
+    '<div class="stops-overview-actions">' +
+      '<button class="btn btn-primary add-stop-btn" onclick="_openAddStopModal()">+ Stopp hinzuf\u00fcgen</button>' +
+    '</div>';
+}
+
+// ---------------------------------------------------------------------------
+// Card Click → Map Sync
+// ---------------------------------------------------------------------------
+
+function _onCardClick(stopId) {
+  // Highlight the clicked card, remove highlight from others
+  document.querySelectorAll('.stop-card-row').forEach(function (card) {
+    card.classList.toggle('selected', String(card.dataset.stopId) === String(stopId));
+  });
+
+  // Sync with map if GoogleMaps module is available
+  if (typeof GoogleMaps !== 'undefined') {
+    if (typeof GoogleMaps.panToStop === 'function') GoogleMaps.panToStop(stopId);
+    if (typeof GoogleMaps.highlightGuideMarker === 'function') GoogleMaps.highlightGuideMarker(stopId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lazy-load card images
+// ---------------------------------------------------------------------------
+
+function _lazyLoadCardImages(plan) {
+  var stops = plan.stops || [];
+  document.querySelectorAll('.stop-card-row').forEach(function (card) {
+    var idx = Number(card.dataset.stopIndex);
+    var stop = stops[idx];
+    if (!stop) return;
+    var photoContainer = card.querySelector('.stop-card-photo');
+    if (photoContainer) {
+      _lazyLoadEntityImages(photoContainer, stop.region, stop.lat, stop.lng, 'destination', 'sm');
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1124,11 +1225,22 @@ function _initGuideDelegation() {
   if (!root) return;
 
   root.addEventListener('click', (e) => {
-    // Overview card click → navigate to stop detail
+    // Overview card click → navigate to stop detail (legacy + new layout)
     const overviewCard = e.target.closest('.stop-overview-card');
     if (overviewCard) {
       const stopId = overviewCard.dataset.stopId;
       if (stopId) navigateToStop(stopId);
+      return;
+    }
+
+    // New stop card row click → highlight + navigate (skip if edit button was clicked)
+    const cardRow = e.target.closest('.stop-card-row');
+    if (cardRow && !e.target.closest('.stop-edit-icon')) {
+      const stopId = cardRow.dataset.stopId;
+      if (stopId) {
+        _onCardClick(stopId);
+        navigateToStop(stopId);
+      }
       return;
     }
 
@@ -2201,7 +2313,7 @@ function _onStopDragEnd(e) {
 
 async function _onStopDrop(e, targetIndex) {
   e.preventDefault();
-  document.querySelectorAll('.stop-overview-card').forEach(c => {
+  document.querySelectorAll('.stop-overview-card, .stop-card-row').forEach(c => {
     c.classList.remove('drag-over');
     c.classList.remove('dragging');
   });
