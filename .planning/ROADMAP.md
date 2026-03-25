@@ -48,7 +48,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Ferry utilities, island lookup table, model extensions, tests
+- [x] 02-01-PLAN.md — Ferry utilities, island lookup table, model extensions, tests
 - [ ] 02-02-PLAN.md — Agent prompt updates, route enrichment ferry fallback, corridor bypass
 
 ### Phase 3: Route Editing

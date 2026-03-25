@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-25T12:00:32.067Z"
+status: Ready to execute
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-25T12:23:57.376Z"
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Route planning and stop discovery must produce consistently high-quality, geographically correct results for any destination type.
-**Current focus:** Phase 01 — ai-quality-stabilization
+**Current focus:** Phase 02 — geographic-routing
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
+Phase: 02 (geographic-routing) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Plan: Not started
 | Phase 01 P01 | 3min | 2 tasks | 5 files |
 | Phase 01 P02 | 3min | 2 tasks | 3 files |
 | Phase 01 P03 | 350s | 3 tasks | 6 files |
+| Phase 02 P01 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,8 @@ Recent decisions affecting current work:
 - [Phase 01]: bearing_degrees() added to maps_helper.py as reusable utility for direction calculations
 - [Phase 01]: Corridor check flags but does NOT reject stops (D-04) -- user sees warning badge
 - [Phase 01]: Quality validation uses two-tier Google Places check (find_place_from_text then nearby_search)
+- [Phase 02]: Bbox-based island detection (not haversine-from-center) for simpler validation
+- [Phase 02]: Ferry speed constant 30 km/h; google_directions_with_ferry checks both endpoints
 
 ### Pending Todos
 
@@ -78,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T12:00:32.065Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-geographic-routing/02-CONTEXT.md
+Last session: 2026-03-25T12:23:57.374Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None
