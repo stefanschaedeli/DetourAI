@@ -34,10 +34,12 @@ from routers.admin import router as admin_router
 from utils.debug_logger import debug_logger, LogLevel
 from utils.maps_helper import (
     geocode_google, google_directions, google_directions_simple,
+    google_directions_with_ferry,
     reverse_geocode_google, reference_cities_along_route_google,
     build_maps_url, decode_polyline5, point_along_route, corridor_bbox,
     bearing_degrees, bearing_deviation, proportional_corridor_buffer,
 )
+from utils.ferry_ports import is_island_destination
 from utils.google_places import validate_stop_quality
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
@@ -801,10 +803,18 @@ async def _find_and_stream_options(
             opt["maps_url"] = build_maps_url([prev_location, place])
 
             if prev_coords:
-                hours, km = await google_directions_simple(prev_location, place)
+                hours, km, _, is_ferry = await google_directions_with_ferry(prev_location, place)
                 if hours > 0:
                     opt["drive_hours"] = hours
                     opt["drive_km"] = km
+                    if is_ferry:
+                        opt["is_ferry_required"] = True
+                        opt["ferry_hours"] = hours
+                        await debug_logger.log(
+                            LogLevel.INFO,
+                            f"  Faehre erkannt: {prev_location} -> {place} ({hours:.1f}h, {km:.0f}km)",
+                            job_id=job_id, agent="StopOptionsFinder",
+                        )
 
             if max_drive_hours > 0:
                 opt["drives_over_limit"] = opt.get("drive_hours", 0) > max_drive_hours
@@ -844,48 +854,58 @@ async def _find_and_stream_options(
                     )
                     return None
 
-            # ------ Corridor check: proportional buffer (D-02, D-03, D-04) ------
-            segment_total_km = geo.get("segment_total_km", 0)
-            route_points = geo.get("_route_decoded", [])
-            if segment_total_km > 0 and route_points and not geo.get("rundreise_mode", False):
-                buffer_km = proportional_corridor_buffer(segment_total_km)
-                search_from = geo.get("search_from_km", 0)
-                search_to = geo.get("search_to_km", segment_total_km)
-                prop_box = corridor_bbox(route_points, search_from, search_to, buffer_km=buffer_km)
-                if prop_box:
-                    is_inside = (
-                        prop_box["min_lat"] <= coords[0] <= prop_box["max_lat"]
-                        and prop_box["min_lon"] <= coords[1] <= prop_box["max_lon"]
-                    )
-                    if not is_inside:
-                        # D-04: FLAG but do NOT reject -- user may have reasons for off-route stops
-                        opt["outside_corridor"] = True
-                        # Calculate approximate distance outside corridor
-                        clamp_lat = max(prop_box["min_lat"], min(coords[0], prop_box["max_lat"]))
-                        clamp_lon = max(prop_box["min_lon"], min(coords[1], prop_box["max_lon"]))
-                        opt["corridor_distance_km"] = round(
-                            _haversine_km(coords, (clamp_lat, clamp_lon)), 1
-                        )
-                        await debug_logger.log(
-                            LogLevel.INFO,
-                            f"  Ausserhalb Korridor ({opt['corridor_distance_km']:.0f} km): {place}",
-                            job_id=job_id, agent="StopOptionsFinder",
-                        )
+            # Island destination bypass (D-09): skip corridor + bearing for island targets
+            target_is_island = is_island_destination(target_coords) if target_coords else None
 
-            # ------ Bearing check: detect backtracking (D-09, D-10) ------
-            if prev_coords and target_coords and not geo.get("rundreise_mode", False):
-                d_prev_to_stop = _haversine_km(prev_coords, coords)
-                if d_prev_to_stop > 20:  # Skip bearing check for very short distances (unreliable)
-                    route_bearing = bearing_degrees(prev_coords, target_coords)
-                    stop_bearing = bearing_degrees(prev_coords, coords)
-                    deviation = bearing_deviation(route_bearing, stop_bearing)
-                    if deviation > 90:
-                        await debug_logger.log(
-                            LogLevel.DEBUG,
-                            f"  Verworfen (Backtracking: {deviation:.0f} Grad Abweichung): {place}",
-                            job_id=job_id, agent="StopOptionsFinder",
+            if not target_is_island:
+                # ------ Corridor check: proportional buffer (D-02, D-03, D-04) ------
+                segment_total_km = geo.get("segment_total_km", 0)
+                route_points = geo.get("_route_decoded", [])
+                if segment_total_km > 0 and route_points and not geo.get("rundreise_mode", False):
+                    buffer_km = proportional_corridor_buffer(segment_total_km)
+                    search_from = geo.get("search_from_km", 0)
+                    search_to = geo.get("search_to_km", segment_total_km)
+                    prop_box = corridor_bbox(route_points, search_from, search_to, buffer_km=buffer_km)
+                    if prop_box:
+                        is_inside = (
+                            prop_box["min_lat"] <= coords[0] <= prop_box["max_lat"]
+                            and prop_box["min_lon"] <= coords[1] <= prop_box["max_lon"]
                         )
-                        return None
+                        if not is_inside:
+                            # D-04: FLAG but do NOT reject -- user may have reasons for off-route stops
+                            opt["outside_corridor"] = True
+                            # Calculate approximate distance outside corridor
+                            clamp_lat = max(prop_box["min_lat"], min(coords[0], prop_box["max_lat"]))
+                            clamp_lon = max(prop_box["min_lon"], min(coords[1], prop_box["max_lon"]))
+                            opt["corridor_distance_km"] = round(
+                                _haversine_km(coords, (clamp_lat, clamp_lon)), 1
+                            )
+                            await debug_logger.log(
+                                LogLevel.INFO,
+                                f"  Ausserhalb Korridor ({opt['corridor_distance_km']:.0f} km): {place}",
+                                job_id=job_id, agent="StopOptionsFinder",
+                            )
+
+                # ------ Bearing check: detect backtracking (D-09, D-10) ------
+                if prev_coords and target_coords and not geo.get("rundreise_mode", False):
+                    d_prev_to_stop = _haversine_km(prev_coords, coords)
+                    if d_prev_to_stop > 20:  # Skip bearing check for very short distances (unreliable)
+                        route_bearing = bearing_degrees(prev_coords, target_coords)
+                        stop_bearing = bearing_degrees(prev_coords, coords)
+                        deviation = bearing_deviation(route_bearing, stop_bearing)
+                        if deviation > 90:
+                            await debug_logger.log(
+                                LogLevel.DEBUG,
+                                f"  Verworfen (Backtracking: {deviation:.0f} Grad Abweichung): {place}",
+                                job_id=job_id, agent="StopOptionsFinder",
+                            )
+                            return None
+            else:
+                await debug_logger.log(
+                    LogLevel.DEBUG,
+                    f"  Korridor-Check uebersprungen (Insel-Ziel: {target_is_island}): {place}",
+                    job_id=job_id, agent="StopOptionsFinder",
+                )
 
             # ------ Quality check: Google Places validation (D-07, D-08) ------
             try:
