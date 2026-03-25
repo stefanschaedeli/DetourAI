@@ -85,37 +85,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AIQ-01 | — | Pending |
-| AIQ-02 | — | Pending |
-| AIQ-03 | — | Pending |
-| AIQ-04 | — | Pending |
-| AIQ-05 | — | Pending |
-| GEO-01 | — | Pending |
-| GEO-02 | — | Pending |
-| GEO-03 | — | Pending |
-| GEO-04 | — | Pending |
-| GEO-05 | — | Pending |
-| CTL-01 | — | Pending |
-| CTL-02 | — | Pending |
-| CTL-03 | — | Pending |
-| CTL-04 | — | Pending |
-| CTL-05 | — | Pending |
-| UIR-01 | — | Pending |
-| UIR-02 | — | Pending |
-| UIR-03 | — | Pending |
-| UIR-04 | — | Pending |
-| UIR-05 | — | Pending |
-| UIR-06 | — | Pending |
-| SHR-01 | — | Pending |
-| SHR-02 | — | Pending |
-| SHR-03 | — | Pending |
-| SHR-04 | — | Pending |
+| AIQ-01 | Phase 1 | Pending |
+| AIQ-02 | Phase 1 | Pending |
+| AIQ-03 | Phase 1 | Pending |
+| AIQ-04 | Phase 1 | Pending |
+| AIQ-05 | Phase 1 | Pending |
+| GEO-01 | Phase 2 | Pending |
+| GEO-02 | Phase 2 | Pending |
+| GEO-03 | Phase 2 | Pending |
+| GEO-04 | Phase 2 | Pending |
+| GEO-05 | Phase 2 | Pending |
+| CTL-01 | Phase 3 | Pending |
+| CTL-02 | Phase 3 | Pending |
+| CTL-03 | Phase 3 | Pending |
+| CTL-04 | Phase 3 | Pending |
+| CTL-05 | Phase 3 | Pending |
+| UIR-01 | Phase 4 | Pending |
+| UIR-02 | Phase 4 | Pending |
+| UIR-03 | Phase 4 | Pending |
+| UIR-04 | Phase 4 | Pending |
+| UIR-05 | Phase 4 | Pending |
+| UIR-06 | Phase 4 | Pending |
+| SHR-01 | Phase 5 | Pending |
+| SHR-02 | Phase 5 | Pending |
+| SHR-03 | Phase 5 | Pending |
+| SHR-04 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-25*
-*Last updated: 2026-03-25 after initial definition*
+*Last updated: 2026-03-25 after roadmap creation*
