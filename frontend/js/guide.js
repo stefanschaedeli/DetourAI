@@ -1646,6 +1646,9 @@ function _setupGuideMap(plan) {
   GoogleMaps.setGuideMarkers(plan, _onMarkerClick);
   _guideMapInitialized = true;
 
+  // Enable click-to-add-stop on empty map areas (D-10)
+  GoogleMaps.enableClickToAdd(map, _onMapClickToAdd);
+
   // Suppress auto-pan during user map interaction (Pitfall 4)
   google.maps.event.addListener(map, 'dragstart', () => {
     _userInteractingWithMap = true;
@@ -2438,6 +2441,195 @@ async function _executeAddStop() {
     _unlockEditing();
     alert('Fehler: ' + err.message);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Click-to-Add-Stop on Map (D-10)
+// ---------------------------------------------------------------------------
+
+/** Haversine distance in km between two lat/lng points. */
+function _haversineKm(lat1, lon1, lat2, lon2) {
+  var R = 6371;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLon = (lon2 - lon1) * Math.PI / 180;
+  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Handle click on empty map area — reverse geocode and show popup. */
+function _onMapClickToAdd(latLng) {
+  if (_editInProgress) return;
+  _hideClickToAddPopup();
+  var geocoder = new google.maps.Geocoder();
+  geocoder.geocode({ location: { lat: latLng.lat(), lng: latLng.lng() } }, function(results, status) {
+    if (status !== 'OK' || !results || !results[0]) return;
+    var placeName = results[0].formatted_address || '';
+    _showClickToAddPopup(latLng, placeName);
+  });
+}
+
+/** Show click-to-add popup at map click position. */
+function _showClickToAddPopup(latLng, placeName) {
+  var popup = document.getElementById('click-to-add-popup');
+  if (!popup) return;
+
+  var map = GoogleMaps.getGuideMap();
+  if (!map) return;
+
+  // Store latLng for later use in confirm
+  popup._clickLatLng = latLng;
+  popup._placeName = placeName;
+
+  // Build popup content safely using DOM methods — textContent for place name (XSS safe)
+  var nameEl = document.createElement('div');
+  nameEl.className = 'popup-place-name';
+  nameEl.textContent = placeName;
+
+  var btn = document.createElement('button');
+  btn.className = 'popup-add-btn';
+  btn.textContent = 'Stopp hier hinzuf\u00fcgen?';
+  btn.onclick = function() { _confirmClickToAdd(popup._placeName); };
+
+  // Clear previous content safely and append new DOM elements
+  while (popup.firstChild) popup.removeChild(popup.firstChild);
+  popup.appendChild(nameEl);
+  popup.appendChild(btn);
+
+  // Position popup using map overlay projection
+  var overlay = new google.maps.OverlayView();
+  overlay.draw = function() {};
+  overlay.setMap(map);
+
+  // Wait for projection to be ready
+  google.maps.event.addListenerOnce(map, 'idle', function() {
+    var proj = overlay.getProjection();
+    if (proj) {
+      var point = proj.fromLatLngToContainerPixel(latLng);
+      if (point) {
+        popup.style.left = point.x + 'px';
+        popup.style.top = (point.y - 10) + 'px';
+        popup.style.transform = 'translate(-50%, -100%)';
+      }
+    }
+    overlay.setMap(null);
+  });
+
+  popup.style.display = 'block';
+
+  // Escape key dismisses popup
+  popup._escHandler = function(e) {
+    if (e.key === 'Escape') _hideClickToAddPopup();
+  };
+  document.addEventListener('keydown', popup._escHandler);
+}
+
+/** Hide click-to-add popup and clean up listeners. */
+function _hideClickToAddPopup() {
+  var popup = document.getElementById('click-to-add-popup');
+  if (!popup) return;
+  popup.style.display = 'none';
+  while (popup.firstChild) popup.removeChild(popup.firstChild);
+  popup._clickLatLng = null;
+  popup._placeName = null;
+  if (popup._escHandler) {
+    document.removeEventListener('keydown', popup._escHandler);
+    popup._escHandler = null;
+  }
+}
+
+/** Confirm adding a stop at the clicked map location. */
+function _confirmClickToAdd(placeName) {
+  if (!placeName) return;
+  var plan = S.result;
+  if (!plan) return;
+
+  var popup = document.getElementById('click-to-add-popup');
+  var clickLatLng = popup ? popup._clickLatLng : null;
+  _hideClickToAddPopup();
+
+  if (!clickLatLng) return;
+
+  var stops = plan.stops || [];
+  if (stops.length === 0) {
+    // No stops yet — insert after position 0 (start)
+    _doAddStopFromMap(placeName, 0);
+    return;
+  }
+
+  // Find nearest stop by haversine distance
+  var clickLat = clickLatLng.lat();
+  var clickLng = clickLatLng.lng();
+  var nearestIdx = 0;
+  var nearestDist = Infinity;
+
+  stops.forEach(function(stop, i) {
+    if (!stop.lat || !stop.lng) return;
+    var d = _haversineKm(clickLat, clickLng, stop.lat, stop.lng);
+    if (d < nearestDist) {
+      nearestDist = d;
+      nearestIdx = i;
+    }
+  });
+
+  // Determine if click falls before or after the nearest stop
+  // by comparing distances to the previous and next stops
+  var insertAfterId;
+  var nearestStop = stops[nearestIdx];
+  var prevStop = nearestIdx > 0 ? stops[nearestIdx - 1] : null;
+  var nextStop = nearestIdx < stops.length - 1 ? stops[nearestIdx + 1] : null;
+
+  var distToPrev = prevStop && prevStop.lat && prevStop.lng
+    ? _haversineKm(clickLat, clickLng, prevStop.lat, prevStop.lng)
+    : Infinity;
+  var distToNext = nextStop && nextStop.lat && nextStop.lng
+    ? _haversineKm(clickLat, clickLng, nextStop.lat, nextStop.lng)
+    : Infinity;
+
+  // If click is closer to the previous stop than the next, insert before nearest
+  if (distToPrev < distToNext && prevStop) {
+    insertAfterId = prevStop.id;
+  } else {
+    insertAfterId = nearestStop.id;
+  }
+
+  _doAddStopFromMap(placeName, insertAfterId);
+}
+
+/** Execute add-stop from map click — reuses the existing add-stop API flow. */
+function _doAddStopFromMap(placeName, afterStopId) {
+  var plan = S.result;
+  if (!plan) return;
+
+  var travelId = plan._saved_travel_id || plan.id;
+  if (!travelId) {
+    alert('Reise muss zuerst gespeichert werden.');
+    return;
+  }
+
+  _lockEditing();
+  apiAddStop(travelId, afterStopId, placeName, 1).then(function(res) {
+    _editSSE = openSSE(res.job_id, {
+      add_stop_progress: function() {},
+      add_stop_complete: function(data) {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        data._saved_travel_id = travelId;
+        S.result = data;
+        lsSet(LS_RESULT, { savedAt: new Date().toISOString(), plan: data });
+        _unlockEditing();
+        renderGuide(data, 'stops');
+      },
+      job_error: function(data) {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        _unlockEditing();
+        alert('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'));
+      },
+    });
+  }).catch(function(err) {
+    _unlockEditing();
+    alert('Fehler: ' + err.message);
+  });
 }
 
 // ---------------------------------------------------------------------------

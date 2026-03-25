@@ -750,6 +750,21 @@ const GoogleMaps = (() => {
     }
   }
 
+  /**
+   * Register a click listener on the map for empty-area clicks (click-to-add-stop).
+   * Marker clicks are separate overlay events and do not trigger this handler.
+   * @param {google.maps.Map} map
+   * @param {Function} onMapClick - callback(latLng) when an empty area is clicked
+   */
+  function enableClickToAdd(map, onMapClick) {
+    google.maps.event.addListener(map, 'click', function(event) {
+      if (event.placeId) {
+        event.stop();
+      }
+      onMapClick(event.latLng);
+    });
+  }
+
   return {
     _onApiReady,
     _setApiKey,
@@ -769,6 +784,7 @@ const GoogleMaps = (() => {
     highlightGuideMarker,
     panToStop,
     fitAllStops,
+    enableClickToAdd,
     get routeMap() { return _routeMap; },
     get guideMap()  { return _guideMap; },
   };
