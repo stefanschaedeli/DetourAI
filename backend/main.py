@@ -2387,6 +2387,7 @@ async def api_replace_stop(travel_id: int, body: ReplaceStopRequest, current_use
             prev_location=prev_location,
             max_drive_hours=request.max_drive_hours_per_day,
             route_geometry=route_geo,
+            extra_instructions=body.hints or "",
         )
 
         # Enrich options with Google Directions
