@@ -1609,6 +1609,7 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   left: 0;
   top: 0;
   width: 58%;
+  height: 100vh; /* fallback for older browsers */
   height: 100dvh;
   z-index: 1;
 }
@@ -1728,6 +1729,43 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 @keyframes slideFromLeft {
   from { transform: translateX(-100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
+}
+
+/* --- Sidebar Overlay Nodes --- */
+.overlay-node {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm, 8px);
+  padding: var(--space-sm, 8px);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.overlay-node:hover {
+  background: var(--bg-subtle, rgba(240, 237, 248, 0.5));
+}
+
+.overlay-node-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--text, #2D2B3D);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.overlay-node-name {
+  font-size: 13px;
+  color: var(--text, #2D2B3D);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Mobile: hide sidebar overlay entirely */
@@ -5517,5 +5555,50 @@ strong.req-keyword {
   .guide-marker-num,
   .guide-marker:hover .guide-marker-num {
     transition: none;
+  }
+}
+
+/* ============================================================ Mobile Touch Targets & Tab Polish (UIR-02) */
+@media (max-width: 767px) {
+  .guide-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0;
+  }
+  .guide-tabs::-webkit-scrollbar { display: none; }
+
+  .guide-tab {
+    min-height: 44px;
+    white-space: nowrap;
+    padding: 10px 16px;
+  }
+
+  .guide-header-row {
+    flex-wrap: wrap;
+    padding: var(--space-sm, 8px) var(--space-md, 16px);
+  }
+
+  /* Day timeline mobile adjustments */
+  .day-timeline {
+    padding-left: 32px;
+  }
+  .day-timeline::before {
+    left: 14px;
+  }
+  .day-timeline-node {
+    left: -23px;
+  }
+  .day-timeline-header {
+    min-height: 44px;
+    padding: var(--space-sm, 8px) var(--space-sm, 8px);
+  }
+
+  /* Touch targets for all interactive elements */
+  .stop-edit-icon,
+  .overlay-node,
+  .day-overview-card,
+  .day-timeline-header {
+    min-height: 44px;
   }
 }

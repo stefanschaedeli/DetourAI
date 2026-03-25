@@ -23,6 +23,8 @@ function showTravelGuide(plan) {
   if (typeof updateSidebar === 'function') updateSidebar();
   _setupGuideMap(plan);
   renderGuide(plan, activeTab);
+  // Pre-populate sidebar overlay content (D-03)
+  if (typeof _populateSidebarOverlay === 'function') _populateSidebarOverlay();
 }
 
 function renderGuide(plan, tab) {
@@ -1651,6 +1653,15 @@ function _setupGuideMap(plan) {
   });
   google.maps.event.addListener(map, 'dragend', () => {
     _userInteractionTimeout = setTimeout(() => { _userInteractingWithMap = false; }, 3000);
+  });
+
+  // Click-outside-to-close sidebar overlay (D-03)
+  google.maps.event.addListener(map, 'click', () => {
+    const overlay = document.getElementById('sidebar-overlay');
+    if (overlay && overlay.classList.contains('expanded')) {
+      overlay.classList.remove('expanded');
+      overlay.classList.add('collapsed');
+    }
   });
 }
 

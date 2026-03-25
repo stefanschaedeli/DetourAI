@@ -372,3 +372,88 @@ const Sidebar = (() => {
 function initSidebar()   { Sidebar.initSidebar(); }
 function updateSidebar() { Sidebar.updateSidebar(); }
 function toggleSidebar() { Sidebar.toggleSidebar(); }
+
+// ─── Sidebar Overlay for Map Panel (D-03) ─────────────────────────────────────
+
+function toggleSidebarOverlay() {
+  const overlay = document.getElementById('sidebar-overlay');
+  if (!overlay) return;
+  const isExpanded = overlay.classList.contains('expanded');
+  if (isExpanded) {
+    overlay.classList.remove('expanded');
+    overlay.classList.add('collapsed');
+  } else {
+    overlay.classList.remove('collapsed');
+    overlay.classList.add('expanded');
+    _populateSidebarOverlay();
+  }
+}
+
+function _populateSidebarOverlay() {
+  const container = document.getElementById('sidebar-overlay-content');
+  if (!container) return;
+  const plan = S.result;
+  if (!plan) { container.textContent = ''; return; }
+
+  const stops = plan.stops || [];
+  const startLoc = plan.start_location || '';
+
+  let html = '<div class="overlay-node" data-overlay-type="start">'
+    + '<span class="overlay-node-num">S</span>'
+    + '<span class="overlay-node-name">' + esc(startLoc) + '</span>'
+    + '</div>';
+
+  stops.forEach((stop, i) => {
+    const flag = (typeof FLAGS !== 'undefined' && FLAGS[stop.country]) ? FLAGS[stop.country] + ' ' : '';
+    const name = stop.region || stop.name || 'Stop';
+    html += '<div class="overlay-node" data-overlay-stop-id="' + esc(String(stop.id)) + '">'
+      + '<span class="overlay-node-num">' + (i + 1) + '</span>'
+      + '<span class="overlay-node-name">' + flag + esc(name) + '</span>'
+      + '</div>';
+  });
+
+  // End location (last leg end)
+  const lastStop = stops[stops.length - 1];
+  if (lastStop) {
+    html += '<div class="overlay-node" data-overlay-type="end">'
+      + '<span class="overlay-node-num">E</span>'
+      + '<span class="overlay-node-name">' + esc(lastStop.region || lastStop.name || '') + '</span>'
+      + '</div>';
+  }
+
+  // Safe DOM update: use textContent to clear, then insertAdjacentHTML for controlled HTML
+  // All values above pass through esc() for XSS safety
+  container.textContent = '';
+  container.insertAdjacentHTML('afterbegin', html);
+
+  // Attach click listeners
+  container.querySelectorAll('.overlay-node[data-overlay-stop-id]').forEach(node => {
+    node.addEventListener('click', () => {
+      _onOverlayNodeClick(node.dataset.overlayStopId);
+    });
+  });
+}
+
+function _onOverlayNodeClick(stopId) {
+  if (!stopId) return;
+  // Pan map to stop
+  if (typeof GoogleMaps !== 'undefined' && S.result) {
+    GoogleMaps.panToStop(stopId, S.result.stops || []);
+    GoogleMaps.highlightGuideMarker(stopId);
+  }
+  // If on stops tab, scroll to card
+  if (typeof activeTab !== 'undefined' && activeTab === 'stops') {
+    const card = document.querySelector('[data-stop-id="' + stopId + '"]');
+    if (card) {
+      document.querySelectorAll('.stop-card-row.selected').forEach(el => el.classList.remove('selected'));
+      card.classList.add('selected');
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+  // Collapse overlay
+  const overlay = document.getElementById('sidebar-overlay');
+  if (overlay) {
+    overlay.classList.remove('expanded');
+    overlay.classList.add('collapsed');
+  }
+}
