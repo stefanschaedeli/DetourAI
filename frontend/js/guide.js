@@ -1212,9 +1212,28 @@ function renderCalendar(plan) {
     }
   }
 
+  // Find max day number to detect gaps (missing drive days)
+  const dayNums = new Set(dayPlans.map(dp => dp.day));
+  const maxDay = dayPlans.reduce((m, dp) => Math.max(m, dp.day), 0);
+
+  // Fill in missing days as drive days
+  const allDayPlans = [...dayPlans];
+  if (baseDate) {
+    for (let d = 1; d <= maxDay; d++) {
+      if (!dayNums.has(d)) {
+        const driveDate = new Date(baseDate);
+        driveDate.setDate(driveDate.getDate() + (d - 1));
+        const dd = String(driveDate.getDate()).padStart(2, '0');
+        const mm = String(driveDate.getMonth() + 1).padStart(2, '0');
+        const yyyy = driveDate.getFullYear();
+        allDayPlans.push({ day: d, date: `${dd}.${mm}.${yyyy}`, type: 'drive', title: 'Reisetag', description: '' });
+      }
+    }
+  }
+
   // Build lookup: date-string (YYYY-MM-DD) → { dp, type, stop, flag, stopName }
   const dayMap = new Map();
-  dayPlans.forEach(dp => {
+  allDayPlans.forEach(dp => {
     const raw = (dp.type || 'mixed').toLowerCase();
     const type = ['drive','rest','activity','mixed'].includes(raw) ? raw : 'mixed';
     const stop = stops.find(s => {
@@ -1225,7 +1244,6 @@ function renderCalendar(plan) {
     const stopName = stop ? stop.region : '';
     const stopId = stop ? stop.id : null;
     let date = parseDate(dp.date);
-    // Fallback: compute date from base start date + day offset
     if (!date && baseDate) {
       date = new Date(baseDate);
       date.setDate(date.getDate() + (dp.day - 1));
