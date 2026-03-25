@@ -10,6 +10,9 @@ celery_app = Celery(
     include=[
         "tasks.run_planning_job",
         "tasks.prefetch_accommodations",
+        "tasks.remove_stop_job",
+        "tasks.add_stop_job",
+        "tasks.reorder_stops_job",
     ],
 )
 celery_app.conf.update(task_serializer="json", result_serializer="json")

@@ -59,6 +59,7 @@ _COMPONENT_MAP: dict[str, str] = {
     "ReplaceStop": "agents/replace_stop",
     "ReplaceStopJob": "agents/replace_stop",
     "FerryDetection": "utils/ferry_detection",
+    "RouteEdit": "agents/route_edit",
 }
 
 
