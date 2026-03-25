@@ -526,30 +526,49 @@
   </section>
 
   <!-- ============================================================ Travel guide -->
-  <section class="section" id="travel-guide">
-    <div class="guide-header-row">
-      <h2>Ihr Reiseplan</h2>
-      <button class="btn btn-secondary btn-sm replan-btn" id="replan-current-btn"
-              onclick="replanCurrentTravel()"
-              title="Reiseführer, Aktivitäten, Restaurants und stündliche Tagespläne mit KI neu generieren — Route und Unterkünfte bleiben erhalten">
-        Neu berechnen
-      </button>
-    </div>
+  <section class="section section--full-width" id="travel-guide">
+    <div class="guide-split-panel">
+      <!-- LEFT: Map panel (fixed, persistent) -->
+      <div class="guide-map-panel">
+        <div id="guide-map" class="guide-map-container"></div>
+        <div class="sidebar-overlay collapsed" id="sidebar-overlay">
+          <button class="sidebar-overlay-toggle" onclick="toggleSidebarOverlay()" aria-label="Route-Uebersicht">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+          </button>
+          <div class="sidebar-overlay-content" id="sidebar-overlay-content"></div>
+        </div>
+        <div class="click-to-add-popup" id="click-to-add-popup" style="display:none"></div>
+      </div>
 
-    <div class="guide-tabs">
-      <button class="guide-tab active" data-tab="overview" onclick="switchGuideTab('overview')">Übersicht</button>
-      <button class="guide-tab" data-tab="stops" onclick="switchGuideTab('stops')">Reiseführer & Stops</button>
-      <button class="guide-tab" data-tab="calendar" onclick="switchGuideTab('calendar')">Kalender</button>
-      <button class="guide-tab" data-tab="days" onclick="switchGuideTab('days')">Tagesplan</button>
-      <button class="guide-tab" data-tab="budget" onclick="switchGuideTab('budget')">Budget</button>
-    </div>
+      <!-- RIGHT: Content panel (scrollable) -->
+      <div class="guide-content-panel" id="guide-content-panel">
+        <div class="guide-header-row">
+          <h2>Ihr Reiseplan</h2>
+          <button class="btn btn-secondary btn-sm replan-btn" id="replan-current-btn"
+                  onclick="replanCurrentTravel()"
+                  title="Reiseführer, Aktivitäten, Restaurants und stündliche Tagespläne mit KI neu generieren — Route und Unterkünfte bleiben erhalten">
+            Neu berechnen
+          </button>
+        </div>
 
-    <div id="guide-content">
-      <!-- rendered by JS -->
-    </div>
+        <div id="guide-stats-bar"></div>
 
-    <div style="margin-top:24px">
-      <button class="btn btn-secondary" onclick="Router.navigate('/')">Neue Reise planen</button>
+        <div class="guide-tabs" role="tablist">
+          <button class="guide-tab active" role="tab" aria-selected="true" data-tab="overview" onclick="switchGuideTab('overview')">Übersicht</button>
+          <button class="guide-tab" role="tab" aria-selected="false" data-tab="stops" onclick="switchGuideTab('stops')">Stopps</button>
+          <button class="guide-tab" role="tab" aria-selected="false" data-tab="days" onclick="switchGuideTab('days')">Tage</button>
+          <button class="guide-tab" role="tab" aria-selected="false" data-tab="calendar" onclick="switchGuideTab('calendar')">Kalender</button>
+          <button class="guide-tab" role="tab" aria-selected="false" data-tab="budget" onclick="switchGuideTab('budget')">Budget</button>
+        </div>
+
+        <div id="guide-content" role="main">
+          <!-- rendered by JS per active tab -->
+        </div>
+
+        <div style="margin-top:var(--space-lg)">
+          <button class="btn btn-secondary" onclick="Router.navigate('/')">Neue Reise planen</button>
+        </div>
+      </div>
     </div>
   </section>
 
