@@ -647,3 +647,14 @@ class TestReorderRegions:
             d += haversine_km((regs[-1].lat, regs[-1].lon), start)
             return d
         assert route_dist(result) <= route_dist(regions)
+
+
+# ---------------------------------------------------------------------------
+# StopOptionsFinder — style enforcement in SYSTEM_PROMPT
+# ---------------------------------------------------------------------------
+
+def test_stop_options_style_enforcement():
+    """AIQ-03: StopOptionsFinder SYSTEM_PROMPT must enforce travel style matching."""
+    from agents.stop_options_finder import SYSTEM_PROMPT
+    assert "STIL-REGEL" in SYSTEM_PROMPT, "SYSTEM_PROMPT missing STIL-REGEL block"
+    assert "matches_travel_style" in SYSTEM_PROMPT, "SYSTEM_PROMPT missing matches_travel_style field requirement"
