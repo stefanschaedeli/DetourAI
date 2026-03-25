@@ -22,6 +22,7 @@ function openRouteSSE(jobId) {
     region_plan_ready: data => { showRegionPlanUI(data.regions, data.summary, data.leg_id); },
     region_updated:    data => { updateRegionPlanUI(data.regions, data.summary); },
     leg_complete:           data => { console.log(`Schnitt ${(data.leg_index || 0) + 1} abgeschlossen (${data.mode || ''})`); },
+    style_mismatch_warning: _onStyleMismatchWarning,
     onerror: () => {},  // silently ignore — HTTP response is the fallback
   });
 }
@@ -104,6 +105,51 @@ function onRouteOptionReady(data) {
   progressOverlay.completeLine(`option_${optIndex}`, '');
 }
 
+function _onStyleMismatchWarning(data) {
+  const warning = data.warning || '';
+  const suggestions = (data.suggestions || []).join(', ');
+
+  const banner = document.createElement('div');
+  banner.className = 'plausibility-banner';
+
+  const iconEl = document.createElement('div');
+  iconEl.className = 'plausibility-icon';
+  iconEl.textContent = '\u26A0';
+  banner.appendChild(iconEl);
+
+  const textEl = document.createElement('div');
+  textEl.className = 'plausibility-text';
+  const strong = document.createElement('strong');
+  strong.textContent = 'Hinweis zum Reisestil';
+  textEl.appendChild(strong);
+  const p = document.createElement('p');
+  p.textContent = warning;
+  textEl.appendChild(p);
+  if (suggestions) {
+    const p2 = document.createElement('p');
+    p2.textContent = 'Alternativen: ' + esc(suggestions);
+    textEl.appendChild(p2);
+  }
+  banner.appendChild(textEl);
+
+  const actions = document.createElement('div');
+  actions.className = 'plausibility-actions';
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-sm';
+  btn.textContent = 'Verstanden';
+  btn.addEventListener('click', () => banner.remove());
+  actions.appendChild(btn);
+  banner.appendChild(actions);
+
+  const panel = document.getElementById('route-builder-panel')
+             || document.getElementById('route-options-container');
+  if (panel && panel.firstChild) {
+    panel.insertBefore(banner, panel.firstChild);
+  } else if (panel) {
+    panel.appendChild(banner);
+  }
+}
+
 function onRouteOptionsDone(data) {
   if (data.no_stops_found) {
     _showNoStopsFoundUI(data.corridor);
@@ -137,6 +183,12 @@ function _buildOptionCardHTML(opt, i) {
   const mapsLink = opt.maps_url
     ? `<a class="option-maps-link" href="${safeUrl(opt.maps_url)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="vertical-align:-2px;margin-right:3px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Google Maps</a>`
     : '';
+  const corridorBadge = opt.outside_corridor
+    ? `<span class="badge badge-warning" title="Ausserhalb des empfohlenen Routenkorridors (${esc(String(Math.round(opt.corridor_distance_km || 0)))} km)">Abseits der Route</span>`
+    : '';
+  const wildcardBadge = (opt.matches_travel_style === false || opt.travel_style_match === false)
+    ? '<span class="badge badge-neutral">Wildcard</span>'
+    : '';
   const extraFields = _buildExtraFields(opt);
   return {
     classes: `option-card${overLimit ? ' over-limit' : ''}`,
@@ -147,6 +199,7 @@ function _buildOptionCardHTML(opt, i) {
         <div class="option-card-header">
           <span class="option-card-number">${i + 1}</span>
           <div class="option-type-badge type-${esc(opt.option_type)}">${esc(opt.option_type)}</div>
+          ${corridorBadge}${wildcardBadge}
         </div>
         <h3>${flag} ${esc(opt.region)}, ${esc(opt.country)}</h3>
         <div class="option-meta">

@@ -4783,3 +4783,77 @@ strong.req-keyword {
 @media (min-width: 769px) {
   .sidebar-mobile-toggle { display: none !important; }
 }
+
+/* AI Quality: Corridor warning badge */
+.badge-warning {
+  background: #f59e0b;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badge-neutral {
+  background: #6b7280;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* AI Quality: Plausibility warning banner */
+.plausibility-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.plausibility-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.plausibility-text {
+  flex: 1;
+}
+
+.plausibility-text strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #92400e;
+}
+
+.plausibility-text p {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  color: #78350f;
+}
+
+.plausibility-actions {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.plausibility-actions .btn {
+  background: #f59e0b;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.plausibility-actions .btn:hover {
+  background: #d97706;
+}
