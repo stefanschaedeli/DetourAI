@@ -61,7 +61,12 @@ Plans:
   3. User can drag stops to reorder the route sequence
   4. User can replace a stop with a guided flow that finds alternatives matching specific criteria (e.g., "more beach", "less driving")
   5. After any route modification, total distance, driving time, and budget estimates update immediately
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Shared route edit helpers, edit lock, Celery tasks (remove/add/reorder) + tests
+- [ ] 03-02-PLAN.md — API endpoints, _fire_task registration, edit lock integration, replace-stop hints + endpoint tests
+- [ ] 03-03-PLAN.md — Frontend edit controls (remove, add modal, drag-and-drop reorder, SSE handlers, replace hints UI)
 
 ### Phase 4: Map-Centric Responsive Layout
 **Goal**: The app uses a modern map-centric layout that works well on both desktop and mobile browsers
@@ -96,6 +101,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. AI Quality Stabilization | 2/3 | In Progress|  |
 | 2. Geographic Routing | 0/2 | Planned | - |
-| 3. Route Editing | 0/? | Not started | - |
+| 3. Route Editing | 0/3 | Planned | - |
 | 4. Map-Centric Responsive Layout | 0/? | Not started | - |
 | 5. Sharing & Cleanup | 0/? | Not started | - |
