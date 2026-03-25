@@ -6,6 +6,9 @@ let _guidePolyline = null;
 let _initializedStopMaps = new Set();
 let _activeStopId = null;
 let _activeDayNum = null;
+let _editInProgress = false;
+let _editSSE = null;
+let _dragStopSourceIndex = null;
 
 function showTravelGuide(plan) {
   S.result = plan;
@@ -949,20 +952,32 @@ function renderStopsOverview(plan) {
     const actCount = (stop.top_activities || []).length;
     const restCount = (stop.restaurants || []).length;
     return `
-      <div class="stop-overview-card" data-stop-id="${stop.id}">
-        ${buildHeroPhotoLoading('sm')}
-        <div class="stop-overview-card-body">
-          <div class="stop-number">Stop ${stop.id}</div>
-          <h3>${flag} ${esc(stop.region)}, ${esc(stop.country)}</h3>
-          <div class="stop-meta">
-            ${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}
-            ${stop.drive_hours_from_prev > 0 ? ` · ${stop.drive_hours_from_prev}h Fahrt` : ''}
-            ${stop.drive_km_from_prev > 0 ? ` · ${stop.drive_km_from_prev} km` : ''}
+      <div class="stop-overview-card" data-stop-id="${stop.id}" draggable="true"
+        ondragstart="_onStopDragStart(event, ${i})"
+        ondragend="_onStopDragEnd(event)"
+        ondragover="event.preventDefault(); this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="_onStopDrop(event, ${i})">
+        <div class="stop-overview-card-inner">
+          <div class="drag-handle" title="Ziehen zum Sortieren">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
           </div>
-          <div class="stop-overview-highlights">
-            ${acc.name ? `<span class="stop-overview-chip chip-acc">${esc(acc.name)} · CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>` : ''}
-            ${actCount ? `<span class="stop-overview-chip chip-act">${actCount} Aktivität${actCount !== 1 ? 'en' : ''}</span>` : ''}
-            ${restCount ? `<span class="stop-overview-chip chip-rest">${restCount} Restaurant${restCount !== 1 ? 's' : ''}</span>` : ''}
+          <div class="stop-overview-card-main">
+            ${buildHeroPhotoLoading('sm')}
+            <div class="stop-overview-card-body">
+              <div class="stop-number">Stop ${stop.id}</div>
+              <h3>${flag} ${esc(stop.region)}, ${esc(stop.country)}</h3>
+              <div class="stop-meta">
+                ${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}
+                ${stop.drive_hours_from_prev > 0 ? ` \u00b7 ${stop.drive_hours_from_prev}h Fahrt` : ''}
+                ${stop.drive_km_from_prev > 0 ? ` \u00b7 ${stop.drive_km_from_prev} km` : ''}
+              </div>
+              <div class="stop-overview-highlights">
+                ${acc.name ? `<span class="stop-overview-chip chip-acc">${esc(acc.name)} \u00b7 CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>` : ''}
+                ${actCount ? `<span class="stop-overview-chip chip-act">${actCount} Aktivit\u00e4t${actCount !== 1 ? 'en' : ''}</span>` : ''}
+                ${restCount ? `<span class="stop-overview-chip chip-rest">${restCount} Restaurant${restCount !== 1 ? 's' : ''}</span>` : ''}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -972,6 +987,9 @@ function renderStopsOverview(plan) {
   return `
     <div class="stops-overview-grid">
       ${cards}
+    </div>
+    <div class="stops-overview-actions">
+      <button class="btn btn-primary add-stop-btn" onclick="_openAddStopModal()">+ Stopp hinzuf\u00fcgen</button>
     </div>
   `;
 }
@@ -1028,6 +1046,10 @@ function renderStopDetail(plan, stopId) {
               </div>
             </div>
             <div class="stop-header-right">
+              ${stops.length > 1 ? `<button class="remove-stop-btn btn-icon-danger" onclick="event.stopPropagation(); _confirmRemoveStop(${stop.id})" title="Stopp entfernen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Entfernen
+              </button>` : ''}
               <button class="replace-stop-btn" onclick="event.stopPropagation(); openReplaceStopModal(${stop.id}, ${stop.nights})" title="Stopp ersetzen">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
                 Ersetzen
@@ -1907,6 +1929,320 @@ async function replanCurrentTravel() {
 
 
 // ---------------------------------------------------------------------------
+// Edit Lock — one operation at a time (D-17)
+// ---------------------------------------------------------------------------
+
+function _lockEditing() {
+  _editInProgress = true;
+  document.querySelectorAll('.remove-stop-btn, .add-stop-btn, .replace-stop-btn').forEach(btn => {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.pointerEvents = 'none';
+  });
+  document.querySelectorAll('.stop-overview-card[draggable]').forEach(card => {
+    card.style.opacity = '0.5';
+    card.style.pointerEvents = 'none';
+  });
+}
+
+function _unlockEditing() {
+  _editInProgress = false;
+  document.querySelectorAll('.remove-stop-btn, .add-stop-btn, .replace-stop-btn').forEach(btn => {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
+  });
+  document.querySelectorAll('.stop-overview-card[draggable]').forEach(card => {
+    card.style.opacity = '';
+    card.style.pointerEvents = '';
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Remove Stop — confirm + execute
+// ---------------------------------------------------------------------------
+
+function _confirmRemoveStop(stopId) {
+  if (_editInProgress) return;
+  const plan = S.result;
+  if (!plan) return;
+  const stop = (plan.stops || []).find(s => s.id === stopId);
+  if (!stop) return;
+
+  const existing = document.getElementById('confirm-remove-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'confirm-remove-modal';
+  modal.className = 'modal-backdrop';
+
+  // Build modal content safely using esc() for user data
+  const heading = document.createElement('h3');
+  heading.textContent = 'Stopp entfernen?';
+
+  const para = document.createElement('p');
+  para.innerHTML = 'M\u00f6chtest du <strong>' + esc(stop.region) + '</strong> wirklich entfernen? Alle recherchierten Daten (Aktivit\u00e4ten, Restaurants, Unterk\u00fcnfte) gehen verloren.';
+
+  const actions = document.createElement('div');
+  actions.className = 'modal-actions';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-secondary';
+  cancelBtn.textContent = 'Abbrechen';
+  cancelBtn.onclick = () => modal.remove();
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'btn btn-danger';
+  removeBtn.textContent = 'Entfernen';
+  removeBtn.onclick = () => _executeRemoveStop(stopId);
+
+  actions.appendChild(cancelBtn);
+  actions.appendChild(removeBtn);
+
+  const content = document.createElement('div');
+  content.className = 'modal-content';
+  content.appendChild(heading);
+  content.appendChild(para);
+  content.appendChild(actions);
+
+  modal.appendChild(content);
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+async function _executeRemoveStop(stopId) {
+  const modal = document.getElementById('confirm-remove-modal');
+  if (modal) modal.remove();
+
+  const travelId = S.result._saved_travel_id || S.result.id;
+  if (!travelId) return;
+
+  _lockEditing();
+  try {
+    const res = await apiRemoveStop(travelId, stopId);
+    _editSSE = openSSE(res.job_id, {
+      remove_stop_progress: () => {},
+      remove_stop_complete: (data) => {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        data._saved_travel_id = travelId;
+        S.result = data;
+        lsSet(LS_RESULT, { savedAt: new Date().toISOString(), plan: data });
+        _activeStopId = null;
+        _unlockEditing();
+        renderGuide(data, 'stops');
+      },
+      job_error: (data) => {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        _unlockEditing();
+        alert('Fehler beim Entfernen: ' + (data.error || 'Unbekannter Fehler'));
+      },
+    });
+  } catch (err) {
+    _unlockEditing();
+    alert('Fehler: ' + err.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Add Stop — modal + execute
+// ---------------------------------------------------------------------------
+
+function _openAddStopModal() {
+  if (_editInProgress) return;
+  const plan = S.result;
+  if (!plan) return;
+
+  const savedId = plan._saved_travel_id;
+  if (!savedId) {
+    alert('Reise muss zuerst gespeichert werden.');
+    return;
+  }
+
+  const stops = plan.stops || [];
+  const existing = document.getElementById('add-stop-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'add-stop-modal';
+  modal.className = 'modal-backdrop';
+
+  const content = document.createElement('div');
+  content.className = 'modal-content';
+
+  const heading = document.createElement('h3');
+  heading.textContent = 'Stopp hinzuf\u00fcgen';
+  content.appendChild(heading);
+
+  // Location input
+  const locGroup = document.createElement('div');
+  locGroup.className = 'form-group';
+  const locLabel = document.createElement('label');
+  locLabel.textContent = 'Ort';
+  locLabel.setAttribute('for', 'add-stop-location');
+  const locInput = document.createElement('input');
+  locInput.type = 'text';
+  locInput.id = 'add-stop-location';
+  locInput.className = 'form-input';
+  locInput.placeholder = 'z.B. Lyon, Marseille...';
+  locGroup.appendChild(locLabel);
+  locGroup.appendChild(locInput);
+  content.appendChild(locGroup);
+
+  // Insert-after select
+  const afterGroup = document.createElement('div');
+  afterGroup.className = 'form-group';
+  const afterLabel = document.createElement('label');
+  afterLabel.textContent = 'Einf\u00fcgen nach';
+  afterLabel.setAttribute('for', 'add-stop-after');
+  const afterSelect = document.createElement('select');
+  afterSelect.id = 'add-stop-after';
+  afterSelect.className = 'form-input';
+  stops.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.region + ' (Stop ' + s.id + ')';
+    afterSelect.appendChild(opt);
+  });
+  afterGroup.appendChild(afterLabel);
+  afterGroup.appendChild(afterSelect);
+  content.appendChild(afterGroup);
+
+  // Nights input
+  const nightsGroup = document.createElement('div');
+  nightsGroup.className = 'form-group';
+  const nightsLabel = document.createElement('label');
+  nightsLabel.textContent = 'N\u00e4chte';
+  nightsLabel.setAttribute('for', 'add-stop-nights');
+  const nightsInput = document.createElement('input');
+  nightsInput.type = 'number';
+  nightsInput.id = 'add-stop-nights';
+  nightsInput.className = 'form-input';
+  nightsInput.value = '1';
+  nightsInput.min = '1';
+  nightsInput.max = '14';
+  nightsInput.style.width = '80px';
+  nightsGroup.appendChild(nightsLabel);
+  nightsGroup.appendChild(nightsInput);
+  content.appendChild(nightsGroup);
+
+  // Actions
+  const actions = document.createElement('div');
+  actions.className = 'modal-actions';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-secondary';
+  cancelBtn.textContent = 'Abbrechen';
+  cancelBtn.onclick = () => modal.remove();
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn btn-primary';
+  addBtn.textContent = 'Hinzuf\u00fcgen';
+  addBtn.onclick = () => _executeAddStop();
+  actions.appendChild(cancelBtn);
+  actions.appendChild(addBtn);
+  content.appendChild(actions);
+
+  modal.appendChild(content);
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+  setTimeout(() => locInput.focus(), 100);
+}
+
+async function _executeAddStop() {
+  const location = (document.getElementById('add-stop-location')?.value || '').trim();
+  if (!location) { alert('Bitte Ortsnamen eingeben'); return; }
+
+  const afterId = parseInt(document.getElementById('add-stop-after')?.value) || 1;
+  const nights = parseInt(document.getElementById('add-stop-nights')?.value) || 1;
+
+  const modal = document.getElementById('add-stop-modal');
+  if (modal) modal.remove();
+
+  const travelId = S.result._saved_travel_id || S.result.id;
+  if (!travelId) return;
+
+  _lockEditing();
+  try {
+    const res = await apiAddStop(travelId, afterId, location, nights);
+    _editSSE = openSSE(res.job_id, {
+      add_stop_progress: () => {},
+      add_stop_complete: (data) => {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        data._saved_travel_id = travelId;
+        S.result = data;
+        lsSet(LS_RESULT, { savedAt: new Date().toISOString(), plan: data });
+        _unlockEditing();
+        renderGuide(data, 'stops');
+      },
+      job_error: (data) => {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        _unlockEditing();
+        alert('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'));
+      },
+    });
+  } catch (err) {
+    _unlockEditing();
+    alert('Fehler: ' + err.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Drag-and-Drop Reorder
+// ---------------------------------------------------------------------------
+
+function _onStopDragStart(e, index) {
+  if (_editInProgress) { e.preventDefault(); return; }
+  _dragStopSourceIndex = index;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('dragging');
+}
+
+function _onStopDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+}
+
+async function _onStopDrop(e, targetIndex) {
+  e.preventDefault();
+  document.querySelectorAll('.stop-overview-card').forEach(c => {
+    c.classList.remove('drag-over');
+    c.classList.remove('dragging');
+  });
+
+  if (_dragStopSourceIndex === null || _dragStopSourceIndex === targetIndex) {
+    _dragStopSourceIndex = null;
+    return;
+  }
+
+  const travelId = S.result._saved_travel_id || S.result.id;
+  if (!travelId) return;
+
+  const oldIdx = _dragStopSourceIndex;
+  _dragStopSourceIndex = null;
+
+  _lockEditing();
+  try {
+    const res = await apiReorderStops(travelId, oldIdx, targetIndex);
+    _editSSE = openSSE(res.job_id, {
+      reorder_stops_progress: () => {},
+      reorder_stops_complete: (data) => {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        data._saved_travel_id = travelId;
+        S.result = data;
+        lsSet(LS_RESULT, { savedAt: new Date().toISOString(), plan: data });
+        _unlockEditing();
+        renderGuide(data, 'stops');
+      },
+      job_error: (data) => {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        _unlockEditing();
+        alert('Fehler beim Sortieren: ' + (data.error || 'Unbekannter Fehler'));
+      },
+    });
+  } catch (err) {
+    _unlockEditing();
+    alert('Fehler: ' + err.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Replace Stop — Modal + SSE handling
 // ---------------------------------------------------------------------------
 
@@ -1959,6 +2295,8 @@ function openReplaceStopModal(stopId, currentNights) {
           <input type="text" id="replace-manual-location" class="replace-input" placeholder="z.B. Lyon, Frankreich" />
           <label>Nächte <small>(Standard: ${currentNights})</small></label>
           <input type="number" id="replace-manual-nights" class="replace-input" min="1" max="14" value="${currentNights}" />
+          <label>Vorlieben (optional)</label>
+          <input type="text" id="replace-stop-hints" class="replace-input" placeholder="z.B. mehr Strand, weniger Fahrzeit..." />
           <button class="btn btn-primary replace-submit-btn" id="replace-manual-btn"
             onclick="_doManualReplace(${savedId}, ${stopId})">Ersetzen</button>
         </div>
@@ -2021,14 +2359,16 @@ function _hideReplaceProgress() {
 async function _doManualReplace(travelId, stopId) {
   const loc = (document.getElementById('replace-manual-location')?.value || '').trim();
   const nights = parseInt(document.getElementById('replace-manual-nights')?.value) || 1;
+  const hints = (document.getElementById('replace-stop-hints')?.value || '').trim();
   if (!loc) { alert('Bitte einen Ort eingeben.'); return; }
 
   const btn = document.getElementById('replace-manual-btn');
   if (btn) btn.disabled = true;
+  _lockEditing();
   _showReplaceProgress('Ort wird gesucht…');
 
   try {
-    const res = await apiReplaceStop(travelId, stopId, 'manual', loc, nights);
+    const res = await apiReplaceStop(travelId, stopId, 'manual', loc, nights, hints);
     _listenForReplaceComplete(res.job_id, travelId);
   } catch (err) {
     _hideReplaceProgress();
@@ -2040,10 +2380,12 @@ async function _doManualReplace(travelId, stopId) {
 async function _doSearchReplace(travelId, stopId) {
   const btn = document.getElementById('replace-search-btn');
   if (btn) btn.disabled = true;
+  const hints = (document.getElementById('replace-stop-hints')?.value || '').trim();
+  _lockEditing();
   _showReplaceProgress('Alternativen werden gesucht…');
 
   try {
-    const res = await apiReplaceStop(travelId, stopId, 'search');
+    const res = await apiReplaceStop(travelId, stopId, 'search', null, null, hints);
     _hideReplaceProgress();
     if (btn) btn.disabled = false;
 
@@ -2103,11 +2445,13 @@ function _listenForReplaceComplete(jobId, travelId) {
       data._saved_travel_id = travelId;
       S.result = data;
       lsSet(LS_RESULT, { jobId: data.job_id || jobId, savedAt: new Date().toISOString(), plan: data });
+      _unlockEditing();
       closeReplaceStopModal();
       renderGuide(data, activeTab);
     },
     job_error: (data) => {
       if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
+      _unlockEditing();
       _hideReplaceProgress();
       alert('Fehler beim Ersetzen: ' + (data.error || 'Unbekannter Fehler'));
     },

@@ -301,7 +301,7 @@ async function apiResetSettings(section) {
   })).json();
 }
 
-async function apiReplaceStop(travelId, stopId, mode, manualLocation, manualNights) {
+async function apiReplaceStop(travelId, stopId, mode, manualLocation, manualNights, hints) {
   return (await _fetch(`${API}/travels/${travelId}/replace-stop`, {
     method: 'POST',
     body: JSON.stringify({
@@ -309,8 +309,34 @@ async function apiReplaceStop(travelId, stopId, mode, manualLocation, manualNigh
       mode,
       manual_location: manualLocation || null,
       manual_nights: manualNights || null,
+      hints: hints || null,
     }),
   }, 'Stopp wird ersetzt…')).json();
+}
+
+async function apiRemoveStop(travelId, stopId) {
+  return (await _fetch(`${API}/travels/${travelId}/remove-stop`, {
+    method: 'POST',
+    body: JSON.stringify({ stop_id: stopId }),
+  }, 'Stopp wird entfernt…')).json();
+}
+
+async function apiAddStop(travelId, insertAfterStopId, location, nights) {
+  return (await _fetch(`${API}/travels/${travelId}/add-stop`, {
+    method: 'POST',
+    body: JSON.stringify({
+      insert_after_stop_id: insertAfterStopId,
+      location: location,
+      nights: nights || 1,
+    }),
+  }, 'Stopp wird hinzugefügt…')).json();
+}
+
+async function apiReorderStops(travelId, oldIndex, newIndex) {
+  return (await _fetch(`${API}/travels/${travelId}/reorder-stops`, {
+    method: 'POST',
+    body: JSON.stringify({ old_index: oldIndex, new_index: newIndex }),
+  }, 'Stopps werden neu sortiert…')).json();
 }
 
 async function apiReplaceStopSelect(travelId, jobId, optionIndex) {
@@ -338,6 +364,9 @@ function openSSE(jobId, handlers) {
     'restaurants_loaded', 'route_option_ready', 'route_options_done', 'ping',
     'region_plan_ready', 'region_updated', 'leg_complete',
     'replace_stop_progress', 'replace_stop_complete',
+    'remove_stop_progress', 'remove_stop_complete',
+    'add_stop_progress', 'add_stop_complete',
+    'reorder_stops_progress', 'reorder_stops_complete',
   ];
 
   events.forEach(evt => {
