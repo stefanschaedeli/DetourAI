@@ -21,7 +21,10 @@ SYSTEM_PROMPT = (
     "nicht hinter dem Ziel oder in eine andere Richtung. Orientiere dich an den Referenzorten entlang der Route. "
     "KRITISCH — Fahrzeiten: Jede Option muss drive_hours ≤ dem angegebenen Maximum einhalten. "
     "Wähle nähere Zwischenstopps wenn nötig — lieber einen kürzeren Etappenstopp als das Limit zu überschreiten. "
-    "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
+    "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON. "
+    "STIL-REGEL: Wenn Reisestile angegeben sind, muessen mindestens 2 der 3 Optionen "
+    "dem Reisestil entsprechen. Die 3. Option darf ein interessanter Wildcard-Vorschlag sein. "
+    "Kennzeichne in jedem Vorschlag: \"matches_travel_style\": true/false. "
 )
 
 
@@ -110,6 +113,23 @@ class StopOptionsFinderAgent:
 
         geo_block = "\n".join(geo_lines) + "\n" if geo_lines else ""
 
+        # Bearing context for backtracking prevention (D-10)
+        prev_coords = geo.get("_from_coords")
+        target_coords = geo.get("_to_coords")
+        bearing_block = ""
+        if prev_coords and target_coords and not is_rundreise:
+            from utils.maps_helper import bearing_degrees
+            prev_lat, prev_lon = prev_coords if prev_coords else (None, None)
+            target_lat, target_lon = target_coords if target_coords else (None, None)
+            if prev_lat and target_lat:
+                route_bearing = bearing_degrees((prev_lat, prev_lon), (target_lat, target_lon))
+                bearing_block = (
+                    f"\nRICHTUNGSKONTEXT: Vom letzten Stopp ({prev_stop}) zum Ziel ({segment_target}) "
+                    f"betraegt die Fahrtrichtung ca. {route_bearing:.0f} Grad. "
+                    f"WICHTIG: Schlage NUR Orte vor, die grob in dieser Richtung liegen. "
+                    f"Keine Rueckwaertsfahrten oder starke Umwege (> 90 Grad Abweichung).\n"
+                )
+
         # Option-type block
         if is_rundreise:
             option_block = (
@@ -168,6 +188,16 @@ class StopOptionsFinderAgent:
                 f"Prüfe die lat/lon-Koordinaten deiner Vorschläge gegen den angegebenen Bereich.\n"
             )
 
+        # Travel style emphasis (D-05)
+        style_emphasis = ""
+        if req.travel_styles:
+            styles_str = ", ".join(req.travel_styles)
+            style_emphasis = (
+                f"\nREISESTIL-PRAEFERENZ: Der Nutzer bevorzugt \"{styles_str}\". "
+                f"Mindestens 2 von 3 Optionen muessen diesem Stil entsprechen. "
+                f"Die 3. Option darf ein ueberraschender Geheimtipp sein.\n"
+            )
+
         # JSON example option_types
         if is_rundreise:
             ex1_type = "umweg_links"
@@ -185,12 +215,12 @@ Letzter Stop (Abfahrtspunkt): {prev_stop}
 Endziel dieses Segments: {segment_target}
 Aktueller Stop #{stop_number}
 {stops_str}
-{geo_block}Verbleibende Tage im Segment: {days_remaining}
+{geo_block}{bearing_block}Verbleibende Tage im Segment: {days_remaining}
 Maximale Fahrzeit pro Etappe: {req.max_drive_hours_per_day}h
 Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
 Reisende: {req.adults} Erwachsene{', ' + str(len(req.children)) + ' Kinder (Alter: ' + ', '.join(str(c) for c in req.children) + ')' if req.children else ''}
 {complete_hint}{extra_hint}
-{option_block}
+{option_block}{style_emphasis}
 {rules_block}Nächte: {req.min_nights_per_stop}–{req.max_nights_per_stop}.
 
 Befülle folgende Felder kontextabhängig:
@@ -208,9 +238,9 @@ Befülle folgende Felder kontextabhängig:
 Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PFLICHT – keine null):
 {{
   "options": [
-    {{"id": 1, "option_type": "{ex1_type}", "region": "...", "country": "FR", "lat": 45.7640, "lon": 4.8357, "drive_hours": 3.5, "drive_km": 280, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}},
-    {{"id": 2, "option_type": "{ex2_type}", "region": "...", "country": "FR", "lat": 45.9237, "lon": 6.8694, "drive_hours": 4.0, "drive_km": 320, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": 1200, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}},
-    {{"id": 3, "option_type": "{ex3_type}", "region": "...", "country": "FR", "lat": 43.2965, "lon": 5.3698, "drive_hours": 3.0, "drive_km": 250, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."]{', ' + family_field[:-1] if family_field else ''}}}
+    {{"id": 1, "option_type": "{ex1_type}", "region": "...", "country": "FR", "lat": 45.7640, "lon": 4.8357, "drive_hours": 3.5, "drive_km": 280, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."], "matches_travel_style": true{', ' + family_field[:-1] if family_field else ''}}},
+    {{"id": 2, "option_type": "{ex2_type}", "region": "...", "country": "FR", "lat": 45.9237, "lon": 6.8694, "drive_hours": 4.0, "drive_km": 320, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": 1200, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."], "matches_travel_style": true{', ' + family_field[:-1] if family_field else ''}}},
+    {{"id": 3, "option_type": "{ex3_type}", "region": "...", "country": "FR", "lat": 43.2965, "lon": 5.3698, "drive_hours": 3.0, "drive_km": 250, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."], "matches_travel_style": true{', ' + family_field[:-1] if family_field else ''}}}
   ],
   "estimated_total_stops": 4,
   "route_could_be_complete": false
