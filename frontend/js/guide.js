@@ -1201,6 +1201,17 @@ function renderCalendar(plan) {
     return isNaN(d.getTime()) ? null : d;
   }
 
+  // Compute base start date from the first day plan that has a date
+  let baseDate = null;
+  for (const dp of dayPlans) {
+    const d = parseDate(dp.date);
+    if (d) {
+      baseDate = new Date(d);
+      baseDate.setDate(baseDate.getDate() - (dp.day - 1));
+      break;
+    }
+  }
+
   // Build lookup: date-string (YYYY-MM-DD) → { dp, type, stop, flag, stopName }
   const dayMap = new Map();
   dayPlans.forEach(dp => {
@@ -1213,7 +1224,12 @@ function renderCalendar(plan) {
     const flag = stop ? (FLAGS[stop.country] || '') : '';
     const stopName = stop ? stop.region : '';
     const stopId = stop ? stop.id : null;
-    const date = parseDate(dp.date);
+    let date = parseDate(dp.date);
+    // Fallback: compute date from base start date + day offset
+    if (!date && baseDate) {
+      date = new Date(baseDate);
+      date.setDate(date.getDate() + (dp.day - 1));
+    }
     if (date) {
       const key = date.toISOString().slice(0, 10);
       dayMap.set(key, { dp, type, stop, flag, stopName, stopId, date });
