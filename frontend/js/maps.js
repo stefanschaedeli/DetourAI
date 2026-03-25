@@ -10,6 +10,10 @@ const GoogleMaps = (() => {
   let _guideMap = null;
   let _apiKey = '';
 
+  // Persistent guide map state
+  let _guideMarkerList = [];
+  let _guidePolylineRef = null;
+
   // Cache: place name|lat|lng|context → [url, ...]
   const _imageCache = new Map();
 
@@ -553,11 +557,206 @@ const GoogleMaps = (() => {
     return new google.maps.Polyline({ map, path, ...polyOpts });
   }
 
+  // ---------------------------------------------------------------------------
+  // Persistent guide map (survives tab switches)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Reuse existing guide map if its container is still in the DOM.
+   * Unlike initGuideMap which always creates fresh, this persists across tab switches.
+   */
+  function initPersistentGuideMap(elId, opts) {
+    const el = document.getElementById(elId);
+    if (!el) { _log('WARNING', 'initPersistentGuideMap: Element #' + elId + ' nicht gefunden'); return null; }
+    if (_guideMap && _guideMap.getDiv() && _guideMap.getDiv().isConnected) return _guideMap;
+    try {
+      _guideMap = new google.maps.Map(el, {
+        center: (opts && opts.center) || { lat: 47, lng: 8 },
+        zoom: (opts && opts.zoom) || 6,
+        mapTypeControl: false,
+        streetViewControl: false,
+        gestureHandling: window.innerWidth < 768 ? 'cooperative' : 'greedy',
+      });
+    } catch (e) {
+      _log('ERROR', 'initPersistentGuideMap fehlgeschlagen: ' + e.message);
+      return null;
+    }
+    return _guideMap;
+  }
+
+  /** Returns current persistent guide map instance or null. */
+  function getGuideMap() {
+    return _guideMap;
+  }
+
+  /** Remove all guide markers and polylines from the map. */
+  function clearGuideMarkers() {
+    _guideMarkerList.forEach(m => {
+      if (m && typeof m.setMap === 'function') m.setMap(null);
+      if (m && typeof m.onRemove === 'function') m.onRemove();
+    });
+    _guideMarkerList = [];
+    if (_guidePolylineRef) {
+      if (typeof _guidePolylineRef.setMap === 'function') _guidePolylineRef.setMap(null);
+      _guidePolylineRef = null;
+    }
+  }
+
+  /**
+   * Place numbered circle markers for all stops + start marker + route polyline.
+   * @param {Object} plan - travel plan with stops, start_lat, start_lng
+   * @param {Function} onMarkerClick - callback(stopId) when marker is clicked
+   */
+  function setGuideMarkers(plan, onMarkerClick) {
+    clearGuideMarkers();
+    if (!_guideMap) return;
+
+    const stops = plan.stops || [];
+    const bounds = new google.maps.LatLngBounds();
+    let hasBounds = false;
+    const routePoints = [];
+
+    // Start marker ("S" badge)
+    if (plan.start_lat && plan.start_lng) {
+      const pos = { lat: plan.start_lat, lng: plan.start_lng };
+      const m = createDivMarker(_guideMap, pos,
+        '<div class="guide-marker" data-stop-id="start"><div class="guide-marker-num">S</div></div>',
+        null
+      );
+      _guideMarkerList.push(m);
+      bounds.extend(pos);
+      hasBounds = true;
+      routePoints.push(pos);
+    }
+
+    // Numbered stop markers
+    stops.forEach((stop, i) => {
+      const sLat = stop.lat;
+      const sLng = stop.lng;
+      if (!sLat || !sLng) return;
+
+      const pos = { lat: sLat, lng: sLng };
+      const stopId = String(stop.id);
+      const markerHtml = '<div class="guide-marker" data-stop-id="' + esc(stopId) + '">' +
+        '<div class="guide-marker-num">' + stop.id + '</div></div>';
+
+      const m = createDivMarker(_guideMap, pos, markerHtml, () => {
+        if (onMarkerClick) onMarkerClick(stopId);
+      });
+      m._stopId = stopId;
+      _guideMarkerList.push(m);
+      bounds.extend(pos);
+      hasBounds = true;
+      routePoints.push(pos);
+    });
+
+    // Driving route polyline (black, per D-11)
+    if (routePoints.length >= 2) {
+      GoogleMaps.renderDrivingRoute(_guideMap, routePoints, {
+        strokeColor: '#2D2B3D', strokeWeight: 3, strokeOpacity: 1.0,
+      }).then(r => { _guidePolylineRef = r; });
+    }
+
+    // Ferry segments as dashed polyline
+    stops.forEach((stop, i) => {
+      if (stop.is_ferry && i > 0) {
+        const prevStop = stops[i - 1];
+        const prevPos = prevStop ? { lat: prevStop.lat, lng: prevStop.lng } : (plan.start_lat ? { lat: plan.start_lat, lng: plan.start_lng } : null);
+        if (prevPos && stop.lat && stop.lng) {
+          const ferryPath = [
+            new google.maps.LatLng(prevPos.lat, prevPos.lng),
+            new google.maps.LatLng(stop.lat, stop.lng),
+          ];
+          const ferryLine = new google.maps.Polyline({
+            map: _guideMap,
+            path: ferryPath,
+            strokeColor: '#2D2B3D',
+            strokeWeight: 3,
+            strokeOpacity: 0,
+            icons: [{
+              icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, strokeColor: '#2D2B3D', scale: 3 },
+              offset: '0',
+              repeat: '14px',
+            }],
+          });
+          _guideMarkerList.push(ferryLine); // track for cleanup
+        }
+      }
+    });
+
+    // Fit bounds with padding
+    if (hasBounds) {
+      _guideMap.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+      google.maps.event.addListenerOnce(_guideMap, 'bounds_changed', () => {
+        if (_guideMap.getZoom() > 9) _guideMap.setZoom(9);
+      });
+    }
+  }
+
+  /**
+   * Highlight a specific marker (selected state) and deselect others.
+   * @param {string} stopId
+   */
+  function highlightGuideMarker(stopId) {
+    _guideMarkerList.forEach(m => {
+      if (!m || !m._div) return;
+      const markerEl = m._div.querySelector('.guide-marker-num');
+      if (!markerEl) return;
+      const parentEl = m._div.querySelector('.guide-marker');
+      const markerId = parentEl ? parentEl.dataset.stopId : null;
+      if (markerId === stopId) {
+        markerEl.classList.add('selected');
+      } else {
+        markerEl.classList.remove('selected');
+      }
+    });
+  }
+
+  /**
+   * Pan the guide map smoothly to a specific stop.
+   * @param {string} stopId
+   * @param {Array} stops - array of stop objects
+   */
+  function panToStop(stopId, stops) {
+    if (!_guideMap) return;
+    const stop = (stops || []).find(s => String(s.id) === stopId);
+    if (stop && stop.lat && stop.lng) {
+      _guideMap.panTo({ lat: stop.lat, lng: stop.lng });
+    }
+  }
+
+  /**
+   * Fit the guide map to show all stops.
+   * @param {Object} plan
+   */
+  function fitAllStops(plan) {
+    if (!_guideMap) return;
+    const bounds = new google.maps.LatLngBounds();
+    let hasBounds = false;
+
+    if (plan.start_lat && plan.start_lng) {
+      bounds.extend({ lat: plan.start_lat, lng: plan.start_lng });
+      hasBounds = true;
+    }
+    (plan.stops || []).forEach(s => {
+      if (s.lat && s.lng) {
+        bounds.extend({ lat: s.lat, lng: s.lng });
+        hasBounds = true;
+      }
+    });
+
+    if (hasBounds) {
+      _guideMap.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+    }
+  }
+
   return {
     _onApiReady,
     _setApiKey,
     initRouteMap,
     initGuideMap,
+    initPersistentGuideMap,
+    getGuideMap,
     initStopOverviewMap,
     createDivMarker,
     createPlaceMarker,
@@ -565,6 +764,11 @@ const GoogleMaps = (() => {
     getPlaceImages,
     renderDrivingRoute,
     resolveEntityCoordinates,
+    clearGuideMarkers,
+    setGuideMarkers,
+    highlightGuideMarker,
+    panToStop,
+    fitAllStops,
     get routeMap() { return _routeMap; },
     get guideMap()  { return _guideMap; },
   };

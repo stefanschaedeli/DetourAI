@@ -10,9 +10,18 @@ let _editInProgress = false;
 let _editSSE = null;
 let _dragStopSourceIndex = null;
 
+// Persistent map + bidirectional sync state
+let _scrollDebounce = null;
+let _lastPannedStopId = null;
+let _userInteractingWithMap = false;
+let _userInteractionTimeout = null;
+let _cardObserver = null;
+let _guideMapInitialized = false;
+
 function showTravelGuide(plan) {
   S.result = plan;
   if (typeof updateSidebar === 'function') updateSidebar();
+  _setupGuideMap(plan);
   renderGuide(plan, activeTab);
 }
 
@@ -30,7 +39,6 @@ function renderGuide(plan, tab) {
   switch (activeTab) {
     case 'overview':
       content.innerHTML = renderOverview(plan);
-      _initGuideMap(plan);
       break;
     case 'stops':
       _initializedStopMaps = new Set();
@@ -49,6 +57,7 @@ function renderGuide(plan, tab) {
         requestAnimationFrame(() => {
           _initGuideDelegation();
           _lazyLoadOverviewImages(plan);
+          _initScrollSync();
         });
       }
       break;
@@ -71,8 +80,10 @@ function renderGuide(plan, tab) {
     case 'budget':     content.innerHTML = renderBudget(plan);    break;
     default:
       content.innerHTML = renderOverview(plan);
-      _initGuideMap(plan);
   }
+
+  // Update persistent map for current tab
+  _updateMapForTab(plan, activeTab);
 
   // Fade-in animation on tab switch
   content.style.opacity = '0';
@@ -148,8 +159,6 @@ function renderOverview(plan) {
           `).join('')}
         </div>
       </div>
-
-      <div id="guide-map"></div>
 
       ${(plan.day_plans && plan.day_plans.length) ? `
       <div class="overview-dayplan-cta" onclick="switchGuideTab('days')">
@@ -1464,6 +1473,85 @@ function _initGuideMap(plan) {
       if (map.getZoom() > 9) map.setZoom(9);
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Persistent guide map + bidirectional sync (D-09, D-11)
+// ---------------------------------------------------------------------------
+
+/** Initialize the persistent guide map once. Reuses existing map on subsequent calls. */
+function _setupGuideMap(plan) {
+  if (typeof GoogleMaps === 'undefined' || !window.google) return;
+  const map = GoogleMaps.initPersistentGuideMap('guide-map', { center: { lat: 47, lng: 8 }, zoom: 6 });
+  if (!map) return;
+  GoogleMaps.setGuideMarkers(plan, _onMarkerClick);
+  _guideMapInitialized = true;
+
+  // Suppress auto-pan during user map interaction (Pitfall 4)
+  google.maps.event.addListener(map, 'dragstart', () => {
+    _userInteractingWithMap = true;
+    clearTimeout(_userInteractionTimeout);
+  });
+  google.maps.event.addListener(map, 'dragend', () => {
+    _userInteractionTimeout = setTimeout(() => { _userInteractingWithMap = false; }, 3000);
+  });
+}
+
+/** Update map view when switching tabs. */
+function _updateMapForTab(plan, tab) {
+  if (typeof GoogleMaps === 'undefined' || !_guideMapInitialized) return;
+  GoogleMaps.fitAllStops(plan);
+}
+
+/** Handle marker click: highlight marker and scroll to card. */
+function _onMarkerClick(stopId) {
+  if (typeof GoogleMaps !== 'undefined') GoogleMaps.highlightGuideMarker(stopId);
+  if (activeTab === 'stops') {
+    _scrollToAndHighlightCard(stopId);
+  } else {
+    _activeStopId = null;
+    switchGuideTab('stops');
+    requestAnimationFrame(() => {
+      setTimeout(() => _scrollToAndHighlightCard(stopId), 100);
+    });
+  }
+}
+
+/** Scroll content panel to a stop card and highlight it. */
+function _scrollToAndHighlightCard(stopId) {
+  const sel = '[data-stop-id="' + stopId + '"]';
+  const card = document.querySelector('.stop-card-row' + sel)
+    || document.querySelector('.stop-overview-card' + sel);
+  if (!card) return;
+  document.querySelectorAll('.stop-card-row.selected, .stop-overview-card.selected')
+    .forEach(el => el.classList.remove('selected'));
+  card.classList.add('selected');
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/** Set up IntersectionObserver on stop cards for auto-pan (D-09). */
+function _initScrollSync() {
+  if (_cardObserver) _cardObserver.disconnect();
+  if (typeof GoogleMaps === 'undefined') return;
+
+  _cardObserver = new IntersectionObserver((entries) => {
+    if (_userInteractingWithMap) return;
+    const visible = entries.find(e => e.isIntersecting);
+    if (!visible) return;
+    clearTimeout(_scrollDebounce);
+    _scrollDebounce = setTimeout(() => {
+      const stopId = visible.target.dataset.stopId;
+      if (stopId && stopId !== _lastPannedStopId) {
+        _lastPannedStopId = stopId;
+        GoogleMaps.panToStop(stopId, S.result?.stops || []);
+        GoogleMaps.highlightGuideMarker(stopId);
+      }
+    }, 300);
+  }, { threshold: 0.6 });
+
+  document.querySelectorAll('[data-stop-id]').forEach(card => {
+    _cardObserver.observe(card);
+  });
 }
 
 /**
