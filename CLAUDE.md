@@ -239,6 +239,28 @@ LOGS_DIR=/app/logs               # file logging dir (default: backend/logs/)
 
 ---
 
+## Local API Debugging (for Claude Code)
+
+All API endpoints require JWT authentication. To call protected endpoints locally:
+
+```bash
+# Token generieren (15 Min gültig, kein laufender Server nötig)
+TOKEN=$(cd /Users/stefan/Code/travelman3 && python3 scripts/dev-token.py)
+
+# Geschützte Endpoints aufrufen
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/auth/me
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/travels
+
+# SSE-Endpoints mit Query-Parameter
+curl -s "http://localhost:8000/api/progress/{job_id}/stream?token=$TOKEN"
+```
+
+- Bei 401-Fehler: Token neu generieren (gleicher Befehl)
+- Das Script liest `JWT_SECRET` aus `backend/.env` — kein DB-Zugriff nötig
+- Öffentliche Endpoints ohne Token: `/health`, `/api/maps-config`, `/api/log`
+
+---
+
 ## Testing Standards
 
 - **test_models.py:** Pydantic validation — valid inputs, invalid inputs, edge cases
