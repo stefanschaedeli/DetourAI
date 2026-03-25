@@ -36,7 +36,9 @@ from utils.maps_helper import (
     geocode_google, google_directions, google_directions_simple,
     reverse_geocode_google, reference_cities_along_route_google,
     build_maps_url, decode_polyline5, point_along_route, corridor_bbox,
+    bearing_degrees, bearing_deviation, proportional_corridor_buffer,
 )
+from utils.google_places import validate_stop_quality
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
@@ -841,6 +843,70 @@ async def _find_and_stream_options(
                         job_id=job_id, agent="StopOptionsFinder",
                     )
                     return None
+
+            # ------ Corridor check: proportional buffer (D-02, D-03, D-04) ------
+            segment_total_km = geo.get("segment_total_km", 0)
+            route_points = geo.get("_route_decoded", [])
+            if segment_total_km > 0 and route_points and not geo.get("rundreise_mode", False):
+                buffer_km = proportional_corridor_buffer(segment_total_km)
+                search_from = geo.get("search_from_km", 0)
+                search_to = geo.get("search_to_km", segment_total_km)
+                prop_box = corridor_bbox(route_points, search_from, search_to, buffer_km=buffer_km)
+                if prop_box:
+                    is_inside = (
+                        prop_box["min_lat"] <= coords[0] <= prop_box["max_lat"]
+                        and prop_box["min_lon"] <= coords[1] <= prop_box["max_lon"]
+                    )
+                    if not is_inside:
+                        # D-04: FLAG but do NOT reject -- user may have reasons for off-route stops
+                        opt["outside_corridor"] = True
+                        # Calculate approximate distance outside corridor
+                        clamp_lat = max(prop_box["min_lat"], min(coords[0], prop_box["max_lat"]))
+                        clamp_lon = max(prop_box["min_lon"], min(coords[1], prop_box["max_lon"]))
+                        opt["corridor_distance_km"] = round(
+                            _haversine_km(coords, (clamp_lat, clamp_lon)), 1
+                        )
+                        await debug_logger.log(
+                            LogLevel.INFO,
+                            f"  Ausserhalb Korridor ({opt['corridor_distance_km']:.0f} km): {place}",
+                            job_id=job_id, agent="StopOptionsFinder",
+                        )
+
+            # ------ Bearing check: detect backtracking (D-09, D-10) ------
+            if prev_coords and target_coords and not geo.get("rundreise_mode", False):
+                d_prev_to_stop = _haversine_km(prev_coords, coords)
+                if d_prev_to_stop > 20:  # Skip bearing check for very short distances (unreliable)
+                    route_bearing = bearing_degrees(prev_coords, target_coords)
+                    stop_bearing = bearing_degrees(prev_coords, coords)
+                    deviation = bearing_deviation(route_bearing, stop_bearing)
+                    if deviation > 90:
+                        await debug_logger.log(
+                            LogLevel.DEBUG,
+                            f"  Verworfen (Backtracking: {deviation:.0f} Grad Abweichung): {place}",
+                            job_id=job_id, agent="StopOptionsFinder",
+                        )
+                        return None
+
+            # ------ Quality check: Google Places validation (D-07, D-08) ------
+            try:
+                is_quality, reason = await validate_stop_quality(
+                    opt.get("region", ""), opt.get("country", ""),
+                    coords[0], coords[1]
+                )
+                if not is_quality:
+                    await debug_logger.log(
+                        LogLevel.DEBUG,
+                        f"  Verworfen (Qualitaet: {reason}): {place}",
+                        job_id=job_id, agent="StopOptionsFinder",
+                    )
+                    return None  # Silent rejection -- triggers re-ask in the existing retry logic
+            except Exception as e:
+                # Quality check failure should not block the pipeline
+                await debug_logger.log(
+                    LogLevel.WARNING,
+                    f"  Qualitaetspruefung fehlgeschlagen ({e}): {place} -- wird akzeptiert",
+                    job_id=job_id, agent="StopOptionsFinder",
+                )
 
             return opt
 

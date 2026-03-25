@@ -180,6 +180,30 @@ async def text_search(query: str, location_bias: tuple[float, float] = None) -> 
         return []
 
 
+async def validate_stop_quality(region: str, country: str, lat: float, lon: float) -> tuple[bool, str]:
+    """Check stop quality via Google Places. Returns (is_quality, reason).
+    Uses find_place_from_text as first pass (cheapest API call).
+    Only calls nearby_search if first check passes -- controls API cost."""
+    # Strategy 1: Does this place exist in Google Places?
+    result = await find_place_from_text(f"{region}, {country}")
+    if not result:
+        return False, "Kein Google Places Ergebnis"
+
+    # Strategy 2: Check nearby tourist attractions (does this place have interesting things?)
+    attractions = await nearby_search(lat, lon, "tourist_attraction", radius_m=5000)
+    if len(attractions) < 2:
+        return False, f"Zu wenige Sehenswuerdigkeiten ({len(attractions)})"
+
+    # Strategy 3: Check average rating of nearby attractions
+    rated = [a for a in attractions if a.get("rating")]
+    if rated:
+        avg_rating = sum(a["rating"] for a in rated) / len(rated)
+        if avg_rating < 3.0:
+            return False, f"Niedrige durchschnittliche Bewertung: {avg_rating:.1f}"
+
+    return True, "OK"
+
+
 async def search_restaurants(lat: float, lon: float, radius_m: int = 10000) -> list[dict]:
     """Convenience: Restaurants in der Nähe."""
     return await nearby_search(lat, lon, "restaurant", radius_m)

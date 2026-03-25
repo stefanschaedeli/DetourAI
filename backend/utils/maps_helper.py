@@ -185,17 +185,6 @@ def haversine_km(c1: tuple[float, float], c2: tuple[float, float]) -> float:
     return 6371 * 2 * math.asin(math.sqrt(a))
 
 
-def bearing_degrees(c1: tuple[float, float], c2: tuple[float, float]) -> float:
-    """Initial bearing in degrees (0-360) from c1 to c2, both (lat, lon)."""
-    lat1, lon1 = math.radians(c1[0]), math.radians(c1[1])
-    lat2, lon2 = math.radians(c2[0]), math.radians(c2[1])
-    dlon = lon2 - lon1
-    x = math.sin(dlon) * math.cos(lat2)
-    y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
-    bearing = math.degrees(math.atan2(x, y))
-    return (bearing + 360) % 360
-
-
 def point_along_route(points: list[tuple[float, float]], target_km: float) -> tuple[float, float]:
     """Returns the (lat, lon) at target_km along the decoded polyline."""
     if not points:
