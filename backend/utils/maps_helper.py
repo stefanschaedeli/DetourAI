@@ -240,6 +240,29 @@ def corridor_bbox(
     }
 
 
+def bearing_degrees(from_coord: tuple[float, float], to_coord: tuple[float, float]) -> float:
+    """Calculate initial bearing from from_coord to to_coord in degrees (0-360)."""
+    lat1, lon1 = math.radians(from_coord[0]), math.radians(from_coord[1])
+    lat2, lon2 = math.radians(to_coord[0]), math.radians(to_coord[1])
+    dlon = lon2 - lon1
+    x = math.sin(dlon) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
+    bearing = math.degrees(math.atan2(x, y))
+    return (bearing + 360) % 360
+
+
+def bearing_deviation(bearing1: float, bearing2: float) -> float:
+    """Absolute angular difference between two bearings (0-180)."""
+    diff = abs(bearing1 - bearing2) % 360
+    return min(diff, 360 - diff)
+
+
+def proportional_corridor_buffer(leg_distance_km: float) -> float:
+    """Buffer in km = 20% of leg distance, clamped to [15, 100] km."""
+    buffer = leg_distance_km * 0.20
+    return max(15.0, min(buffer, 100.0))
+
+
 def build_maps_url(locations: list[str], place_ids: list[str] = None) -> Optional[str]:
     """Builds Google Maps Directions URL. Uses Place IDs when available."""
     locs = [l for l in locations if l]

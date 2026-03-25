@@ -30,7 +30,7 @@ class StopOptionsFinderAgent:
         self.request = request
         self.job_id = job_id
         self.client = get_client()
-        self.model = get_model("claude-haiku-4-5", AGENT_KEY)
+        self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
 
     def _build_prompt(
         self,
