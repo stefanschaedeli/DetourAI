@@ -45,7 +45,11 @@ Plans:
   2. Stop coordinates for island destinations resolve to actual island locations, never to nearby mainland points
   3. When Google Directions returns no route for a water crossing, the system constructs a ferry-aware alternative instead of failing
   4. Ferry travel time is deducted from the daily driving budget so days with ferry crossings have realistic schedules
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Ferry utilities, island lookup table, model extensions, tests
+- [ ] 02-02-PLAN.md — Agent prompt updates, route enrichment ferry fallback, corridor bypass
 
 ### Phase 3: Route Editing
 **Goal**: Users can directly modify their planned route by adding, removing, reordering, and replacing stops
@@ -91,7 +95,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. AI Quality Stabilization | 2/3 | In Progress|  |
-| 2. Geographic Routing | 0/? | Not started | - |
+| 2. Geographic Routing | 0/2 | Planned | - |
 | 3. Route Editing | 0/? | Not started | - |
 | 4. Map-Centric Responsive Layout | 0/? | Not started | - |
 | 5. Sharing & Cleanup | 0/? | Not started | - |
