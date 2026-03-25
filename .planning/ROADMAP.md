@@ -64,9 +64,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Shared route edit helpers, edit lock, Celery tasks (remove/add/reorder) + tests
-- [ ] 03-02-PLAN.md — API endpoints, _fire_task registration, edit lock integration, replace-stop hints + endpoint tests
-- [ ] 03-03-PLAN.md — Frontend edit controls (remove, add modal, drag-and-drop reorder, SSE handlers, replace hints UI)
+- [x] 03-01-PLAN.md — Shared route edit helpers, edit lock, Celery tasks (remove/add/reorder) + tests
+- [x] 03-02-PLAN.md — API endpoints, _fire_task registration, edit lock integration, replace-stop hints + endpoint tests
+- [x] 03-03-PLAN.md — Frontend edit controls (remove, add modal, drag-and-drop reorder, SSE handlers, replace hints UI)
 
 ### Phase 4: Map-Centric Responsive Layout
 **Goal**: The app uses a modern map-centric layout that works well on both desktop and mobile browsers
