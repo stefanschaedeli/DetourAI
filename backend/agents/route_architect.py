@@ -8,6 +8,7 @@ AGENT_KEY = "route_architect"
 
 SYSTEM_PROMPT = (
     "Du bist ein Reiseplaner für Familien. "
+    "Du pruefst die Plausibilitaet von Reisewuenschen und planst optimale Routen. "
     "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. "
     "Kein Markdown, keine Erklärungen, nur JSON."
 )
@@ -46,6 +47,32 @@ class RouteArchitectAgent:
             acts = [f"{a.name}" + (f" ({a.location})" if a.location else "") for a in req.mandatory_activities]
             mandatory_str = f"Pflichtaktivitäten: {', '.join(acts)}\n"
 
+        # Travel style routing block (D-06)
+        style_block = ""
+        if req.travel_styles:
+            styles_str = ", ".join(req.travel_styles)
+            style_block = (
+                f"\nROUTENPLANUNG NACH REISESTIL: Die Route soll durch Regionen fuehren, die zum "
+                f"Reisestil \"{styles_str}\" passen. Beispiel: Bei \"Strand\" -> Kuestenroute bevorzugen. "
+                f"Bei \"Kultur\" -> Route durch historisch bedeutsame Regionen. "
+                f"Bei \"Berge\" -> Alpenuebergaenge und Bergregionen. "
+                f"Bei \"Natur\" -> Nationalparks und Naturschutzgebiete.\n"
+            )
+
+        # Plausibility check block (D-11, D-12)
+        plausibility_block = ""
+        if req.travel_styles:
+            styles_str = ", ".join(req.travel_styles)
+            plausibility_block = (
+                f"\nPLAUSIBILITAETSPRUEFUNG: Pruefe ob die angegebenen Reisestile ({styles_str}) "
+                f"geographisch zum Zielgebiet ({req.main_destination}) passen. Wenn ein Reisestil "
+                f"im Zielgebiet nicht umsetzbar ist (z.B. \"Vulkane\" in Frankreich, \"Strand\" in den Alpen), "
+                f"fuege ein \"plausibility_warning\" Feld zum JSON hinzu mit:\n"
+                f"- \"warning\": Erklaerung auf Deutsch warum der Stil nicht zum Ziel passt\n"
+                f"- \"suggestions\": Liste von 2-3 alternativen Reisestilen die besser passen\n"
+                f"Wenn alle Stile zum Ziel passen, KEIN plausibility_warning Feld einfuegen.\n"
+            )
+
         prompt = f"""Plane eine Reiseroute mit Zwischenstopps:
 
 Start: {req.start_location}
@@ -57,8 +84,7 @@ Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
 Maximale Fahrzeit pro Tag: {req.max_drive_hours_per_day}h
 Nächte pro Stop: {req.min_nights_per_stop}–{req.max_nights_per_stop}
 Budget: CHF {req.budget_chf:,.0f}
-{mandatory_str}
-
+{mandatory_str}{style_block}{plausibility_block}
 Erstelle eine optimale Route. Der erste Stop MUSS der Startort sein, der letzte Stop MUSS das Hauptziel sein.
 Dazwischen plane 2–5 sinnvolle Zwischenstopps. Verteile die Tage sinnvoll.
 Gib genau dieses JSON zurück:
@@ -93,4 +119,20 @@ Gib genau dieses JSON zurück:
             job_id=self.job_id, agent="RouteArchitect",
         )
 
-        return parse_agent_json(text)
+        parsed = parse_agent_json(text)
+
+        # Plausibility challenge -- fire-and-forget SSE warning (per D-13)
+        if parsed.get("plausibility_warning"):
+            pw = parsed["plausibility_warning"]
+            await debug_logger.push_event(self.job_id, "style_mismatch_warning", {
+                "warning": pw.get("warning", ""),
+                "suggestions": pw.get("suggestions", []),
+                "original_styles": req.travel_styles,
+            })
+            await debug_logger.log(
+                LogLevel.INFO,
+                f"Plausibilitaetswarnung: {pw.get('warning', '')}",
+                job_id=self.job_id, agent="RouteArchitect",
+            )
+
+        return parsed
