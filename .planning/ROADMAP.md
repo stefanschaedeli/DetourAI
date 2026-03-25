@@ -78,8 +78,15 @@ Plans:
   3. Stops appear as visual cards with photos, key facts, and travel style tags instead of plain text lists
   4. The day-by-day timeline is scrollable and each day can be expanded to show full details
   5. A dashboard overview shows key trip stats: total days, number of stops, total distance, and remaining budget
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 6 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Backend model extension (TravelStop tags/teaser/highlights) + HTML/CSS split-panel skeleton
+- [ ] 04-02-PLAN.md — Persistent map panel, numbered markers, black polyline, bidirectional sync
+- [ ] 04-03-PLAN.md — Stop cards with photos/tags/edit controls + stats bar
+- [ ] 04-04-PLAN.md — Day timeline with expand/collapse + sidebar overlay + mobile polish
+- [ ] 04-05-PLAN.md — Click-to-add-stop on map (reverse geocode + insert)
+- [ ] 04-06-PLAN.md — Visual verification checkpoint (all UIR requirements)
 
 ### Phase 5: Sharing & Cleanup
 **Goal**: Users can share trip plans via public links and the deprecated PDF/PPTX export is removed
@@ -102,5 +109,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. AI Quality Stabilization | 2/3 | In Progress|  |
 | 2. Geographic Routing | 0/2 | Planned | - |
 | 3. Route Editing | 0/3 | Complete    | 2026-03-25 |
-| 4. Map-Centric Responsive Layout | 0/? | Not started | - |
+| 4. Map-Centric Responsive Layout | 0/6 | Planned | - |
 | 5. Sharing & Cleanup | 0/? | Not started | - |
