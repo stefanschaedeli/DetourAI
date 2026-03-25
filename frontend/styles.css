@@ -4783,3 +4783,104 @@ strong.req-keyword {
 @media (min-width: 769px) {
   .sidebar-mobile-toggle { display: none !important; }
 }
+
+/* ── Route Editing UI ── */
+
+.btn-icon-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background .15s ease, color .15s ease;
+}
+.btn-icon-danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.stops-overview-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.stop-overview-card[draggable] { cursor: grab; }
+.stop-overview-card.dragging { opacity: 0.5; }
+.stop-overview-card.drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+.stop-overview-card-inner {
+  display: flex;
+  align-items: stretch;
+}
+.stop-overview-card-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  flex-shrink: 0;
+  transition: color .15s ease;
+}
+.drag-handle:hover { color: var(--text-primary); }
+
+/* Modal Backdrop (generic) */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: var(--card, #fff);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  max-width: 480px;
+  width: 90%;
+}
+.modal-content h3 {
+  margin: 0 0 1rem;
+}
+.modal-content p {
+  margin: 0 0 1rem;
+  color: var(--text-sub);
+  line-height: 1.5;
+}
+.modal-content .form-group {
+  margin-bottom: 1rem;
+}
+.modal-content .form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+.modal-content .form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
