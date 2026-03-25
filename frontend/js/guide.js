@@ -78,16 +78,9 @@ function renderGuide(plan, tab) {
       _initCalendarClicks(plan);
       break;
     case 'days':
-      if (_activeDayNum !== null) {
-        content.innerHTML = renderDayDetail(plan, _activeDayNum);
-        requestAnimationFrame(() => {
-          _initGuideDelegation();
-          _initDayDetailMap(plan, _activeDayNum);
-        });
-      } else {
-        content.innerHTML = renderDaysOverview(plan);
-        requestAnimationFrame(() => _initGuideDelegation());
-      }
+      // Note: innerHTML usage is XSS-safe — all user content passed through esc()
+      content.innerHTML = renderDaysOverview(plan);
+      requestAnimationFrame(() => _initGuideDelegation());
       break;
     case 'budget':     content.innerHTML = renderBudget(plan);    break;
     default:
@@ -595,38 +588,82 @@ function _findStopsForDay(plan, dayNum) {
 
 function renderDaysOverview(plan) {
   const dayPlans = plan.day_plans || [];
-  const stops = plan.stops || [];
-  const typeLabel = { drive: 'Fahrt', rest: 'Entspannen', activity: 'Erlebnis', mixed: 'Gemischt' };
-  const typeColor = { drive: 'var(--accent)', rest: '#7C6BE0', activity: '#E8A84C', mixed: '#5AB8A0' };
+  if (!dayPlans.length) return '<p class="day-timeline-empty">Keine Tagesplaene vorhanden.</p>';
 
-  const cards = dayPlans.map(dp => {
+  const typeLabel = { drive: 'Fahrt', rest: 'Entspannen', activity: 'Erlebnis', mixed: 'Gemischt' };
+  const chevronSvg = '<svg class="day-expand-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>';
+
+  const items = dayPlans.map(dp => {
     const type = (dp.type || 'mixed').toLowerCase();
     const dayStops = _findStopsForDay(plan, dp.day);
-    const stopInfo = dayStops.map(s => `${FLAGS[s.country] || ''} ${esc(s.region)}`).join(', ');
-    const desc = (dp.description || '').length > 120 ? dp.description.substring(0, 120) + '…' : (dp.description || '');
+
+    // Build summary: "Start nach End -- Xh Fahrt"
+    let summaryText = '';
+    if (dayStops.length >= 2) {
+      summaryText = `${esc(dayStops[0].region || dayStops[0].name)} nach ${esc(dayStops[dayStops.length - 1].region || dayStops[dayStops.length - 1].name)}`;
+    } else if (dayStops.length === 1) {
+      summaryText = esc(dayStops[0].region || dayStops[0].name);
+    }
+    // Calculate total drive hours from time blocks
+    const driveBlocks = (dp.time_blocks || []).filter(tb => tb.activity_type === 'drive');
+    const driveMinutes = driveBlocks.reduce((sum, tb) => sum + (tb.duration_minutes || 0), 0);
+    if (driveMinutes > 0) {
+      const hrs = (driveMinutes / 60).toFixed(1).replace('.0', '');
+      summaryText += (summaryText ? ' \u2014 ' : '') + hrs + 'h Fahrt';
+    }
+
+    // Expanded detail: title, description, time blocks
+    const detailHtml = `
+      <h3>${esc(dp.title)}</h3>
+      ${dp.description ? '<p>' + esc(dp.description) + '</p>' : ''}
+      ${dp.stops_on_route && dp.stops_on_route.length ? '<div class="day-overview-route">' + dp.stops_on_route.map(s => '<span class="day-route-tag">' + esc(s) + '</span>').join(' \u2192 ') + '</div>' : ''}
+      ${renderDayTimeBlocks(dp)}
+    `;
 
     return `
-      <div class="day-overview-card" data-day-num="${dp.day}" style="border-left-color: ${typeColor[type] || typeColor.mixed}">
-        <div class="day-overview-card-body">
-          <div class="day-overview-top">
-            <span class="day-overview-num">Tag ${dp.day}</span>
-            ${dp.date ? `<span class="day-overview-date">${esc(dp.date)}</span>` : ''}
+      <div class="day-timeline-item" data-day="${dp.day}">
+        <div class="day-timeline-node"></div>
+        <div class="day-timeline-content">
+          <div class="day-timeline-header" role="listitem" aria-expanded="false" data-day-num="${dp.day}">
+            <span class="day-timeline-num">Tag ${dp.day}</span>
+            <span class="day-timeline-summary">${summaryText}</span>
             <span class="day-type-badge type-${esc(type)}">${typeLabel[type] || esc(dp.type)}</span>
+            ${chevronSvg}
           </div>
-          <h3>${esc(dp.title)}</h3>
-          <p class="day-overview-desc">${esc(desc)}</p>
-          ${stopInfo ? `<div class="day-overview-stop">${stopInfo}</div>` : ''}
-          ${dp.stops_on_route.length ? `<div class="day-overview-route">${dp.stops_on_route.map(s => `<span class="day-route-tag">${esc(s)}</span>`).join(' → ')}</div>` : ''}
+          <div class="day-timeline-detail" id="day-detail-${dp.day}" style="display:none">
+            ${detailHtml}
+          </div>
         </div>
       </div>
     `;
   }).join('');
 
-  return `
-    <div class="days-overview-grid">
-      ${cards}
-    </div>
-  `;
+  return '<div class="day-timeline" role="list">' + items + '</div>';
+}
+
+function _toggleDayExpand(dayNum) {
+  const detail = document.getElementById('day-detail-' + dayNum);
+  if (!detail) return;
+  const header = detail.previousElementSibling;
+  const isExpanded = detail.style.display !== 'none';
+  // Collapse all others first
+  document.querySelectorAll('.day-timeline-detail').forEach(d => {
+    d.style.display = 'none';
+    if (d.previousElementSibling) {
+      d.previousElementSibling.setAttribute('aria-expanded', 'false');
+      const chev = d.previousElementSibling.querySelector('.day-expand-chevron');
+      if (chev) chev.classList.remove('rotated');
+    }
+  });
+  if (!isExpanded) {
+    detail.style.display = 'block';
+    if (header) {
+      header.setAttribute('aria-expanded', 'true');
+      const chev = header.querySelector('.day-expand-chevron');
+      if (chev) chev.classList.add('rotated');
+    }
+    detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
 
 function renderDayDetail(plan, dayNum) {
@@ -1284,7 +1321,15 @@ function _initGuideDelegation() {
       return;
     }
 
-    // Day overview card → navigate to day detail
+    // Day timeline header → toggle inline expand/collapse
+    const dayTimelineHeader = e.target.closest('.day-timeline-header');
+    if (dayTimelineHeader) {
+      const dayNum = dayTimelineHeader.dataset.dayNum;
+      if (dayNum) _toggleDayExpand(dayNum);
+      return;
+    }
+
+    // Day overview card → navigate to day detail (legacy fallback)
     const dayCard = e.target.closest('.day-overview-card');
     if (dayCard) {
       const dayNum = dayCard.dataset.dayNum;
