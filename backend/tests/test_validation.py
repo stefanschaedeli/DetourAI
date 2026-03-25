@@ -1,6 +1,7 @@
 """Tests for AI quality validation utilities (Phase 01)."""
 import sys, os, math
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from utils.maps_helper import bearing_degrees, bearing_deviation, proportional_corridor_buffer
@@ -141,3 +142,86 @@ class TestStopOptionsFinderModel:
             source = f.read()
         assert 'get_model("claude-sonnet-4-5"' in source
         assert 'get_model("claude-haiku-4-5"' not in source
+
+
+class TestQualityValidationReject:
+    """AIQ-04: validate_stop_quality rejects low-quality stops."""
+
+    @pytest.mark.asyncio
+    async def test_quality_validation_reject_no_place(self):
+        """Reject when Google Places finds no results for the region."""
+        with patch("utils.google_places.find_place_from_text", new_callable=AsyncMock, return_value=None):
+            from utils.google_places import validate_stop_quality
+            is_quality, reason = await validate_stop_quality("FakeVillage", "XX", 0.0, 0.0)
+            assert is_quality is False
+            assert "Kein Google Places Ergebnis" in reason
+
+    @pytest.mark.asyncio
+    async def test_quality_validation_reject_few_attractions(self):
+        """Reject when too few tourist attractions nearby."""
+        with patch("utils.google_places.find_place_from_text", new_callable=AsyncMock, return_value={"name": "Test"}), \
+             patch("utils.google_places.nearby_search", new_callable=AsyncMock, return_value=[{"name": "one"}]):
+            from utils.google_places import validate_stop_quality
+            is_quality, reason = await validate_stop_quality("SmallVillage", "FR", 47.0, 7.0)
+            assert is_quality is False
+            assert "Zu wenige" in reason
+
+    @pytest.mark.asyncio
+    async def test_quality_validation_reject_low_rating(self):
+        """Reject when average attraction rating is below 3.0."""
+        attractions = [
+            {"name": "A", "rating": 2.0},
+            {"name": "B", "rating": 2.5},
+            {"name": "C", "rating": 2.8},
+        ]
+        with patch("utils.google_places.find_place_from_text", new_callable=AsyncMock, return_value={"name": "Test"}), \
+             patch("utils.google_places.nearby_search", new_callable=AsyncMock, return_value=attractions):
+            from utils.google_places import validate_stop_quality
+            is_quality, reason = await validate_stop_quality("BadTown", "DE", 48.0, 8.0)
+            assert is_quality is False
+            assert "Niedrige" in reason
+
+    @pytest.mark.asyncio
+    async def test_quality_validation_accept(self):
+        """Accept when place has sufficient high-rated attractions."""
+        attractions = [
+            {"name": "A", "rating": 4.5},
+            {"name": "B", "rating": 4.2},
+            {"name": "C", "rating": 3.8},
+        ]
+        with patch("utils.google_places.find_place_from_text", new_callable=AsyncMock, return_value={"name": "Annecy"}), \
+             patch("utils.google_places.nearby_search", new_callable=AsyncMock, return_value=attractions):
+            from utils.google_places import validate_stop_quality
+            is_quality, reason = await validate_stop_quality("Annecy", "FR", 45.9, 6.13)
+            assert is_quality is True
+            assert reason == "OK"
+
+
+class TestSilentReask:
+    """AIQ-04/D-08: Quality rejection returns None from _enrich_one, triggering re-ask."""
+
+    def test_silent_reask_pipeline_design(self):
+        """Verify that validate_stop_quality returning False leads to None return in _enrich_one.
+
+        This is a design-level test: we verify that main.py contains the pattern where
+        validate_stop_quality failure returns None (which triggers the existing retry loop).
+        Integration testing of the full _enrich_one pipeline requires a running server,
+        so we verify the code pattern statically."""
+        main_file = os.path.join(os.path.dirname(__file__), "..", "main.py")
+        with open(main_file) as f:
+            source = f.read()
+        # Verify the quality check pattern: call validate_stop_quality, return None on failure
+        assert "validate_stop_quality" in source, "main.py must call validate_stop_quality"
+        assert "is_quality" in source or "not is_quality" in source, "main.py must check quality result"
+        # Verify the silent rejection pattern (return None after quality failure)
+        # The pattern: if not is_quality: ... return None
+        lines = source.split("\n")
+        found_quality_reject = False
+        for i, line in enumerate(lines):
+            if "not is_quality" in line:
+                # Look for return None within the next 10 lines
+                for j in range(i + 1, min(i + 11, len(lines))):
+                    if "return None" in lines[j]:
+                        found_quality_reject = True
+                        break
+        assert found_quality_reject, "main.py must return None after quality validation failure (silent rejection per D-08)"
