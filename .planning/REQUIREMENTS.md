@@ -25,11 +25,11 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### User Route Control
 
-- [ ] **CTL-01**: User can remove a stop from the proposed route
-- [ ] **CTL-02**: User can add a custom stop to the route at any position
-- [ ] **CTL-03**: User can reorder stops in the route sequence via drag-and-drop
-- [ ] **CTL-04**: User can replace a stop with guided "find something else" flow (e.g., "more beach", "less driving")
-- [ ] **CTL-05**: Route metrics (total distance, driving time, budget) update after any route modification
+- [x] **CTL-01**: User can remove a stop from the proposed route
+- [x] **CTL-02**: User can add a custom stop to the route at any position
+- [x] **CTL-03**: User can reorder stops in the route sequence via drag-and-drop
+- [x] **CTL-04**: User can replace a stop with guided "find something else" flow (e.g., "more beach", "less driving")
+- [x] **CTL-05**: Route metrics (total distance, driving time, budget) update after any route modification
 
 ### UI Redesign
 
@@ -95,11 +95,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GEO-03 | Phase 2 | Complete |
 | GEO-04 | Phase 2 | Complete |
 | GEO-05 | Phase 2 | Complete |
-| CTL-01 | Phase 3 | Pending |
-| CTL-02 | Phase 3 | Pending |
-| CTL-03 | Phase 3 | Pending |
-| CTL-04 | Phase 3 | Pending |
-| CTL-05 | Phase 3 | Pending |
+| CTL-01 | Phase 3 | Complete |
+| CTL-02 | Phase 3 | Complete |
+| CTL-03 | Phase 3 | Complete |
+| CTL-04 | Phase 3 | Complete |
+| CTL-05 | Phase 3 | Complete |
 | UIR-01 | Phase 4 | Pending |
 | UIR-02 | Phase 4 | Pending |
 | UIR-03 | Phase 4 | Pending |

@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: AI Quality Stabilization** - Fix model bug, coordinate validation, travel style enforcement, and stop quality consistency
 - [ ] **Phase 2: Geographic Routing** - Island-aware routing with ferry detection, port awareness, and water crossing fallbacks
-- [ ] **Phase 3: Route Editing** - User controls to add, remove, reorder, and replace stops with live metric updates
+- [x] **Phase 3: Route Editing** - User controls to add, remove, reorder, and replace stops with live metric updates (completed 2026-03-25)
 - [ ] **Phase 4: Map-Centric Responsive Layout** - Split-panel map-hero design, mobile responsive, photo cards, timeline, dashboard
 - [ ] **Phase 5: Sharing & Cleanup** - Public shareable trip links and removal of deprecated PDF/PPTX export
 
@@ -61,7 +61,7 @@ Plans:
   3. User can drag stops to reorder the route sequence
   4. User can replace a stop with a guided flow that finds alternatives matching specific criteria (e.g., "more beach", "less driving")
   5. After any route modification, total distance, driving time, and budget estimates update immediately
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 03-01-PLAN.md — Shared route edit helpers, edit lock, Celery tasks (remove/add/reorder) + tests
@@ -101,6 +101,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. AI Quality Stabilization | 2/3 | In Progress|  |
 | 2. Geographic Routing | 0/2 | Planned | - |
-| 3. Route Editing | 0/3 | Planned | - |
+| 3. Route Editing | 0/3 | Complete    | 2026-03-25 |
 | 4. Map-Centric Responsive Layout | 0/? | Not started | - |
 | 5. Sharing & Cleanup | 0/? | Not started | - |

@@ -36,10 +36,10 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - [x] Ensure stop finder respects travel style preferences (beach/ocean focus not overridden by mountain stops) — Validated in Phase 1
 - [x] Consistent stop quality — eliminate random low-quality suggestions — Validated in Phase 1
 - [x] Driving efficiency — reduce unnecessary zigzag and backtracking in routes — Validated in Phase 1
-- [ ] User can edit stops manually (rename, move, add, remove)
+- [x] User can edit stops manually (rename, move, add, remove) — Validated in Phase 3
 - [ ] User can adjust preferences mid-planning and regenerate affected parts
-- [ ] User can replace individual stops with guided "find something else" flow
-- [ ] User can reorder stops in the route sequence
+- [x] User can replace individual stops with guided "find something else" flow — Validated in Phase 3
+- [x] User can reorder stops in the route sequence — Validated in Phase 3
 - [ ] Responsive web design — full mobile browser support
 - [ ] UI redesign: map-centric layout with the route map as hero element
 - [ ] UI redesign: card-based stop presentation with photos (Airbnb/Google Travel style)
@@ -104,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-25 after Phase 2 completion*
+*Last updated: 2026-03-25 after Phase 3 completion*
