@@ -31,8 +31,8 @@ Declared values (must be multiples of 4). Uses existing CSS custom properties fr
 
 | Token | Value | CSS Variable | Usage |
 |-------|-------|-------------|-------|
-| xs | 4px | `--space-xs` | Icon gaps, inline padding, tag pill internal spacing |
-| sm | 8px | `--space-sm` | Compact element spacing, card info line gaps |
+| xs | 4px | `--space-xs` | Icon gaps, inline padding, tag pill vertical padding |
+| sm | 8px | `--space-sm` | Compact element spacing, card info line gaps, tag pill horizontal padding |
 | md | 16px | `--space-md` | Default element spacing, card content padding |
 | lg | 24px | `--space-lg` | Section padding, card outer gaps |
 | xl | 32px | `--space-xl` | Layout gaps between map and content panels |
@@ -47,19 +47,23 @@ Exceptions:
 
 ## Typography
 
-Uses existing `--font-primary` (Inter) from `styles.css`. Phase 4 uses 4 size roles:
+Uses existing `--font-primary` (Inter) from `styles.css`. Phase 4 uses 4 size roles and 2 weights only:
 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 16px (`--text-base`) | 400 | 1.5 | Stop card description text, day detail content |
-| Label | 14px (`--text-sm`) | 500 | 1.4 | Drive time, nights, tag pills, stat labels, overlines |
+| Label | 14px (`--text-sm`) | 400 | 1.4 | Drive time, nights, tag pills, stat labels, overlines |
 | Heading | 20px (`--text-xl`) | 600 | 1.2 | Stop card name, day heading, tab titles |
-| Display | 32px (`--text-3xl`) | 700 | 1.1 | Stats bar numbers (total days, distance, budget) |
+| Display | 32px (`--text-3xl`) | 600 | 1.1 | Stats bar numbers (total days, distance, budget) |
+
+Weight map (only 2 weights used):
+- **400 (regular):** Body text, labels, descriptions, tag pills, stat labels, tab text (inactive)
+- **600 (semibold):** Headings, display numbers, stop number badges, map marker numbers, active tab text, CTA buttons
 
 Additional constraints:
-- Stop number badge on cards: 14px weight 700, white on `--accent-primary` circle
+- Stop number badge on cards: 14px weight 600, white on `--accent-primary` circle
 - Edit icon buttons: 20px icon size, no text label
-- Map marker number badge: 14px weight 700
+- Map marker number badge: 14px weight 600
 
 ---
 
@@ -116,6 +120,8 @@ Additional semantic colors:
 - Map panel: `position: fixed; left: 0; top: 0; width: 58%; height: 100vh;`
 - Content panel: `margin-left: 58%; width: 42%; overflow-y: auto; height: 100vh;`
 - Sidebar overlay: positioned absolutely over map panel, left edge, collapsible with toggle button
+
+**Primary visual anchor:** The active/selected stop card is the primary visual anchor of the content panel.
 
 ### Tablet (768px -- 1099px)
 
@@ -176,18 +182,18 @@ Additional semantic colors:
 - Selected state: `border-left: 3px solid var(--accent-primary)`, subtle `box-shadow: 0 4px 16px rgba(124,107,224,0.12)`
 - Info area: flex column, gap `var(--space-xs)` (4px) between lines
 - Stop number + name: heading role (20px/600), single line with ellipsis overflow
-- Drive time: label role (14px/500), `color: var(--text-secondary)`
-- Nights: label role (14px/500), `color: var(--text-secondary)`
-- Tags: inline flex, gap 4px. Each tag is a pill: `font-size: 12px`, `font-weight: 500`, `padding: 2px 8px`, `border-radius: 980px`, `background: var(--surface-active)`, `color: var(--accent-primary)`
+- Drive time: label role (14px/400), `color: var(--text-secondary)`
+- Nights: label role (14px/400), `color: var(--text-secondary)`
+- Tags: inline flex, gap 4px. Each tag is a pill: `font-size: 14px` (`--text-sm`), `font-weight: 400`, `padding: var(--space-xs) var(--space-sm)` (4px 8px), `border-radius: 980px`, `background: var(--surface-active)`, `color: var(--accent-primary)`
 - Description: body role (16px/400), `color: var(--text-secondary)`, max 2 lines with `-webkit-line-clamp: 2`
 - Edit icons row: bottom-right of card, flex row, gap 8px. Icons: remove (X), reorder (grip), replace (refresh). Each 20px SVG, `color: var(--text-muted)`, hover `color: var(--accent-primary)`. Remove hover: `color: var(--accent-warm)`
 
 ### Stats Bar (UIR-05)
 
 - Container: flex row (desktop) / 2x2 grid (mobile), gap `var(--space-sm)` (8px)
-- Each stat pill: `background: var(--surface-card)`, `border: 1px solid var(--border-subtle)`, `border-radius: var(--radius-sm)` (8px), `padding: 12px 16px`
-- Stat number: display role (32px/700), `color: var(--text-primary)`
-- Stat label: label role (14px/500), `color: var(--text-muted)`
+- Each stat pill: `background: var(--surface-card)`, `border: 1px solid var(--border-subtle)`, `border-radius: var(--radius-sm)` (8px), `padding: var(--space-sm) var(--space-md)` (8px 16px)
+- Stat number: display role (32px/600), `color: var(--text-primary)`
+- Stat label: label role (14px/400), `color: var(--text-muted)`
 - Four stats: Tage (days), Stopps (stops), Distanz (km), Budget (CHF remaining)
 
 ### Day Timeline (UIR-04)
@@ -204,15 +210,15 @@ Additional semantic colors:
 
 - Horizontal row, bottom-bordered
 - Tabs: Uebersicht, Stopps, Tage, Kalender, Budget
-- Active tab: `color: var(--accent-primary)`, 2px bottom border `var(--accent-primary)`
-- Inactive tab: `color: var(--text-muted)`, no bottom border
-- Tab text: label role (14px/500)
+- Active tab: `color: var(--accent-primary)`, `font-weight: 600`, 2px bottom border `var(--accent-primary)`
+- Inactive tab: `color: var(--text-muted)`, `font-weight: 400`, no bottom border
+- Tab text: label role (14px)
 - Mobile: horizontal scroll, no wrapping
 
 ### Map Markers (UIR-06)
 
 - Numbered circle markers using existing `GoogleMaps.createDivMarker()` pattern
-- Default: 28px circle, `background: var(--text-primary)` (#2D2B3D), white number text (14px/700)
+- Default: 28px circle, `background: var(--text-primary)` (#2D2B3D), white number text (14px/600)
 - Selected/active: 36px circle, `background: var(--accent-primary)` (#7C6BE0), white number text, `box-shadow: 0 4px 12px rgba(124,107,224,0.3)`
 - Hover: scale(1.15) transition 150ms
 - Route polyline: `strokeColor: '#2D2B3D'`, `strokeWeight: 3`, `strokeOpacity: 1.0`
@@ -229,8 +235,8 @@ Additional semantic colors:
 ### Click-to-Add Prompt (D-10)
 
 - On map click (empty area): show small popup at click coordinates
-- Popup: `background: var(--bg-elevated)`, `border-radius: var(--radius-sm)`, `padding: 12px 16px`, `box-shadow: 0 8px 24px rgba(0,0,0,0.15)`
-- Content: reverse-geocoded place name (heading role, 16px/600) + "Stopp hier hinzufuegen?" button (accent pill, 14px/500)
+- Popup: `background: var(--bg-elevated)`, `border-radius: var(--radius-sm)`, `padding: var(--space-sm) var(--space-md)` (8px 16px), `box-shadow: 0 8px 24px rgba(0,0,0,0.15)`
+- Content: reverse-geocoded place name (heading role, 16px/600) + "Stopp hier hinzufuegen?" button (accent pill, 14px/600)
 - Dismiss: click elsewhere on map or press Escape
 
 ---
