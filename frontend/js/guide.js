@@ -1188,18 +1188,24 @@ function renderCalendar(plan) {
   };
   const _pinIcon = _ic('<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>');
   const typeLabel = { drive: 'Fahrt', checkin: 'Ankunft', activity: 'Erlebnis', rest: 'Entspannen', mixed: 'Gemischt' };
+  const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+                      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
-  // Build a cell per day_plan entry
-  const cells = dayPlans.map(dp => {
-    // Determine type based on day plan type field
+  // Parse date string (DD.MM.YYYY or YYYY-MM-DD) into Date object
+  function parseDate(str) {
+    if (!str) return null;
+    const dotMatch = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (dotMatch) return new Date(+dotMatch[3], +dotMatch[2] - 1, +dotMatch[1]);
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // Build lookup: date-string (YYYY-MM-DD) → { dp, type, stop, flag, stopName }
+  const dayMap = new Map();
+  dayPlans.forEach(dp => {
     const raw = (dp.type || 'mixed').toLowerCase();
-    const type = raw === 'drive' ? 'drive'
-               : raw === 'rest'  ? 'rest'
-               : raw === 'activity' ? 'activity'
-               : raw === 'mixed'   ? 'mixed'
-               : 'mixed';
-
-    // Find which stop this day belongs to
+    const type = ['drive','rest','activity','mixed'].includes(raw) ? raw : 'mixed';
     const stop = stops.find(s => {
       const arr = s.arrival_day || 1;
       return dp.day >= arr && dp.day < arr + (s.nights || 1);
@@ -1207,27 +1213,102 @@ function renderCalendar(plan) {
     const flag = stop ? (FLAGS[stop.country] || '') : '';
     const stopName = stop ? stop.region : '';
     const stopId = stop ? stop.id : null;
+    const date = parseDate(dp.date);
+    if (date) {
+      const key = date.toISOString().slice(0, 10);
+      dayMap.set(key, { dp, type, stop, flag, stopName, stopId, date });
+    }
+  });
 
-    return `
-      <div class="cal-day-cell" data-type="${esc(type)}" data-stop-id="${stopId || ''}" data-day-num="${dp.day}"
-           title="${esc(dp.title)}" tabindex="0" role="button">
-        <div class="cal-day-num">${dp.day}</div>
-        <div class="cal-day-icon">${typeIcon[type] || _pinIcon}</div>
-        <div class="cal-day-label">${esc(dp.title || typeLabel[type])}</div>
-        ${stopName ? `<div class="cal-day-stop">${flag} ${esc(stopName)}</div>` : ''}
-        ${dp.date ? `<div class="cal-day-date">${esc(dp.date)}</div>` : ''}
-      </div>
-    `;
-  }).join('');
+  // Determine date range
+  const allDates = [...dayMap.values()].map(v => v.date).sort((a, b) => a - b);
+  if (allDates.length === 0) {
+    return `<div class="calendar-section"><p class="calendar-hint">Keine Kalenderdaten verfügbar.</p></div>`;
+  }
+
+  const firstDate = allDates[0];
+  const lastDate = allDates[allDates.length - 1];
+
+  // Find Monday of the week containing firstDate (0=Sun in JS, we want Mon start)
+  function getMonday(d) {
+    const dt = new Date(d);
+    const day = dt.getDay(); // 0=Sun, 1=Mon, ...
+    const diff = day === 0 ? -6 : 1 - day;
+    dt.setDate(dt.getDate() + diff);
+    return dt;
+  }
+
+  const startMon = getMonday(firstDate);
+  // Find Sunday of the week containing lastDate
+  const endSun = new Date(lastDate);
+  const endDay = endSun.getDay();
+  if (endDay !== 0) endSun.setDate(endSun.getDate() + (7 - endDay));
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayKey = today.toISOString().slice(0, 10);
+
+  // Build weeks
+  let html = '';
+  let currentMonth = -1;
+  const cursor = new Date(startMon);
+
+  while (cursor <= endSun) {
+    // Check if we need a month header
+    const weekStart = new Date(cursor);
+    // Use the date of the first trip day in this week, or the Monday for month label
+    const monthCheckDate = new Date(cursor);
+    // Advance to find first day in this week that's part of the trip or just use Monday
+    if (monthCheckDate.getMonth() !== currentMonth) {
+      currentMonth = monthCheckDate.getMonth();
+      html += `<div class="calendar-month-header">${monthNames[currentMonth]} ${monthCheckDate.getFullYear()}</div>`;
+    }
+
+    // Build 7 cells for this week
+    let weekHtml = '';
+    for (let i = 0; i < 7; i++) {
+      const dateKey = cursor.toISOString().slice(0, 10);
+      const entry = dayMap.get(dateKey);
+      const dayNum = cursor.getDate();
+      const isToday = dateKey === todayKey;
+
+      if (entry) {
+        const { dp, type, flag, stopName, stopId } = entry;
+        weekHtml += `
+          <div class="calendar-day calendar-day--trip${isToday ? ' calendar-day--today' : ''}"
+               data-type="${esc(type)}" data-stop-id="${stopId || ''}" data-day-num="${dp.day}"
+               title="${esc(dp.title)}" tabindex="0" role="button">
+            <div class="calendar-day__header">
+              <span class="calendar-day__num">${dayNum}</span>
+              <span class="calendar-day__trip-day">Tag ${dp.day}</span>
+            </div>
+            <div class="calendar-day__icon">${typeIcon[type] || _pinIcon}</div>
+            <div class="calendar-day__title">${esc(dp.title || typeLabel[type])}</div>
+            ${stopName ? `<div class="calendar-day__stop">${flag} ${esc(stopName)}</div>` : ''}
+          </div>`;
+      } else {
+        weekHtml += `
+          <div class="calendar-day calendar-day--empty${isToday ? ' calendar-day--today' : ''}">
+            <span class="calendar-day__num calendar-day__num--empty">${dayNum}</span>
+          </div>`;
+      }
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    html += `<div class="calendar-week">${weekHtml}</div>`;
+  }
+
+  // Weekday header
+  const headerHtml = weekdays.map(d => `<div class="calendar-weekday">${d}</div>`).join('');
 
   return `
     <div class="calendar-section">
       <h3 class="calendar-title">Reise-Kalender</h3>
       <p class="calendar-hint">Klick auf einen Tag öffnet den Tagesplan.</p>
-      <div class="calendar-scroll-wrap">
-        <div class="calendar-timeline">
-          ${cells}
-        </div>
+      <div class="calendar-grid-wrap">
+        <div class="calendar-weekday-row">${headerHtml}</div>
+        ${html}
       </div>
       <div class="calendar-legend">
         ${Object.entries(typeIcon).map(([t, icon]) =>
@@ -1239,7 +1320,7 @@ function renderCalendar(plan) {
 }
 
 function _initCalendarClicks(plan) {
-  document.querySelectorAll('.cal-day-cell[data-day-num]').forEach(cell => {
+  document.querySelectorAll('.calendar-day--trip[data-day-num]').forEach(cell => {
     const dayNum = cell.dataset.dayNum;
     if (!dayNum) return;
     cell.addEventListener('click', () => {
