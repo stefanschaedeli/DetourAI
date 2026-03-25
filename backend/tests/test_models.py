@@ -508,6 +508,46 @@ def test_travel_stop_with_travel_guide():
 
 
 # ---------------------------------------------------------------------------
+# TravelStop tags, teaser, highlights
+# ---------------------------------------------------------------------------
+
+def test_travel_stop_tags_teaser():
+    """Tags, teaser, highlights: defaults and explicit values."""
+    # defaults when omitted
+    stop_default = TravelStop(
+        id=1, region="Annecy", country="FR",
+        arrival_day=2, nights=2,
+    )
+    assert stop_default.tags == []
+    assert stop_default.teaser is None
+    assert stop_default.highlights == []
+
+    # explicit values
+    stop_full = TravelStop(
+        id=2, region="Luzern", country="CH",
+        arrival_day=3, nights=1,
+        tags=["Kultur", "See"],
+        teaser="Charmante Altstadt am Vierwaldstaettersee",
+        highlights=["Altstadt", "Seepromenade", "Kapellbruecke"],
+    )
+    assert stop_full.tags == ["Kultur", "See"]
+    assert stop_full.teaser == "Charmante Altstadt am Vierwaldstaettersee"
+    assert stop_full.highlights == ["Altstadt", "Seepromenade", "Kapellbruecke"]
+
+    # backward compatibility: existing construction without new fields
+    stop_compat = TravelStop(
+        id=3, region="Annecy", country="FR",
+        arrival_day=2, nights=2,
+        drive_hours_from_prev=3.5,
+        drive_km_from_prev=220.0,
+        lat=45.899, lng=6.129,
+    )
+    assert stop_compat.tags == []
+    assert stop_compat.teaser is None
+    assert stop_compat.highlights == []
+
+
+# ---------------------------------------------------------------------------
 # DayPlan with time_blocks
 # ---------------------------------------------------------------------------
 
