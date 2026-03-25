@@ -9,11 +9,11 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### AI Quality
 
-- [ ] **AIQ-01**: StopOptionsFinder uses correct production model (claude-sonnet-4-5) instead of hardcoded claude-haiku-4-5
-- [ ] **AIQ-02**: All geocoded stop coordinates are validated against the route corridor bounding box before being accepted
-- [ ] **AIQ-03**: Stop finder prompts enforce the user's travel style preference (beach, ocean, mountains, culture) so suggestions match the trip theme
-- [ ] **AIQ-04**: Stop suggestions maintain consistent quality — no random low-effort entries mixed with good ones
-- [ ] **AIQ-05**: Route architect produces driving-efficient routes without unnecessary zigzag or backtracking
+- [x] **AIQ-01**: StopOptionsFinder uses correct production model (claude-sonnet-4-5) instead of hardcoded claude-haiku-4-5
+- [x] **AIQ-02**: All geocoded stop coordinates are validated against the route corridor bounding box before being accepted
+- [x] **AIQ-03**: Stop finder prompts enforce the user's travel style preference (beach, ocean, mountains, culture) so suggestions match the trip theme
+- [x] **AIQ-04**: Stop suggestions maintain consistent quality — no random low-effort entries mixed with good ones
+- [x] **AIQ-05**: Route architect produces driving-efficient routes without unnecessary zigzag or backtracking
 
 ### Geographic Routing
 
@@ -85,11 +85,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AIQ-01 | Phase 1 | Pending |
-| AIQ-02 | Phase 1 | Pending |
-| AIQ-03 | Phase 1 | Pending |
-| AIQ-04 | Phase 1 | Pending |
-| AIQ-05 | Phase 1 | Pending |
+| AIQ-01 | Phase 1 | Complete |
+| AIQ-02 | Phase 1 | Complete |
+| AIQ-03 | Phase 1 | Complete |
+| AIQ-04 | Phase 1 | Complete |
+| AIQ-05 | Phase 1 | Complete |
 | GEO-01 | Phase 2 | Pending |
 | GEO-02 | Phase 2 | Pending |
 | GEO-03 | Phase 2 | Pending |
