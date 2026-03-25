@@ -4958,3 +4958,38 @@ strong.req-keyword {
   color: var(--text-primary);
   box-sizing: border-box;
 }
+
+/* ---------------------------------------------------------------------------
+   Guide Map Markers (D-11)
+--------------------------------------------------------------------------- */
+.guide-marker { cursor: pointer; }
+.guide-marker-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #2D2B3D; color: white;
+  font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translate(-50%, -50%);
+}
+.guide-marker-num.selected {
+  width: 36px; height: 36px;
+  background: var(--accent-primary, #7C6BE0);
+  box-shadow: 0 4px 12px rgba(124,107,224,0.3);
+}
+.guide-marker:hover .guide-marker-num {
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+/* Selected stop card highlight */
+.stop-card-row.selected,
+.stop-overview-card.selected {
+  border-left: 3px solid var(--accent-primary, #7C6BE0);
+  box-shadow: 0 4px 16px rgba(124,107,224,0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-marker-num,
+  .guide-marker:hover .guide-marker-num {
+    transition: none;
+  }
+}
