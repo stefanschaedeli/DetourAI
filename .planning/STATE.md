@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-25T12:23:57.376Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-03-25T12:31:49.121Z"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -50,6 +50,7 @@ Plan: 2 of 2
 | Phase 01 P02 | 3min | 2 tasks | 3 files |
 | Phase 01 P03 | 350s | 3 tasks | 6 files |
 | Phase 02 P01 | 3min | 2 tasks | 5 files |
+| Phase 02 P02 | 5min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Quality validation uses two-tier Google Places check (find_place_from_text then nearby_search)
 - [Phase 02]: Bbox-based island detection (not haversine-from-center) for simpler validation
 - [Phase 02]: Ferry speed constant 30 km/h; google_directions_with_ferry checks both endpoints
+- [Phase 02]: Corridor bypass applies to both corridor AND bearing checks for island targets
+- [Phase 02]: Ferry cost formula: CHF 50 base + CHF 0.5/km for all crossings
 
 ### Pending Todos
 
@@ -81,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T12:23:57.374Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-03-25T12:31:49.119Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None

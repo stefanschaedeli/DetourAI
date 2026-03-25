@@ -49,7 +49,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Ferry utilities, island lookup table, model extensions, tests
-- [ ] 02-02-PLAN.md — Agent prompt updates, route enrichment ferry fallback, corridor bypass
+- [x] 02-02-PLAN.md — Agent prompt updates, route enrichment ferry fallback, corridor bypass
 
 ### Phase 3: Route Editing
 **Goal**: Users can directly modify their planned route by adding, removing, reordering, and replacing stops

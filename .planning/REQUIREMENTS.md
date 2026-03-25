@@ -17,11 +17,11 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Geographic Routing
 
-- [ ] **GEO-01**: Route planning handles island destinations by identifying ferry crossings and port cities
+- [x] **GEO-01**: Route planning handles island destinations by identifying ferry crossings and port cities
 - [x] **GEO-02**: Stop finder resolves coordinates to actual island locations, not nearby mainland points
 - [x] **GEO-03**: System detects when Google Directions returns no route (0,0 fallback) and attempts ferry-aware alternatives
 - [x] **GEO-04**: Common island groups (Greek islands, Corsica, Sardinia, Balearics) have ferry-port awareness
-- [ ] **GEO-05**: Route planning accounts for ferry time in daily driving budget
+- [x] **GEO-05**: Route planning accounts for ferry time in daily driving budget
 
 ### User Route Control
 
@@ -90,11 +90,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AIQ-03 | Phase 1 | Complete |
 | AIQ-04 | Phase 1 | Complete |
 | AIQ-05 | Phase 1 | Complete |
-| GEO-01 | Phase 2 | Pending |
+| GEO-01 | Phase 2 | Complete |
 | GEO-02 | Phase 2 | Complete |
 | GEO-03 | Phase 2 | Complete |
 | GEO-04 | Phase 2 | Complete |
-| GEO-05 | Phase 2 | Pending |
+| GEO-05 | Phase 2 | Complete |
 | CTL-01 | Phase 3 | Pending |
 | CTL-02 | Phase 3 | Pending |
 | CTL-03 | Phase 3 | Pending |
