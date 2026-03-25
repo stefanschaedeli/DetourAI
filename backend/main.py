@@ -32,6 +32,7 @@ from utils.migrations import run_migrations
 from routers.auth import router as auth_router
 from routers.admin import router as admin_router
 from utils.debug_logger import debug_logger, LogLevel
+from utils.route_edit_lock import acquire_edit_lock
 from utils.maps_helper import (
     geocode_google, google_directions, google_directions_simple,
     google_directions_with_ferry,
@@ -98,6 +99,15 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
         elif task_name == "replace_stop_job":
             from tasks.replace_stop_job import replace_stop_job_task
             replace_stop_job_task.delay(job_id)
+        elif task_name == "remove_stop_job":
+            from tasks.remove_stop_job import remove_stop_job_task
+            remove_stop_job_task.delay(job_id)
+        elif task_name == "add_stop_job":
+            from tasks.add_stop_job import add_stop_job_task
+            add_stop_job_task.delay(job_id)
+        elif task_name == "reorder_stops_job":
+            from tasks.reorder_stops_job import reorder_stops_job_task
+            reorder_stops_job_task.delay(job_id)
     else:
         # Run inline as a fire-and-forget asyncio task
         if task_name == "prefetch_accommodations":
@@ -109,6 +119,15 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
         elif task_name == "replace_stop_job":
             from tasks.replace_stop_job import _replace_stop_job
             asyncio.ensure_future(_replace_stop_job(job_id))
+        elif task_name == "remove_stop_job":
+            from tasks.remove_stop_job import _remove_stop_job
+            asyncio.ensure_future(_remove_stop_job(job_id))
+        elif task_name == "add_stop_job":
+            from tasks.add_stop_job import _add_stop_job
+            asyncio.ensure_future(_add_stop_job(job_id))
+        elif task_name == "reorder_stops_job":
+            from tasks.reorder_stops_job import _reorder_stops_job
+            asyncio.ensure_future(_reorder_stops_job(job_id))
 
 
 async def _periodic_subscriber_cleanup():
@@ -2265,6 +2284,22 @@ class ReplaceStopRequest(BaseModel):
     mode: str  # "manual" | "search"
     manual_location: Optional[str] = None
     manual_nights: Optional[int] = None
+    hints: Optional[str] = None  # e.g. "mehr Strand", "weniger Fahrzeit"
+
+
+class RemoveStopRequest(BaseModel):
+    stop_id: int
+
+
+class AddStopRequest(BaseModel):
+    location: str
+    insert_after_stop_id: int  # ID of stop after which to insert
+    nights: int = 1
+
+
+class ReorderStopsRequest(BaseModel):
+    old_index: int
+    new_index: int
 
 
 @app.post("/api/travels/{travel_id}/replace-stop")
@@ -2289,6 +2324,9 @@ async def api_replace_stop(travel_id: int, body: ReplaceStopRequest, current_use
         geo_result = await geocode_google(body.manual_location.strip())
         if not geo_result:
             raise HTTPException(400, detail=f"Ort '{body.manual_location}' konnte nicht gefunden werden")
+
+        if not acquire_edit_lock(travel_id):
+            raise HTTPException(409, detail="Eine Bearbeitung laeuft bereits")
 
         nights = body.manual_nights if body.manual_nights and body.manual_nights > 0 else old_stop.get("nights", 1)
 
@@ -2363,6 +2401,7 @@ async def api_replace_stop(travel_id: int, body: ReplaceStopRequest, current_use
             "options": options,
             "request": req_data,
             "user_id": current_user.id,
+            "hints": body.hints,
         }
         save_job(job_id, job)
 
@@ -2418,6 +2457,120 @@ async def api_replace_stop_select(travel_id: int, body: ReplaceStopSelectRequest
     _fire_task("replace_stop_job", new_job_id)
 
     return {"job_id": new_job_id, "status": "replacing", "selected": selected}
+
+
+# ---------------------------------------------------------------------------
+# POST /api/travels/{travel_id}/remove-stop
+# Remove a stop from a finished travel plan
+# ---------------------------------------------------------------------------
+
+@app.post("/api/travels/{travel_id}/remove-stop")
+async def api_remove_stop(travel_id: int, body: RemoveStopRequest, current_user: CurrentUser = Depends(get_current_user)):
+    plan = await get_travel(travel_id, current_user.id)
+    if plan is None:
+        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+
+    stops = plan.get("stops", [])
+    stop_index = next((i for i, s in enumerate(stops) if s.get("id") == body.stop_id), None)
+    if stop_index is None:
+        raise HTTPException(400, detail=f"Stop {body.stop_id} nicht gefunden")
+    if len(stops) <= 1:
+        raise HTTPException(400, detail="Mindestens ein Stopp muss verbleiben")
+
+    if not acquire_edit_lock(travel_id):
+        raise HTTPException(409, detail="Eine Bearbeitung laeuft bereits")
+
+    job_id = uuid.uuid4().hex
+    job = {
+        "status": "editing",
+        "travel_id": travel_id,
+        "operation": "remove",
+        "stop_index": stop_index,
+        "user_id": current_user.id,
+    }
+    save_job(job_id, job)
+    _fire_task("remove_stop_job", job_id)
+    return {"job_id": job_id, "status": "editing"}
+
+
+# ---------------------------------------------------------------------------
+# POST /api/travels/{travel_id}/add-stop
+# Add a new stop to a finished travel plan
+# ---------------------------------------------------------------------------
+
+@app.post("/api/travels/{travel_id}/add-stop")
+async def api_add_stop(travel_id: int, body: AddStopRequest, current_user: CurrentUser = Depends(get_current_user)):
+    if not body.location or not body.location.strip():
+        raise HTTPException(400, detail="Ortsname darf nicht leer sein")
+
+    plan = await get_travel(travel_id, current_user.id)
+    if plan is None:
+        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+
+    stops = plan.get("stops", [])
+    insert_after_index = next((i for i, s in enumerate(stops) if s.get("id") == body.insert_after_stop_id), None)
+    if insert_after_index is None:
+        raise HTTPException(400, detail=f"Stop {body.insert_after_stop_id} nicht gefunden")
+
+    geo_result = await geocode_google(body.location.strip())
+    if not geo_result:
+        raise HTTPException(400, detail=f"Ort '{body.location}' konnte nicht gefunden werden")
+
+    if not acquire_edit_lock(travel_id):
+        raise HTTPException(409, detail="Eine Bearbeitung laeuft bereits")
+
+    job_id = uuid.uuid4().hex
+    job = {
+        "status": "editing",
+        "travel_id": travel_id,
+        "operation": "add",
+        "insert_after_index": insert_after_index,
+        "location_name": body.location.strip(),
+        "lat": geo_result[0],
+        "lng": geo_result[1],
+        "nights": body.nights if body.nights and body.nights > 0 else 1,
+        "user_id": current_user.id,
+        "request": plan.get("request", {}),
+    }
+    save_job(job_id, job)
+    _fire_task("add_stop_job", job_id)
+    return {"job_id": job_id, "status": "editing"}
+
+
+# ---------------------------------------------------------------------------
+# POST /api/travels/{travel_id}/reorder-stops
+# Reorder stops in a finished travel plan
+# ---------------------------------------------------------------------------
+
+@app.post("/api/travels/{travel_id}/reorder-stops")
+async def api_reorder_stops(travel_id: int, body: ReorderStopsRequest, current_user: CurrentUser = Depends(get_current_user)):
+    plan = await get_travel(travel_id, current_user.id)
+    if plan is None:
+        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+
+    stops = plan.get("stops", [])
+    if body.old_index < 0 or body.old_index >= len(stops):
+        raise HTTPException(400, detail=f"Ungueltiger Quell-Index {body.old_index}")
+    if body.new_index < 0 or body.new_index >= len(stops):
+        raise HTTPException(400, detail=f"Ungueltiger Ziel-Index {body.new_index}")
+    if body.old_index == body.new_index:
+        raise HTTPException(400, detail="Quell- und Ziel-Index sind identisch")
+
+    if not acquire_edit_lock(travel_id):
+        raise HTTPException(409, detail="Eine Bearbeitung laeuft bereits")
+
+    job_id = uuid.uuid4().hex
+    job = {
+        "status": "editing",
+        "travel_id": travel_id,
+        "operation": "reorder",
+        "old_index": body.old_index,
+        "new_index": body.new_index,
+        "user_id": current_user.id,
+    }
+    save_job(job_id, job)
+    _fire_task("reorder_stops_job", job_id)
+    return {"job_id": job_id, "status": "editing"}
 
 
 # ---------------------------------------------------------------------------
