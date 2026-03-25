@@ -58,6 +58,7 @@ _COMPONENT_MAP: dict[str, str] = {
     "Orchestrator": "orchestrator/orchestrator",
     "ReplaceStop": "agents/replace_stop",
     "ReplaceStopJob": "agents/replace_stop",
+    "FerryDetection": "utils/ferry_detection",
 }
 
 

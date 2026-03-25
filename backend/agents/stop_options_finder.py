@@ -9,6 +9,7 @@ from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
 from utils.wikipedia import get_city_summary
 from agents._client import get_client, get_model, get_max_tokens
+from utils.ferry_ports import is_island_destination, validate_island_coordinates
 
 AGENT_KEY = "stop_options_finder"
 
@@ -297,6 +298,23 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
                         option.setdefault("description", wiki["extract"][:200])
                     if wiki.get("thumbnail_url"):
                         option["wikipedia_image"] = wiki["thumbnail_url"]
+
+            # Island coordinate validation (D-10, GEO-02)
+            opt_lat = option.get("lat")
+            opt_lon = option.get("lon")
+            if opt_lat is not None and opt_lon is not None:
+                coords = (opt_lat, opt_lon)
+                island_group = is_island_destination(coords)
+                if island_group:
+                    if not validate_island_coordinates(region, coords, island_group):
+                        await debug_logger.log(
+                            LogLevel.WARNING,
+                            f"Insel-Koordinaten-Validierung fehlgeschlagen: {region} "
+                            f"({coords[0]:.4f}, {coords[1]:.4f}) nicht in {island_group} bbox",
+                            job_id=self.job_id, agent="StopOptionsFinder",
+                        )
+                        # Coordinates resolved to mainland instead of island -- flag for review
+                        # but do not discard (graceful degradation)
 
         return result
 

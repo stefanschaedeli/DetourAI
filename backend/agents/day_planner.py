@@ -146,10 +146,18 @@ class DayPlannerAgent:
         total_drive = sum(s.get("drive_hours_from_prev", 0) for s in stops)
         fuel_chf = total_drive * get_setting("budget.fuel_chf_per_hour")
 
-        total = acc_total + activities_chf + food_chf + fuel_chf
+        # Ferry cost computation (D-12)
+        ferry_chf = 0.0
+        for stop in stops:
+            if stop.get("is_ferry") or stop.get("ferry_hours"):
+                ferry_km = stop.get("ferry_km", stop.get("drive_km_from_prev", 0))
+                # Rough formula: CHF 50 base + CHF 0.5/km (converted from EUR estimate)
+                ferry_chf += 50.0 + (ferry_km * 0.5)
+
+        total = acc_total + activities_chf + food_chf + fuel_chf + ferry_chf
         return {
             "accommodations_chf": round(acc_total, 2),
-            "ferries_chf": 0.0,
+            "ferries_chf": round(ferry_chf, 2),
             "activities_chf": round(activities_chf, 2),
             "food_chf": round(food_chf, 2),
             "fuel_chf": round(fuel_chf, 2),
@@ -258,6 +266,17 @@ class DayPlannerAgent:
                     )
                     break
 
+        # Ferry time deduction (D-11)
+        ferry_info = ""
+        if day_ctx.get("is_ferry") or day_ctx.get("ferry_hours"):
+            ferry_hours = day_ctx.get("ferry_hours", 0)
+            remaining_drive = max(0, self.request.max_drive_hours_per_day - ferry_hours)
+            ferry_info = (
+                f"\nFAEHRE: Dieser Tag beinhaltet eine Faehrueberfahrt von {ferry_hours:.1f} Stunden. "
+                f"Verbleibende Fahrzeit nach der Faehre: {remaining_drive:.1f}h. "
+                f"Plane die Faehre als eigenen time_block mit activity_type 'ferry' ein.\n"
+            )
+
         prompt = f"""WICHTIG: Verwende in den time_blocks die exakten Namen der unten genannten Aktivitäten und Restaurants als "title" und "location".
 
 Erstelle einen stündlichen Tagesplan für Tag {day_num} ({date_str}):
@@ -268,7 +287,7 @@ Fahrtzeit: {drive_hours:.1f}h
 Aktivitäten: {acts_str or 'keine spezifischen'}
 Restaurants: {rests_str or 'keine spezifischen'}
 Reisende: {self.request.adults} Erwachsene{f', {len(self.request.children)} Kinder' if self.request.children else ''}
-{weather_block}
+{weather_block}{ferry_info}
 Starte um 08:00 Uhr. Erstelle einen realistischen Zeitplan.
 
 Gib exakt dieses JSON zurück:
@@ -408,6 +427,8 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
                 "restaurants": rests,
                 "prev_region": prev_region,
                 "weather_forecast": weather_forecast,
+                "is_ferry": stop.get("is_ferry", False),
+                "ferry_hours": stop.get("ferry_hours", 0),
             })
 
             # Rest/activity days at this stop

@@ -3,6 +3,8 @@ from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
 from agents._client import get_client, get_model, get_max_tokens
+from utils.ferry_ports import is_island_destination, get_ferry_ports, ISLAND_GROUPS
+from utils.maps_helper import geocode_google
 
 AGENT_KEY = "route_architect"
 
@@ -73,6 +75,33 @@ class RouteArchitectAgent:
                 f"Wenn alle Stile zum Ziel passen, KEIN plausibility_warning Feld einfuegen.\n"
             )
 
+        # Ferry detection block (D-02, D-04)
+        ferry_block = ""
+        island_group = None
+        await debug_logger.log(
+            LogLevel.API,
+            f"Geocoding Ziel fuer Faehr-Erkennung: {req.main_destination}",
+            job_id=self.job_id, agent="RouteArchitect",
+        )
+        dest_geo = await geocode_google(req.main_destination)
+        if dest_geo:
+            island_group = is_island_destination((dest_geo[0], dest_geo[1]))
+            if island_group:
+                ports = get_ferry_ports(island_group)
+                ferry_block = (
+                    f"\nINSEL-ZIEL ERKANNT: {req.main_destination} liegt auf einer Insel ({island_group}). "
+                    f"Die Route MUSS einen Faehrhafen als eigenen Stopp beinhalten. "
+                    f"Uebliche Faehrhaefen fuer diese Region: {', '.join(ports)}. "
+                    f"Fuege den Faehrhafen als eigenen Stopp in die Route ein. "
+                    f"Trage die Faehrueberfahrt in ferry_crossings ein mit: "
+                    f"from_port, to_port, estimated_hours, estimated_cost_chf.\n"
+                )
+                await debug_logger.log(
+                    LogLevel.INFO,
+                    f"Insel-Ziel erkannt: {req.main_destination} ({island_group}), Haefen: {', '.join(ports)}",
+                    job_id=self.job_id, agent="RouteArchitect",
+                )
+
         prompt = f"""Plane eine Reiseroute mit Zwischenstopps:
 
 Start: {req.start_location}
@@ -84,7 +113,7 @@ Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
 Maximale Fahrzeit pro Tag: {req.max_drive_hours_per_day}h
 Nächte pro Stop: {req.min_nights_per_stop}–{req.max_nights_per_stop}
 Budget: CHF {req.budget_chf:,.0f}
-{mandatory_str}{style_block}{plausibility_block}
+{mandatory_str}{style_block}{plausibility_block}{ferry_block}
 Erstelle eine optimale Route. Der erste Stop MUSS der Startort sein, der letzte Stop MUSS das Hauptziel sein.
 Dazwischen plane 2–5 sinnvolle Zwischenstopps. Verteile die Tage sinnvoll.
 Gib genau dieses JSON zurück:
@@ -134,5 +163,12 @@ Gib genau dieses JSON zurück:
                 f"Plausibilitaetswarnung: {pw.get('warning', '')}",
                 job_id=self.job_id, agent="RouteArchitect",
             )
+
+        # Ferry detection SSE event
+        if parsed.get("ferry_crossings"):
+            await debug_logger.push_event(self.job_id, "ferry_detected", {
+                "crossings": parsed["ferry_crossings"],
+                "island_group": island_group,
+            })
 
         return parsed
