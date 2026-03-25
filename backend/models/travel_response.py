@@ -93,6 +93,9 @@ class TravelStop(BaseModel):
     further_activities: List[StopActivity] = []
     google_maps_url: Optional[str] = None
     notes: Optional[str] = None
+    tags: List[str] = []
+    teaser: Optional[str] = None
+    highlights: List[str] = []
     is_ferry: bool = False
     ferry_hours: Optional[float] = None
     ferry_cost_chf: Optional[float] = None
