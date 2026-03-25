@@ -24,6 +24,10 @@ class StopOption(BaseModel):
     lat: Optional[float] = None
     lon: Optional[float] = None
     place_id: Optional[str] = None
+    # AI quality validation fields (Phase 01)
+    outside_corridor: bool = False
+    corridor_distance_km: Optional[float] = None
+    travel_style_match: bool = True
 
 
 class StopOptionsResponse(BaseModel):
