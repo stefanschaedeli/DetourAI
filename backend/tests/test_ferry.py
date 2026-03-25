@@ -92,3 +92,102 @@ def test_get_ferry_ports():
 
 def test_get_ferry_ports_unknown():
     assert get_ferry_ports("atlantis") == []
+
+
+# ---------------------------------------------------------------------------
+# Model field tests: TravelStop ferry fields
+# ---------------------------------------------------------------------------
+
+def test_travel_stop_is_ferry_default():
+    from models.travel_response import TravelStop
+    stop = TravelStop(id=1, region="X", country="Y", arrival_day=1, nights=1)
+    assert stop.is_ferry is False
+
+
+def test_travel_stop_is_ferry_true():
+    from models.travel_response import TravelStop
+    stop = TravelStop(id=1, region="X", country="Y", arrival_day=1, nights=1, is_ferry=True)
+    assert stop.is_ferry is True
+
+
+def test_travel_stop_ferry_hours():
+    from models.travel_response import TravelStop
+    stop = TravelStop(id=1, region="X", country="Y", arrival_day=1, nights=1, ferry_hours=3.5)
+    assert stop.ferry_hours == 3.5
+
+
+def test_travel_stop_ferry_cost_default():
+    from models.travel_response import TravelStop
+    stop = TravelStop(id=1, region="X", country="Y", arrival_day=1, nights=1)
+    assert stop.ferry_cost_chf is None
+
+
+# ---------------------------------------------------------------------------
+# Model field tests: StopOption ferry field
+# ---------------------------------------------------------------------------
+
+def test_stop_option_is_ferry_required_default():
+    from models.stop_option import StopOption
+    opt = StopOption(id=1, option_type="direct", region="X", country="Y",
+                     drive_hours=0, nights=1, teaser="test")
+    assert opt.is_ferry_required is False
+
+
+def test_stop_option_is_ferry_required():
+    from models.stop_option import StopOption
+    opt = StopOption(id=1, option_type="direct", region="X", country="Y",
+                     drive_hours=0, nights=1, teaser="test", is_ferry_required=True)
+    assert opt.is_ferry_required is True
+
+
+# ---------------------------------------------------------------------------
+# google_directions_with_ferry (mocked)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_directions_with_ferry_normal_route(mocker):
+    """When google_directions returns valid route, pass through with is_ferry=False."""
+    mocker.patch("utils.maps_helper.google_directions",
+                 return_value=(3.5, 250.0, "polyline_abc"))
+    from utils.maps_helper import google_directions_with_ferry
+    hours, km, poly, is_ferry = await google_directions_with_ferry("A", "B")
+    assert hours == 3.5
+    assert km == 250.0
+    assert poly == "polyline_abc"
+    assert is_ferry is False
+
+
+@pytest.mark.asyncio
+async def test_directions_with_ferry_water_crossing(mocker):
+    """When google_directions returns (0,0,'') and dest is island, return ferry estimate."""
+    mocker.patch("utils.maps_helper.google_directions",
+                 return_value=(0.0, 0.0, ""))
+    # Cyclades coords for destination
+    mocker.patch("utils.maps_helper.geocode_google",
+                 side_effect=[
+                     (37.98, 23.73, "origin_pid"),   # Athens (mainland)
+                     (36.4, 25.4, "dest_pid"),        # Santorini (cyclades)
+                 ])
+    from utils.maps_helper import google_directions_with_ferry
+    hours, km, poly, is_ferry = await google_directions_with_ferry("Athens", "Santorini")
+    assert is_ferry is True
+    assert hours > 0
+    assert km > 0
+    assert poly == ""
+
+
+@pytest.mark.asyncio
+async def test_directions_with_ferry_no_island(mocker):
+    """When google_directions returns (0,0,'') and no island, return zeros."""
+    mocker.patch("utils.maps_helper.google_directions",
+                 return_value=(0.0, 0.0, ""))
+    mocker.patch("utils.maps_helper.geocode_google",
+                 side_effect=[
+                     (47.5, 7.6, "pid1"),   # Liestal (mainland)
+                     (48.8, 2.3, "pid2"),    # Paris (mainland)
+                 ])
+    from utils.maps_helper import google_directions_with_ferry
+    hours, km, poly, is_ferry = await google_directions_with_ferry("Liestal", "Paris")
+    assert is_ferry is False
+    assert hours == 0.0
+    assert km == 0.0

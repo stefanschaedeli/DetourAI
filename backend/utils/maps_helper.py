@@ -7,6 +7,7 @@ from typing import Optional
 from urllib.parse import quote
 
 from utils.http_session import get_session
+from utils.ferry_ports import is_island_destination, ferry_estimate, FERRY_SPEED_KMH
 
 
 # Bounded geocode cache (max 2000 entries, FIFO eviction)
@@ -125,6 +126,34 @@ async def google_directions_simple(origin: str, destination: str) -> tuple[float
     """Convenience: only (hours, km) — no polyline needed."""
     hours, km, _ = await google_directions(origin, destination)
     return (hours, km)
+
+
+async def google_directions_with_ferry(
+    origin: str, destination: str, waypoints: list[str] = None
+) -> tuple[float, float, str, bool]:
+    """Wie google_directions() aber gibt (hours, km, polyline, is_ferry) zurueck.
+    Wenn Google keine Route liefert, wird die Insel-Lookup-Tabelle geprueft
+    und eine Faehrschaetzung erstellt (D-01, D-07)."""
+    hours, km, polyline = await google_directions(origin, destination, waypoints)
+    if hours > 0 and km > 0:
+        return (hours, km, polyline, False)
+
+    # Google hat keine Route gefunden -- pruefen ob Wasserueberquerung
+    origin_geo = await geocode_google(origin)
+    dest_geo = await geocode_google(destination)
+    if not origin_geo or not dest_geo:
+        return (0.0, 0.0, "", False)
+
+    origin_coords = (origin_geo[0], origin_geo[1])
+    dest_coords = (dest_geo[0], dest_geo[1])
+    straight_km = haversine_km(origin_coords, dest_coords)
+
+    # Wenn ein Endpunkt in einer Inselgruppe liegt, Faehre annehmen (D-07, D-08)
+    if is_island_destination(dest_coords) or is_island_destination(origin_coords):
+        est = ferry_estimate(straight_km)
+        return (est["hours"], est["km"], "", True)
+
+    return (0.0, 0.0, "", False)
 
 
 async def reference_cities_along_route_google(

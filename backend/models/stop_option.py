@@ -28,6 +28,7 @@ class StopOption(BaseModel):
     outside_corridor: bool = False
     corridor_distance_km: Optional[float] = None
     travel_style_match: bool = True
+    is_ferry_required: bool = False
 
 
 class StopOptionsResponse(BaseModel):
