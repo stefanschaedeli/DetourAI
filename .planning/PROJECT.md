@@ -31,8 +31,8 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 
 ### Active
 
-- [ ] Fix route planning for island/coastal destinations (ferry routes, island-aware geography)
-- [ ] Fix stop finder coordinate resolution (stops landing on mainland instead of target islands)
+- [x] Fix route planning for island/coastal destinations (ferry routes, island-aware geography) — Validated in Phase 2
+- [x] Fix stop finder coordinate resolution (stops landing on mainland instead of target islands) — Validated in Phase 2
 - [x] Ensure stop finder respects travel style preferences (beach/ocean focus not overridden by mountain stops) — Validated in Phase 1
 - [x] Consistent stop quality — eliminate random low-quality suggestions — Validated in Phase 1
 - [x] Driving efficiency — reduce unnecessary zigzag and backtracking in routes — Validated in Phase 1
@@ -104,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-25 after Phase 1 completion*
+*Last updated: 2026-03-25 after Phase 2 completion*
