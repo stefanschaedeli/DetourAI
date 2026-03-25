@@ -472,3 +472,135 @@ class TestRegionEndpoints:
         )
         assert resp.status_code == 200
         assert resp.json()["region_plan"]["regions"][0]["name"] == "Wallis"
+
+
+# ---------------------------------------------------------------------------
+# Route editing endpoints: remove, add, reorder
+# ---------------------------------------------------------------------------
+
+SAMPLE_PLAN_3STOPS = {
+    "job_id": "abc123",
+    "start_location": "Liestal",
+    "request": {
+        "legs": [{
+            "leg_id": "leg-0",
+            "start_location": "Liestal",
+            "end_location": "Paris",
+            "start_date": "2026-06-01",
+            "end_date": "2026-06-14",
+            "mode": "transit",
+            "via_points": [],
+            "zone_bbox": None,
+            "zone_guidance": [],
+        }],
+        "adults": 2,
+        "children": [],
+        "budget_chf": 5000,
+        "budget_accommodation_pct": 60,
+        "budget_food_pct": 20,
+        "budget_activities_pct": 20,
+    },
+    "stops": [
+        {"id": 1, "region": "Annecy", "nights": 2},
+        {"id": 2, "region": "Lyon", "nights": 2},
+        {"id": 3, "region": "Dijon", "nights": 1},
+    ],
+    "day_plans": [],
+    "cost_estimate": {"total_chf": 3000.0},
+}
+
+
+def test_remove_stop_success(client, mocker):
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    mocker.patch('main.acquire_edit_lock', return_value=True)
+    mocker.patch('main.save_job')
+    mocker.patch('main._fire_task')
+    r = client.post("/api/travels/1/remove-stop", json={"stop_id": 2})
+    assert r.status_code == 200
+    data = r.json()
+    assert "job_id" in data
+    assert data["status"] == "editing"
+
+
+def test_remove_stop_not_found(client, mocker):
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    mocker.patch('main.acquire_edit_lock', return_value=True)
+    r = client.post("/api/travels/1/remove-stop", json={"stop_id": 99})
+    assert r.status_code == 400
+    assert "nicht gefunden" in r.json()["detail"]
+
+
+def test_remove_stop_last_stop(client, mocker):
+    plan_1stop = {**SAMPLE_PLAN_3STOPS, "stops": [{"id": 1, "region": "Annecy", "nights": 2}]}
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=plan_1stop))
+    mocker.patch('main.acquire_edit_lock', return_value=True)
+    r = client.post("/api/travels/1/remove-stop", json={"stop_id": 1})
+    assert r.status_code == 400
+    assert "Mindestens ein Stopp" in r.json()["detail"]
+
+
+def test_add_stop_success(client, mocker):
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    mocker.patch('main.geocode_google', new=AsyncMock(return_value=(45.7, 4.8)))
+    mocker.patch('main.acquire_edit_lock', return_value=True)
+    mocker.patch('main.save_job')
+    mocker.patch('main._fire_task')
+    r = client.post("/api/travels/1/add-stop", json={
+        "location": "Lyon", "insert_after_stop_id": 1, "nights": 2
+    })
+    assert r.status_code == 200
+    data = r.json()
+    assert "job_id" in data
+    assert data["status"] == "editing"
+
+
+def test_add_stop_geocode_fail(client, mocker):
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    mocker.patch('main.geocode_google', new=AsyncMock(return_value=None))
+    r = client.post("/api/travels/1/add-stop", json={
+        "location": "NirgendwoXYZ", "insert_after_stop_id": 1, "nights": 1
+    })
+    assert r.status_code == 400
+    assert "konnte nicht gefunden werden" in r.json()["detail"]
+
+
+def test_add_stop_empty_location(client, mocker):
+    r = client.post("/api/travels/1/add-stop", json={
+        "location": "", "insert_after_stop_id": 1, "nights": 1
+    })
+    assert r.status_code == 400
+    assert "Ortsname darf nicht leer sein" in r.json()["detail"]
+
+
+def test_reorder_stops_success(client, mocker):
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    mocker.patch('main.acquire_edit_lock', return_value=True)
+    mocker.patch('main.save_job')
+    mocker.patch('main._fire_task')
+    r = client.post("/api/travels/1/reorder-stops", json={"old_index": 0, "new_index": 2})
+    assert r.status_code == 200
+    data = r.json()
+    assert "job_id" in data
+    assert data["status"] == "editing"
+
+
+def test_reorder_stops_same_index(client, mocker):
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    r = client.post("/api/travels/1/reorder-stops", json={"old_index": 1, "new_index": 1})
+    assert r.status_code == 400
+    assert "identisch" in r.json()["detail"]
+
+
+def test_reorder_stops_invalid_index(client, mocker):
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    r = client.post("/api/travels/1/reorder-stops", json={"old_index": 99, "new_index": 0})
+    assert r.status_code == 400
+    assert "Ungueltiger" in r.json()["detail"]
+
+
+def test_edit_lock_conflict(client, mocker):
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    mocker.patch('main.acquire_edit_lock', return_value=False)
+    r = client.post("/api/travels/1/remove-stop", json={"stop_id": 2})
+    assert r.status_code == 409
+    assert "Bearbeitung laeuft bereits" in r.json()["detail"]
