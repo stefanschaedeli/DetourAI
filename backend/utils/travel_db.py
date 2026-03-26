@@ -112,10 +112,15 @@ def _sync_list(user_id: int) -> list:
 def _sync_get(travel_id: int, user_id: int) -> Optional[dict]:
     with _get_conn() as conn:
         row = conn.execute(
-            "SELECT plan_json FROM travels WHERE id=? AND user_id=?",
+            "SELECT id, plan_json, share_token FROM travels WHERE id=? AND user_id=?",
             (travel_id, user_id),
         ).fetchone()
-    return json.loads(row["plan_json"]) if row else None
+    if row is None:
+        return None
+    plan = json.loads(row["plan_json"])
+    plan["_saved_travel_id"] = row["id"]
+    plan["share_token"] = row["share_token"]
+    return plan
 
 
 def _sync_delete(travel_id: int, user_id: int) -> bool:

@@ -368,6 +368,22 @@ def test_stop_option_place_id_default_none():
     assert opt.place_id is None
 
 
+def test_stop_option_tags():
+    # Default: empty list
+    opt = StopOption(
+        id=1, option_type="direct", region="Bern", country="Schweiz",
+        drive_hours=2.0, nights=2, teaser="Test",
+    )
+    assert opt.tags == []
+    # Explicit tags
+    opt_tags = StopOption(
+        id=2, option_type="scenic", region="Annecy", country="FR",
+        drive_hours=3.0, nights=2, teaser="Charmant",
+        tags=["Strand", "Kultur"],
+    )
+    assert opt_tags.tags == ["Strand", "Kultur"]
+
+
 # ---------------------------------------------------------------------------
 # CostEstimate
 # ---------------------------------------------------------------------------
