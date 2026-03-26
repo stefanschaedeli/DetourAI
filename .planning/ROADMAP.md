@@ -100,8 +100,8 @@ Plans:
 **Plans:** 0/3 plans executed
 
 Plans:
-- [ ] 05-01-PLAN.md — Backend sharing infrastructure (DB migration, travel_db functions, API endpoints + tests)
-- [ ] 05-02-PLAN.md — PDF/PPTX export removal (output_generator, endpoint, buttons, deps, docs cleanup)
+- [x] 05-01-PLAN.md — Backend sharing infrastructure (DB migration, travel_db functions, API endpoints + tests)
+- [x] 05-02-PLAN.md — PDF/PPTX export removal (output_generator, endpoint, buttons, deps, docs cleanup)
 - [ ] 05-03-PLAN.md — Frontend sharing UI (share toggle, read-only shared view, router + guide changes)
 
 ## Progress
