@@ -10,10 +10,10 @@ from typing import Optional
 async def recalc_segment_directions(stops: list, index: int, start_location: str) -> None:
     """Recalculate Google Directions for the segment arriving at stops[index].
 
-    Uses google_directions_simple for now. Sets drive_hours_from_prev and
-    drive_km_from_prev on the target stop.
+    Uses google_directions_with_ferry for ferry-aware routing. Sets drive_hours_from_prev,
+    drive_km_from_prev, and ferry metadata (is_ferry, ferry_hours, ferry_cost_chf) on the target stop.
     """
-    from utils.maps_helper import google_directions_simple
+    from utils.maps_helper import google_directions_with_ferry
 
     if index < 0 or index >= len(stops):
         return
@@ -31,10 +31,18 @@ async def recalc_segment_directions(stops: list, index: int, start_location: str
         return
 
     destination = f"{target['region']}, {target.get('country', '')}"
-    hours, km = await google_directions_simple(origin, destination)
+    hours, km, _, is_ferry = await google_directions_with_ferry(origin, destination)
     if hours > 0:
         target["drive_hours_from_prev"] = round(hours, 1)
         target["drive_km_from_prev"] = round(km)
+    if is_ferry:
+        target["is_ferry"] = True
+        target["ferry_hours"] = round(hours, 1)
+        target["ferry_cost_chf"] = round(50.0 + km * 0.5, 2)
+    else:
+        target["is_ferry"] = False
+        target["ferry_hours"] = None
+        target["ferry_cost_chf"] = None
 
 
 async def recalc_all_segments(stops: list, start_location: str) -> None:
