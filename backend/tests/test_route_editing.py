@@ -296,7 +296,7 @@ async def test_add_stop_runs_research():
 
 @pytest.mark.asyncio
 async def test_reorder_recalcs_all():
-    """After reorder, google_directions_simple called for every stop."""
+    """After reorder, google_directions_with_ferry called for every stop."""
     from utils.route_edit_helpers import recalc_all_segments
 
     stops = [_make_stop(1), _make_stop(2), _make_stop(3)]
@@ -328,6 +328,136 @@ async def test_reorder_renumbers_ids():
     assert stops[0]["id"] == 1
     assert stops[1]["id"] == 2
     assert stops[2]["id"] == 3
+
+
+# ---------------------------------------------------------------------------
+# Tests: replace_stop_job ferry metadata
+# ---------------------------------------------------------------------------
+
+def _make_replace_job_state(plan: dict, stop_index: int, new_region: str,
+                            new_country: str = "GR", new_lat: float = 36.4,
+                            new_lng: float = 25.4, new_nights: int = 2) -> dict:
+    """Build a minimal Redis job state dict for replace_stop_job tests."""
+    return {
+        "travel_id": 1,
+        "user_id": 1,
+        "stop_index": stop_index,
+        "new_region": new_region,
+        "new_country": new_country,
+        "new_lat": new_lat,
+        "new_lng": new_lng,
+        "new_nights": new_nights,
+    }
+
+
+@pytest.mark.asyncio
+async def test_replace_stop_ferry_metadata_prev_to_new():
+    """replace_stop_job sets ferry metadata on new_stop when prev->new is a ferry crossing."""
+    from tasks.replace_stop_job import _replace_stop_job
+
+    plan = _make_plan(3)
+    job_state = _make_replace_job_state(plan, stop_index=1, new_region="Santorini")
+
+    mock_store = MagicMock()
+    mock_store.get.return_value = json.dumps(job_state).encode()
+
+    # prev->new returns ferry (5h, 300km), new->next returns non-ferry (2h, 100km)
+    ferry_result = AsyncMock(side_effect=[
+        (5.0, 300.0, "", True),       # prev -> new (ferry)
+        (2.0, 100.0, "poly", False),  # new -> next (no ferry)
+    ])
+
+    with patch("tasks.replace_stop_job._get_store", return_value=mock_store), \
+         patch("utils.travel_db.get_travel", new_callable=AsyncMock, return_value=plan), \
+         patch("utils.maps_helper.google_directions_with_ferry", ferry_result), \
+         patch("utils.travel_db.update_plan_json", new_callable=AsyncMock), \
+         patch("utils.route_edit_lock.release_edit_lock"), \
+         patch("utils.debug_logger.debug_logger") as mock_logger, \
+         patch("agents.activities_agent.ActivitiesAgent") as mock_act, \
+         patch("agents.restaurants_agent.RestaurantsAgent") as mock_rest, \
+         patch("agents.travel_guide_agent.TravelGuideAgent") as mock_guide, \
+         patch("agents.accommodation_researcher.AccommodationResearcherAgent") as mock_acc, \
+         patch("agents.day_planner.DayPlannerAgent") as mock_day, \
+         patch("utils.image_fetcher.fetch_unsplash_images", new_callable=AsyncMock, return_value={}), \
+         patch("utils.settings_store.get_setting", return_value=45):
+
+        mock_logger.log = AsyncMock()
+        mock_logger.push_event = AsyncMock()
+        mock_act.return_value.run_stop = AsyncMock(return_value={"top_activities": []})
+        mock_rest.return_value.run_stop = AsyncMock(return_value={"restaurants": []})
+        mock_guide.return_value.run_stop = AsyncMock(return_value={"travel_guide": "test", "further_activities": []})
+        mock_acc.return_value.find_options = AsyncMock(return_value={"options": [{"name": "Hotel", "price_per_night": 100}]})
+        mock_day.return_value.run = AsyncMock(return_value={"day_plans": []})
+
+        await _replace_stop_job("test-job-id")
+
+    # Verify the new_stop (index 1) got ferry metadata from prev->new
+    updated_stops = plan["stops"]
+    new_stop = updated_stops[1]
+    assert new_stop["is_ferry"] is True
+    assert new_stop["ferry_hours"] == 5.0
+    assert new_stop["ferry_cost_chf"] == 200.0  # 50 + 300*0.5
+
+    # Verify next stop (index 2) got non-ferry metadata from new->next
+    nxt = updated_stops[2]
+    assert nxt["is_ferry"] is False
+    assert nxt["ferry_hours"] is None
+    assert nxt["ferry_cost_chf"] is None
+
+
+@pytest.mark.asyncio
+async def test_replace_stop_ferry_metadata_new_to_next():
+    """replace_stop_job sets ferry metadata on nxt stop when new->next is a ferry crossing."""
+    from tasks.replace_stop_job import _replace_stop_job
+
+    plan = _make_plan(3)
+    job_state = _make_replace_job_state(plan, stop_index=1, new_region="Mykonos")
+
+    mock_store = MagicMock()
+    mock_store.get.return_value = json.dumps(job_state).encode()
+
+    # prev->new returns non-ferry (1h, 80km), new->next returns ferry (4h, 250km)
+    ferry_result = AsyncMock(side_effect=[
+        (1.0, 80.0, "poly", False),  # prev -> new (no ferry)
+        (4.0, 250.0, "", True),      # new -> next (ferry)
+    ])
+
+    with patch("tasks.replace_stop_job._get_store", return_value=mock_store), \
+         patch("utils.travel_db.get_travel", new_callable=AsyncMock, return_value=plan), \
+         patch("utils.maps_helper.google_directions_with_ferry", ferry_result), \
+         patch("utils.travel_db.update_plan_json", new_callable=AsyncMock), \
+         patch("utils.route_edit_lock.release_edit_lock"), \
+         patch("utils.debug_logger.debug_logger") as mock_logger, \
+         patch("agents.activities_agent.ActivitiesAgent") as mock_act, \
+         patch("agents.restaurants_agent.RestaurantsAgent") as mock_rest, \
+         patch("agents.travel_guide_agent.TravelGuideAgent") as mock_guide, \
+         patch("agents.accommodation_researcher.AccommodationResearcherAgent") as mock_acc, \
+         patch("agents.day_planner.DayPlannerAgent") as mock_day, \
+         patch("utils.image_fetcher.fetch_unsplash_images", new_callable=AsyncMock, return_value={}), \
+         patch("utils.settings_store.get_setting", return_value=45):
+
+        mock_logger.log = AsyncMock()
+        mock_logger.push_event = AsyncMock()
+        mock_act.return_value.run_stop = AsyncMock(return_value={"top_activities": []})
+        mock_rest.return_value.run_stop = AsyncMock(return_value={"restaurants": []})
+        mock_guide.return_value.run_stop = AsyncMock(return_value={"travel_guide": "test", "further_activities": []})
+        mock_acc.return_value.find_options = AsyncMock(return_value={"options": [{"name": "Hotel", "price_per_night": 100}]})
+        mock_day.return_value.run = AsyncMock(return_value={"day_plans": []})
+
+        await _replace_stop_job("test-job-id")
+
+    # Verify the new_stop (index 1) got non-ferry metadata from prev->new
+    updated_stops = plan["stops"]
+    new_stop = updated_stops[1]
+    assert new_stop["is_ferry"] is False
+    assert new_stop["ferry_hours"] is None
+    assert new_stop["ferry_cost_chf"] is None
+
+    # Verify next stop (index 2) got ferry metadata from new->next
+    nxt = updated_stops[2]
+    assert nxt["is_ferry"] is True
+    assert nxt["ferry_hours"] == 4.0
+    assert nxt["ferry_cost_chf"] == 175.0  # 50 + 250*0.5
 
 
 # ---------------------------------------------------------------------------
