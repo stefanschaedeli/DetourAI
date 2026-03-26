@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Milestone complete
-stopped_at: Phase 6 context gathered
-last_updated: "2026-03-26T10:18:25.454Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-26T12:42:32.394Z"
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 17
-  completed_plans: 17
+  completed_phases: 6
+  total_plans: 19
+  completed_plans: 19
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Route planning and stop discovery must produce consistently high-quality, geographically correct results for any destination type.
-**Current focus:** Phase 05 — sharing-cleanup
+**Current focus:** Phase 06 — wiring-fixes
 
 ## Current Position
 
-Phase: 05
+Phase: 06
 Plan: Not started
 
 ## Performance Metrics
@@ -61,6 +61,8 @@ Plan: Not started
 | Phase 05 P02 | 3min | 2 tasks | 11 files |
 | Phase 05 P01 | 3min | 2 tasks | 6 files |
 | Phase 05 P03 | 4min | 2 tasks | 6 files |
+| Phase 06 P01 | 3min | 2 tasks | 7 files |
+| Phase 06 P02 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -95,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase 05]: OutputGenerator entry removed from debug_logger _COMPONENT_MAP as part of SHR-04 cleanup
 - [Phase 05]: secrets.token_urlsafe(16) for share tokens; separate public endpoint /api/shared/{token}
 - [Phase 05]: Share token detected via URLSearchParams in all travel route handlers; Router.navigate() auto-appends ?share= in shared mode
+- [Phase 06]: Tags merge uses dict.fromkeys for ordered dedup (max 4 per stop)
+- [Phase 06]: Ferry cost wiring confirmed end-to-end (D-08) — no changes needed
+- [Phase 06]: showToast() placed in api.js since it loads early and is globally available
 
 ### Pending Todos
 
@@ -108,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T10:18:25.452Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-wiring-fixes/06-CONTEXT.md
+Last session: 2026-03-26T12:37:46.958Z
+Stopped at: Completed 06-02-PLAN.md
+Resume file: None

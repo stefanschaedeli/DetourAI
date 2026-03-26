@@ -115,7 +115,7 @@ Plans:
   2. Replace-stop hints entered by user are forwarded to the StopOptionsFinderAgent
   3. style_mismatch_warning and ferry_detected SSE events fire handlers in the browser
   4. Stop cards display populated tags from AI agent output
-**Plans:** 2 plans
+**Plans:** 0/2 plans executed
 
 Plans:
 - [ ] 06-01-PLAN.md — Backend wiring: share_token persistence, StopOption tags model, agent prompt tags, orchestrator merge
