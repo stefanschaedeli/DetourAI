@@ -4,7 +4,7 @@ from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
-from utils.maps_helper import geocode_google, google_directions_simple, build_maps_url
+from utils.maps_helper import geocode_google, google_directions_with_ferry, build_maps_url
 from utils.weather import get_forecast
 from utils.currency import detect_currency, get_chf_rate
 from agents._client import get_client, get_model, get_max_tokens
@@ -76,9 +76,9 @@ class DayPlannerAgent:
             prev_result = coords[i - 1]
             curr_result = coords[i]
             if prev_result and curr_result:
-                dir_tasks.append(google_directions_simple(locations[i - 1], locations[i]))
+                dir_tasks.append(google_directions_with_ferry(locations[i - 1], locations[i]))
             else:
-                async def _zero(): return (0.0, 0.0)
+                async def _zero(): return (0.0, 0.0, "", False)
                 dir_tasks.append(_zero())
 
         results = await asyncio.gather(*[t if asyncio.iscoroutine(t) else t for t in dir_tasks],
@@ -88,12 +88,23 @@ class DayPlannerAgent:
         for i, stop in enumerate(stops):
             s = dict(stop)
             if i < len(results) and not isinstance(results[i], BaseException):
-                hours, km = results[i]  # type: ignore[misc]
+                hours, km, _, is_ferry = results[i]  # type: ignore[misc]
                 s["drive_hours_from_prev"] = hours if hours > 0 else s.get("drive_hours_from_prev", 0)
                 s["drive_km_from_prev"] = km if km > 0 else s.get("drive_km_from_prev", 0)
+                if is_ferry:
+                    s["is_ferry"] = True
+                    s["ferry_hours"] = round(hours, 1)
+                    s["ferry_cost_chf"] = round(50.0 + km * 0.5, 2)
+                else:
+                    s["is_ferry"] = False
+                    s["ferry_hours"] = None
+                    s["ferry_cost_chf"] = None
             else:
                 s.setdefault("drive_hours_from_prev", 0)
                 s.setdefault("drive_km_from_prev", 0)
+                s["is_ferry"] = False
+                s["ferry_hours"] = None
+                s["ferry_cost_chf"] = None
 
             # Store lat/lng and place_id
             if i + 1 < len(coords) and coords[i + 1]:

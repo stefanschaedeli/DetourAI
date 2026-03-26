@@ -29,7 +29,7 @@ async def _replace_stop_job(job_id: str):
     from models.travel_request import TravelRequest
     from utils.debug_logger import debug_logger, LogLevel
     from utils.image_fetcher import fetch_unsplash_images
-    from utils.maps_helper import geocode_google, google_directions_simple
+    from utils.maps_helper import geocode_google, google_directions_with_ferry
     from utils.travel_db import get_travel, update_plan_json
     from utils.settings_store import get_setting
     from utils.route_edit_lock import release_edit_lock
@@ -108,19 +108,35 @@ async def _replace_stop_job(job_id: str):
             prev_place = plan.get("start_location", "")
 
         if prev_place:
-            hours, km = await google_directions_simple(prev_place, new_place)
+            hours, km, _, is_ferry = await google_directions_with_ferry(prev_place, new_place)
             if hours > 0:
                 new_stop["drive_hours_from_prev"] = round(hours, 1)
                 new_stop["drive_km_from_prev"] = round(km)
+            if is_ferry:
+                new_stop["is_ferry"] = True
+                new_stop["ferry_hours"] = round(hours, 1)
+                new_stop["ferry_cost_chf"] = round(50.0 + km * 0.5, 2)
+            else:
+                new_stop["is_ferry"] = False
+                new_stop["ferry_hours"] = None
+                new_stop["ferry_cost_chf"] = None
 
         # Next stop recalc
         if stop_index < len(stops) - 1:
             nxt = stops[stop_index + 1]
             nxt_place = f"{nxt['region']}, {nxt.get('country', '')}"
-            hours, km = await google_directions_simple(new_place, nxt_place)
+            hours, km, _, is_ferry = await google_directions_with_ferry(new_place, nxt_place)
             if hours > 0:
                 nxt["drive_hours_from_prev"] = round(hours, 1)
                 nxt["drive_km_from_prev"] = round(km)
+            if is_ferry:
+                nxt["is_ferry"] = True
+                nxt["ferry_hours"] = round(hours, 1)
+                nxt["ferry_cost_chf"] = round(50.0 + km * 0.5, 2)
+            else:
+                nxt["is_ferry"] = False
+                nxt["ferry_hours"] = None
+                nxt["ferry_cost_chf"] = None
 
         # Recalculate arrival_day for this and all following stops
         if stop_index == 0:
