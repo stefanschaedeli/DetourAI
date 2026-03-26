@@ -2753,14 +2753,19 @@ function openReplaceStopModal(stopId, currentNights) {
         <button class="replace-tab" data-tab="search" onclick="_switchReplaceTab('search')">Neue Suche</button>
       </div>
 
+      <div class="replace-hints-section" style="margin-bottom:16px">
+        <label style="display:block;font-size:var(--text-sm,14px);color:var(--text-secondary,#666);margin-bottom:4px">Hinweise (optional)</label>
+        <input type="text" id="replace-stop-hints" class="replace-input"
+          placeholder="z.B. mehr Strand, weniger Fahrzeit"
+          style="width:100%;padding:12px 16px;font-size:16px;border:1px solid var(--border-default,#ddd);border-radius:8px;box-sizing:border-box" />
+      </div>
+
       <div class="replace-tab-content" id="replace-tab-manual">
         <div class="replace-form">
           <label>Neuer Ort</label>
           <input type="text" id="replace-manual-location" class="replace-input" placeholder="z.B. Lyon, Frankreich" />
           <label>Nächte <small>(Standard: ${currentNights})</small></label>
           <input type="number" id="replace-manual-nights" class="replace-input" min="1" max="14" value="${currentNights}" />
-          <label>Vorlieben (optional)</label>
-          <input type="text" id="replace-stop-hints" class="replace-input" placeholder="z.B. mehr Strand, weniger Fahrzeit..." />
           <button class="btn btn-primary replace-submit-btn" id="replace-manual-btn"
             onclick="_doManualReplace(${savedId}, ${stopId})">Ersetzen</button>
         </div>
