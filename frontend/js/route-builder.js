@@ -23,6 +23,7 @@ function openRouteSSE(jobId) {
     region_updated:    data => { updateRegionPlanUI(data.regions, data.summary); },
     leg_complete:           data => { console.log(`Schnitt ${(data.leg_index || 0) + 1} abgeschlossen (${data.mode || ''})`); },
     style_mismatch_warning: _onStyleMismatchWarning,
+    ferry_detected: _onFerryDetected,
     onerror: () => {},  // silently ignore — HTTP response is the fallback
   });
 }
@@ -148,6 +149,20 @@ function _onStyleMismatchWarning(data) {
   } else if (panel) {
     panel.appendChild(banner);
   }
+
+  showToast('Stilwarnung: ' + (data.warning || 'Stopp passt nicht zum Reisestil'), 'warning');
+}
+
+function _onFerryDetected(data) {
+  const crossings = data.crossings || [];
+  const group = data.island_group || '';
+  let msg = 'Fähre erkannt';
+  if (crossings.length > 0 && crossings[0].from && crossings[0].to) {
+    msg += ': Überfahrt von ' + crossings[0].from + ' nach ' + crossings[0].to;
+  } else if (group) {
+    msg += ': ' + group;
+  }
+  showToast(msg, 'info');
 }
 
 function onRouteOptionsDone(data) {

@@ -5767,3 +5767,38 @@ strong.req-keyword {
 .shared-mode .stop-edit-icon {
   display: none !important;
 }
+
+/* ---------------------------------------------------------------------------
+   Toast Notifications (Phase 6)
+   --------------------------------------------------------------------------- */
+.app-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  max-width: 400px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: var(--text-sm, 14px);
+  font-weight: 600;
+  line-height: 1.4;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.app-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.app-toast--warning {
+  background: #FFF3E0;
+  color: #8B6914;
+  border-left: 3px solid #E8C34A;
+}
+.app-toast--info {
+  background: #E3F2FD;
+  color: #1565C0;
+  border-left: 3px solid #90CAF9;
+}

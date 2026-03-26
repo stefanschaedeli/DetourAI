@@ -17,6 +17,17 @@ function connectSSE(jobId) {
     job_complete:           onJobComplete,
     job_error:              onJobError,
     debug_log:              onProgressDebugLog,
+    style_mismatch_warning: function(data) {
+      showToast('Stilwarnung: ' + (data.warning || 'Stopp passt nicht zum Reisestil'), 'warning');
+    },
+    ferry_detected: function(data) {
+      var crossings = data.crossings || [];
+      var msg = 'Fähre erkannt';
+      if (crossings.length > 0 && crossings[0].from && crossings[0].to) {
+        msg += ': Überfahrt von ' + crossings[0].from + ' nach ' + crossings[0].to;
+      }
+      showToast(msg, 'info');
+    },
     ping: () => {},
     onerror: () => { console.warn('Progress SSE error'); },
   });
