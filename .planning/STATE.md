@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to plan
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-25T19:19:08.242Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-03-26T06:25:12.244Z"
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 4
+  total_plans: 14
+  completed_plans: 14
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Route planning and stop discovery must produce consistently high-quality, geographically correct results for any destination type.
-**Current focus:** Phase 03 — route-editing
+**Current focus:** Phase 04 — map-centric-responsive-layout
 
 ## Current Position
 
-Phase: 4
+Phase: 5
 Plan: Not started
 
 ## Performance Metrics
@@ -53,6 +53,11 @@ Plan: Not started
 | Phase 02 P02 | 5min | 2 tasks | 6 files |
 | Phase 03 P01 | 4min | 2 tasks | 8 files |
 | Phase 03 P02 | 6min | 2 tasks | 3 files |
+| Phase 04 P01 | 4min | 2 tasks | 4 files |
+| Phase 04 P02 | 4min | 2 tasks | 3 files |
+| Phase 04 P03 | 5min | 2 tasks | 2 files |
+| Phase 04 P05 | 2min | 1 tasks | 2 files |
+| Phase 04 P04 | 6min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -76,6 +81,14 @@ Recent decisions affecting current work:
 - [Phase 03]: Used google_directions_simple instead of non-existent google_directions_with_ferry
 - [Phase 03]: Edit lock placed after input validation but before job creation
 - [Phase 03]: Replace-stop hints stored in job dict for future prompt enhancement
+- [Phase 04]: TravelStop tags/teaser/highlights placed after notes, before is_ferry
+- [Phase 04]: Tab labels shortened: Stopps, Tage (was Reisefuehrer & Stops, Tagesplan)
+- [Phase 04]: Persistent guide map reuses DOM-connected instance; auto-pan suppressed 3s after drag
+- [Phase 04]: Card photos use buildHeroPhotoLoading('sm') with parent CSS constraining to 120px/16:9
+- [Phase 04]: GoogleMaps.panToStop/highlightGuideMarker called conditionally (stub until Plan 04)
+- [Phase 04]: Frontend reverse geocoding via Google Maps Geocoder (no backend round-trip)
+- [Phase 04]: Insert position determined by haversine distance to nearest stop neighbors
+- [Phase 04]: Day timeline uses accordion pattern (expand one, collapse others) instead of separate detail pages
 
 ### Pending Todos
 
@@ -89,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T19:19:08.238Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-map-centric-responsive-layout/04-CONTEXT.md
+Last session: 2026-03-25T21:27:10.229Z
+Stopped at: Completed 04-04-PLAN.md
+Resume file: None
