@@ -206,6 +206,7 @@ Gib exakt dieses JSON zurück:
 {{
   "stop_id": {stop_id},
   "region": "{region}",
+  "tags": ["Wandern", "Natur"],
   "top_activities": [
     {{
       "name": "...",
@@ -218,7 +219,9 @@ Gib exakt dieses JSON zurück:
       "google_maps_url": "https://maps.google.com/?q=..."
     }}
   ]
-}}{real_data_block}{weather_block}"""
+}}
+
+- tags: 2-3 kurze deutsche Schlagworte basierend auf den gefundenen Aktivitaeten (z.B. "Wandern", "Kultur", "Wassersport", "Natur", "Geschichte"){real_data_block}{weather_block}"""
 
         await debug_logger.log(
             LogLevel.API, f"→ Anthropic API call: {self.model} (Aktivitäten: {region})",

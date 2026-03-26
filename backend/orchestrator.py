@@ -277,6 +277,10 @@ class TravelPlannerOrchestrator:
         for stop in stops:
             sid = stop.get("id")
             stop.update(loc_img_map.get(sid, {}))
+            # Merge activity tags into stop (per D-09: union + dedup, max 4)
+            activity_tags = act_map.get(sid, {}).get("tags", [])
+            existing_tags = stop.get("tags", [])
+            stop["tags"] = list(dict.fromkeys(existing_tags + activity_tags))[:4]
             merged = {}
             merged.update(act_map.get(sid, {}))
             merged.update(rest_map.get(sid, {}))
