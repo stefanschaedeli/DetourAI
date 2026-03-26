@@ -37,7 +37,7 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - [x] Consistent stop quality — eliminate random low-quality suggestions — Validated in Phase 1
 - [x] Driving efficiency — reduce unnecessary zigzag and backtracking in routes — Validated in Phase 1
 - [x] User can edit stops manually (rename, move, add, remove) — Validated in Phase 3
-- [ ] User can adjust preferences mid-planning and regenerate affected parts
+- [ ] User can adjust preferences mid-planning and regenerate affected parts — deferred to future milestone
 - [x] User can replace individual stops with guided "find something else" flow — Validated in Phase 3
 - [x] User can reorder stops in the route sequence — Validated in Phase 3
 - [x] Responsive web design — full mobile browser support — Validated in Phase 4
@@ -81,9 +81,9 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Drop PDF/PPTX export | User stopped pursuing exports; shareable links replace this | ✓ Done (Phase 5) |
-| Full UI redesign over incremental fixes | Current design needs fundamental rethink, not patches | — Pending |
-| Responsive web over native app | Friends & family audience doesn't justify native app investment | — Pending |
-| Parallel AI quality + UX tracks | Both are equally important; interleave rather than sequence | — Pending |
+| Full UI redesign over incremental fixes | Current design needs fundamental rethink, not patches | ✓ Done (Phase 4) |
+| Responsive web over native app | Friends & family audience doesn't justify native app investment | ✓ Done (Phase 4) |
+| Parallel AI quality + UX tracks | Both are equally important; interleave rather than sequence | ✓ Done (v1.0) |
 | Public shareable links for trip sharing | Simple, no-auth viewing for recipients | ✓ Done (Phase 5) |
 
 ## Evolution
@@ -104,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-26 after Phase 5 completion — all milestone phases complete*
+*Last updated: 2026-03-26 after Phase 6 completion — v1.0 milestone complete, all wiring gaps closed*
