@@ -3,6 +3,7 @@ import json
 import math
 import os
 import re
+import secrets
 import time as _time
 import uuid
 from contextlib import asynccontextmanager
@@ -191,7 +192,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", str(Path(__file__).parent.parent / "outputs")))
 OUTPUTS_DIR.mkdir(exist_ok=True)
 
-from utils.travel_db import _init_db, save_travel, list_travels, get_travel, delete_travel, update_travel, update_plan_json
+from utils.travel_db import _init_db, save_travel, list_travels, get_travel, delete_travel, update_travel, update_plan_json, set_share_token, get_travel_by_share_token
 from utils.settings_store import (
     get_setting, async_get_all_settings, async_reset_section,
     validate_setting, set_setting, DEFAULTS, ALLOWED_MODELS,
@@ -2572,6 +2573,43 @@ async def api_reorder_stops(travel_id: int, body: ReorderStopsRequest, current_u
     save_job(job_id, job)
     _fire_task("reorder_stops_job", job_id)
     return {"job_id": job_id, "status": "editing"}
+
+
+# ---------------------------------------------------------------------------
+# POST /api/travels/{travel_id}/share — generate or regenerate share token
+# ---------------------------------------------------------------------------
+
+@app.post("/api/travels/{travel_id}/share")
+async def api_share_travel(travel_id: int, current_user: CurrentUser = Depends(get_current_user)):
+    token = secrets.token_urlsafe(16)
+    ok = await set_share_token(travel_id, current_user.id, token)
+    if not ok:
+        raise HTTPException(404, detail="Reise nicht gefunden")
+    return {"share_token": token, "share_url": f"/travel/{travel_id}?share={token}"}
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/travels/{travel_id}/share — revoke share link
+# ---------------------------------------------------------------------------
+
+@app.delete("/api/travels/{travel_id}/share")
+async def api_unshare_travel(travel_id: int, current_user: CurrentUser = Depends(get_current_user)):
+    ok = await set_share_token(travel_id, current_user.id, None)
+    if not ok:
+        raise HTTPException(404, detail="Reise nicht gefunden")
+    return {"status": "unshared"}
+
+
+# ---------------------------------------------------------------------------
+# GET /api/shared/{token} — public access, NO auth dependency
+# ---------------------------------------------------------------------------
+
+@app.get("/api/shared/{token}")
+async def api_get_shared_travel(token: str):
+    plan = await get_travel_by_share_token(token)
+    if plan is None:
+        raise HTTPException(404, detail="Geteilter Link nicht gefunden oder deaktiviert")
+    return plan
 
 
 # ---------------------------------------------------------------------------

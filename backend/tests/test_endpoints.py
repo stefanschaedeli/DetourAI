@@ -604,3 +604,53 @@ def test_edit_lock_conflict(client, mocker):
     r = client.post("/api/travels/1/remove-stop", json={"stop_id": 2})
     assert r.status_code == 409
     assert "Bearbeitung laeuft bereits" in r.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Share endpoints
+# ---------------------------------------------------------------------------
+
+def test_share_endpoint(client, mocker):
+    """POST /api/travels/{id}/share returns share_token."""
+    mocker.patch('main.set_share_token', new=AsyncMock(return_value=True))
+    r = client.post("/api/travels/1/share")
+    assert r.status_code == 200
+    data = r.json()
+    assert "share_token" in data
+    assert "share_url" in data
+
+
+def test_share_endpoint_not_found(client, mocker):
+    mocker.patch('main.set_share_token', new=AsyncMock(return_value=False))
+    r = client.post("/api/travels/999/share")
+    assert r.status_code == 404
+
+
+def test_unshare_endpoint(client, mocker):
+    """DELETE /api/travels/{id}/share clears token."""
+    mocker.patch('main.set_share_token', new=AsyncMock(return_value=True))
+    r = client.delete("/api/travels/1/share")
+    assert r.status_code == 200
+    assert r.json()["status"] == "unshared"
+
+
+def test_shared_public_access(client, mocker):
+    """GET /api/shared/{token} returns plan without auth."""
+    mocker.patch('main.get_travel_by_share_token', new=AsyncMock(return_value={"stops": [], "start_location": "Liestal"}))
+    r = client.get("/api/shared/validtoken123")
+    assert r.status_code == 200
+    assert "stops" in r.json()
+
+
+def test_shared_invalid_token(client, mocker):
+    """GET /api/shared/{invalid} returns 404."""
+    mocker.patch('main.get_travel_by_share_token', new=AsyncMock(return_value=None))
+    r = client.get("/api/shared/invalidtoken")
+    assert r.status_code == 404
+
+
+def test_revoked_token_404(client, mocker):
+    """After revocation, public endpoint returns 404."""
+    mocker.patch('main.get_travel_by_share_token', new=AsyncMock(return_value=None))
+    r = client.get("/api/shared/revokedtoken")
+    assert r.status_code == 404
