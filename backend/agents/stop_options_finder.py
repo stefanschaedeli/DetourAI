@@ -279,7 +279,7 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
         def call():
             return self.client.messages.create(
                 model=self.model,
-                max_tokens=get_max_tokens(AGENT_KEY, 2500),
+                max_tokens=get_max_tokens(AGENT_KEY, 4096),
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -391,7 +391,7 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
             results = []
             with self.client.messages.stream(
                 model=self.model,
-                max_tokens=get_max_tokens(AGENT_KEY, 2500),
+                max_tokens=get_max_tokens(AGENT_KEY, 4096),
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             ) as stream:
