@@ -115,15 +115,16 @@ Plans:
   2. Replace-stop hints entered by user are forwarded to the StopOptionsFinderAgent
   3. style_mismatch_warning and ferry_detected SSE events fire handlers in the browser
   4. Stop cards display populated tags from AI agent output
-**Plans:** 0 plans (not yet planned)
+**Plans:** 2 plans
 
 Plans:
-- (none yet — run `/gsd:plan-phase 6`)
+- [ ] 06-01-PLAN.md — Backend wiring: share_token persistence, StopOption tags model, agent prompt tags, orchestrator merge
+- [ ] 06-02-PLAN.md — Frontend wiring: SSE event registration, toast notifications, hints input relocation
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -132,4 +133,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 3. Route Editing | 0/3 | Complete    | 2026-03-25 |
 | 4. Map-Centric Responsive Layout | 3/6 | In Progress|  |
 | 5. Sharing & Cleanup | 0/3 | Planned    |  |
-| 6. Wiring Fixes | 0/0 | Planned    |  |
+| 6. Wiring Fixes | 0/2 | Planned    |  |
