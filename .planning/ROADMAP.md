@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 4: Map-Centric Responsive Layout** - Split-panel map-hero design, mobile responsive, photo cards, timeline, dashboard
 - [ ] **Phase 5: Sharing & Cleanup** - Public shareable trip links and removal of deprecated PDF/PPTX export
 - [ ] **Phase 6: Wiring Fixes** - Close audit gaps: share_token persistence, hints wiring, SSE event registration, stop tags population
-- [ ] **Phase 7: Ferry-Aware Route Edits** - Replace google_directions_simple with ferry-aware variant in route edit helpers and replace-stop job
+- [x] **Phase 7: Ferry-Aware Route Edits** - Replace google_directions_simple with ferry-aware variant in route edit helpers and replace-stop job (completed 2026-03-26)
 
 ## Phase Details
 
@@ -130,10 +130,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Editing stops on an island trip recalculates segments using ferry-aware directions instead of simple directions
   2. Water crossing segments after route edits show correct ferry time/distance instead of 0
-**Plans:** 1 plan
+**Plans:** 1/1 plans executed
 
 Plans:
-- [ ] 07-01-PLAN.md — Swap google_directions_simple to ferry-aware variant in route_edit_helpers, replace_stop_job, day_planner + update tests
+- [x] 07-01-PLAN.md — Swap google_directions_simple to ferry-aware variant in route_edit_helpers, replace_stop_job, day_planner + update tests
 
 ## Progress
 
@@ -148,4 +148,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 4. Map-Centric Responsive Layout | 3/6 | In Progress|  |
 | 5. Sharing & Cleanup | 0/3 | Planned    |  |
 | 6. Wiring Fixes | 0/2 | Planned    |  |
-| 7. Ferry-Aware Route Edits | 0/1 | Planned    |  |
+| 7. Ferry-Aware Route Edits | 1/1 | Complete   | 2026-03-26 |
