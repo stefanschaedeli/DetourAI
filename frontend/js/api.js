@@ -381,6 +381,7 @@ function openSSE(jobId, handlers) {
     'remove_stop_progress', 'remove_stop_complete',
     'add_stop_progress', 'add_stop_complete',
     'reorder_stops_progress', 'reorder_stops_complete',
+    'style_mismatch_warning', 'ferry_detected',
   ];
 
   events.forEach(evt => {
@@ -398,4 +399,25 @@ function openSSE(jobId, handlers) {
   };
 
   return source;
+}
+
+/**
+ * Show a brief auto-dismissing toast notification.
+ * @param {string} message
+ * @param {'info'|'warning'} type
+ */
+function showToast(message, type) {
+  const toast = document.createElement('div');
+  toast.className = `app-toast app-toast--${type}`;
+  toast.textContent = message;
+  // Stack above existing toasts
+  const existing = document.querySelectorAll('.app-toast');
+  const offset = 24 + existing.length * 48;
+  toast.style.bottom = offset + 'px';
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('visible'));
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(() => toast.remove(), 300);
+  }, 6000);
 }
