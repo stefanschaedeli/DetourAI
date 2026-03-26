@@ -52,7 +52,7 @@ Exceptions: none — all Phase 6 elements use existing tokens.
 | Body | 16px (--text-base) | 400 | 1.5 |
 | Label / Small | 14px (--text-sm) | 400 | 1.4 |
 | Heading | 20px (--text-xl) | 600 | 1.2 |
-| Toast text | 14px (--text-sm) | 500 | 1.4 |
+| Toast text | 14px (--text-sm) | 600 | 1.4 |
 | Tag pill text | 14px (--text-sm) | 400 | 1.4 |
 | Hints input | 16px (--text-base) | 400 | 1.5 |
 
@@ -90,9 +90,9 @@ Accent reserved for: primary CTA buttons, share toggle active state, tag pill te
 |----------|-------|
 | Position | fixed, bottom: 24px, right: 24px |
 | Width | auto, max-width: 400px |
-| Padding | 10px 20px (matches existing settings-toast) |
+| Padding | 8px 16px |
 | Border-radius | 8px (--radius-sm) |
-| Font size | 14px (--text-sm), weight 500 |
+| Font size | 14px (--text-sm), weight 600 |
 | Z-index | 9999 |
 | Entry animation | opacity 0 to 1, translateY(10px) to 0, 0.25s ease |
 | Auto-dismiss | 6 seconds, then fade out over 300ms |
@@ -120,7 +120,7 @@ Accent reserved for: primary CTA buttons, share toggle active state, tag pill te
 | ID | `replace-stop-hints` |
 | Placeholder | `z.B. mehr Strand, weniger Fahrzeit` |
 | Width | 100% of dialog content area |
-| Padding | 10px 14px |
+| Padding | 12px 16px |
 | Font size | 16px (--text-base) — avoids iOS zoom on focus |
 | Border | 1px solid var(--border-default) |
 | Border-radius | 8px (--radius-sm) |
