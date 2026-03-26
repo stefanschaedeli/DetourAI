@@ -126,7 +126,7 @@ async def test_recalc_arrival_days_from_mid():
 
 @pytest.mark.asyncio
 async def test_recalc_segment_directions():
-    """google_directions_simple called with correct origin/destination."""
+    """google_directions_with_ferry called with correct origin/destination; non-ferry clears fields."""
     from utils.route_edit_helpers import recalc_segment_directions
 
     stops = [
@@ -134,12 +134,14 @@ async def test_recalc_segment_directions():
         _make_stop(2),
     ]
 
-    with patch("utils.maps_helper.google_directions_simple",
-               new_callable=AsyncMock, return_value=(2.5, 200.0)):
+    with patch("utils.maps_helper.google_directions_with_ferry",
+               new_callable=AsyncMock, return_value=(2.5, 200.0, "poly", False)):
         await recalc_segment_directions(stops, 1, "Liestal, Schweiz")
 
     assert stops[1]["drive_hours_from_prev"] == 2.5
     assert stops[1]["drive_km_from_prev"] == 200
+    assert stops[1]["is_ferry"] is False
+    assert stops[1]["ferry_hours"] is None
 
 
 @pytest.mark.asyncio
@@ -149,12 +151,50 @@ async def test_recalc_segment_directions_first_stop():
 
     stops = [_make_stop(1)]
 
-    with patch("utils.maps_helper.google_directions_simple",
-               new_callable=AsyncMock, return_value=(1.0, 80.0)) as mock_dir:
+    with patch("utils.maps_helper.google_directions_with_ferry",
+               new_callable=AsyncMock, return_value=(1.0, 80.0, "poly", False)) as mock_dir:
         await recalc_segment_directions(stops, 0, "Liestal, Schweiz")
         mock_dir.assert_called_once()
         args = mock_dir.call_args[0]
         assert args[0] == "Liestal, Schweiz"
+
+
+@pytest.mark.asyncio
+async def test_recalc_segment_directions_ferry():
+    """Ferry crossing sets is_ferry, ferry_hours, ferry_cost_chf on target stop."""
+    from utils.route_edit_helpers import recalc_segment_directions
+
+    stops = [_make_stop(1), _make_stop(2)]
+
+    with patch("utils.maps_helper.google_directions_with_ferry",
+               new_callable=AsyncMock, return_value=(5.0, 200.0, "", True)):
+        await recalc_segment_directions(stops, 1, "Liestal, Schweiz")
+
+    assert stops[1]["is_ferry"] is True
+    assert stops[1]["ferry_hours"] == 5.0
+    assert stops[1]["ferry_cost_chf"] == 150.0  # 50 + 200*0.5
+    assert stops[1]["drive_hours_from_prev"] == 5.0
+    assert stops[1]["drive_km_from_prev"] == 200
+
+
+@pytest.mark.asyncio
+async def test_recalc_segment_directions_clears_ferry():
+    """Non-ferry result clears stale ferry metadata on target stop."""
+    from utils.route_edit_helpers import recalc_segment_directions
+
+    stops = [_make_stop(1), _make_stop(2)]
+    # Pre-set stale ferry metadata
+    stops[1]["is_ferry"] = True
+    stops[1]["ferry_hours"] = 3.0
+    stops[1]["ferry_cost_chf"] = 200.0
+
+    with patch("utils.maps_helper.google_directions_with_ferry",
+               new_callable=AsyncMock, return_value=(2.0, 150.0, "poly", False)):
+        await recalc_segment_directions(stops, 1, "Liestal, Schweiz")
+
+    assert stops[1]["is_ferry"] is False
+    assert stops[1]["ferry_hours"] is None
+    assert stops[1]["ferry_cost_chf"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -174,8 +214,8 @@ async def test_remove_stop_reconnect():
     stops.pop(1)
     assert len(stops) == 2
 
-    with patch("utils.maps_helper.google_directions_simple",
-               new_callable=AsyncMock, return_value=(3.0, 250.0)):
+    with patch("utils.maps_helper.google_directions_with_ferry",
+               new_callable=AsyncMock, return_value=(3.0, 250.0, "poly", False)):
         await recalc_segment_directions(stops, 1, "Liestal, Schweiz")
 
     assert stops[1]["drive_hours_from_prev"] == 3.0
@@ -265,8 +305,8 @@ async def test_reorder_recalcs_all():
     moved = stops.pop(0)
     stops.insert(2, moved)
 
-    with patch("utils.maps_helper.google_directions_simple",
-               new_callable=AsyncMock, return_value=(1.5, 100.0)) as mock_dir:
+    with patch("utils.maps_helper.google_directions_with_ferry",
+               new_callable=AsyncMock, return_value=(1.5, 100.0, "poly", False)) as mock_dir:
         await recalc_all_segments(stops, "Liestal, Schweiz")
 
     assert mock_dir.call_count == 3  # called for every stop
