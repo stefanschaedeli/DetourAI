@@ -51,9 +51,9 @@ Exceptions: none
 |------|------|--------|-------------|
 | Body | 16px (1rem) | 400 | 1.5 |
 | Label | 13px (--text-sm / 0.875rem) | 600 | 1.4 |
-| Heading | 24px (--text-2xl / 1.5rem) | 700 | 1.2 |
+| Heading | 24px (--text-2xl / 1.5rem) | 600 | 1.2 |
 
-Only 3 sizes needed this phase. The share toggle label uses Label size. The "Erstellt mit Travelman" footer uses Body at muted color. Copy feedback ("Kopiert!") uses the existing `.btn-sm` font-size (13px).
+Only 3 sizes needed this phase. Two weights: 400 (body text, footer branding) and 600 (labels, headings, buttons). The share toggle label uses Label size. The "Erstellt mit Travelman" footer uses Body at muted color. Copy feedback ("Kopiert!") uses the existing `.btn-sm` font-size (13px).
 
 ---
 
@@ -63,12 +63,12 @@ Only 3 sizes needed this phase. The share toggle label uses Label size. The "Ers
 |------|-------|-------|
 | Dominant (60%) | #FAF8FF (--bg-primary) | Page background, shared view background |
 | Secondary (30%) | #FFFFFF (--bg-elevated) | Cards, share control container |
-| Accent (10%) | #7C6BE0 (--accent-primary) | Toggle switch active state, "Kopieren" button hover, share URL link color |
+| Accent (10%) | #7C6BE0 (--accent-primary) | Toggle switch active state, "Link kopieren" button hover, share URL link color |
 | Destructive | #E88B8B (--accent-warm / --danger) | Revoke confirmation prompt highlight |
 
 Accent reserved for:
 - Toggle switch checked state (slider background)
-- "Kopieren" button active/hover state
+- "Link kopieren" button active/hover state
 - Share URL text selection highlight
 
 New color tokens needed: none. All values exist in current `:root`.
@@ -83,7 +83,7 @@ Location: `.guide-header-row`, between the h2 title and the replan button.
 
 **Structure:**
 ```
-[Toggle Switch] [Label: "Teilen"] [Share URL input (readonly)] [Kopieren button]
+[Toggle Switch] [Label: "Teilen"] [Share URL input (readonly)] [Link kopieren button]
 ```
 
 **Visual spec:**
@@ -94,12 +94,12 @@ Location: `.guide-header-row`, between the h2 title and the replan button.
 - Toggle slider dot: 18px circle, white, 2px inset, `transition: transform 0.2s`
 - Label "Teilen": 13px, weight 600, `--text-secondary` color
 - Share URL input: appears only when toggle is ON, `--text-sm` (13px), `--bg-secondary` background, `--border-subtle` border, `--radius-sm` (8px) corners, readonly, `text-overflow: ellipsis`
-- "Kopieren" button: uses existing `.btn.btn-sm.btn-secondary` styles (13px, 6px 14px padding)
+- "Link kopieren" button: uses existing `.btn.btn-sm.btn-secondary` styles (13px, 6px 14px padding)
 
 **Interaction:**
 - Toggle ON: POST to create share token, animate URL input appearing (fade-in 0.2s)
 - Toggle OFF: show confirmation prompt (browser `confirm()` dialog), then DELETE share token
-- Copy click: `navigator.clipboard.writeText(url)`, button text "Kopieren" -> "Kopiert!" for 2s
+- Copy click: `navigator.clipboard.writeText(url)`, button text "Link kopieren" -> "Kopiert!" for 2s
 
 **Accessibility:**
 - Toggle is `<input type="checkbox">` with `<label>` -- keyboard-accessible, screen-reader-friendly
@@ -136,14 +136,14 @@ All text in German per project convention.
 | Element | Copy |
 |---------|------|
 | Share toggle label | "Teilen" |
-| Copy button (default) | "Kopieren" |
+| Copy button (default) | "Link kopieren" |
 | Copy button (feedback) | "Kopiert!" |
 | Revoke confirmation | "Link deaktivieren? Bestehende Empfaenger verlieren Zugriff." |
 | Shared view footer | "Erstellt mit Travelman" |
 | Shared link not found (404) | "Dieser Link ist nicht mehr gueltig oder wurde deaktiviert." |
 | Shared link error (network) | "Link konnte nicht geladen werden. Bitte versuche es erneut." |
 
-Sources: D-10 (revoke confirmation), D-11 (copy feedback), D-07 (footer).
+Sources: D-10 (revoke confirmation), D-11 (copy feedback, updated to "Link kopieren"), D-07 (footer).
 
 ### Empty State
 
@@ -181,9 +181,9 @@ Not applicable -- sharing operates on existing saved trips. There is no empty st
 
 | State | Visual |
 |-------|--------|
-| Default | ".btn.btn-sm.btn-secondary" -- "Kopieren" |
+| Default | ".btn.btn-sm.btn-secondary" -- "Link kopieren" |
 | After click | Text changes to "Kopiert!", no other visual change |
-| After 2 seconds | Text reverts to "Kopieren" |
+| After 2 seconds | Text reverts to "Link kopieren" |
 
 ### Shared View Error Page
 
@@ -196,6 +196,10 @@ Not applicable -- sharing operates on existing saved trips. There is no empty st
 
 ## Layout Integration
 
+### Focal Point
+
+The primary visual anchor of the guide header screen is the share toggle control row. When sharing is active, the visible URL input with the "Link kopieren" button draws the eye as the actionable focal point; when sharing is inactive, the toggle itself serves as a compact, discoverable entry point.
+
 ### Guide Header Row (modified)
 
 Current layout:
@@ -205,7 +209,7 @@ Current layout:
 
 New layout (owner view):
 ```
-[h2: Ihr Reiseplan]    [Toggle] [Teilen] [URL] [Kopieren]    [Replan Button]
+[h2: Ihr Reiseplan]    [Toggle] [Teilen] [URL] [Link kopieren]    [Replan Button]
 ```
 
 The share controls sit in a flex container between the title and the replan button. On mobile (<768px), the guide header row wraps: title on first line, share controls + replan button on second line.
