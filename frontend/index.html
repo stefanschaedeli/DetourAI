@@ -544,11 +544,15 @@
       <div class="guide-content-panel" id="guide-content-panel">
         <div class="guide-header-row">
           <h2>Ihr Reiseplan</h2>
-          <button class="btn btn-secondary btn-sm replan-btn" id="replan-current-btn"
-                  onclick="replanCurrentTravel()"
-                  title="Reiseführer, Aktivitäten, Restaurants und stündliche Tagespläne mit KI neu generieren — Route und Unterkünfte bleiben erhalten">
-            Neu berechnen
-          </button>
+          <div class="guide-header-actions">
+            <div class="share-toggle-container" id="share-toggle-container" style="display:none"></div>
+            <button class="btn btn-secondary btn-sm replan-btn" id="replan-current-btn"
+                    onclick="replanCurrentTravel()"
+                    title="Reiseführer, Aktivitäten, Restaurants und stündliche Tagespläne mit KI neu generieren — Route und Unterkünfte bleiben erhalten"
+                    style="display:none">
+              Neu berechnen
+            </button>
+          </div>
         </div>
 
         <div id="guide-stats-bar"></div>

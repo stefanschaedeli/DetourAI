@@ -272,6 +272,25 @@ async function apiUpdateTravel(id, data) {
   })).json();
 }
 
+// ---------------------------------------------------------------------------
+// Share API helpers
+// ---------------------------------------------------------------------------
+
+/** Fetch a shared travel plan by token (NO auth — public endpoint). */
+async function apiGetShared(token) {
+  const res = await fetch(`${API}/shared/${token}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function apiShareTravel(travelId) {
+  return (await _fetchQuiet(`${API}/travels/${travelId}/share`, { method: 'POST' })).json();
+}
+
+async function apiUnshareTravel(travelId) {
+  return (await _fetchQuiet(`${API}/travels/${travelId}/share`, { method: 'DELETE' })).json();
+}
+
 /** Send a frontend log entry to the backend. */
 async function apiLogError(level, message, source, stack) {
   try {
