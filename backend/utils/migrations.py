@@ -56,6 +56,11 @@ MIGRATIONS: List[Tuple[int, str, Union[str, Callable]]] = [
         "users_add_token_quota",
         lambda conn: _add_column_if_missing(conn, "users", "token_quota", "INTEGER"),
     ),
+    (
+        6,
+        "travels_add_share_token",
+        lambda conn: _add_column_if_missing(conn, "travels", "share_token", "TEXT"),
+    ),
 ]
 
 

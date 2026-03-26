@@ -142,3 +142,47 @@ def test_async_save_and_get():
         assert len(rows) == 1
 
     asyncio.run(run())
+
+
+# ---------------------------------------------------------------------------
+# Share token
+# ---------------------------------------------------------------------------
+
+def test_share_token_set():
+    """Set share_token on a travel and retrieve it."""
+    from utils.travel_db import _sync_save, _sync_set_share_token, _sync_get_by_share_token
+    tid = _sync_save(_sample_plan("share_job"), USER_ID)
+    assert _sync_set_share_token(tid, USER_ID, token="abc123") is True
+    plan = _sync_get_by_share_token("abc123")
+    assert plan is not None
+    assert plan["_saved_travel_id"] == tid
+
+
+def test_share_token_wrong_user():
+    """Cannot set share_token for another user's travel."""
+    from utils.travel_db import _sync_save, _sync_set_share_token
+    tid = _sync_save(_sample_plan("share_wrong"), USER_ID)
+    assert _sync_set_share_token(tid, user_id=999, token="abc") is False
+
+
+def test_share_token_clear():
+    """Setting token to None clears sharing."""
+    from utils.travel_db import _sync_save, _sync_set_share_token, _sync_get_by_share_token
+    tid = _sync_save(_sample_plan("share_clear"), USER_ID)
+    _sync_set_share_token(tid, USER_ID, token="abc123")
+    _sync_set_share_token(tid, USER_ID, token=None)
+    assert _sync_get_by_share_token("abc123") is None
+
+
+def test_share_token_invalid():
+    """Unknown token returns None."""
+    from utils.travel_db import _sync_get_by_share_token
+    assert _sync_get_by_share_token("nonexistent") is None
+
+
+def test_share_token_in_list():
+    """List includes share_token field."""
+    from utils.travel_db import _sync_save, _sync_list
+    _sync_save(_sample_plan("share_list"), USER_ID)
+    travels = _sync_list(USER_ID)
+    assert "share_token" in travels[0]

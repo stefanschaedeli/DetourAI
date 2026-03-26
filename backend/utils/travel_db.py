@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import secrets
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -36,6 +37,7 @@ def _init_db() -> None:
                 total_input_tokens  INTEGER NOT NULL DEFAULT 0,
                 total_output_tokens INTEGER NOT NULL DEFAULT 0,
                 total_tokens        INTEGER NOT NULL DEFAULT 0,
+                share_token         TEXT,
                 UNIQUE(job_id)
             )
         """)
@@ -54,6 +56,10 @@ def _init_db() -> None:
             pass
         try:
             conn.execute("ALTER TABLE travels ADD COLUMN user_id INTEGER REFERENCES users(id)")
+        except Exception:
+            pass
+        try:
+            conn.execute("ALTER TABLE travels ADD COLUMN share_token TEXT")
         except Exception:
             pass
 
@@ -96,7 +102,7 @@ def _sync_list(user_id: int) -> list:
         rows = conn.execute(
             "SELECT id,job_id,title,created_at,start_location,"
             "destination,total_days,num_stops,total_cost_chf,has_travel_guide,"
-            "custom_name,rating "
+            "custom_name,rating,share_token "
             "FROM travels WHERE user_id = ? ORDER BY id DESC",
             (user_id,),
         ).fetchall()
@@ -196,3 +202,39 @@ async def update_travel(travel_id: int, user_id: int, custom_name: Optional[str]
 
 async def update_plan_json(travel_id: int, user_id: int, plan: dict) -> bool:
     return await asyncio.to_thread(_sync_update_plan_json, travel_id, user_id, plan)
+
+
+# ---------------------------------------------------------------------------
+# Share token functions
+# ---------------------------------------------------------------------------
+
+def _sync_set_share_token(travel_id: int, user_id: int, token: Optional[str]) -> bool:
+    """Set or clear share_token for a travel owned by user_id. Returns True if row updated."""
+    with _get_conn() as conn:
+        cur = conn.execute(
+            "UPDATE travels SET share_token = ? WHERE id = ? AND user_id = ?",
+            (token, travel_id, user_id),
+        )
+    return cur.rowcount > 0
+
+
+def _sync_get_by_share_token(token: str) -> Optional[dict]:
+    """Fetch plan_json by share_token (public, no user_id check)."""
+    with _get_conn() as conn:
+        row = conn.execute(
+            "SELECT id, plan_json FROM travels WHERE share_token = ?",
+            (token,),
+        ).fetchone()
+    if row is None:
+        return None
+    plan = json.loads(row["plan_json"])
+    plan["_saved_travel_id"] = row["id"]
+    return plan
+
+
+async def set_share_token(travel_id: int, user_id: int, token: Optional[str]) -> bool:
+    return await asyncio.to_thread(_sync_set_share_token, travel_id, user_id, token)
+
+
+async def get_travel_by_share_token(token: str) -> Optional[dict]:
+    return await asyncio.to_thread(_sync_get_by_share_token, token)
