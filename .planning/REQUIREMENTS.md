@@ -33,19 +33,19 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### UI Redesign
 
-- [ ] **UIR-01**: Desktop layout uses map-centric split-panel with map as the hero element
-- [ ] **UIR-02**: Layout is fully responsive — comfortable to use on phone browsers
-- [ ] **UIR-03**: Stops are presented as visual cards with photos, key facts, and travel style tags
-- [ ] **UIR-04**: Day-by-day timeline is interactive — scrollable with expandable day details
-- [ ] **UIR-05**: Dashboard overview shows key trip stats (total days, stops, distance, budget remaining)
-- [ ] **UIR-06**: Map and content panels stay synchronized — selecting a stop highlights it on the map and vice versa
+- [x] **UIR-01**: Desktop layout uses map-centric split-panel with map as the hero element
+- [x] **UIR-02**: Layout is fully responsive — comfortable to use on phone browsers
+- [x] **UIR-03**: Stops are presented as visual cards with photos, key facts, and travel style tags
+- [x] **UIR-04**: Day-by-day timeline is interactive — scrollable with expandable day details
+- [x] **UIR-05**: Dashboard overview shows key trip stats (total days, stops, distance, budget remaining)
+- [x] **UIR-06**: Map and content panels stay synchronized — selecting a stop highlights it on the map and vice versa
 
 ### Sharing
 
-- [ ] **SHR-01**: User can generate a public shareable link for any saved trip plan
-- [ ] **SHR-02**: Shared link shows a read-only view of the full trip plan (no authentication required)
-- [ ] **SHR-03**: User can revoke (disable) a previously shared link
-- [ ] **SHR-04**: PDF/PPTX export functionality is removed from the codebase
+- [x] **SHR-01**: User can generate a public shareable link for any saved trip plan
+- [x] **SHR-02**: Shared link shows a read-only view of the full trip plan (no authentication required)
+- [x] **SHR-03**: User can revoke (disable) a previously shared link
+- [x] **SHR-04**: PDF/PPTX export functionality is removed from the codebase
 
 ## v2 Requirements
 
@@ -100,16 +100,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CTL-03 | Phase 3 | Complete |
 | CTL-04 | Phase 3 | Complete |
 | CTL-05 | Phase 3 | Complete |
-| UIR-01 | Phase 4 | Pending |
-| UIR-02 | Phase 4 | Pending |
-| UIR-03 | Phase 4 | Pending |
-| UIR-04 | Phase 4 | Pending |
-| UIR-05 | Phase 4 | Pending |
-| UIR-06 | Phase 4 | Pending |
-| SHR-01 | Phase 5 | Pending |
-| SHR-02 | Phase 5 | Pending |
-| SHR-03 | Phase 5 | Pending |
-| SHR-04 | Phase 5 | Pending |
+| UIR-01 | Phase 4 | Complete |
+| UIR-02 | Phase 4 | Complete |
+| UIR-03 | Phase 4 | Complete |
+| UIR-04 | Phase 4 | Complete |
+| UIR-05 | Phase 4 | Complete |
+| UIR-06 | Phase 4 | Complete |
+| SHR-01 | Phase 5 | Complete |
+| SHR-02 | Phase 5 | Complete |
+| SHR-03 | Phase 5 | Complete |
+| SHR-04 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 25 total

@@ -97,7 +97,7 @@ Plans:
   2. Anyone with the link can view the full trip plan without logging in
   3. User can revoke a shared link so it stops working
   4. PDF/PPTX export buttons and backend code are completely removed from the codebase
-**Plans:** 3 plans
+**Plans:** 0/3 plans executed
 
 Plans:
 - [ ] 05-01-PLAN.md — Backend sharing infrastructure (DB migration, travel_db functions, API endpoints + tests)
@@ -115,4 +115,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Geographic Routing | 0/2 | Planned | - |
 | 3. Route Editing | 0/3 | Complete    | 2026-03-25 |
 | 4. Map-Centric Responsive Layout | 3/6 | In Progress|  |
-| 5. Sharing & Cleanup | 0/3 | Planned | - |
+| 5. Sharing & Cleanup | 0/3 | Planned    |  |
