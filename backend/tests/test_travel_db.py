@@ -186,3 +186,19 @@ def test_share_token_in_list():
     _sync_save(_sample_plan("share_list"), USER_ID)
     travels = _sync_list(USER_ID)
     assert "share_token" in travels[0]
+
+
+def test_get_includes_share_token():
+    """_sync_get returns share_token and _saved_travel_id."""
+    from utils.travel_db import _sync_save, _sync_get, _sync_set_share_token
+    tid = _sync_save(_sample_plan("share_get"), USER_ID)
+    # Before sharing: share_token is None
+    result = _sync_get(tid, USER_ID)
+    assert result is not None
+    assert result["share_token"] is None
+    assert result["_saved_travel_id"] == tid
+    # After sharing: share_token is populated
+    _sync_set_share_token(tid, USER_ID, "test_token_abc")
+    result = _sync_get(tid, USER_ID)
+    assert result["share_token"] == "test_token_abc"
+    assert result["_saved_travel_id"] == tid
