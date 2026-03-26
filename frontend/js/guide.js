@@ -2069,36 +2069,10 @@ function renderBudget(plan) {
         <span>Verbleibendes Budget:</span>
         <strong>CHF ${rem.toLocaleString('de-CH')}</strong>
       </div>
-
-      <div class="output-actions">
-        <h3>Reiseplan exportieren</h3>
-        <button class="btn btn-primary" onclick="generateOutput('pdf')">PDF herunterladen</button>
-        <button class="btn btn-secondary" onclick="generateOutput('pptx')">PowerPoint herunterladen</button>
-      </div>
     </div>
   `;
 }
 
-async function generateOutput(type) {
-  const btn = event.target;
-  btn.disabled = true;
-  btn.textContent = 'Wird erstellt…';
-
-  try {
-    const blob = await apiGenerateOutput(S.jobId, type);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `reiseplan_${S.jobId}.${type}`;
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    alert('Fehler beim Erstellen: ' + err.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = type === 'pdf' ? 'PDF herunterladen' : 'PowerPoint herunterladen';
-  }
-}
 
 function loadGuideFromCache() {
   const saved = lsGet(LS_RESULT);
