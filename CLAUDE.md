@@ -80,8 +80,7 @@ travelman3/
 │   │   ├── restaurants_agent.py         # claude-sonnet-4-5
 │   │   ├── day_planner.py               # claude-opus-4-5 + Google Directions
 │   │   ├── travel_guide_agent.py        # claude-sonnet-4-5 (narrative guide)
-│   │   ├── trip_analysis_agent.py       # claude-sonnet-4-5 (replan analysis)
-│   │   └── output_generator.py          # PDF/PPTX (fpdf2 + pptx)
+│   │   └── trip_analysis_agent.py       # claude-sonnet-4-5 (replan analysis)
 │   ├── models/
 │   │   ├── travel_request.py            # TravelRequest Pydantic model
 │   │   ├── travel_response.py           # TravelPlan, TravelStop, DayPlan, CostEstimate
@@ -138,7 +137,6 @@ travelman3/
 ├── DESIGN_GUIDELINE.md              # Apple-inspired design system
 ├── scripts/
 │   └── generate-types.sh
-└── outputs/                 # generated PDF/PPTX files
 ```
 
 ---
@@ -345,15 +343,12 @@ AI-powered road trip planner for friends and family. Users configure a trip (sta
 - PyJWT >=2.8.0 - JWT token creation/validation (`backend/utils/auth.py`)
 - passlib[argon2] >=1.7.4 - Argon2id password hashing (`backend/utils/auth.py`)
 - python-dotenv >=1.0.1 - Environment variable loading from `.env`
-- fpdf2 >=2.7.9 - PDF generation for trip output (`backend/agents/output_generator.py`)
-- python-pptx >=0.6.23 - PowerPoint generation for trip output (`backend/agents/output_generator.py`)
 ## Data & Storage
 - SQLite - Application data (travels, users, settings)
 - Redis 7 (Alpine) - Job state store + Celery message broker
 - Geocode cache: OrderedDict, max 2000 entries, FIFO eviction (`backend/utils/maps_helper.py`)
 - Currency rate cache: 24h TTL per currency (`backend/utils/currency.py`)
 - Settings cache: 60s TTL (`backend/utils/settings_store.py`)
-- Local filesystem for generated outputs (PDF/PPTX)
 ## Configuration
 - `.env` file loaded via python-dotenv at startup (`backend/main.py`)
 - `.env.example` provides template - never commit `.env`
@@ -539,7 +534,6 @@ AI-powered road trip planner for friends and family. Users configure a trip (sta
 ### Trip Planning Lifecycle
 - Replace individual stops: `POST /api/travels/{id}/replace-stop` → Celery task
 - Replan trip: `POST /api/travels/{id}/replan`
-- Generate PDF/PPTX: `POST /api/generate-output/{job_id}/{type}`
 ### SSE Event System
 ```
 ```

@@ -23,7 +23,6 @@ services:
       - BRAVE_API_KEY=${BRAVE_API_KEY:-}
       - TEST_MODE=${TEST_MODE:-true}
       - REDIS_URL=redis://redis:6379
-      - OUTPUTS_DIR=/app/outputs
       - DATA_DIR=/app/data
       - LOGS_DIR=/app/logs
       - JWT_SECRET=${JWT_SECRET}
@@ -41,7 +40,6 @@ services:
       retries: 3
       start_period: 15s
     volumes:
-      - ./outputs:/app/outputs
       - travel_data:/app/data
       - ./logs:/app/logs
 

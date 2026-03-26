@@ -54,7 +54,6 @@ _COMPONENT_MAP: dict[str, str] = {
     "DayPlannerAgent": "agents/day_planner",
     "TravelGuideAgent": "agents/travel_guide_agent",
     "TripAnalysisAgent": "agents/trip_analysis_agent",
-    "OutputGenerator": "agents/output_generator",
     "Orchestrator": "orchestrator/orchestrator",
     "ReplaceStop": "agents/replace_stop",
     "ReplaceStopJob": "agents/replace_stop",

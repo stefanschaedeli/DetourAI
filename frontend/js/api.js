@@ -168,11 +168,6 @@ async function apiGetResult(jobId) {
   return res.json();
 }
 
-async function apiGenerateOutput(jobId, type) {
-  const res = await _fetch(`${API}/generate-output/${jobId}/${type}`, { method: 'POST' },
-    'Dokument wird erstellt…');
-  return res.blob();
-}
 
 async function apiPatchJob(jobId, action, extraDays, viaPointLocation) {
   const res = await _fetchQuiet(`${API}/patch-job/${jobId}`, {

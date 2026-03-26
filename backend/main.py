@@ -189,8 +189,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     logger.error(f"Validation error: {errors}")
     return JSONResponse(status_code=422, content={"detail": errors})
 
-OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", str(Path(__file__).parent.parent / "outputs")))
-OUTPUTS_DIR.mkdir(exist_ok=True)
 
 from utils.travel_db import _init_db, save_travel, list_travels, get_travel, delete_travel, update_travel, update_plan_json, set_share_token, get_travel_by_share_token
 from utils.settings_store import (
@@ -2034,42 +2032,6 @@ async def get_result(job_id: str, current_user: CurrentUser = Depends(get_curren
     job = get_job(job_id)
     return job
 
-
-# ---------------------------------------------------------------------------
-# POST /api/generate-output/{job_id}/{file_type}
-# ---------------------------------------------------------------------------
-
-@app.post("/api/generate-output/{job_id}/{file_type}")
-async def generate_output(job_id: str, file_type: str, current_user: CurrentUser = Depends(get_current_user)):
-    from agents.output_generator import OutputGeneratorAgent
-
-    if file_type not in ("pdf", "pptx"):
-        raise HTTPException(status_code=400, detail="file_type muss 'pdf' oder 'pptx' sein")
-
-    job = get_job(job_id)
-    result = job.get("result")
-    if not result:
-        raise HTTPException(status_code=400, detail="Keine Ergebnisse vorhanden")
-
-    agent = OutputGeneratorAgent()
-    if file_type == "pdf":
-        output_path = await asyncio.to_thread(agent._create_pdf, result, OUTPUTS_DIR)
-    else:
-        output_path = await asyncio.to_thread(agent._create_pptx, result, OUTPUTS_DIR)
-
-    # Save path in job
-    job["result"]["outputs"] = job.get("result", {}).get("outputs", {})
-    job["result"]["outputs"][file_type] = str(output_path)
-    save_job(job_id, job)
-
-    media_type = "application/pdf" if file_type == "pdf" else \
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-
-    return FileResponse(
-        path=str(output_path),
-        media_type=media_type,
-        filename=output_path.name,
-    )
 
 
 # ---------------------------------------------------------------------------

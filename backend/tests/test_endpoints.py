@@ -654,3 +654,13 @@ def test_revoked_token_404(client, mocker):
     mocker.patch('main.get_travel_by_share_token', new=AsyncMock(return_value=None))
     r = client.get("/api/shared/revokedtoken")
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Export removal regression
+# ---------------------------------------------------------------------------
+
+def test_generate_output_removed(client):
+    """Regression guard: /api/generate-output endpoint must not exist after SHR-04 cleanup."""
+    res = client.post("/api/generate-output/test-job/pdf")
+    assert res.status_code in (404, 405), f"generate-output endpoint still exists: {res.status_code}"
