@@ -2,7 +2,7 @@
 
 ## What This Is
 
-AI-powered road trip planner for friends and family. Users configure a trip (start, destination, duration, budget, travel style), then specialized Claude agents collaboratively build the route, research accommodations/activities/restaurants, and produce a day-by-day travel guide. Real-time progress via SSE. Currently deployed via Docker Compose with FastAPI backend and vanilla JS frontend.
+AI-powered road trip planner for friends and family. Users configure a trip (start, destination, duration, budget, travel style), then 9 specialized Claude agents collaboratively build the route, research accommodations/activities/restaurants, and produce a day-by-day travel guide. Features interactive route building with stop selection, map-centric responsive layout, route editing (add/remove/reorder/replace stops), public shareable trip links, and geographic intelligence for island and ferry destinations. Real-time progress via SSE. Deployed via Docker Compose with FastAPI backend and vanilla JS frontend.
 
 ## Core Value
 
@@ -28,25 +28,25 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - ✓ Calendar/week view for trip timeline — existing
 - ✓ Sidebar navigation with route visualization — existing
 - ✓ File-based debug logging with per-agent log files — existing
+- ✓ Fix route planning for island/coastal destinations (ferry routes, island-aware geography) — v1.0
+- ✓ Fix stop finder coordinate resolution (stops landing on mainland instead of target islands) — v1.0
+- ✓ Ensure stop finder respects travel style preferences — v1.0
+- ✓ Consistent stop quality — eliminate random low-quality suggestions — v1.0
+- ✓ Driving efficiency — reduce unnecessary zigzag and backtracking in routes — v1.0
+- ✓ User can edit stops manually (add, remove, reorder, replace) — v1.0
+- ✓ User can replace individual stops with guided "find something else" flow — v1.0
+- ✓ User can reorder stops in the route sequence — v1.0
+- ✓ Responsive web design — full mobile browser support — v1.0
+- ✓ UI redesign: map-centric layout with the route map as hero element — v1.0
+- ✓ UI redesign: card-based stop presentation with photos — v1.0
+- ✓ UI redesign: interactive day-by-day timeline (scrollable, expandable) — v1.0
+- ✓ UI redesign: dashboard overview with key trip stats — v1.0
+- ✓ Public shareable links for trip plans (read-only view for friends/family) — v1.0
+- ✓ Remove PDF/PPTX export functionality (deprecated, replaced by shareable links) — v1.0
 
 ### Active
 
-- [x] Fix route planning for island/coastal destinations (ferry routes, island-aware geography) — Validated in Phase 2
-- [x] Fix stop finder coordinate resolution (stops landing on mainland instead of target islands) — Validated in Phase 2
-- [x] Ensure stop finder respects travel style preferences (beach/ocean focus not overridden by mountain stops) — Validated in Phase 1
-- [x] Consistent stop quality — eliminate random low-quality suggestions — Validated in Phase 1
-- [x] Driving efficiency — reduce unnecessary zigzag and backtracking in routes — Validated in Phase 1
-- [x] User can edit stops manually (rename, move, add, remove) — Validated in Phase 3
-- [ ] User can adjust preferences mid-planning and regenerate affected parts — deferred to future milestone
-- [x] User can replace individual stops with guided "find something else" flow — Validated in Phase 3
-- [x] User can reorder stops in the route sequence — Validated in Phase 3
-- [x] Responsive web design — full mobile browser support — Validated in Phase 4
-- [x] UI redesign: map-centric layout with the route map as hero element — Validated in Phase 4
-- [x] UI redesign: card-based stop presentation with photos (Airbnb/Google Travel style) — Validated in Phase 4
-- [x] UI redesign: interactive day-by-day timeline (scrollable, expandable) — Validated in Phase 4
-- [x] UI redesign: dashboard overview with key trip stats — Validated in Phase 4
-- [x] Public shareable links for trip plans (read-only view for friends/family) — Validated in Phase 5
-- [x] Remove PDF/PPTX export functionality (deprecated, replaced by shareable links) — Validated in Phase 5
+(None — next milestone requirements will be defined via `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -56,15 +56,18 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - Real-time collaborative editing — single-user planning is fine
 - Monetization/payment system — personal project for friends & family
 - Multi-language support — German-only as designed
+- CSS framework migration — vanilla CSS with Grid/Container Queries is sufficient
+- Map library migration — Google Maps SDK + Leaflet covers all needs
 
 ## Context
 
 - Used by friends and family circle, not a public product
-- App works well for mainland Europe (France, Germany) but struggles with geography-heavy destinations (Greek islands, coastal routes with ferries)
-- The current Apple-inspired design guideline needs a full rethink — wants richer, more visual travel-app feel
-- Stop quality is inconsistent: sometimes excellent, sometimes random or mismatched to travel style
-- The output_generator (PDF/PPTX) has been removed; sharing is now via public web links
-- Current UI flow (5-step form → route builder → results) works but needs better user control at every stage
+- v1.0 shipped 2026-03-26 with 286 passing tests across 14,332 LOC Python + 16,092 LOC JS/HTML/CSS
+- 9 AI agents orchestrated via Celery workers with SSE streaming
+- Geographic intelligence covers 8 Mediterranean island groups with ferry detection
+- Map-centric responsive layout with split-panel design, stop cards, day timeline
+- Public sharing via token-based links with read-only mode
+- Known tech debt: map markers not refreshed after route edits, replace_stop_job missing from Celery include list
 
 ## Constraints
 
@@ -80,11 +83,16 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Drop PDF/PPTX export | User stopped pursuing exports; shareable links replace this | ✓ Done (Phase 5) |
-| Full UI redesign over incremental fixes | Current design needs fundamental rethink, not patches | ✓ Done (Phase 4) |
-| Responsive web over native app | Friends & family audience doesn't justify native app investment | ✓ Done (Phase 4) |
-| Parallel AI quality + UX tracks | Both are equally important; interleave rather than sequence | ✓ Done (v1.0) |
-| Public shareable links for trip sharing | Simple, no-auth viewing for recipients | ✓ Done (Phase 5) |
+| Drop PDF/PPTX export | User stopped pursuing exports; shareable links replace this | ✓ Good (Phase 5) |
+| Full UI redesign over incremental fixes | Current design needs fundamental rethink, not patches | ✓ Good (Phase 4) |
+| Responsive web over native app | Friends & family audience doesn't justify native app investment | ✓ Good (Phase 4) |
+| Parallel AI quality + UX tracks | Both are equally important; interleave rather than sequence | ✓ Good (v1.0) |
+| Public shareable links for trip sharing | Simple, no-auth viewing for recipients | ✓ Good (Phase 5) |
+| Bbox-based island detection | Simpler than haversine-from-center, covers all 8 island groups | ✓ Good (Phase 2) |
+| Ferry speed constant 30 km/h | Reasonable estimate for Mediterranean ferries | ✓ Good (Phase 2) |
+| Corridor check flags but does NOT reject | User sees warning badge, maintains choice | ✓ Good (Phase 1) |
+| Tags merge with ordered dedup, max 4 | Prevents tag overload while preserving AI + activity sources | ✓ Good (Phase 6) |
+| Ferry-aware directions in all code paths | Route edits on island trips need correct ferry metadata | ✓ Good (Phase 7) |
 
 ## Evolution
 
@@ -104,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-26 after Phase 6 completion — v1.0 milestone complete, all wiring gaps closed*
+*Last updated: 2026-03-26 after v1.0 milestone completion*
