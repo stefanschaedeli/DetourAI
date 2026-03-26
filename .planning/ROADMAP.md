@@ -130,10 +130,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Editing stops on an island trip recalculates segments using ferry-aware directions instead of simple directions
   2. Water crossing segments after route edits show correct ferry time/distance instead of 0
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- (none yet)
+- [ ] 07-01-PLAN.md — Swap google_directions_simple to ferry-aware variant in route_edit_helpers, replace_stop_job, day_planner + update tests
 
 ## Progress
 
@@ -148,4 +148,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 4. Map-Centric Responsive Layout | 3/6 | In Progress|  |
 | 5. Sharing & Cleanup | 0/3 | Planned    |  |
 | 6. Wiring Fixes | 0/2 | Planned    |  |
-| 7. Ferry-Aware Route Edits | 0/0 | Planned    |  |
+| 7. Ferry-Aware Route Edits | 0/1 | Planned    |  |
