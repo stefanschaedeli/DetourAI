@@ -40,11 +40,11 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - [ ] User can adjust preferences mid-planning and regenerate affected parts
 - [x] User can replace individual stops with guided "find something else" flow — Validated in Phase 3
 - [x] User can reorder stops in the route sequence — Validated in Phase 3
-- [ ] Responsive web design — full mobile browser support
-- [ ] UI redesign: map-centric layout with the route map as hero element
-- [ ] UI redesign: card-based stop presentation with photos (Airbnb/Google Travel style)
-- [ ] UI redesign: interactive day-by-day timeline (scrollable, expandable)
-- [ ] UI redesign: dashboard overview with key trip stats
+- [x] Responsive web design — full mobile browser support — Validated in Phase 4
+- [x] UI redesign: map-centric layout with the route map as hero element — Validated in Phase 4
+- [x] UI redesign: card-based stop presentation with photos (Airbnb/Google Travel style) — Validated in Phase 4
+- [x] UI redesign: interactive day-by-day timeline (scrollable, expandable) — Validated in Phase 4
+- [x] UI redesign: dashboard overview with key trip stats — Validated in Phase 4
 - [ ] Public shareable links for trip plans (read-only view for friends/family)
 - [ ] Remove PDF/PPTX export functionality (deprecated, replaced by shareable links)
 
