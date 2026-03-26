@@ -604,3 +604,9 @@ def test_edit_lock_conflict(client, mocker):
     r = client.post("/api/travels/1/remove-stop", json={"stop_id": 2})
     assert r.status_code == 409
     assert "Bearbeitung laeuft bereits" in r.json()["detail"]
+
+
+def test_generate_output_removed(client):
+    """Regression guard: /api/generate-output endpoint must not exist after SHR-04 cleanup."""
+    res = client.post("/api/generate-output/test-job/pdf")
+    assert res.status_code in (404, 405), f"generate-output endpoint still exists: {res.status_code}"

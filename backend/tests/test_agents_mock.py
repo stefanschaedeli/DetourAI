@@ -312,16 +312,6 @@ def test_image_fetcher_stub():
     assert result == {"image_overview": None, "image_mood": None, "image_customer": None}
 
 
-# ---------------------------------------------------------------------------
-# Output generator — instantiation
-# ---------------------------------------------------------------------------
-
-def test_output_generator_instantiation():
-    from agents.output_generator import OutputGeneratorAgent
-    agent = OutputGeneratorAgent()
-    assert hasattr(agent, '_create_pdf')
-    assert hasattr(agent, '_create_pptx')
-
 
 # ---------------------------------------------------------------------------
 # Maps helper — build_maps_url
