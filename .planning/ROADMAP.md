@@ -17,6 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Route Editing** - User controls to add, remove, reorder, and replace stops with live metric updates (completed 2026-03-25)
 - [ ] **Phase 4: Map-Centric Responsive Layout** - Split-panel map-hero design, mobile responsive, photo cards, timeline, dashboard
 - [ ] **Phase 5: Sharing & Cleanup** - Public shareable trip links and removal of deprecated PDF/PPTX export
+- [ ] **Phase 6: Wiring Fixes** - Close audit gaps: share_token persistence, hints wiring, SSE event registration, stop tags population
 
 ## Phase Details
 
@@ -104,6 +105,21 @@ Plans:
 - [x] 05-02-PLAN.md — PDF/PPTX export removal (output_generator, endpoint, buttons, deps, docs cleanup)
 - [ ] 05-03-PLAN.md — Frontend sharing UI (share toggle, read-only shared view, router + guide changes)
 
+### Phase 6: Wiring Fixes
+**Goal**: Close all audit gaps — fix broken wiring between phases so every v1.0 requirement is fully satisfied
+**Depends on**: Phase 5
+**Requirements**: CTL-04, SHR-01, AIQ-03, GEO-01, UIR-03
+**Gap Closure:** Closes gaps from v1.0 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Share toggle shows correct state on page reload for actively shared travels
+  2. Replace-stop hints entered by user are forwarded to the StopOptionsFinderAgent
+  3. style_mismatch_warning and ferry_detected SSE events fire handlers in the browser
+  4. Stop cards display populated tags from AI agent output
+**Plans:** 0 plans (not yet planned)
+
+Plans:
+- (none yet — run `/gsd:plan-phase 6`)
+
 ## Progress
 
 **Execution Order:**
@@ -116,3 +132,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 3. Route Editing | 0/3 | Complete    | 2026-03-25 |
 | 4. Map-Centric Responsive Layout | 3/6 | In Progress|  |
 | 5. Sharing & Cleanup | 0/3 | Planned    |  |
+| 6. Wiring Fixes | 0/0 | Planned    |  |

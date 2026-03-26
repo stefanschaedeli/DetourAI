@@ -28,7 +28,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **CTL-01**: User can remove a stop from the proposed route
 - [x] **CTL-02**: User can add a custom stop to the route at any position
 - [x] **CTL-03**: User can reorder stops in the route sequence via drag-and-drop
-- [x] **CTL-04**: User can replace a stop with guided "find something else" flow (e.g., "more beach", "less driving")
+- [ ] **CTL-04**: User can replace a stop with guided "find something else" flow (e.g., "more beach", "less driving")
 - [x] **CTL-05**: Route metrics (total distance, driving time, budget) update after any route modification
 
 ### UI Redesign
@@ -42,7 +42,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Sharing
 
-- [x] **SHR-01**: User can generate a public shareable link for any saved trip plan
+- [ ] **SHR-01**: User can generate a public shareable link for any saved trip plan
 - [x] **SHR-02**: Shared link shows a read-only view of the full trip plan (no authentication required)
 - [x] **SHR-03**: User can revoke (disable) a previously shared link
 - [x] **SHR-04**: PDF/PPTX export functionality is removed from the codebase
@@ -98,7 +98,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CTL-01 | Phase 3 | Complete |
 | CTL-02 | Phase 3 | Complete |
 | CTL-03 | Phase 3 | Complete |
-| CTL-04 | Phase 3 | Complete |
+| CTL-04 | Phase 6 | Pending |
 | CTL-05 | Phase 3 | Complete |
 | UIR-01 | Phase 4 | Complete |
 | UIR-02 | Phase 4 | Complete |
@@ -106,7 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UIR-04 | Phase 4 | Complete |
 | UIR-05 | Phase 4 | Complete |
 | UIR-06 | Phase 4 | Complete |
-| SHR-01 | Phase 5 | Complete |
+| SHR-01 | Phase 6 | Pending |
 | SHR-02 | Phase 5 | Complete |
 | SHR-03 | Phase 5 | Complete |
 | SHR-04 | Phase 5 | Complete |
@@ -118,4 +118,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-25*
-*Last updated: 2026-03-25 after roadmap creation*
+*Last updated: 2026-03-26 after gap closure phase creation*
