@@ -41,7 +41,12 @@ const Router = (() => {
   function navigate(path, opts) {
     opts = opts || {};
     const method = opts.replace ? 'replaceState' : 'pushState';
-    history[method](null, '', path + location.search);
+    // Preserve share token in URL when in shared mode
+    let qs = location.search;
+    if (S.sharedMode && S.shareToken && !path.includes('?share=') && !qs.includes('share=')) {
+      qs = '?share=' + encodeURIComponent(S.shareToken);
+    }
+    history[method](null, '', path + qs);
     if (_dispatching || opts.skipDispatch) return;  // URL updated but no re-dispatch
     _dispatch(path);
   }
@@ -149,6 +154,49 @@ const Router = (() => {
       const id = parseInt(m[1], 10);
       document.title = 'Reise wird geladen… — Travelman';
 
+      // Shared view detection
+      const shareToken = new URLSearchParams(location.search).get('share');
+      if (shareToken) {
+        S.sharedMode = true;
+        S.shareToken = shareToken;
+        showLoading('Reiseplan wird geladen…');
+        try {
+          const plan = await apiGetShared(shareToken);
+          plan._saved_travel_id = id;
+          S.result = plan;
+          const title = plan.custom_name || plan.title || '';
+          document.title = `Reise: ${title} — Travelman`;
+          showTravelGuide(plan);
+          showSection('travel-guide');
+        } catch (err) {
+          // Show error page with safe static content (no user input)
+          const el = document.getElementById('guide-content');
+          if (el) {
+            el.textContent = '';
+            const wrapper = document.createElement('div');
+            wrapper.className = 'shared-error-page';
+            const card = document.createElement('div');
+            card.className = 'shared-error-card';
+            const h = document.createElement('h2');
+            h.textContent = 'Link ungueltig';
+            const p = document.createElement('p');
+            p.textContent = 'Dieser Link ist nicht mehr gueltig oder wurde deaktiviert.';
+            card.appendChild(h);
+            card.appendChild(p);
+            wrapper.appendChild(card);
+            el.appendChild(wrapper);
+          }
+          showSection('travel-guide');
+        } finally {
+          hideLoading();
+        }
+        return;
+      }
+
+      // Reset shared mode for non-shared views
+      S.sharedMode = false;
+      S.shareToken = null;
+
       // If the currently loaded result matches, just show it
       if (S.result && S.result._saved_travel_id === id) {
         const title = S.result.custom_name || S.result.title || '';
@@ -182,15 +230,21 @@ const Router = (() => {
       const id = parseInt(m[1], 10);
       const tab = m[2];
 
+      // Share token detection
+      const shareToken = new URLSearchParams(location.search).get('share');
+      if (shareToken) { S.sharedMode = true; S.shareToken = shareToken; }
+
       // Ensure travel is loaded first
       if (!S.result || S.result._saved_travel_id !== id) {
         showLoading('Reiseplan wird geladen…');
         try {
-          const plan = await apiGetTravel(id);
+          const plan = S.sharedMode ? await apiGetShared(S.shareToken) : await apiGetTravel(id);
           plan._saved_travel_id = id;
           S.result = plan;
-          S.jobId = plan.job_id || null;
-          lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan });
+          if (!S.sharedMode) {
+            S.jobId = plan.job_id || null;
+            lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan });
+          }
         } catch (err) {
           hideLoading();
           _toast('Reise nicht gefunden.');
@@ -210,15 +264,21 @@ const Router = (() => {
       const id = parseInt(m[1], 10);
       const stopId = parseInt(m[2], 10);
 
+      // Share token detection
+      const shareToken = new URLSearchParams(location.search).get('share');
+      if (shareToken) { S.sharedMode = true; S.shareToken = shareToken; }
+
       // Ensure travel is loaded first
       if (!S.result || S.result._saved_travel_id !== id) {
         showLoading('Reiseplan wird geladen…');
         try {
-          const plan = await apiGetTravel(id);
+          const plan = S.sharedMode ? await apiGetShared(S.shareToken) : await apiGetTravel(id);
           plan._saved_travel_id = id;
           S.result = plan;
-          S.jobId = plan.job_id || null;
-          lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan });
+          if (!S.sharedMode) {
+            S.jobId = plan.job_id || null;
+            lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan });
+          }
         } catch (err) {
           hideLoading();
           _toast('Reise nicht gefunden.');
@@ -238,15 +298,21 @@ const Router = (() => {
       const id = parseInt(m[1], 10);
       const dayNum = parseInt(m[2], 10);
 
+      // Share token detection
+      const shareToken = new URLSearchParams(location.search).get('share');
+      if (shareToken) { S.sharedMode = true; S.shareToken = shareToken; }
+
       // Ensure travel is loaded first
       if (!S.result || S.result._saved_travel_id !== id) {
         showLoading('Reiseplan wird geladen…');
         try {
-          const plan = await apiGetTravel(id);
+          const plan = S.sharedMode ? await apiGetShared(S.shareToken) : await apiGetTravel(id);
           plan._saved_travel_id = id;
           S.result = plan;
-          S.jobId = plan.job_id || null;
-          lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan });
+          if (!S.sharedMode) {
+            S.jobId = plan.job_id || null;
+            lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan });
+          }
         } catch (err) {
           hideLoading();
           _toast('Reise nicht gefunden.');

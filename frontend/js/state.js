@@ -57,6 +57,9 @@ const S = {
   pendingSelections: {},
   allAccLoaded: false,
   accSelectionCount: 0,
+  // Sharing
+  sharedMode: false,
+  shareToken: null,
 };
 
 // localStorage keys
