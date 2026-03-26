@@ -45,8 +45,8 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - [x] UI redesign: card-based stop presentation with photos (Airbnb/Google Travel style) — Validated in Phase 4
 - [x] UI redesign: interactive day-by-day timeline (scrollable, expandable) — Validated in Phase 4
 - [x] UI redesign: dashboard overview with key trip stats — Validated in Phase 4
-- [ ] Public shareable links for trip plans (read-only view for friends/family)
-- [ ] Remove PDF/PPTX export functionality (deprecated, replaced by shareable links)
+- [x] Public shareable links for trip plans (read-only view for friends/family) — Validated in Phase 5
+- [x] Remove PDF/PPTX export functionality (deprecated, replaced by shareable links) — Validated in Phase 5
 
 ### Out of Scope
 
@@ -63,7 +63,7 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - App works well for mainland Europe (France, Germany) but struggles with geography-heavy destinations (Greek islands, coastal routes with ferries)
 - The current Apple-inspired design guideline needs a full rethink — wants richer, more visual travel-app feel
 - Stop quality is inconsistent: sometimes excellent, sometimes random or mismatched to travel style
-- The output_generator (PDF/PPTX) is deprecated and should be removed in favor of shareable web links
+- The output_generator (PDF/PPTX) has been removed; sharing is now via public web links
 - Current UI flow (5-step form → route builder → results) works but needs better user control at every stage
 
 ## Constraints
@@ -80,11 +80,11 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Drop PDF/PPTX export | User stopped pursuing exports; shareable links replace this | — Pending |
+| Drop PDF/PPTX export | User stopped pursuing exports; shareable links replace this | ✓ Done (Phase 5) |
 | Full UI redesign over incremental fixes | Current design needs fundamental rethink, not patches | — Pending |
 | Responsive web over native app | Friends & family audience doesn't justify native app investment | — Pending |
 | Parallel AI quality + UX tracks | Both are equally important; interleave rather than sequence | — Pending |
-| Public shareable links for trip sharing | Simple, no-auth viewing for recipients | — Pending |
+| Public shareable links for trip sharing | Simple, no-auth viewing for recipients | ✓ Done (Phase 5) |
 
 ## Evolution
 
@@ -104,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-25 after Phase 3 completion*
+*Last updated: 2026-03-26 after Phase 5 completion — all milestone phases complete*
