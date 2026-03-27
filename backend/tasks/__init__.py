@@ -13,6 +13,7 @@ celery_app = Celery(
         "tasks.remove_stop_job",
         "tasks.add_stop_job",
         "tasks.reorder_stops_job",
+        "tasks.replace_stop_job",
     ],
 )
 celery_app.conf.update(task_serializer="json", result_serializer="json")
