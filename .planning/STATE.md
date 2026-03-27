@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Polish & Travel View Redesign
 status: executing
-stopped_at: Phase 8 context gathered
-last_updated: "2026-03-27T15:54:01.953Z"
-last_activity: 2026-03-27 -- Phase 08 execution started
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-03-27T15:58:06.082Z"
+last_activity: 2026-03-27
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 0
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 ## Current Position
 
 Phase: 08 (tech-debt-stabilization) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 08
-Last activity: 2026-03-27 -- Phase 08 execution started
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-03-27
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -47,12 +47,16 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 7 | 1 | 4min | 4min |
 
 **Average:** 3.6 min/plan across 18 plans
+| Phase 08 P02 | 8 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
 ### Decisions
 
 All v1.0 decisions archived in PROJECT.md Key Decisions table and milestones/v1.0-ROADMAP.md.
+
+- [Phase 08]: Two-tier drive limit: soft warns, hard (130%) retries 2x then accepts with warnings
+- [Phase 08]: Ferry hours excluded from drive limit check via separate ferry_hours field
 
 ### Pending Todos
 
@@ -64,6 +68,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-27T15:42:43.198Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-tech-debt-stabilization/08-CONTEXT.md
+Last session: 2026-03-27T15:58:06.080Z
+Stopped at: Completed 08-02-PLAN.md
+Resume file: None

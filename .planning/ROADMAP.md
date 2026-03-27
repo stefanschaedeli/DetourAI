@@ -26,7 +26,7 @@
 
 **Milestone Goal:** Fix all known tech debt and bugs, then redesign the travel view for clarity -- overview-first with drill-down into days/stops.
 
-- [ ] **Phase 8: Tech Debt Stabilization** - Fix production bugs and stale-state issues against the current UI
+- [x] **Phase 8: Tech Debt Stabilization** - Fix production bugs and stale-state issues against the current UI (completed 2026-03-27)
 - [ ] **Phase 9: Guide Module Split** - Split guide.js monolith into focused modules with zero behavioral changes
 - [ ] **Phase 10: Progressive Disclosure UI** - Three-level drill-down navigation with map focus management
 - [ ] **Phase 11: Browser Verification** - Verify 9 pending UI items against the new progressive disclosure view
@@ -42,10 +42,10 @@
   2. After adding, removing, reordering, or replacing a stop, map markers and polyline reflect the current route without page reload
   3. Stats bar (total distance, drive time, budget) updates immediately after any route edit
   4. RouteArchitect generates routes where no single driving day exceeds the user-configured max_drive_time_per_day, including legs with ferry crossings
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 08-01-PLAN.md — Celery task registration, map redraw after edits, stats bar on all tabs
-- [ ] 08-02-PLAN.md — RouteArchitect drive limit enforcement with two-tier validation
+- [x] 08-01-PLAN.md — Celery task registration, map redraw after edits, stats bar on all tabs
+- [x] 08-02-PLAN.md — RouteArchitect drive limit enforcement with two-tier validation
 
 ### Phase 9: Guide Module Split
 **Goal**: guide.js is decomposed into focused modules with clear boundaries, enabling safe progressive disclosure work in Phase 10
@@ -93,7 +93,7 @@ Plans:
 | 5. Sharing & Cleanup | v1.0 | 3/3 | Complete | 2026-03-26 |
 | 6. Wiring Fixes | v1.0 | 2/2 | Complete | 2026-03-26 |
 | 7. Ferry-Aware Route Edits | v1.0 | 1/1 | Complete | 2026-03-26 |
-| 8. Tech Debt Stabilization | v1.1 | 0/2 | Planning | - |
+| 8. Tech Debt Stabilization | v1.1 | 2/2 | Complete   | 2026-03-27 |
 | 9. Guide Module Split | v1.1 | 0/0 | Not started | - |
 | 10. Progressive Disclosure UI | v1.1 | 0/0 | Not started | - |
 | 11. Browser Verification | v1.1 | 0/0 | Not started | - |

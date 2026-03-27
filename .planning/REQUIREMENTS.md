@@ -12,7 +12,7 @@ Requirements for v1.1 Polish & Travel View Redesign. Each maps to roadmap phases
 - [ ] **DEBT-01**: Celery include list registers `replace_stop_job` so stop replacement works in production
 - [ ] **DEBT-02**: Map markers and polyline refresh after route edits (add/remove/reorder/replace stops)
 - [ ] **DEBT-03**: Stats bar updates immediately after route edits instead of lagging by one edit cycle
-- [ ] **DEBT-04**: RouteArchitect respects `max_drive_time_per_day` constraint and avoids overlong driving days with ferries/islands
+- [x] **DEBT-04**: RouteArchitect respects `max_drive_time_per_day` constraint and avoids overlong driving days with ferries/islands
 
 ### Code Structure
 
@@ -59,7 +59,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEBT-01 | Phase 8 | Pending |
 | DEBT-02 | Phase 8 | Pending |
 | DEBT-03 | Phase 8 | Pending |
-| DEBT-04 | Phase 8 | Pending |
+| DEBT-04 | Phase 8 | Complete |
 | STRC-01 | Phase 9 | Pending |
 | NAV-01 | Phase 10 | Pending |
 | NAV-02 | Phase 10 | Pending |
