@@ -132,6 +132,29 @@ class TravelPlannerOrchestrator:
 
         return all_stops
 
+    @staticmethod
+    def _validate_drive_limits(stops: list, max_hours: float) -> tuple:
+        """
+        Two-tier drive limit validation (per D-04).
+        - Soft limit: max_hours — flag with warning but accept
+        - Hard limit: max_hours * 1.3 — reject (return hard_violation=True)
+        Ferry hours (stop.get("ferry_hours", 0)) are excluded from drive time (per D-05).
+        Returns (stops_with_warnings, hard_violation_found).
+        """
+        hard_limit = max_hours * 1.3
+        hard_violation = False
+        for stop in stops:
+            drive = stop.get("drive_hours", 0)
+            # ferry_hours excluded from limit check per D-05
+            if drive <= 0:
+                continue
+            if drive > hard_limit:
+                hard_violation = True
+                stop["drive_limit_warning"] = f"Fahrzeit {drive:.1f}h überschreitet Hardlimit ({hard_limit:.1f}h)"
+            elif drive > max_hours:
+                stop["drive_limit_warning"] = f"Fahrzeit {drive:.1f}h überschreitet Softlimit ({max_hours:.1f}h)"
+        return stops, hard_violation
+
     async def _run_transit_leg(self, leg, leg_index: int) -> list:
         """Transit leg: use RouteArchitectAgent, ensure start+destination are included."""
         req = self.request
@@ -144,6 +167,36 @@ class TravelPlannerOrchestrator:
         await debug_logger.log(LogLevel.AGENT, f"RouteArchitect für Leg {leg_index}", job_id=self.job_id)
         route = await RouteArchitectAgent(req, self.job_id, token_accumulator=self._token_accumulator).run()
         stops = route.get("stops", [])
+
+        # Post-generation drive limit validation (D-04)
+        max_retries = 2
+        for attempt in range(max_retries + 1):
+            stops, hard_violation = self._validate_drive_limits(stops, req.max_drive_hours_per_day)
+            if not hard_violation:
+                break
+            if attempt < max_retries:
+                await debug_logger.log(
+                    LogLevel.WARNING,
+                    f"Route hat Hardlimit-Verletzung (Versuch {attempt + 1}/{max_retries + 1}) — generiere neu",
+                    job_id=self.job_id,
+                )
+                route = await RouteArchitectAgent(req, self.job_id, token_accumulator=self._token_accumulator).run()
+                stops = route.get("stops", [])
+            else:
+                await debug_logger.log(
+                    LogLevel.WARNING,
+                    f"Route hat nach {max_retries + 1} Versuchen noch Hardlimit-Verletzungen — akzeptiere mit Warnungen",
+                    job_id=self.job_id,
+                )
+
+        warnings = [s for s in stops if s.get("drive_limit_warning")]
+        if warnings:
+            for w in warnings:
+                await debug_logger.log(
+                    LogLevel.INFO,
+                    f"Softlimit-Warnung für {w.get('region', '?')}: {w['drive_limit_warning']}",
+                    job_id=self.job_id,
+                )
 
         # Safety net: ensure destination is included as last stop
         if stops and leg.end_location:
