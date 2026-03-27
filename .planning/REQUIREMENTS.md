@@ -20,10 +20,10 @@ Requirements for v1.1 Polish & Travel View Redesign. Each maps to roadmap phases
 
 ### Navigation
 
-- [ ] **NAV-01**: Travel view shows compact overview with trip summary, day cards, and full-route map as default landing
+- [x] **NAV-01**: Travel view shows compact overview with trip summary, day cards, and full-route map as default landing
 - [ ] **NAV-02**: User can drill into a day to see that day's stops, activities, restaurants with map focused on day's region
 - [ ] **NAV-03**: User can drill into a stop to see accommodation, activities, restaurants with map focused on stop area
-- [ ] **NAV-04**: Breadcrumb navigation allows back-navigation at each drill level (overview <- day <- stop)
+- [x] **NAV-04**: Breadcrumb navigation allows back-navigation at each drill level (overview <- day <- stop)
 - [ ] **NAV-05**: Map markers dim for non-focused stops when viewing a specific day or stop
 - [ ] **NAV-06**: Browser back/forward buttons work with drill-down navigation via URL routing
 
@@ -61,10 +61,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEBT-03 | Phase 8 | Pending |
 | DEBT-04 | Phase 8 | Complete |
 | STRC-01 | Phase 9 | Complete |
-| NAV-01 | Phase 10 | Pending |
+| NAV-01 | Phase 10 | Complete |
 | NAV-02 | Phase 10 | Pending |
 | NAV-03 | Phase 10 | Pending |
-| NAV-04 | Phase 10 | Pending |
+| NAV-04 | Phase 10 | Complete |
 | NAV-05 | Phase 10 | Pending |
 | NAV-06 | Phase 10 | Pending |
 | VRFY-01 | Phase 11 | Pending |

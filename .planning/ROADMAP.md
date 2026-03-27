@@ -70,9 +70,9 @@ Plans:
   3. Clicking a stop from day view drills into stop detail -- map pans and zooms to stop area, showing accommodation, activities, restaurants
   4. Breadcrumb bar (Uebersicht > Tag 3 > Annecy) appears at each drill level and allows back-navigation to any parent level
   5. Non-focused stops appear dimmed on the map when viewing a specific day or stop, and return to full visibility on back-navigation to overview
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 Plans:
-- [ ] 10-01-PLAN.md — CSS infrastructure, breadcrumb HTML, crossfade helper, overview restructure with day cards grid
+- [x] 10-01-PLAN.md — CSS infrastructure, breadcrumb HTML, crossfade helper, overview restructure with day cards grid
 - [ ] 10-02-PLAN.md — Map marker dimming and day-scoped map fitting
 - [ ] 10-03-PLAN.md — Wire drill-down navigation, breadcrumb clicks, browser history, checkpoint
 **UI hint**: yes
@@ -102,5 +102,5 @@ Plans:
 | 7. Ferry-Aware Route Edits | v1.0 | 1/1 | Complete | 2026-03-26 |
 | 8. Tech Debt Stabilization | v1.1 | 2/2 | Complete   | 2026-03-27 |
 | 9. Guide Module Split | v1.1 | 2/2 | Complete   | 2026-03-27 |
-| 10. Progressive Disclosure UI | v1.1 | 0/3 | Planned | - |
+| 10. Progressive Disclosure UI | v1.1 | 1/3 | In Progress|  |
 | 11. Browser Verification | v1.1 | 0/0 | Not started | - |
