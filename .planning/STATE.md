@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Polish & Travel View Redesign
 status: executing
-stopped_at: Completed 10-01-PLAN.md and 10-02-PLAN.md (Wave 1)
-last_updated: "2026-03-27T21:00:21.795Z"
+stopped_at: Checkpoint at Task 3 of 10-03-PLAN.md — awaiting human verify
+last_updated: "2026-03-27T21:06:47.708Z"
 last_activity: 2026-03-27
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 7
   percent: 0
 ---
 
@@ -68,6 +68,9 @@ All v1.0 decisions archived in PROJECT.md Key Decisions table and milestones/v1.
 - [Phase 10]: _renderBreadcrumb uses imperative DOM with textContent for XSS-safe user data rendering
 - [Phase 10]: panToStop called with (stopId, plan.stops) argument order matching existing maps.js signature
 - [Phase 10]: drillLevel inferred from _activeStopId/_activeDayNum in _updateMapForTab for backward compatibility
+- [Phase 10]: _initBreadcrumbDelegation() uses separate listener on #guide-breadcrumb — breadcrumb outside #guide-content delegation scope
+- [Phase 10]: activateDayDetail/activateStopDetail use _drillTransition for consistent UX on browser back/forward
+- [Phase 10]: router _travel handler resets activeTab/_activeDayNum/_activeStopId before showTravelGuide for correct browser back-to-overview behavior
 
 ### Pending Todos
 
@@ -79,6 +82,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-27T21:00:21.793Z
-Stopped at: Completed Wave 1 (10-01 + 10-02)
+Last session: 2026-03-27T21:06:42.728Z
+Stopped at: Checkpoint at Task 3 of 10-03-PLAN.md — awaiting human verify
 Resume file: None
