@@ -126,10 +126,42 @@ function _setupGuideMap(plan) {
   });
 }
 
-/** Update map view when switching tabs. */
-function _updateMapForTab(plan, tab) {
+/**
+ * Update map view when switching tabs, with optional drill-level awareness.
+ * @param {Object} plan
+ * @param {string} tab - active guide tab
+ * @param {string} [drillLevel] - 'overview' | 'day' | 'stop' (inferred from state if not passed)
+ * @param {Object} [drillContext] - { dayNum, stopId }
+ */
+function _updateMapForTab(plan, tab, drillLevel, drillContext) {
   if (typeof GoogleMaps === 'undefined' || !_guideMapInitialized) return;
-  GoogleMaps.fitAllStops(plan);
+
+  // Infer drill level from state if not explicitly passed
+  if (!drillLevel) {
+    if (_activeStopId != null) {
+      drillLevel = 'stop';
+      drillContext = { stopId: _activeStopId, dayNum: _activeDayNum };
+    } else if (_activeDayNum != null) {
+      drillLevel = 'day';
+      drillContext = { dayNum: _activeDayNum };
+    } else {
+      drillLevel = 'overview';
+      drillContext = {};
+    }
+  }
+
+  if (drillLevel === 'day' && drillContext && drillContext.dayNum) {
+    var dayStops = _findStopsForDay(plan, Number(drillContext.dayNum));
+    var focusedIds = dayStops.map(function(s) { return String(s.id); });
+    GoogleMaps.fitDayStops(dayStops);
+    setTimeout(function() { GoogleMaps.dimNonFocusedMarkers(focusedIds); }, 50);
+  } else if (drillLevel === 'stop' && drillContext && drillContext.stopId) {
+    GoogleMaps.panToStop(drillContext.stopId, plan.stops || []);
+    setTimeout(function() { GoogleMaps.dimNonFocusedMarkers([String(drillContext.stopId)]); }, 50);
+  } else {
+    GoogleMaps.fitAllStops(plan);
+    GoogleMaps.restoreAllMarkers();
+  }
 }
 
 /** Handle marker click: highlight marker and scroll to card. */
