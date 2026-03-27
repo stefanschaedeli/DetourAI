@@ -212,33 +212,70 @@ function renderStopDetail(plan, stopId) {
 
 function navigateToStop(stopId) {
   _activeStopId = Number(stopId);
-  const plan = S.result;
+  var plan = S.result;
   if (!plan) return;
-  renderGuide(plan, 'stops');
-  // Update URL
+
+  // Determine which day this stop belongs to for breadcrumb
+  var stop = (plan.stops || []).find(function(s) { return String(s.id) === String(stopId); });
+  if (stop && _activeDayNum == null) {
+    _activeDayNum = stop.arrival_day || null;
+  }
+
+  _drillTransition(
+    function() { return renderStopDetail(plan, Number(stopId)); },
+    function() {
+      _initGuideDelegation();
+      var s = (plan.stops || []).find(function(x) { return String(x.id) === String(stopId); });
+      if (s) {
+        _initStopMap(s);
+        _lazyLoadSingleStopImages(plan, s);
+      }
+    }
+  );
+
+  _renderBreadcrumb('stop', plan, _activeDayNum, stopId);
+  _updateMapForTab(plan, 'stops', 'stop', { stopId: Number(stopId), dayNum: _activeDayNum });
+
   if (plan._saved_travel_id) {
-    const title = plan.custom_name || plan.title || '';
-    const base = Router.travelPath(plan._saved_travel_id, title);
+    var title = plan.custom_name || plan.title || '';
+    var base = Router.travelPath(plan._saved_travel_id, title);
     Router.navigate(base + '/stops/' + stopId, { skipDispatch: true });
   }
 }
 
 function navigateToStopsOverview() {
   _activeStopId = null;
-  const plan = S.result;
-  if (!plan) return;
-  renderGuide(plan, 'stops');
-  // Update URL
-  if (plan._saved_travel_id) {
-    const title = plan.custom_name || plan.title || '';
-    const base = Router.travelPath(plan._saved_travel_id, title);
-    Router.navigate(base + '/stops', { skipDispatch: true });
+  if (_activeDayNum != null) {
+    navigateToDay(_activeDayNum);
+  } else {
+    _navigateToOverview();
   }
 }
 
 function activateStopDetail(stopId) {
   _activeStopId = Number(stopId);
-  renderGuide(S.result, 'stops');
+  var plan = S.result;
+  if (!plan) return;
+
+  var stop = (plan.stops || []).find(function(s) { return String(s.id) === String(stopId); });
+  if (stop && _activeDayNum == null) {
+    _activeDayNum = stop.arrival_day || null;
+  }
+
+  _drillTransition(
+    function() { return renderStopDetail(plan, Number(stopId)); },
+    function() {
+      _initGuideDelegation();
+      var s = (plan.stops || []).find(function(x) { return String(x.id) === String(stopId); });
+      if (s) {
+        _initStopMap(s);
+        _lazyLoadSingleStopImages(plan, s);
+      }
+    }
+  );
+
+  _renderBreadcrumb('stop', plan, _activeDayNum, stopId);
+  _updateMapForTab(plan, 'stops', 'stop', { stopId: Number(stopId), dayNum: _activeDayNum });
 }
 
 

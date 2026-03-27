@@ -392,31 +392,48 @@ function renderDayDetail(plan, dayNum) {
 
 function navigateToDay(dayNum) {
   _activeDayNum = Number(dayNum);
-  const plan = S.result;
+  _activeStopId = null;
+  var plan = S.result;
   if (!plan) return;
-  renderGuide(plan, 'days');
+
+  _drillTransition(
+    function() { return renderDayDetail(plan, Number(dayNum)); },
+    function() {
+      _initGuideDelegation();
+      _initDayDetailMap(plan, Number(dayNum));
+    }
+  );
+
+  _renderBreadcrumb('day', plan, dayNum, null);
+  _updateMapForTab(plan, 'days', 'day', { dayNum: Number(dayNum) });
+
   if (plan._saved_travel_id) {
-    const title = plan.custom_name || plan.title || '';
-    const base = Router.travelPath(plan._saved_travel_id, title);
+    var title = plan.custom_name || plan.title || '';
+    var base = Router.travelPath(plan._saved_travel_id, title);
     Router.navigate(base + '/days/' + dayNum, { skipDispatch: true });
   }
 }
 
 function navigateToDaysOverview() {
-  _activeDayNum = null;
-  const plan = S.result;
-  if (!plan) return;
-  renderGuide(plan, 'days');
-  if (plan._saved_travel_id) {
-    const title = plan.custom_name || plan.title || '';
-    const base = Router.travelPath(plan._saved_travel_id, title);
-    Router.navigate(base + '/days', { skipDispatch: true });
-  }
+  _navigateToOverview();
 }
 
 function activateDayDetail(dayNum) {
   _activeDayNum = Number(dayNum);
-  renderGuide(S.result, 'days');
+  _activeStopId = null;
+  var plan = S.result;
+  if (!plan) return;
+
+  _drillTransition(
+    function() { return renderDayDetail(plan, Number(dayNum)); },
+    function() {
+      _initGuideDelegation();
+      _initDayDetailMap(plan, Number(dayNum));
+    }
+  );
+
+  _renderBreadcrumb('day', plan, dayNum, null);
+  _updateMapForTab(plan, 'days', 'day', { dayNum: Number(dayNum) });
 }
 
 // ---------------------------------------------------------------------------

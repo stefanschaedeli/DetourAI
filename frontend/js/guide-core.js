@@ -11,6 +11,9 @@ let _activeDayNum = null;
 // One-time event delegation on #guide-content
 let _guideDelegationReady = false;
 
+// One-time event delegation on #guide-breadcrumb (outside #guide-content)
+let _breadcrumbDelegationReady = false;
+
 // Crossfade transition timer — guards against rapid navigation (Pitfall 2)
 let _drillTransitionTimer = null;
 
@@ -68,6 +71,9 @@ function showTravelGuide(plan) {
 function renderGuide(plan, tab) {
   activeTab = tab || 'overview';
 
+  // Wire breadcrumb delegation on first call (breadcrumb is outside #guide-content)
+  _initBreadcrumbDelegation();
+
   // Update tab buttons
   document.querySelectorAll('.guide-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === activeTab);
@@ -104,6 +110,7 @@ function renderGuide(plan, tab) {
       _initializedStopMaps = new Set();
       if (_activeStopId !== null) {
         content.innerHTML = renderStopDetail(plan, _activeStopId);
+        _renderBreadcrumb('stop', plan, _activeDayNum, _activeStopId);
         requestAnimationFrame(() => {
           _initGuideDelegation();
           const stop = (plan.stops || []).find(s => String(s.id) === String(_activeStopId));
@@ -114,6 +121,7 @@ function renderGuide(plan, tab) {
         });
       } else {
         content.innerHTML = renderStopsOverview(plan);
+        _renderBreadcrumb('overview', plan, null, null);
         requestAnimationFrame(() => {
           _initGuideDelegation();
           _lazyLoadCardImages(plan);
@@ -123,14 +131,28 @@ function renderGuide(plan, tab) {
       break;
     case 'calendar':
       content.innerHTML = renderCalendar(plan);
+      _renderBreadcrumb('overview', plan, null, null);
       _initCalendarClicks(plan);
       break;
     case 'days':
-      // Note: innerHTML usage is XSS-safe — all user content passed through esc()
-      content.innerHTML = renderDaysOverview(plan);
-      requestAnimationFrame(() => _initGuideDelegation());
+      if (_activeDayNum !== null) {
+        // Note: innerHTML usage is XSS-safe — all user content passed through esc()
+        content.innerHTML = renderDayDetail(plan, _activeDayNum);
+        _renderBreadcrumb('day', plan, _activeDayNum, null);
+        requestAnimationFrame(() => {
+          _initGuideDelegation();
+          _initDayDetailMap(plan, _activeDayNum);
+        });
+      } else {
+        content.innerHTML = renderDaysOverview(plan);
+        _renderBreadcrumb('overview', plan, null, null);
+        requestAnimationFrame(() => _initGuideDelegation());
+      }
       break;
-    case 'budget':     content.innerHTML = renderBudget(plan);    break;
+    case 'budget':
+      content.innerHTML = renderBudget(plan);
+      _renderBreadcrumb('overview', plan, null, null);
+      break;
     default:
       content.textContent = '';
       (function() {
@@ -420,19 +442,55 @@ function _initGuideDelegation() {
       return;
     }
 
-    // Breadcrumb segment click - navigate to level
-    const breadcrumbSeg = e.target.closest('.guide-breadcrumb__segment');
-    if (breadcrumbSeg && !breadcrumbSeg.classList.contains('guide-breadcrumb__segment--active')) {
-      const navLevel = breadcrumbSeg.dataset.navLevel;
-      if (navLevel === 'overview') {
-        switchGuideTab('overview');
-      } else if (navLevel === 'day') {
-        const dayNum = breadcrumbSeg.dataset.dayNum;
-        if (dayNum) navigateToDay(dayNum);
-      }
-      return;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Breadcrumb Delegation (separate from _initGuideDelegation — breadcrumb is outside #guide-content)
+// ---------------------------------------------------------------------------
+
+function _initBreadcrumbDelegation() {
+  if (_breadcrumbDelegationReady) return;
+  _breadcrumbDelegationReady = true;
+  var bar = document.getElementById('guide-breadcrumb');
+  if (!bar) return;
+  bar.addEventListener('click', function(e) {
+    var seg = e.target.closest('.guide-breadcrumb__segment');
+    if (!seg || seg.classList.contains('guide-breadcrumb__segment--active')) return;
+    var navLevel = seg.getAttribute('data-nav-level');
+    var plan = S.result;
+    if (!plan) return;
+    if (navLevel === 'overview') {
+      _activeStopId = null;
+      _activeDayNum = null;
+      _navigateToOverview();
+    } else if (navLevel === 'day') {
+      var dayNum = seg.getAttribute('data-day-num');
+      _activeStopId = null;
+      if (dayNum) navigateToDay(Number(dayNum));
     }
   });
+}
+
+// ---------------------------------------------------------------------------
+// Overview Navigation Helper
+// ---------------------------------------------------------------------------
+
+function _navigateToOverview() {
+  var plan = S.result;
+  if (!plan) return;
+  _activeDayNum = null;
+  _activeStopId = null;
+  _drillTransition(
+    function() { return renderOverview(plan); },
+    function() { _initGuideDelegation(); if (typeof _initOverviewInteractions === 'function') _initOverviewInteractions(plan); }
+  );
+  _renderBreadcrumb('overview', plan, null, null);
+  _updateMapForTab(plan, 'overview', 'overview', {});
+  if (plan._saved_travel_id) {
+    var title = plan.custom_name || plan.title || '';
+    Router.navigate(Router.travelPath(plan._saved_travel_id, title), { skipDispatch: true });
+  }
 }
 
 function loadGuideFromCache() {
