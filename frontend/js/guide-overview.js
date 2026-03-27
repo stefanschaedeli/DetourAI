@@ -9,66 +9,85 @@ function renderOverview(plan) {
   const stops = plan.stops || [];
   const cost  = plan.cost_estimate || {};
   const mapUrl = plan.google_maps_overview_url || '';
+  const dayPlans = plan.day_plans || [];
+  const lastStop = stops[stops.length - 1] || {};
 
-  return `
-    <div class="overview-section">
-      <div class="overview-hero">
-        <h2>Reise: ${esc(plan.start_location)} \u2192 ${esc(stops[stops.length - 1]?.region || '')}</h2>
-        <p>${stops.length} Stops \u00b7 ${plan.day_plans?.length || 0} Tage</p>
-        ${mapUrl ? `<a href="${safeUrl(mapUrl)}" target="_blank" class="btn btn-secondary">
-          Google Maps \u00f6ffnen
-        </a>` : ''}
-      </div>
+  // Day cards HTML
+  const dayCardsHtml = dayPlans.map(function(dp) {
+    const dayStops = _findStopsForDay(plan, dp.day);
+    const stopCount = dayStops.length;
+    const driveHours = dayStops.reduce(function(sum, s) {
+      return sum + (typeof s.drive_hours_from_prev === 'number' ? s.drive_hours_from_prev : 0);
+    }, 0).toFixed(1);
+    return '<div class="day-card-v2" data-day-num="' + dp.day + '" tabindex="0" role="button">' +
+      '<div class="day-card-v2__thumb">' + buildHeroPhotoLoading('sm') + '</div>' +
+      '<div class="day-card-v2__body">' +
+        '<div class="day-card-v2__title">Tag ' + dp.day + ': ' + esc(dp.title) + '</div>' +
+        '<div class="day-card-v2__meta">' + stopCount + ' Stopp' + (stopCount !== 1 ? 's' : '') + ' · ' + driveHours + 'h Fahrt</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 
-      <div class="overview-stats">
-        <div class="stat-card">
-          <div class="stat-value">${stops.length}</div>
-          <div class="stat-label">Stops</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">${plan.day_plans?.length || 0}</div>
-          <div class="stat-label">Tage</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">CHF ${typeof cost.total_chf === 'number' ? cost.total_chf.toLocaleString('de-CH') : '\u2013'}</div>
-          <div class="stat-label">Gesamtkosten</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">CHF ${typeof cost.budget_remaining_chf === 'number' ? cost.budget_remaining_chf.toLocaleString('de-CH') : '\u2013'}</div>
-          <div class="stat-label">Rest-Budget</div>
-        </div>
-      </div>
+  // Collapsible details content
+  const detailsContent = renderTripAnalysis(plan.trip_analysis, plan.request) +
+    renderBudget(plan) +
+    (plan.travel_guide ? renderTravelGuide(plan.travel_guide) : '') +
+    renderFurtherActivities(plan.further_activities || []);
 
-      <div class="overview-route">
-        <h3>Route</h3>
-        <div class="route-line">
-          <div class="route-point start">${esc(plan.start_location)}</div>
-          ${stops.map(s => `
-            <div class="route-arrow">\u2192</div>
-            <div class="route-point">
-              ${FLAGS[s.country] || ''} ${esc(s.region)}
-              <small>${s.nights} N.</small>
-            </div>
-          `).join('')}
-        </div>
-      </div>
+  return '<div class="overview-section">' +
+    '<div style="margin-bottom:var(--space-lg)">' +
+      '<h2 style="font-size:1.75rem;font-weight:600;margin-bottom:var(--space-xs)">' +
+        'Reise: ' + esc(plan.start_location) + ' → ' + esc(lastStop.region || '') +
+      '</h2>' +
+      '<p style="font-size:var(--text-sm);color:var(--text-secondary)">' +
+        stops.length + ' Stops · ' + dayPlans.length + ' Tage' +
+        (typeof cost.total_chf === 'number' ? ' · CHF ' + cost.total_chf.toLocaleString('de-CH') : '') +
+      '</p>' +
+      (mapUrl ? '<a href="' + safeUrl(mapUrl) + '" target="_blank" class="btn btn-secondary" style="margin-top:var(--space-sm)">Google Maps öffnen</a>' : '') +
+    '</div>' +
+    (dayCardsHtml ? '<div class="day-cards-grid">' + dayCardsHtml + '</div>' : '') +
+    '<div class="overview-collapsible">' +
+      '<button class="overview-collapsible__toggle" aria-expanded="false">' +
+        '<span class="overview-collapsible__chevron">▸</span>' +
+        'Reisedetails &amp; Analyse' +
+      '</button>' +
+      '<div class="overview-collapsible__body">' +
+        '<div>' + detailsContent + '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
 
-      ${(plan.day_plans && plan.day_plans.length) ? `
-      <div class="overview-dayplan-cta" onclick="switchGuideTab('days')">
-        <div class="overview-dayplan-cta-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </div>
-        <div class="overview-dayplan-cta-text">
-          <strong>Tagesplan</strong>
-          <span>${plan.day_plans.length} Tage mit st\u00fcndlichen Zeitbl\u00f6cken, Karte und Aktivit\u00e4ten</span>
-        </div>
-        <svg class="overview-dayplan-cta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="9 6 15 12 9 18"/></svg>
-      </div>
-      ` : ''}
+function _initOverviewInteractions(plan) {
+  // 1. Collapsible toggle
+  var toggle = document.querySelector('.overview-collapsible__toggle');
+  if (toggle) {
+    toggle.addEventListener('click', function() {
+      var collapsible = toggle.closest('.overview-collapsible');
+      if (!collapsible) return;
+      var expanded = collapsible.classList.toggle('is-expanded');
+      toggle.setAttribute('aria-expanded', String(expanded));
+      var chevron = toggle.querySelector('.overview-collapsible__chevron');
+      if (chevron) chevron.textContent = expanded ? '▾' : '▸';
+    });
+  }
 
-      ${renderTripAnalysis(plan.trip_analysis, plan.request)}
-    </div>
-  `;
+  // 2. Day card thumbnail lazy loading (Pitfall 4)
+  var cards = document.querySelectorAll('.day-card-v2');
+  cards.forEach(function(card) {
+    var dayNum = Number(card.dataset.dayNum);
+    var dayStops = _findStopsForDay(plan, dayNum);
+    var firstStop = dayStops[0];
+    if (firstStop) {
+      var thumb = card.querySelector('.day-card-v2__thumb');
+      if (thumb) {
+        _lazyLoadEntityImages(thumb, firstStop.region || firstStop.name, firstStop.lat, firstStop.lng, 'city', 'sm');
+      }
+    }
+  });
+
+  // 3. Lazy load further activities images inside collapsible
+  _lazyLoadOverviewImages(plan);
 }
 
 // Highlight requirement keywords (from plan.request) in an already-escaped string

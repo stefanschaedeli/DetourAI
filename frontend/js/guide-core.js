@@ -11,6 +11,9 @@ let _activeDayNum = null;
 // One-time event delegation on #guide-content
 let _guideDelegationReady = false;
 
+// Crossfade transition timer — guards against rapid navigation (Pitfall 2)
+let _drillTransitionTimer = null;
+
 function showTravelGuide(plan) {
   S.result = plan;
 
@@ -85,7 +88,17 @@ function renderGuide(plan, tab) {
 
   switch (activeTab) {
     case 'overview':
-      content.innerHTML = renderOverview(plan);
+      content.textContent = '';
+      (function() {
+        var tmp = document.createElement('div');
+        tmp.insertAdjacentHTML('afterbegin', renderOverview(plan));
+        while (tmp.firstChild) content.appendChild(tmp.firstChild);
+      })();
+      _renderBreadcrumb('overview', plan, null, null);
+      requestAnimationFrame(function() {
+        _initGuideDelegation();
+        if (typeof _initOverviewInteractions === 'function') _initOverviewInteractions(plan);
+      });
       break;
     case 'stops':
       _initializedStopMaps = new Set();
@@ -119,7 +132,17 @@ function renderGuide(plan, tab) {
       break;
     case 'budget':     content.innerHTML = renderBudget(plan);    break;
     default:
-      content.innerHTML = renderOverview(plan);
+      content.textContent = '';
+      (function() {
+        var tmp = document.createElement('div');
+        tmp.insertAdjacentHTML('afterbegin', renderOverview(plan));
+        while (tmp.firstChild) content.appendChild(tmp.firstChild);
+      })();
+      _renderBreadcrumb('overview', plan, null, null);
+      requestAnimationFrame(function() {
+        _initGuideDelegation();
+        if (typeof _initOverviewInteractions === 'function') _initOverviewInteractions(plan);
+      });
   }
 
   // Update persistent map for current tab
@@ -175,6 +198,122 @@ function renderStatsBar(plan) {
       (budgetRemaining !== null ? 'CHF ' + budgetRemaining.toLocaleString('de-CH') : '\u2013') +
     '</span><span class="stat-label">Budget</span></div>' +
   '</div>';
+}
+
+// ---------------------------------------------------------------------------
+// Crossfade Drill Transition (D-03, D-04)
+// ---------------------------------------------------------------------------
+
+function _drillTransition(renderFn, afterRenderFn) {
+  var content = document.getElementById('guide-content');
+  if (!content) return;
+
+  // Cancel any in-progress transition (Pitfall 2 guard)
+  if (_drillTransitionTimer) {
+    clearTimeout(_drillTransitionTimer);
+    _drillTransitionTimer = null;
+  }
+
+  // Phase 1: fade out
+  content.style.transition = 'opacity 0.15s ease-in';
+  content.style.opacity = '0';
+  content.style.pointerEvents = 'none';
+
+  _drillTransitionTimer = setTimeout(function() {
+    _drillTransitionTimer = null;
+
+    // Scroll to top (D-04)
+    content.scrollTop = 0;
+    var panel = document.getElementById('guide-content-panel');
+    if (panel) panel.scrollTop = 0;
+
+    // Render new content via safe DOM pattern
+    var html = renderFn();
+    content.textContent = '';
+    var tmp = document.createElement('div');
+    tmp.insertAdjacentHTML('afterbegin', html);
+    while (tmp.firstChild) content.appendChild(tmp.firstChild);
+
+    // Phase 2: fade in
+    content.style.opacity = '0';
+    content.style.transition = '';
+    requestAnimationFrame(function() {
+      content.style.transition = 'opacity 0.25s ease-out';
+      content.style.opacity = '1';
+      content.style.pointerEvents = '';
+      if (afterRenderFn) afterRenderFn();
+    });
+  }, 150);
+}
+
+// ---------------------------------------------------------------------------
+// Breadcrumb Renderer (D-06)
+// ---------------------------------------------------------------------------
+
+function _renderBreadcrumb(level, plan, dayNum, stopId) {
+  var bar = document.getElementById('guide-breadcrumb');
+  if (!bar) return;
+
+  if (level === 'overview') {
+    bar.style.display = 'none';
+    bar.textContent = '';
+    return;
+  }
+
+  bar.style.display = '';
+  bar.textContent = '';
+
+  // First segment: always "Übersicht"
+  var seg1 = document.createElement('span');
+  seg1.className = 'guide-breadcrumb__segment';
+  seg1.textContent = 'Übersicht';
+  seg1.dataset.navLevel = 'overview';
+  seg1.setAttribute('role', 'link');
+  seg1.setAttribute('tabindex', '0');
+  bar.appendChild(seg1);
+
+  if (level === 'day' && dayNum != null) {
+    var sep1 = document.createElement('span');
+    sep1.className = 'guide-breadcrumb__separator';
+    sep1.textContent = '›';
+    bar.appendChild(sep1);
+
+    var dp = (plan.day_plans || []).find(function(d) { return d.day === Number(dayNum); });
+    var activeSeg = document.createElement('span');
+    activeSeg.className = 'guide-breadcrumb__segment guide-breadcrumb__segment--active';
+    activeSeg.textContent = 'Tag ' + dayNum + (dp && dp.title ? ': ' + dp.title : '');
+    bar.appendChild(activeSeg);
+  }
+
+  if (level === 'stop' && stopId != null) {
+    var sep2 = document.createElement('span');
+    sep2.className = 'guide-breadcrumb__separator';
+    sep2.textContent = '›';
+    bar.appendChild(sep2);
+
+    var belongsDayNum = dayNum;
+    var stop = (plan.stops || []).find(function(s) { return String(s.id) === String(stopId); });
+    if (stop && belongsDayNum == null) belongsDayNum = stop.arrival_day;
+
+    var daySeg = document.createElement('span');
+    daySeg.className = 'guide-breadcrumb__segment';
+    daySeg.textContent = 'Tag ' + belongsDayNum;
+    daySeg.dataset.navLevel = 'day';
+    daySeg.dataset.dayNum = String(belongsDayNum);
+    daySeg.setAttribute('role', 'link');
+    daySeg.setAttribute('tabindex', '0');
+    bar.appendChild(daySeg);
+
+    var sep3 = document.createElement('span');
+    sep3.className = 'guide-breadcrumb__separator';
+    sep3.textContent = '›';
+    bar.appendChild(sep3);
+
+    var stopSeg = document.createElement('span');
+    stopSeg.className = 'guide-breadcrumb__segment guide-breadcrumb__segment--active';
+    stopSeg.textContent = stop ? (stop.region || stop.name || '') : '';
+    bar.appendChild(stopSeg);
+  }
 }
 
 function _initGuideDelegation() {
@@ -270,6 +409,27 @@ function _initGuideDelegation() {
     if (daySidebarItem) {
       const dayNum = daySidebarItem.dataset.dayNum;
       if (dayNum) navigateToDay(dayNum);
+      return;
+    }
+
+    // Day card v2 (overview grid) - drill down to day detail
+    const dayCardV2 = e.target.closest('.day-card-v2');
+    if (dayCardV2) {
+      const dayNum = dayCardV2.dataset.dayNum;
+      if (dayNum) navigateToDay(dayNum);
+      return;
+    }
+
+    // Breadcrumb segment click - navigate to level
+    const breadcrumbSeg = e.target.closest('.guide-breadcrumb__segment');
+    if (breadcrumbSeg && !breadcrumbSeg.classList.contains('guide-breadcrumb__segment--active')) {
+      const navLevel = breadcrumbSeg.dataset.navLevel;
+      if (navLevel === 'overview') {
+        switchGuideTab('overview');
+      } else if (navLevel === 'day') {
+        const dayNum = breadcrumbSeg.dataset.dayNum;
+        if (dayNum) navigateToDay(dayNum);
+      }
       return;
     }
   });
