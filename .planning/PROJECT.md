@@ -82,6 +82,7 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - Public sharing via token-based links with read-only mode
 - Phase 8 (tech debt) fixed: map markers refresh after edits, replace_stop_job registered, stats bar on all tabs, drive limit enforcement with ferry exclusion
 - Phase 9 split guide.js (3010 lines) into 7 focused modules — pure structural refactor enabling Phase 10 progressive disclosure UI
+- Phase 10 implemented three-level drill-down UI (overview → day → stop) with crossfade transitions, breadcrumb navigation, and map marker dimming/focus management
 
 ## Constraints
 
@@ -108,6 +109,8 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 | Tags merge with ordered dedup, max 4 | Prevents tag overload while preserving AI + activity sources | ✓ Good (Phase 6) |
 | Ferry-aware directions in all code paths | Route edits on island trips need correct ferry metadata | ✓ Good (Phase 7) |
 | Two-tier drive limit validation (soft 100% + hard 130%) | Prevents uncomfortable overlong driving days while staying flexible | ✓ Good (Phase 8) |
+| Breadcrumb outside #guide-content | Persists across renderGuide() calls, avoids delegation scope issues | ✓ Good (Phase 10) |
+| Marker dimming via OverlayView _div opacity | Simpler than marker icon swaps, works with custom overlays | ✓ Good (Phase 10) |
 
 ## Evolution
 
@@ -127,4 +130,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-27 after Phase 9 (guide-module-split) completion*
+*Last updated: 2026-03-27 after Phase 10 (progressive-disclosure-ui) completion*
