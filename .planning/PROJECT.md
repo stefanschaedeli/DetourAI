@@ -81,6 +81,7 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - Map-centric responsive layout with split-panel design, stop cards, day timeline
 - Public sharing via token-based links with read-only mode
 - Phase 8 (tech debt) fixed: map markers refresh after edits, replace_stop_job registered, stats bar on all tabs, drive limit enforcement with ferry exclusion
+- Phase 9 split guide.js (3010 lines) into 7 focused modules — pure structural refactor enabling Phase 10 progressive disclosure UI
 
 ## Constraints
 
@@ -126,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-27 after Phase 8 (tech-debt-stabilization) completion*
+*Last updated: 2026-03-27 after Phase 9 (guide-module-split) completion*
