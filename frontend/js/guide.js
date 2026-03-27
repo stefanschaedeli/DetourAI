@@ -2305,6 +2305,7 @@ async function _executeRemoveStop(stopId) {
         _activeStopId = null;
         _unlockEditing();
         renderGuide(data, 'stops');
+        if (typeof GoogleMaps !== 'undefined') GoogleMaps.setGuideMarkers(data, _onMarkerClick);
       },
       job_error: (data) => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
@@ -2446,6 +2447,7 @@ async function _executeAddStop() {
         lsSet(LS_RESULT, { savedAt: new Date().toISOString(), plan: data });
         _unlockEditing();
         renderGuide(data, 'stops');
+        if (typeof GoogleMaps !== 'undefined') GoogleMaps.setGuideMarkers(data, _onMarkerClick);
       },
       job_error: (data) => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
@@ -2635,6 +2637,7 @@ function _doAddStopFromMap(placeName, afterStopId) {
         lsSet(LS_RESULT, { savedAt: new Date().toISOString(), plan: data });
         _unlockEditing();
         renderGuide(data, 'stops');
+        if (typeof GoogleMaps !== 'undefined') GoogleMaps.setGuideMarkers(data, _onMarkerClick);
       },
       job_error: function(data) {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
@@ -2693,6 +2696,7 @@ async function _onStopDrop(e, targetIndex) {
         lsSet(LS_RESULT, { savedAt: new Date().toISOString(), plan: data });
         _unlockEditing();
         renderGuide(data, 'stops');
+        if (typeof GoogleMaps !== 'undefined') GoogleMaps.setGuideMarkers(data, _onMarkerClick);
       },
       job_error: (data) => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
@@ -2917,6 +2921,7 @@ function _listenForReplaceComplete(jobId, travelId) {
       _unlockEditing();
       closeReplaceStopModal();
       renderGuide(data, activeTab);
+      if (typeof GoogleMaps !== 'undefined') GoogleMaps.setGuideMarkers(data, _onMarkerClick);
     },
     job_error: (data) => {
       if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
