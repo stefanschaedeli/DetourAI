@@ -29,6 +29,34 @@ cd "$WORK_DIR/catalog"
 APP_DIR="ix-dev/stable/detour-ai"
 TRAINS_DIR="trains/stable/detour-ai"
 
+# ── Bootstrap catalog structure on first run ──
+if [ ! -f "$APP_DIR/app.yaml" ]; then
+  echo "==> First run detected — bootstrapping catalog structure..."
+  mkdir -p "$APP_DIR"
+  cat > "$APP_DIR/app.yaml" <<APPYAML
+name: detour-ai
+train: stable
+version: 1.0.0
+app_version: "$APP_VERSION"
+title: DetourAI
+description: KI-gestützter Roadtrip-Planer
+home: https://github.com/${GITHUB_USER}/DetourAI
+icon_url: https://raw.githubusercontent.com/${GITHUB_USER}/detour-ai-catalog/main/assets/icon.png
+APPYAML
+  cat > "$APP_DIR/ix_values.yaml" <<IXVALS
+images:
+  backend:
+    repository: ghcr.io/${GITHUB_USER}/detour-ai-backend
+    tag: "$APP_VERSION"
+  frontend:
+    repository: ghcr.io/${GITHUB_USER}/detour-ai-frontend
+    tag: "$APP_VERSION"
+  redis:
+    repository: redis
+    tag: "7-alpine"
+IXVALS
+fi
+
 # ── Read current catalog version and bump minor ──
 CURRENT_VERSION=$(python3 -c "import yaml; d=yaml.safe_load(open('$APP_DIR/app.yaml')); print(d['version'])")
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
