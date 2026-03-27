@@ -16,7 +16,7 @@ Requirements for v1.1 Polish & Travel View Redesign. Each maps to roadmap phases
 
 ### Code Structure
 
-- [ ] **STRC-01**: guide.js split into focused modules (overview, day-detail, stop-detail, map-focus, shared utils) with zero behavioral changes
+- [x] **STRC-01**: guide.js split into focused modules (overview, day-detail, stop-detail, map-focus, shared utils) with zero behavioral changes
 
 ### Navigation
 
@@ -60,7 +60,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEBT-02 | Phase 8 | Pending |
 | DEBT-03 | Phase 8 | Pending |
 | DEBT-04 | Phase 8 | Complete |
-| STRC-01 | Phase 9 | Pending |
+| STRC-01 | Phase 9 | Complete |
 | NAV-01 | Phase 10 | Pending |
 | NAV-02 | Phase 10 | Pending |
 | NAV-03 | Phase 10 | Pending |
