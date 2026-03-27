@@ -80,7 +80,7 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - Geographic intelligence covers 8 Mediterranean island groups with ferry detection
 - Map-centric responsive layout with split-panel design, stop cards, day timeline
 - Public sharing via token-based links with read-only mode
-- Known tech debt: map markers not refreshed after route edits, replace_stop_job missing from Celery include list
+- Phase 8 (tech debt) fixed: map markers refresh after edits, replace_stop_job registered, stats bar on all tabs, drive limit enforcement with ferry exclusion
 
 ## Constraints
 
@@ -106,6 +106,7 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 | Corridor check flags but does NOT reject | User sees warning badge, maintains choice | ✓ Good (Phase 1) |
 | Tags merge with ordered dedup, max 4 | Prevents tag overload while preserving AI + activity sources | ✓ Good (Phase 6) |
 | Ferry-aware directions in all code paths | Route edits on island trips need correct ferry metadata | ✓ Good (Phase 7) |
+| Two-tier drive limit validation (soft 100% + hard 130%) | Prevents uncomfortable overlong driving days while staying flexible | ✓ Good (Phase 8) |
 
 ## Evolution
 
@@ -125,4 +126,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-27 after v1.1 milestone start*
+*Last updated: 2026-03-27 after Phase 8 (tech-debt-stabilization) completion*
