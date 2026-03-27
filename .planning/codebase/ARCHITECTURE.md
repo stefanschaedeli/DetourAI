@@ -4,7 +4,7 @@
 
 ## System Overview
 
-Travelman3 is a full-stack AI-powered road trip planner. Users configure a trip via a multi-step form; specialized Claude AI agents collaboratively build the route, research accommodations/activities/restaurants, and produce a day-by-day travel guide. All long-running operations use Server-Sent Events (SSE) for real-time progress streaming.
+DetourAI is a full-stack AI-powered road trip planner. Users configure a trip via a multi-step form; specialized Claude AI agents collaboratively build the route, research accommodations/activities/restaurants, and produce a day-by-day travel guide. All long-running operations use Server-Sent Events (SSE) for real-time progress streaming.
 
 **Pattern:** Monolithic backend with Celery task offloading. The system follows an interactive orchestration pattern where the user and AI agents collaborate step-by-step (not a single fire-and-forget job).
 

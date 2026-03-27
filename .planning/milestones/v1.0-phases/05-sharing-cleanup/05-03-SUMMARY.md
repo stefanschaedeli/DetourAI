@@ -69,7 +69,7 @@ completed: 2026-03-26
 - Share toggle UI: CSS toggle switch (40x22px pill), share URL input (readonly, ellipsis), "Link kopieren" button with "Kopiert!" feedback
 - `_handleShareToggle()` with confirmation dialog for revoke ("Link deaktivieren? Bestehende Empfaenger verlieren Zugriff.")
 - Read-only shared view: `body.shared-mode` CSS class hides all edit controls via `display: none !important`
-- "Erstellt mit Travelman" footer appended to guide content in shared mode
+- "Erstellt mit DetourAI" footer appended to guide content in shared mode
 - Error page for invalid/revoked share tokens with centered card layout
 - Mobile responsive: share controls wrap at 767px, URL input truncates to 160px
 

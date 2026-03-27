@@ -11,7 +11,7 @@ async def get_city_summary(city: str, language: str = "de") -> Optional[dict]:
         session = await get_session()
         async with session.get(
             url,
-            headers={"User-Agent": "Travelman3/1.0"},
+            headers={"User-Agent": "DetourAI/1.0"},
             timeout=aiohttp.ClientTimeout(total=6),
         ) as resp:
             if resp.status != 200:
@@ -45,7 +45,7 @@ async def get_city_facts(city: str, country: str) -> Optional[dict]:
         session = await get_session()
         async with session.get(
             search_url, params=params,
-            headers={"User-Agent": "Travelman3/1.0"},
+            headers={"User-Agent": "DetourAI/1.0"},
             timeout=aiohttp.ClientTimeout(total=8),
         ) as resp:
             if resp.status != 200:
@@ -65,7 +65,7 @@ async def get_city_facts(city: str, country: str) -> Optional[dict]:
         }
         async with session.get(
             search_url, params=entity_params,
-            headers={"User-Agent": "Travelman3/1.0"},
+            headers={"User-Agent": "DetourAI/1.0"},
             timeout=aiohttp.ClientTimeout(total=8),
         ) as resp:
             if resp.status != 200:

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add login-based access control to Travelman3 — all endpoints protected by JWT auth, user-scoped trip storage, admin panel for user management, and a versioned DB migration runner for safe upgrades.
+**Goal:** Add login-based access control to DetourAI — all endpoints protected by JWT auth, user-scoped trip storage, admin panel for user management, and a versioned DB migration runner for safe upgrades.
 
 **Architecture:** FastAPI-native auth using PyJWT + passlib[argon2]. Access tokens (15min JWT) returned in response body and stored in a JS memory variable; refresh tokens (7-day opaque UUID) stored as HTTP-only SameSite=Strict cookies with hash in SQLite. A versioned migration runner (`migrations.py`) handles all schema changes on startup. Admin panel is a hidden SPA section rendered only for `is_admin` users.
 
@@ -341,7 +341,7 @@ Expected: all 6 tests PASS.
 - [ ] **Step 1.7: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add backend/requirements.txt backend/utils/migrations.py backend/tests/test_migrations.py
 git commit -m "feat: versioned DB migration runner mit initialen Auth-Migrationen
 
@@ -513,7 +513,7 @@ Expected: `OK`
 - [ ] **Step 2.3: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add backend/utils/auth_db.py
 git commit -m "feat: Auth-Datenbank-Schicht (users + refresh_tokens CRUD)
 
@@ -646,7 +646,7 @@ Expected: `True`
 - [ ] **Step 3.3: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add backend/utils/auth.py
 git commit -m "feat: JWT-Hilfsfunktionen und Argon2id-Passwort-Hashing
 
@@ -676,7 +676,7 @@ touch backend/routers/__init__.py
 ```python
 """
 Auth endpoints: login, refresh, logout, me.
-Cookie name: travelman_refresh
+Cookie name: detour_ai_refresh
 """
 import os
 import uuid
@@ -701,7 +701,7 @@ from utils.auth_db import (
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-COOKIE_NAME = "travelman_refresh"
+COOKIE_NAME = "detour_ai_refresh"
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
 REFRESH_TOKEN_TTL_DAYS = 7
 
@@ -754,12 +754,12 @@ async def login(body: LoginRequest, response: Response) -> TokenResponse:
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(
     response: Response,
-    travelman_refresh: str | None = Cookie(default=None),
+    detour_ai_refresh: str | None = Cookie(default=None),
 ) -> TokenResponse:
-    if travelman_refresh is None:
+    if detour_ai_refresh is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kein Refresh-Token")
 
-    user_id = await asyncio.to_thread(validate_and_rotate_refresh_token, travelman_refresh)
+    user_id = await asyncio.to_thread(validate_and_rotate_refresh_token, detour_ai_refresh)
     if user_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges oder abgelaufenes Refresh-Token")
 
@@ -779,10 +779,10 @@ async def refresh(
 @router.post("/logout")
 async def logout(
     response: Response,
-    travelman_refresh: str | None = Cookie(default=None),
+    detour_ai_refresh: str | None = Cookie(default=None),
 ) -> dict:
-    if travelman_refresh:
-        await asyncio.to_thread(delete_refresh_token, travelman_refresh)
+    if detour_ai_refresh:
+        await asyncio.to_thread(delete_refresh_token, detour_ai_refresh)
     response.delete_cookie(key=COOKIE_NAME, path="/api/auth")
     return {"ok": True}
 
@@ -803,7 +803,7 @@ Expected: `OK`
 - [ ] **Step 4.4: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add backend/routers/__init__.py backend/routers/auth.py
 git commit -m "feat: Auth-Router (login, refresh, logout, me)
 
@@ -936,7 +936,7 @@ Expected: `OK`
 - [ ] **Step 5.3: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add backend/routers/admin.py
 git commit -m "feat: Admin-Router (Benutzerverwaltung)
 
@@ -1063,7 +1063,7 @@ Expected: `OK`
 - [ ] **Step 6.11: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add backend/utils/travel_db.py
 git commit -m "feat: travel_db mit user_id-Filterung und Eigentümervalidierung
 
@@ -1131,7 +1131,7 @@ Expected: `OK` for both.
 - [ ] **Step 7.6: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add backend/tasks/run_planning_job.py backend/tasks/replace_stop_job.py
 git commit -m "feat: user_id aus Redis-Job-State an save_travel und update_plan_json weitergeleitet
 
@@ -1269,7 +1269,7 @@ Expected: `OK` (no import errors).
 - [ ] **Step 8.10: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add backend/main.py
 git commit -m "feat: Auth-Middleware in main.py integriert (Migrations, Bootstrap, Deps)
 
@@ -1337,7 +1337,7 @@ def test_login_valid_credentials(client):
     assert "access_token" in data
     assert data["token_type"] == "bearer"
     # refresh cookie should be set
-    assert "travelman_refresh" in resp.cookies
+    assert "detour_ai_refresh" in resp.cookies
 
 
 def test_login_wrong_password(client):
@@ -1398,14 +1398,14 @@ def test_admin_endpoint_as_admin(client):
 
 def test_token_refresh_with_valid_cookie(client):
     login_resp = _login(client)
-    cookie = login_resp.cookies.get("travelman_refresh")
+    cookie = login_resp.cookies.get("detour_ai_refresh")
     assert cookie is not None
 
-    resp = client.post("/api/auth/refresh", cookies={"travelman_refresh": cookie})
+    resp = client.post("/api/auth/refresh", cookies={"detour_ai_refresh": cookie})
     assert resp.status_code == 200
     assert "access_token" in resp.json()
     # New cookie should be set (rotation)
-    assert "travelman_refresh" in resp.cookies
+    assert "detour_ai_refresh" in resp.cookies
 
 
 def test_token_refresh_without_cookie(client):
@@ -1414,7 +1414,7 @@ def test_token_refresh_without_cookie(client):
 
 
 def test_token_refresh_invalid_cookie(client):
-    resp = client.post("/api/auth/refresh", cookies={"travelman_refresh": "invalid-token"})
+    resp = client.post("/api/auth/refresh", cookies={"detour_ai_refresh": "invalid-token"})
     assert resp.status_code == 401
 
 
@@ -1422,13 +1422,13 @@ def test_token_refresh_invalid_cookie(client):
 
 def test_logout_clears_cookie(client):
     login_resp = _login(client)
-    cookie = login_resp.cookies.get("travelman_refresh")
+    cookie = login_resp.cookies.get("detour_ai_refresh")
 
-    logout_resp = client.post("/api/auth/logout", cookies={"travelman_refresh": cookie})
+    logout_resp = client.post("/api/auth/logout", cookies={"detour_ai_refresh": cookie})
     assert logout_resp.status_code == 200
 
     # Using the old cookie should now fail
-    resp = client.post("/api/auth/refresh", cookies={"travelman_refresh": cookie})
+    resp = client.post("/api/auth/refresh", cookies={"detour_ai_refresh": cookie})
     assert resp.status_code == 401
 
 
@@ -1508,7 +1508,7 @@ Fix any regressions in existing tests (the signature changes to travel_db functi
 - [ ] **Step 9.4: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add backend/tests/test_auth.py
 git commit -m "test: Auth-Testfälle (Login, Token, Admin, Eigentümer)
 
@@ -1551,7 +1551,7 @@ In the `celery` service `environment:` block add the same 4 vars (celery workers
 - [ ] **Step 10.3: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add backend/.env.example docker-compose.yml
 git commit -m "feat: Auth-Umgebungsvariablen in .env.example und docker-compose.yml
 
@@ -1789,7 +1789,7 @@ async function apiGetMe() {
 - [ ] **Step 11.4: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add frontend/js/auth.js frontend/js/api.js frontend/js/state.js
 git commit -m "feat: Frontend Auth-Modul (Token-Speicher, Login, Refresh-Serialisierung)
 
@@ -2036,7 +2036,7 @@ If any `user_id` field is interpolated into visible HTML via `esc()` or template
 - [ ] **Step 12.7: Commit**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add frontend/index.html
 git commit -m "feat: Login-Screen und Admin-Panel in index.html integriert
 
@@ -2060,7 +2060,7 @@ Expected: all tests pass (migrations, auth, models, endpoints, agents, travel_db
 - [ ] **Step 13.2: Start the stack**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 ADMIN_USERNAME=admin ADMIN_PASSWORD=testpass123 JWT_SECRET=test_secret_that_is_32_chars_long docker compose up --build
 ```
 
@@ -2084,7 +2084,7 @@ ADMIN_USERNAME=admin ADMIN_PASSWORD=testpass123 JWT_SECRET=test_secret_that_is_3
 - [ ] **Step 13.4: Final commit + tag**
 
 ```bash
-cd /Users/stefan/Code/Travelman3
+cd /Users/stefan/Code/DetourAI
 git add .
 git commit -m "feat: Auth & Access Control vollständig implementiert
 

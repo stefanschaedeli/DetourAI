@@ -213,8 +213,8 @@ assert stops[1]["ferry_cost_chf"] == 150.0  # 50 + 200*0.5
 |----------|-------|
 | Framework | pytest 8.0+ with pytest-asyncio, pytest-mock |
 | Config file | `backend/tests/conftest.py` |
-| Quick run command | `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/test_route_editing.py tests/test_ferry.py -x -v` |
-| Full suite command | `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/ -v` |
+| Quick run command | `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/test_route_editing.py tests/test_ferry.py -x -v` |
+| Full suite command | `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/ -v` |
 
 ### Phase Requirements -> Test Map
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
@@ -225,8 +225,8 @@ assert stops[1]["ferry_cost_chf"] == 150.0  # 50 + 200*0.5
 | GEO-03+05 | Ferry metadata set on stops after edit | unit | `cd backend && python3 -m pytest tests/test_route_editing.py -x -k "ferry_metadata"` | New test needed |
 
 ### Sampling Rate
-- **Per task commit:** `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/test_route_editing.py tests/test_ferry.py -x -v`
-- **Per wave merge:** `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/ -v`
+- **Per task commit:** `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/test_route_editing.py tests/test_ferry.py -x -v`
+- **Per wave merge:** `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/ -v`
 - **Phase gate:** Full suite green before `/gsd:verify-work`
 
 ### Wave 0 Gaps

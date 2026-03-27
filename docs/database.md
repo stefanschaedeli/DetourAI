@@ -1,4 +1,4 @@
-# Travelman — Datenbank-Dokumentation
+# DetourAI — Datenbank-Dokumentation
 
 > Detaillierte Referenz zur SQLite-Persistenzschicht (`travels.db`)
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-Travelman uses two persistence layers with distinct responsibilities:
+DetourAI uses two persistence layers with distinct responsibilities:
 
 | Store | Technology | TTL | Purpose |
 |-------|-----------|-----|---------|

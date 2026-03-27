@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # setup-claude.sh — Bootstrap Claude Code Kontext nach git clone auf neuem PC
-# Usage: cd Travelman3 && bash setup-claude.sh
+# Usage: cd DetourAI && bash setup-claude.sh
 set -euo pipefail
 
 # ─── Detect project path & Claude project key ───────────────────────────────
@@ -10,7 +10,7 @@ PROJECT_KEY="-$(echo "$PROJECT_DIR" | sed 's|^/||; s|/|-|g')"
 MEMORY_DIR="$HOME/.claude/projects/$PROJECT_KEY/memory"
 
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  Travelman3 — Claude Code Setup                            ║"
+echo "║  DetourAI — Claude Code Setup                               ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 echo "Project:    $PROJECT_DIR"
@@ -24,7 +24,7 @@ mkdir -p "$MEMORY_DIR"
 # ─── 2. Write MEMORY.md ─────────────────────────────────────────────────────
 echo "▸ Schreibe MEMORY.md..."
 cat > "$MEMORY_DIR/MEMORY.md" << MEMEOF
-# Travelman3 — Project Memory
+# DetourAI — Project Memory
 
 ## Status: All 6 phases COMPLETE (2026-03-02)
 

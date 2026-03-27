@@ -5,7 +5,7 @@
 #   ./scripts/update-catalog.sh <app_version> <catalog_repo_url>
 #
 # Example:
-#   ./scripts/update-catalog.sh 7.0.0 git@github.com:user/travelman-catalog.git
+#   ./scripts/update-catalog.sh 7.0.0 git@github.com:user/detour-ai-catalog.git
 #
 # Environment:
 #   GITHUB_USER — GitHub username for GHCR image paths (required)
@@ -26,8 +26,8 @@ echo "==> Cloning catalog repo..."
 git clone "$CATALOG_REPO" "$WORK_DIR/catalog"
 cd "$WORK_DIR/catalog"
 
-APP_DIR="ix-dev/stable/travelman"
-TRAINS_DIR="trains/stable/travelman"
+APP_DIR="ix-dev/stable/detour-ai"
+TRAINS_DIR="trains/stable/detour-ai"
 
 # ── Read current catalog version and bump minor ──
 CURRENT_VERSION=$(python3 -c "import yaml; d=yaml.safe_load(open('$APP_DIR/app.yaml')); print(d['version'])")
@@ -45,7 +45,7 @@ with open('$APP_DIR/ix_values.yaml') as f:
 
 for key, img in data.get('images', {}).items():
     # Only update our own images, not third-party (redis)
-    if 'travelman' in img.get('repository', ''):
+    if 'detour-ai' in img.get('repository', ''):
         img['tag'] = '$APP_VERSION'
 
 with open('$APP_DIR/ix_values.yaml', 'w') as f:
@@ -102,16 +102,16 @@ import json
 
 catalog = {
     'stable': {
-        'travelman': {
-            'name': 'Travelman',
+        'detour-ai': {
+            'name': 'DetourAI',
             'categories': ['productivity'],
             'app_version': '$APP_VERSION',
             'train': 'stable',
             'description': 'KI-gestützter Roadtrip-Planer',
-            'home': 'https://github.com/$GITHUB_USER/Travelman3',
+            'home': 'https://github.com/$GITHUB_USER/DetourAI',
             'latest_version': '$NEW_CATALOG_VERSION',
             'latest_app_version': '$APP_VERSION',
-            'icon_url': 'https://raw.githubusercontent.com/$GITHUB_USER/travelman-catalog/main/assets/icon.png'
+            'icon_url': 'https://raw.githubusercontent.com/$GITHUB_USER/detour-ai-catalog/main/assets/icon.png'
         }
     }
 }
@@ -124,7 +124,7 @@ with open('catalog.json', 'w') as f:
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 git add -A
-git commit -m "release: Travelman $APP_VERSION (catalog $NEW_CATALOG_VERSION)
+git commit -m "release: DetourAI $APP_VERSION (catalog $NEW_CATALOG_VERSION)
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 git push

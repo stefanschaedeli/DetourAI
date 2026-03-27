@@ -74,7 +74,7 @@
 | Option | Description | Selected |
 |--------|-------------|----------|
 | No branding | Clean view, no marketing | |
-| Subtle footer note | Small "Erstellt mit Travelman" at bottom | ✓ |
+| Subtle footer note | Small "Erstellt mit DetourAI" at bottom | ✓ |
 | You decide | Let Claude decide | |
 
 **User's choice:** Subtle footer note

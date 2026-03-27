@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Polish & Travel View Redesign
-status: defining requirements
+status: ready to plan
 stopped_at: null
-last_updated: "2026-03-27T09:59:00.000Z"
+last_updated: "2026-03-27T10:30:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -19,39 +19,32 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** Route planning and stop discovery must produce consistently high-quality, geographically correct results for any destination type.
-**Current focus:** v1.1 — Fix tech debt, then redesign travel view with overview-first drill-down
+**Current focus:** Phase 8 -- Tech Debt Stabilization (fix production bugs before redesign)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-27 — Milestone v1.1 started
+Phase: 8 of 11 (Tech Debt Stabilization) -- first of 4 phases in v1.1
+Plan: --
+Status: Ready to plan
+Last activity: 2026-03-27 -- Roadmap created for v1.1 (Phases 8-11)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity (18 plans tracked from v1.0):**
 
-| Plan | Duration | Tasks | Files |
-|------|----------|-------|-------|
-| Phase 01 P01 | 3min | 2 tasks | 5 files |
-| Phase 01 P02 | 3min | 2 tasks | 3 files |
-| Phase 01 P03 | 350s | 3 tasks | 6 files |
-| Phase 02 P01 | 3min | 2 tasks | 5 files |
-| Phase 02 P02 | 5min | 2 tasks | 6 files |
-| Phase 03 P01 | 4min | 2 tasks | 8 files |
-| Phase 03 P02 | 6min | 2 tasks | 3 files |
-| Phase 04 P01 | 4min | 2 tasks | 4 files |
-| Phase 04 P02 | 4min | 2 tasks | 3 files |
-| Phase 04 P03 | 5min | 2 tasks | 2 files |
-| Phase 04 P04 | 6min | 2 tasks | 3 files |
-| Phase 04 P05 | 2min | 1 task | 2 files |
-| Phase 05 P01 | 3min | 2 tasks | 6 files |
-| Phase 05 P02 | 3min | 2 tasks | 11 files |
-| Phase 05 P03 | 4min | 2 tasks | 6 files |
-| Phase 06 P01 | 3min | 2 tasks | 7 files |
-| Phase 06 P02 | 3min | 2 tasks | 5 files |
-| Phase 07 P01 | 4min | 2 tasks | 4 files |
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| Phase 1 | 3 | 9min | 3min |
+| Phase 2 | 2 | 8min | 4min |
+| Phase 3 | 3 | 13min | 4.3min |
+| Phase 4 | 6 | 25min | 4.2min |
+| Phase 5 | 3 | 10min | 3.3min |
+| Phase 6 | 2 | 6min | 3min |
+| Phase 7 | 1 | 4min | 4min |
+
+**Average:** 3.6 min/plan across 18 plans
 
 ## Accumulated Context
 
@@ -61,7 +54,7 @@ All v1.0 decisions archived in PROJECT.md Key Decisions table and milestones/v1.
 
 ### Pending Todos
 
-- RouteArchitect ignores daily drive limits and suggests ferries/islands (from v1.0)
+- RouteArchitect ignores daily drive limits and suggests ferries/islands (addressed by DEBT-04 in Phase 8)
 
 ### Blockers/Concerns
 
@@ -70,5 +63,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-03-27
-Stopped at: Defining v1.1 requirements
+Stopped at: Roadmap created for v1.1 milestone
 Resume file: None

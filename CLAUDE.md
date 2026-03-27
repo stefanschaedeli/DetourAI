@@ -56,7 +56,7 @@ cd backend && pip3 install -r requirements.txt
 ## Project Architecture
 
 ```
-travelman3/
+DetourAI/
 ├── CLAUDE.md
 ├── docker-compose.yml
 ├── infra/
@@ -243,7 +243,7 @@ All API endpoints require JWT authentication. To call protected endpoints locall
 
 ```bash
 # Token generieren (15 Min gültig, kein laufender Server nötig)
-TOKEN=$(cd /Users/stefan/Code/travelman3 && python3 scripts/dev-token.py)
+TOKEN=$(cd /Users/stefan/Code/Travelman3 && python3 scripts/dev-token.py)
 
 # Geschützte Endpoints aufrufen
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/auth/me
@@ -294,7 +294,7 @@ git push && git push --tags
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
-**Travelman3**
+**DetourAI**
 
 AI-powered road trip planner for friends and family. Users configure a trip (start, destination, duration, budget, travel style), then specialized Claude agents collaboratively build the route, research accommodations/activities/restaurants, and produce a day-by-day travel guide. Real-time progress via SSE. Currently deployed via Docker Compose with FastAPI backend and vanilla JS frontend.
 

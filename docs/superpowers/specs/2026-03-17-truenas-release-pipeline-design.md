@@ -12,7 +12,7 @@ Automated release pipeline that builds Docker images, pushes them to GitHub Cont
 ## Goals
 
 - Push a release tag → TrueNAS sees an app update automatically
-- TrueNAS discovers Travelman in the "Discover" screen as a native app
+- TrueNAS discovers DetourAI in the "Discover" screen as a native app
 - Native config UI for API keys, ports, and storage
 - No changes to existing development workflow (patch tags continue as-is)
 - Existing source code remains untouched (minor Dockerfile change for UID alignment)
@@ -31,17 +31,17 @@ Automated release pipeline that builds Docker images, pushes them to GitHub Cont
 
 **Two GitHub repositories:**
 
-1. **`Travelman3`** (existing, private) — Source code + GitHub Actions pipeline. Builds Docker images and updates the catalog repo on release.
+1. **`DetourAI`** (existing, private) — Source code + GitHub Actions pipeline. Builds Docker images and updates the catalog repo on release.
 
-2. **`travelman-catalog`** (new, private) — TrueNAS custom app catalog. Contains only catalog metadata, compose templates, and version snapshots. TrueNAS points to this repo.
+2. **`detour-ai-catalog`** (new, private) — TrueNAS custom app catalog. Contains only catalog metadata, compose templates, and version snapshots. TrueNAS points to this repo.
 
 **Why two repos?** TrueNAS clones the entire catalog repository. Keeping it separate prevents TrueNAS from pulling source code, logs, and outputs.
 
 ### Image Registry
 
 Images are hosted on GitHub Container Registry (GHCR):
-- `ghcr.io/<user>/travelman-backend:<version>` — Backend + Celery worker (same image, different entrypoint)
-- `ghcr.io/<user>/travelman-frontend:<version>` — Nginx + static frontend
+- `ghcr.io/<user>/detour-ai-backend:<version>` — Backend + Celery worker (same image, different entrypoint)
+- `ghcr.io/<user>/detour-ai-frontend:<version>` — Nginx + static frontend
 
 Only 2 images are built. The Celery worker reuses the backend image with a different command.
 
@@ -60,7 +60,7 @@ Only 2 images are built. The Celery worker reuses the backend image with a diffe
 
 ### Trigger
 
-Push of a Git tag matching `release/v*` on the Travelman3 repository.
+Push of a Git tag matching `release/v*` on the DetourAI repository.
 
 ### Pipeline Steps (GitHub Actions)
 
@@ -74,18 +74,18 @@ release/v7.0.0 tag pushed
              ▼
 ┌─────────────────────────┐
 │  2. Build Images         │  docker buildx build (amd64)
-│                          │  → travelman-backend
-│                          │  → travelman-frontend
+│                          │  → detour-ai-backend
+│                          │  → detour-ai-frontend
 └────────────┬────────────┘
              ▼
 ┌─────────────────────────┐
-│  3. Push to GHCR         │  ghcr.io/<user>/travelman-backend:7.0.0
-│                          │  ghcr.io/<user>/travelman-frontend:7.0.0
+│  3. Push to GHCR         │  ghcr.io/<user>/detour-ai-backend:7.0.0
+│                          │  ghcr.io/<user>/detour-ai-frontend:7.0.0
 │                          │  + :latest tags
 └────────────┬────────────┘
              ▼
 ┌─────────────────────────┐
-│  4. Update Catalog Repo  │  Clone travelman-catalog
+│  4. Update Catalog Repo  │  Clone detour-ai-catalog
 │                          │  Update ix_values.yaml (new image tags)
 │                          │  Update app.yaml (bump version + app_version)
 │                          │  Create new version dir in trains/
@@ -94,14 +94,14 @@ release/v7.0.0 tag pushed
 └────────────┬────────────┘
              ▼
 ┌─────────────────────────┐
-│  5. GitHub Release       │  Create release on Travelman3
+│  5. GitHub Release       │  Create release on DetourAI
 │                          │  with auto-generated changelog
 └─────────────────────────┘
 ```
 
 ### Workflow File
 
-**Location:** `.github/workflows/release.yml` in Travelman3
+**Location:** `.github/workflows/release.yml` in DetourAI
 
 **Key implementation details:**
 - Uses `docker/build-push-action` for multi-stage builds
@@ -114,7 +114,7 @@ release/v7.0.0 tag pushed
 
 | Secret | Purpose |
 |--------|---------|
-| `CATALOG_DEPLOY_KEY` | SSH deploy key with write access to `travelman-catalog` repo (script clones via SSH URL `git@github.com:<user>/travelman-catalog.git`) |
+| `CATALOG_DEPLOY_KEY` | SSH deploy key with write access to `detour-ai-catalog` repo (script clones via SSH URL `git@github.com:<user>/detour-ai-catalog.git`) |
 | *(built-in)* `GITHUB_TOKEN` | GHCR push access (automatic) |
 
 **TrueNAS pull PAT:** The PAT configured on TrueNAS for GHCR needs `read:packages` scope.
@@ -123,15 +123,15 @@ release/v7.0.0 tag pushed
 
 ## TrueNAS Catalog Structure
 
-### Repository Layout (`travelman-catalog`)
+### Repository Layout (`detour-ai-catalog`)
 
 ```
-travelman-catalog/
+detour-ai-catalog/
 ├── catalog.json                         # Auto-generated catalog index
 ├── features_capability.json             # TrueNAS version feature gates
 ├── ix-dev/
 │   └── stable/
-│       └── travelman/
+│       └── detour-ai/
 │           ├── app.yaml                 # App metadata
 │           ├── ix_values.yaml           # Image repos + tags
 │           ├── questions.yaml           # TrueNAS UI config form
@@ -144,7 +144,7 @@ travelman-catalog/
 │                   └── basic-values.yaml
 └── trains/
     └── stable/
-        └── travelman/
+        └── detour-ai/
             ├── item.yaml
             ├── app_versions.json        # Index of all published versions
             └── <version>/               # Snapshot per release
@@ -164,8 +164,8 @@ categories:
   - productivity
 date_added: "2026-03-17"
 description: "KI-gestützter Roadtrip-Planer mit interaktiver Routenplanung, Unterkünften, Aktivitäten und Tagesführer."
-home: https://github.com/<user>/Travelman3
-icon: https://raw.githubusercontent.com/<user>/travelman-catalog/main/assets/icon.png
+home: https://github.com/<user>/DetourAI
+icon: https://raw.githubusercontent.com/<user>/detour-ai-catalog/main/assets/icon.png
 keywords:
   - travel
   - planner
@@ -174,7 +174,7 @@ lib_version: 2.2.2
 maintainers:
   - name: stefan
     email: ""
-name: travelman
+name: detour-ai
 run_as_context:
   - description: Backend and Celery containers run as apps user
     gid: 568
@@ -187,7 +187,7 @@ run_as_context:
   - description: Redis runs as built-in redis user
     gid: 999
     uid: 999
-title: Travelman
+title: DetourAI
 train: stable
 version: "1.0.0"
 ```
@@ -196,7 +196,7 @@ version: "1.0.0"
 
 | Group | Variables |
 |-------|-----------|
-| **Travelman Configuration** | `ANTHROPIC_API_KEY` (string, required, private), `GOOGLE_MAPS_API_KEY` (string, required, private), `BRAVE_API_KEY` (string, optional), `TEST_MODE` (boolean, default false) |
+| **DetourAI Configuration** | `ANTHROPIC_API_KEY` (string, required, private), `GOOGLE_MAPS_API_KEY` (string, required, private), `BRAVE_API_KEY` (string, optional), `TEST_MODE` (boolean, default false) |
 | **User and Group Configuration** | `user` (int, default 568, min 568), `group` (int, default 568, min 568) — applies to backend + celery containers only |
 | **Network Configuration** | `web_port` (int, default 30080, bind mode, host IPs), `host_network` (boolean, default false) |
 | **Storage Configuration** | `travel_data` (ixVolume/host_path), `logs` (ixVolume/host_path, optional), `outputs` (ixVolume/host_path, optional) |
@@ -207,19 +207,19 @@ version: "1.0.0"
 ```yaml
 images:
   backend_image:
-    repository: ghcr.io/<user>/travelman-backend
+    repository: ghcr.io/<user>/detour-ai-backend
     tag: "7.0.0"
   frontend_image:
-    repository: ghcr.io/<user>/travelman-frontend
+    repository: ghcr.io/<user>/detour-ai-frontend
     tag: "7.0.0"
   redis_image:
     repository: redis
     tag: "7-alpine"
 consts:
-  backend_container_name: travelman-backend
-  celery_container_name: travelman-celery
-  frontend_container_name: travelman-frontend
-  redis_container_name: travelman-redis
+  backend_container_name: detour-ai-backend
+  celery_container_name: detour-ai-celery
+  frontend_container_name: detour-ai-frontend
+  redis_container_name: detour-ai-redis
   perms_container_name: permissions
   data_path: /app/data
   logs_path: /app/logs
@@ -244,11 +244,11 @@ All services share a Docker network. Storage volumes for `travel_data` and `logs
 ### One-Time Setup
 
 1. **GHCR credentials:** TrueNAS Settings → Docker Registry → Add `ghcr.io` with GitHub PAT (scope: `read:packages`)
-2. **Add catalog:** Apps → Discover → Manage Catalogs → Add Catalog → repo URL: `https://github.com/<user>/travelman-catalog`, train: `stable`, branch: `main`
+2. **Add catalog:** Apps → Discover → Manage Catalogs → Add Catalog → repo URL: `https://github.com/<user>/detour-ai-catalog`, train: `stable`, branch: `main`
 
 ### Installing
 
-1. Travelman appears in the Discover screen
+1. DetourAI appears in the Discover screen
 2. Click Install → fill in API keys, choose port, configure storage
 3. TrueNAS renders the compose template and deploys 4 containers
 
@@ -256,12 +256,12 @@ All services share a Docker network. Storage volumes for `travel_data` and `logs
 
 1. Push `release/v8.0.0` tag → pipeline builds images + updates catalog
 2. TrueNAS: Refresh Catalog (or automatic periodic check)
-3. "Update available" badge appears on Travelman
+3. "Update available" badge appears on DetourAI
 4. Click Update → TrueNAS pulls new images and redeploys
 
 ---
 
-## Changes to Travelman3
+## Changes to DetourAI
 
 ### New Files
 

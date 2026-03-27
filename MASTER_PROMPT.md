@@ -1,6 +1,6 @@
-# Travelman2 — Complete Rebuild Specification
+# DetourAI — Complete Rebuild Specification
 
-You are building **Travelman2**, a full-stack AI-powered road trip planner from scratch.
+You are building **DetourAI**, a full-stack AI-powered road trip planner from scratch.
 Read this document completely before writing any code. Implement it phase by phase, stopping
 after each phase for verification before continuing.
 
@@ -67,7 +67,7 @@ FastAPI (port 8000)
 ## Directory Structure (target)
 
 ```
-travelman2/
+DetourAI/
 ├── CLAUDE.md
 ├── docker-compose.yml
 ├── infra/
@@ -771,7 +771,7 @@ async def geocode_nominatim(place: str, country_code: str = "") -> Optional[tupl
     async with aiohttp.ClientSession() as s:
         async with s.get("https://nominatim.openstreetmap.org/search",
                          params=params,
-                         headers={"User-Agent": "Travelman2/1.0"}) as r:
+                         headers={"User-Agent": "DetourAI/1.0"}) as r:
             data = await r.json()
             if data:
                 return float(data[0]["lat"]), float(data[0]["lon"])

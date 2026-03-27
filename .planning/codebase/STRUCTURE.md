@@ -5,7 +5,7 @@
 ## Directory Layout
 
 ```
-travelman3/
+DetourAI/
 ├── backend/                     # Python FastAPI backend
 │   ├── main.py                  # FastAPI app, 40+ endpoints, route geometry helpers
 │   ├── orchestrator.py          # TravelPlannerOrchestrator — agent pipeline coordinator

@@ -8,7 +8,7 @@
 
 ## Goal
 
-Add login-based access control to Travelman3. All endpoints require authentication. Users see only their own saved trips. An admin user (bootstrapped from environment variables) can manage users via a dedicated GUI panel in the SPA.
+Add login-based access control to DetourAI. All endpoints require authentication. Users see only their own saved trips. An admin user (bootstrapped from environment variables) can manage users via a dedicated GUI panel in the SPA.
 
 ---
 

@@ -4,7 +4,7 @@
 
 **Goal:** Automated release pipeline that builds Docker images, pushes to GHCR, and updates a TrueNAS custom app catalog for one-click install/update on TrueNAS 25.04.
 
-**Architecture:** Two GitHub repos — Travelman3 (source + pipeline) and travelman-catalog (TrueNAS catalog metadata). Pipeline triggered by `release/v*` tags builds 2 Docker images, pushes to GHCR, then clones and updates the catalog repo with new version snapshots.
+**Architecture:** Two GitHub repos — DetourAI (source + pipeline) and detour-ai-catalog (TrueNAS catalog metadata). Pipeline triggered by `release/v*` tags builds 2 Docker images, pushes to GHCR, then clones and updates the catalog repo with new version snapshots.
 
 **Tech Stack:** GitHub Actions, Docker buildx, GHCR, TrueNAS ix_lib Jinja2 templates, Bash
 
@@ -14,7 +14,7 @@
 
 ## File Map
 
-### Travelman3 (this repo)
+### DetourAI (this repo)
 
 | File | Action | Responsibility |
 |------|--------|---------------|
@@ -22,22 +22,22 @@
 | `.github/workflows/release.yml` | Create | GitHub Actions release pipeline |
 | `scripts/update-catalog.sh` | Create | Clone catalog repo, update version files, commit + push |
 
-### travelman-catalog (new repo)
+### detour-ai-catalog (new repo)
 
 | File | Action | Responsibility |
 |------|--------|---------------|
 | `catalog.json` | Create | Root catalog index |
 | `features_capability.json` | Create | TrueNAS version feature gates |
-| `ix-dev/stable/travelman/app.yaml` | Create | App metadata |
-| `ix-dev/stable/travelman/ix_values.yaml` | Create | Image repos + tags + constants |
-| `ix-dev/stable/travelman/questions.yaml` | Create | TrueNAS UI config form |
-| `ix-dev/stable/travelman/README.md` | Create | Short app description |
-| `ix-dev/stable/travelman/item.yaml` | Create | Categories, icon, tags |
-| `ix-dev/stable/travelman/templates/docker-compose.yaml` | Create | Jinja2 compose template |
-| `ix-dev/stable/travelman/templates/test_values/basic-values.yaml` | Create | CI test values |
-| `trains/stable/travelman/item.yaml` | Create | Published catalog entry |
-| `trains/stable/travelman/app_versions.json` | Create | Version index |
-| `trains/stable/travelman/1.0.0/` | Create | Initial version snapshot |
+| `ix-dev/stable/detour-ai/app.yaml` | Create | App metadata |
+| `ix-dev/stable/detour-ai/ix_values.yaml` | Create | Image repos + tags + constants |
+| `ix-dev/stable/detour-ai/questions.yaml` | Create | TrueNAS UI config form |
+| `ix-dev/stable/detour-ai/README.md` | Create | Short app description |
+| `ix-dev/stable/detour-ai/item.yaml` | Create | Categories, icon, tags |
+| `ix-dev/stable/detour-ai/templates/docker-compose.yaml` | Create | Jinja2 compose template |
+| `ix-dev/stable/detour-ai/templates/test_values/basic-values.yaml` | Create | CI test values |
+| `trains/stable/detour-ai/item.yaml` | Create | Published catalog entry |
+| `trains/stable/detour-ai/app_versions.json` | Create | Version index |
+| `trains/stable/detour-ai/1.0.0/` | Create | Initial version snapshot |
 
 ---
 
@@ -70,12 +70,12 @@ RUN addgroup --system --gid 568 appgroup \
 
 - [ ] **Step 2: Verify Docker build still works**
 
-Run: `docker build -f infra/Dockerfile.backend -t travelman-backend-test .`
+Run: `docker build -f infra/Dockerfile.backend -t detour-ai-backend-test .`
 Expected: Build completes successfully
 
 - [ ] **Step 3: Verify user inside container**
 
-Run: `docker run --rm travelman-backend-test id`
+Run: `docker run --rm detour-ai-backend-test id`
 Expected: Output contains `uid=568` and `gid=568`
 
 - [ ] **Step 4: Commit**
@@ -87,23 +87,23 @@ git commit -m "fix: Pin UID/GID 568 in Backend-Dockerfile für TrueNAS-Kompatibi
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ```
 
-### Task 2: Create travelman-catalog repo on GitHub
+### Task 2: Create detour-ai-catalog repo on GitHub
 
 This task is performed manually via GitHub UI or `gh` CLI. The plan provides the exact commands.
 
 - [ ] **Step 1: Create the repository**
 
 ```bash
-gh repo create travelman-catalog --private --description "TrueNAS custom app catalog for Travelman" --clone
-cd travelman-catalog
+gh repo create detour-ai-catalog --private --description "TrueNAS custom app catalog for DetourAI" --clone
+cd detour-ai-catalog
 ```
 
 - [ ] **Step 2: Create directory structure**
 
 ```bash
-mkdir -p ix-dev/stable/travelman/templates/test_values
-mkdir -p ix-dev/stable/travelman/templates/library
-mkdir -p trains/stable/travelman/1.0.0
+mkdir -p ix-dev/stable/detour-ai/templates/test_values
+mkdir -p ix-dev/stable/detour-ai/templates/library
+mkdir -p trains/stable/detour-ai/1.0.0
 mkdir -p assets
 ```
 
@@ -130,10 +130,10 @@ git sparse-checkout set "library/$LIB_VERSION"
 cd -
 
 # Copy library into our catalog
-cp -r /tmp/truenas-apps/library/$LIB_VERSION ix-dev/stable/travelman/templates/library/base_v2_2_2
+cp -r /tmp/truenas-apps/library/$LIB_VERSION ix-dev/stable/detour-ai/templates/library/base_v2_2_2
 
 # Compute lib_version_hash for app.yaml
-LIB_HASH=$(find ix-dev/stable/travelman/templates/library/ -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
+LIB_HASH=$(find ix-dev/stable/detour-ai/templates/library/ -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
 echo "lib_version_hash: $LIB_HASH"
 # Update app.yaml with the computed hash (replace the empty string)
 
@@ -164,7 +164,7 @@ Create file `features_capability.json` at repo root:
 }
 ```
 
-- [ ] **Step 5: Create `ix-dev/stable/travelman/app.yaml`**
+- [ ] **Step 5: Create `ix-dev/stable/detour-ai/app.yaml`**
 
 ```yaml
 annotations:
@@ -173,11 +173,11 @@ app_version: "1.0.0"
 capabilities: []
 categories:
   - productivity
-changelog_url: https://github.com/<user>/Travelman3/releases
+changelog_url: https://github.com/<user>/DetourAI/releases
 date_added: "2026-03-17"
 description: "KI-gestützter Roadtrip-Planer mit interaktiver Routenplanung, Unterkünften, Aktivitäten und Tagesführer."
-home: https://github.com/<user>/Travelman3
-icon: https://raw.githubusercontent.com/<user>/travelman-catalog/main/assets/icon.png
+home: https://github.com/<user>/DetourAI
+icon: https://raw.githubusercontent.com/<user>/detour-ai-catalog/main/assets/icon.png
 keywords:
   - travel
   - planner
@@ -187,7 +187,7 @@ lib_version_hash: ""
 maintainers:
   - name: stefan
     email: ""
-name: travelman
+name: detour-ai
 run_as_context:
   - description: Backend and Celery containers run as apps user
     gid: 568
@@ -202,57 +202,57 @@ run_as_context:
     uid: 999
 screenshots: []
 sources:
-  - https://github.com/<user>/Travelman3
-title: Travelman
+  - https://github.com/<user>/DetourAI
+title: DetourAI
 train: stable
 version: "1.0.0"
 ```
 
 > **Note:** Replace `<user>` with your actual GitHub username throughout all files.
 
-- [ ] **Step 6: Create `ix-dev/stable/travelman/ix_values.yaml`**
+- [ ] **Step 6: Create `ix-dev/stable/detour-ai/ix_values.yaml`**
 
 ```yaml
 images:
   backend_image:
-    repository: ghcr.io/<user>/travelman-backend
+    repository: ghcr.io/<user>/detour-ai-backend
     tag: "1.0.0"
   frontend_image:
-    repository: ghcr.io/<user>/travelman-frontend
+    repository: ghcr.io/<user>/detour-ai-frontend
     tag: "1.0.0"
   redis_image:
     repository: redis
     tag: "7-alpine"
 consts:
-  backend_container_name: travelman-backend
-  celery_container_name: travelman-celery
-  frontend_container_name: travelman-frontend
-  redis_container_name: travelman-redis
+  backend_container_name: detour-ai-backend
+  celery_container_name: detour-ai-celery
+  frontend_container_name: detour-ai-frontend
+  redis_container_name: detour-ai-redis
   perms_container_name: permissions
   data_path: /app/data
   logs_path: /app/logs
   outputs_path: /app/outputs
 ```
 
-- [ ] **Step 7: Create `ix-dev/stable/travelman/questions.yaml`**
+- [ ] **Step 7: Create `ix-dev/stable/detour-ai/questions.yaml`**
 
 ```yaml
 groups:
-  - name: Travelman Configuration
-    description: Configure Travelman
+  - name: DetourAI Configuration
+    description: Configure DetourAI
   - name: User and Group Configuration
-    description: Configure User and Group for Travelman
+    description: Configure User and Group for DetourAI
   - name: Network Configuration
-    description: Configure Network for Travelman
+    description: Configure Network for DetourAI
   - name: Storage Configuration
-    description: Configure Storage for Travelman
+    description: Configure Storage for DetourAI
   - name: Resources Configuration
-    description: Configure Resources for Travelman
+    description: Configure Resources for DetourAI
 
 questions:
-  - variable: travelman
+  - variable: detour-ai
     label: ""
-    group: Travelman Configuration
+    group: DetourAI Configuration
     schema:
       type: dict
       attrs:
@@ -293,7 +293,7 @@ questions:
       attrs:
         - variable: user
           label: User ID
-          description: The user id that Travelman data files will be owned by.
+          description: The user id that DetourAI data files will be owned by.
           schema:
             type: int
             min: 568
@@ -301,7 +301,7 @@ questions:
             required: true
         - variable: group
           label: Group ID
-          description: The group id that Travelman data files will be owned by.
+          description: The group id that DetourAI data files will be owned by.
           schema:
             type: int
             min: 568
@@ -592,21 +592,21 @@ questions:
             attrs:
               - variable: cpus
                 label: CPUs
-                description: CPUs limit for Travelman.
+                description: CPUs limit for DetourAI.
                 schema:
                   type: int
                   default: 4
                   required: true
               - variable: memory
                 label: Memory (in MB)
-                description: Memory limit for Travelman.
+                description: Memory limit for DetourAI.
                 schema:
                   type: int
                   default: 4096
                   required: true
 ```
 
-- [ ] **Step 8: Create `ix-dev/stable/travelman/templates/docker-compose.yaml`**
+- [ ] **Step 8: Create `ix-dev/stable/detour-ai/templates/docker-compose.yaml`**
 
 This is the Jinja2 template that uses `ix_lib` to render the final Docker Compose file. It creates 4 services: redis, backend, celery, frontend.
 
@@ -627,12 +627,12 @@ This is the Jinja2 template that uses `ix_lib` to render the final Docker Compos
 {% do backend.depends.add_dependency(values.consts.redis_container_name, "service_healthy") %}
 {% do backend.healthcheck.set_test("curl", {"port": 8000, "path": "/api/health"}) %}
 
-{% do backend.environment.add_env("ANTHROPIC_API_KEY", values.travelman.anthropic_api_key) %}
-{% do backend.environment.add_env("GOOGLE_MAPS_API_KEY", values.travelman.google_maps_api_key) %}
-{% if values.travelman.brave_api_key %}
-{% do backend.environment.add_env("BRAVE_API_KEY", values.travelman.brave_api_key) %}
+{% do backend.environment.add_env("ANTHROPIC_API_KEY", values.detour-ai.anthropic_api_key) %}
+{% do backend.environment.add_env("GOOGLE_MAPS_API_KEY", values.detour-ai.google_maps_api_key) %}
+{% if values.detour-ai.brave_api_key %}
+{% do backend.environment.add_env("BRAVE_API_KEY", values.detour-ai.brave_api_key) %}
 {% endif %}
-{% do backend.environment.add_env("TEST_MODE", values.travelman.test_mode | string | lower) %}
+{% do backend.environment.add_env("TEST_MODE", values.detour-ai.test_mode | string | lower) %}
 {% do backend.environment.add_env("REDIS_URL", "redis://%s:6379" | format(values.consts.redis_container_name)) %}
 {% do backend.environment.add_env("DATA_DIR", values.consts.data_path) %}
 {% do backend.environment.add_env("LOGS_DIR", values.consts.logs_path) %}
@@ -652,12 +652,12 @@ This is the Jinja2 template that uses `ix_lib` to render the final Docker Compos
 {% do celery.depends.add_dependency(values.consts.redis_container_name, "service_healthy") %}
 {% do celery.healthcheck.set_custom_test("celery -A tasks inspect ping --timeout 10") %}
 
-{% do celery.environment.add_env("ANTHROPIC_API_KEY", values.travelman.anthropic_api_key) %}
-{% do celery.environment.add_env("GOOGLE_MAPS_API_KEY", values.travelman.google_maps_api_key) %}
-{% if values.travelman.brave_api_key %}
-{% do celery.environment.add_env("BRAVE_API_KEY", values.travelman.brave_api_key) %}
+{% do celery.environment.add_env("ANTHROPIC_API_KEY", values.detour-ai.anthropic_api_key) %}
+{% do celery.environment.add_env("GOOGLE_MAPS_API_KEY", values.detour-ai.google_maps_api_key) %}
+{% if values.detour-ai.brave_api_key %}
+{% do celery.environment.add_env("BRAVE_API_KEY", values.detour-ai.brave_api_key) %}
 {% endif %}
-{% do celery.environment.add_env("TEST_MODE", values.travelman.test_mode | string | lower) %}
+{% do celery.environment.add_env("TEST_MODE", values.detour-ai.test_mode | string | lower) %}
 {% do celery.environment.add_env("REDIS_URL", "redis://%s:6379" | format(values.consts.redis_container_name)) %}
 {% do celery.environment.add_env("DATA_DIR", values.consts.data_path) %}
 {% do celery.environment.add_env("LOGS_DIR", values.consts.logs_path) %}
@@ -684,12 +684,12 @@ This is the Jinja2 template that uses `ix_lib` to render the final Docker Compos
 {{ tpl.render() | tojson }}
 ```
 
-- [ ] **Step 9: Create `ix-dev/stable/travelman/item.yaml`**
+- [ ] **Step 9: Create `ix-dev/stable/detour-ai/item.yaml`**
 
 ```yaml
 categories:
   - productivity
-icon_url: https://raw.githubusercontent.com/<user>/travelman-catalog/main/assets/icon.png
+icon_url: https://raw.githubusercontent.com/<user>/detour-ai-catalog/main/assets/icon.png
 screenshots: []
 tags:
   - travel
@@ -697,20 +697,20 @@ tags:
   - ai
 ```
 
-- [ ] **Step 10: Create `ix-dev/stable/travelman/README.md`**
+- [ ] **Step 10: Create `ix-dev/stable/detour-ai/README.md`**
 
 ```markdown
-# Travelman
+# DetourAI
 
 KI-gestützter Roadtrip-Planer mit interaktiver Routenplanung, Unterkünften, Aktivitäten und Tagesführer.
 
-- [GitHub](https://github.com/<user>/Travelman3)
+- [GitHub](https://github.com/<user>/DetourAI)
 ```
 
-- [ ] **Step 11: Create `ix-dev/stable/travelman/templates/test_values/basic-values.yaml`**
+- [ ] **Step 11: Create `ix-dev/stable/detour-ai/templates/test_values/basic-values.yaml`**
 
 ```yaml
-travelman:
+detour-ai:
   anthropic_api_key: "sk-ant-test-key"
   google_maps_api_key: "test-maps-key"
   brave_api_key: ""
@@ -753,12 +753,12 @@ resources:
 
 ```bash
 # Copy ix-dev files as initial version snapshot
-cp -r ix-dev/stable/travelman/* trains/stable/travelman/1.0.0/
+cp -r ix-dev/stable/detour-ai/* trains/stable/detour-ai/1.0.0/
 ```
 
-Create `trains/stable/travelman/item.yaml` (same content as ix-dev item.yaml).
+Create `trains/stable/detour-ai/item.yaml` (same content as ix-dev item.yaml).
 
-Create `trains/stable/travelman/app_versions.json`:
+Create `trains/stable/detour-ai/app_versions.json`:
 
 ```json
 {
@@ -766,7 +766,7 @@ Create `trains/stable/travelman/app_versions.json`:
     "healthy": true,
     "supported": true,
     "healthy_error": null,
-    "location": "/trains/stable/travelman/1.0.0",
+    "location": "/trains/stable/detour-ai/1.0.0",
     "last_update": "2026-03-17 00:00:00",
     "human_version": "1.0.0_1.0.0",
     "version": "1.0.0"
@@ -779,16 +779,16 @@ Create `trains/stable/travelman/app_versions.json`:
 ```json
 {
   "stable": {
-    "travelman": {
-      "name": "Travelman",
+    "detour-ai": {
+      "name": "DetourAI",
       "categories": ["productivity"],
       "app_version": "1.0.0",
       "train": "stable",
       "description": "KI-gestützter Roadtrip-Planer",
-      "home": "https://github.com/<user>/Travelman3",
+      "home": "https://github.com/<user>/DetourAI",
       "latest_version": "1.0.0",
       "latest_app_version": "1.0.0",
-      "icon_url": "https://raw.githubusercontent.com/<user>/travelman-catalog/main/assets/icon.png"
+      "icon_url": "https://raw.githubusercontent.com/<user>/detour-ai-catalog/main/assets/icon.png"
     }
   }
 }
@@ -810,7 +810,7 @@ Replace all occurrences with your actual GitHub username.
 
 ```bash
 git add -A
-git commit -m "feat: Initial Travelman TrueNAS catalog
+git commit -m "feat: Initial DetourAI TrueNAS catalog
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 git push -u origin main
@@ -823,7 +823,7 @@ git push -u origin main
 ### Task 3: Create the catalog update script
 
 **Files:**
-- Create: `scripts/update-catalog.sh` (in Travelman3)
+- Create: `scripts/update-catalog.sh` (in DetourAI)
 
 - [ ] **Step 1: Write the update script**
 
@@ -845,7 +845,7 @@ Create `scripts/update-catalog.sh`:
 #   ./scripts/update-catalog.sh <app_version> <catalog_repo_url>
 #
 # Example:
-#   ./scripts/update-catalog.sh 7.0.0 git@github.com:user/travelman-catalog.git
+#   ./scripts/update-catalog.sh 7.0.0 git@github.com:user/detour-ai-catalog.git
 #
 # Environment:
 #   GITHUB_USER — GitHub username for GHCR image paths (required)
@@ -866,8 +866,8 @@ echo "==> Cloning catalog repo..."
 git clone "$CATALOG_REPO" "$WORK_DIR/catalog"
 cd "$WORK_DIR/catalog"
 
-APP_DIR="ix-dev/stable/travelman"
-TRAINS_DIR="trains/stable/travelman"
+APP_DIR="ix-dev/stable/detour-ai"
+TRAINS_DIR="trains/stable/detour-ai"
 
 # ── Read current catalog version and bump minor ──
 CURRENT_VERSION=$(grep '^version:' "$APP_DIR/app.yaml" | sed 's/version: *"\(.*\)"/\1/')
@@ -885,7 +885,7 @@ with open('$APP_DIR/ix_values.yaml') as f:
 
 for key, img in data.get('images', {}).items():
     # Only update our own images, not third-party (redis)
-    if 'travelman' in img.get('repository', ''):
+    if 'detour-ai' in img.get('repository', ''):
         img['tag'] = '$APP_VERSION'
 
 with open('$APP_DIR/ix_values.yaml', 'w') as f:
@@ -942,16 +942,16 @@ import json
 
 catalog = {
     'stable': {
-        'travelman': {
-            'name': 'Travelman',
+        'detour-ai': {
+            'name': 'DetourAI',
             'categories': ['productivity'],
             'app_version': '$APP_VERSION',
             'train': 'stable',
             'description': 'KI-gestützter Roadtrip-Planer',
-            'home': 'https://github.com/$GITHUB_USER/Travelman3',
+            'home': 'https://github.com/$GITHUB_USER/DetourAI',
             'latest_version': '$NEW_CATALOG_VERSION',
             'latest_app_version': '$APP_VERSION',
-            'icon_url': 'https://raw.githubusercontent.com/$GITHUB_USER/travelman-catalog/main/assets/icon.png'
+            'icon_url': 'https://raw.githubusercontent.com/$GITHUB_USER/detour-ai-catalog/main/assets/icon.png'
         }
     }
 }
@@ -964,7 +964,7 @@ with open('catalog.json', 'w') as f:
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 git add -A
-git commit -m "release: Travelman $APP_VERSION (catalog $NEW_CATALOG_VERSION)
+git commit -m "release: DetourAI $APP_VERSION (catalog $NEW_CATALOG_VERSION)
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 git push
@@ -990,7 +990,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ### Task 4: Create GitHub Actions release workflow
 
 **Files:**
-- Create: `.github/workflows/release.yml` (in Travelman3)
+- Create: `.github/workflows/release.yml` (in DetourAI)
 
 - [ ] **Step 1: Create workflows directory**
 
@@ -1067,8 +1067,8 @@ jobs:
           file: infra/Dockerfile.backend
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-backend:${{ steps.version.outputs.app_version }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-backend:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/detour-ai-backend:${{ steps.version.outputs.app_version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/detour-ai-backend:latest
           platforms: linux/amd64
 
       - name: Build and push frontend image
@@ -1078,8 +1078,8 @@ jobs:
           file: infra/Dockerfile.frontend
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-frontend:${{ steps.version.outputs.app_version }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-frontend:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/detour-ai-frontend:${{ steps.version.outputs.app_version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/detour-ai-frontend:latest
           platforms: linux/amd64
 
       - name: Update TrueNAS catalog
@@ -1092,13 +1092,13 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           ./scripts/update-catalog.sh \
             "${{ steps.version.outputs.app_version }}" \
-            "git@github.com:${{ github.repository_owner }}/travelman-catalog.git"
+            "git@github.com:${{ github.repository_owner }}/detour-ai-catalog.git"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "Travelman ${{ steps.version.outputs.app_version }}"
+          name: "DetourAI ${{ steps.version.outputs.app_version }}"
           generate_release_notes: true
           draft: false
 ```
@@ -1119,19 +1119,19 @@ This task is manual setup, documented here for reference.
 - [ ] **Step 1: Generate SSH deploy key pair**
 
 ```bash
-ssh-keygen -t ed25519 -C "travelman-catalog-deploy" -f /tmp/catalog-deploy-key -N ""
+ssh-keygen -t ed25519 -C "detour-ai-catalog-deploy" -f /tmp/catalog-deploy-key -N ""
 ```
 
-- [ ] **Step 2: Add public key to travelman-catalog repo**
+- [ ] **Step 2: Add public key to detour-ai-catalog repo**
 
-Go to: `travelman-catalog` → Settings → Deploy keys → Add deploy key
-- Title: "Travelman3 pipeline"
+Go to: `detour-ai-catalog` → Settings → Deploy keys → Add deploy key
+- Title: "DetourAI pipeline"
 - Key: contents of `/tmp/catalog-deploy-key.pub`
 - Allow write access: **checked**
 
-- [ ] **Step 3: Add private key to Travelman3 repo**
+- [ ] **Step 3: Add private key to DetourAI repo**
 
-Go to: `Travelman3` → Settings → Secrets and variables → Actions → New repository secret
+Go to: `DetourAI` → Settings → Secrets and variables → Actions → New repository secret
 - Name: `CATALOG_DEPLOY_KEY`
 - Value: contents of `/tmp/catalog-deploy-key`
 
@@ -1158,18 +1158,18 @@ git push --tags
 
 - [ ] **Step 3: Monitor the pipeline**
 
-Go to: `Travelman3` → Actions → watch the "Release & Deploy" workflow.
+Go to: `DetourAI` → Actions → watch the "Release & Deploy" workflow.
 
 Expected:
 1. Tests pass
-2. Two images pushed to `ghcr.io/<user>/travelman-backend:1.0.0` and `ghcr.io/<user>/travelman-frontend:1.0.0`
+2. Two images pushed to `ghcr.io/<user>/detour-ai-backend:1.0.0` and `ghcr.io/<user>/detour-ai-frontend:1.0.0`
 3. Catalog repo updated with version `1.1.0` in `trains/`
-4. GitHub Release created on Travelman3
+4. GitHub Release created on DetourAI
 
 - [ ] **Step 4: Verify on TrueNAS**
 
 1. TrueNAS → Apps → Discover → Manage Catalogs → Refresh
-2. Travelman should appear in the Discover screen
+2. DetourAI should appear in the Discover screen
 3. Click Install → verify config form shows API key fields, port, storage options
 
 ---
@@ -1181,15 +1181,15 @@ Expected:
 - [ ] **Step 1: Verify GHCR images are accessible**
 
 ```bash
-docker pull ghcr.io/<user>/travelman-backend:1.0.0
-docker pull ghcr.io/<user>/travelman-frontend:1.0.0
+docker pull ghcr.io/<user>/detour-ai-backend:1.0.0
+docker pull ghcr.io/<user>/detour-ai-frontend:1.0.0
 ```
 
 - [ ] **Step 2: Verify catalog repo structure**
 
 ```bash
-cd /tmp && git clone git@github.com:<user>/travelman-catalog.git
-ls travelman-catalog/trains/stable/travelman/
+cd /tmp && git clone git@github.com:<user>/detour-ai-catalog.git
+ls detour-ai-catalog/trains/stable/detour-ai/
 # Expected: 1.0.0/  1.1.0/  app_versions.json  item.yaml
 ```
 
@@ -1200,7 +1200,7 @@ On TrueNAS: Settings → Docker Registry → verify `ghcr.io` entry exists with 
 - [ ] **Step 4: Test a second release**
 
 ```bash
-# Back in Travelman3
+# Back in DetourAI
 git tag release/v1.0.1
 git push --tags
 ```

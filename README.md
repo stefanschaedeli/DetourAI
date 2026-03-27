@@ -1,8 +1,8 @@
-# Travelman — KI-gestützter Reiseplaner
+# DetourAI — KI-gestützter Reiseplaner
 
 > An AI-powered road trip planner that builds a personalised day-by-day travel guide through an interactive, multi-agent conversation with Claude.
 
-[![Current Version](https://img.shields.io/badge/version-v9.2.1-blue)](#releases)
+[![Current Version](https://img.shields.io/badge/version-v9.5.27-blue)](#releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](#license)
 [![Stack](https://img.shields.io/badge/stack-FastAPI%20·%20Vanilla%20JS%20·%20Redis%20·%20Docker-orange)](#tech-stack)
 [![Agents](https://img.shields.io/badge/AI%20agents-10%20Claude%20agents-purple)](#ai-agents)
@@ -28,7 +28,7 @@
 
 ## Overview
 
-Travelman lets you plan a complete road trip in minutes. You describe where you want to go and what matters to you; ten specialised Claude agents then collaboratively research the route, stops, accommodations, activities, restaurants, and driving schedule — and hand you back a structured, budget-aware travel guide.
+DetourAI lets you plan a complete road trip in minutes. You describe where you want to go and what matters to you; ten specialised Claude agents then collaboratively research the route, stops, accommodations, activities, restaurants, and driving schedule — and hand you back a structured, budget-aware travel guide.
 
 ```
 Du füllst ein 5-Schritte-Formular  →  Login/Register (Auth)
@@ -122,8 +122,8 @@ Tag-für-Tag Reiseführer · PDF · PPTX · interaktive Tageskarten
 ### 1 — Clone & configure
 
 ```bash
-git clone https://github.com/stefanschaedeli/travelman3.git
-cd travelman3
+git clone https://github.com/stefanschaedeli/DetourAI.git
+cd DetourAI
 cp backend/.env.example backend/.env
 ```
 
@@ -224,7 +224,7 @@ docker compose logs -f backend  # follow backend logs
 
 ## AI Agents
 
-Travelman uses ten specialised Claude agents. Each has a single, clearly scoped task, communicates exclusively via structured JSON, and is orchestrated by `TravelPlannerOrchestrator`.
+DetourAI uses ten specialised Claude agents. Each has a single, clearly scoped task, communicates exclusively via structured JSON, and is orchestrated by `TravelPlannerOrchestrator`.
 
 ### Agent Model Assignments
 
@@ -454,7 +454,7 @@ python3 -m pytest tests/test_travel_db.py          # travel persistence
 ## Project Structure
 
 ```
-travelman3/
+DetourAI/
 ├── backend/
 │   ├── main.py                        # FastAPI app — 25+ endpoints
 │   ├── orchestrator.py                # TravelPlannerOrchestrator (leg-sequential)

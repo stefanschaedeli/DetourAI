@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# deploy.sh — Build and run Travelman locally with Docker Compose.
+# deploy.sh — Build and run DetourAI locally with Docker Compose.
 #
 # Usage:
 #   ./deploy.sh            # build images and start all services

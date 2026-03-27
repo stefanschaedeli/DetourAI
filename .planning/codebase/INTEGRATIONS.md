@@ -88,7 +88,7 @@
 
 - **Purpose:** City summaries, thumbnails, and factual data (population, elevation, area)
 - **Auth:** None required
-- **User-Agent:** `Travelman3/1.0`
+- **User-Agent:** `DetourAI/1.0`
 - **File:** `backend/utils/wikipedia.py`
 - **Endpoints:**
   - `get_city_summary(city, language)` - Wikipedia REST API
@@ -199,7 +199,7 @@
 
 **Deployment:**
 - `docker compose up --build` - Full stack deployment
-- Images: `travelman/backend:latest`, `travelman/frontend:latest`
+- Images: `detour-ai/backend:latest`, `detour-ai/frontend:latest`
 - Volumes: `travel_data` (named), `./outputs` and `./logs` (bind mounts)
 
 ## Environment Configuration

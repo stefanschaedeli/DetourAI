@@ -1,6 +1,6 @@
 # Project Research Summary
 
-**Project:** Travelman3 — v1.1 Progressive Disclosure Travel View Redesign
+**Project:** DetourAI — v1.1 Progressive Disclosure Travel View Redesign
 **Domain:** Vanilla JS SPA progressive disclosure UI retrofit with map focus management
 **Researched:** 2026-03-27
 **Confidence:** HIGH

@@ -1,7 +1,7 @@
 from typing import Optional
 """
 Auth endpoints: login, refresh, logout, me.
-Cookie name: travelman_refresh
+Cookie name: detour_ai_refresh
 """
 import os
 import uuid
@@ -28,7 +28,7 @@ from utils.auth_db import (
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-COOKIE_NAME = "travelman_refresh"
+COOKIE_NAME = "detour_ai_refresh"
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
 REFRESH_TOKEN_TTL_DAYS = 7
 
@@ -93,12 +93,12 @@ async def login(body: LoginRequest, response: Response) -> TokenResponse:
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(
     response: Response,
-    travelman_refresh: Optional[str] = Cookie(default=None),
+    detour_ai_refresh: Optional[str] = Cookie(default=None),
 ) -> TokenResponse:
-    if travelman_refresh is None:
+    if detour_ai_refresh is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kein Refresh-Token")
 
-    user_id = await asyncio.to_thread(validate_and_rotate_refresh_token, travelman_refresh)
+    user_id = await asyncio.to_thread(validate_and_rotate_refresh_token, detour_ai_refresh)
     if user_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges oder abgelaufenes Refresh-Token")
 
@@ -118,10 +118,10 @@ async def refresh(
 @router.post("/logout")
 async def logout(
     response: Response,
-    travelman_refresh: Optional[str] = Cookie(default=None),
+    detour_ai_refresh: Optional[str] = Cookie(default=None),
 ) -> dict:
-    if travelman_refresh:
-        await asyncio.to_thread(delete_refresh_token, travelman_refresh)
+    if detour_ai_refresh:
+        await asyncio.to_thread(delete_refresh_token, detour_ai_refresh)
     response.delete_cookie(key=COOKIE_NAME, path="/api/auth")
     return {"ok": True}
 

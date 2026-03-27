@@ -408,8 +408,8 @@ style_mismatch_warning: data => {
 |----------|-------|
 | Framework | pytest 8.4.2 + pytest-mock 3.15.1 + pytest-asyncio 1.2.0 |
 | Config file | None (convention-based, `backend/tests/`) |
-| Quick run command | `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/ -x -q` |
-| Full suite command | `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/ -v` |
+| Quick run command | `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/ -x -q` |
+| Full suite command | `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/ -v` |
 
 ### Phase Requirements to Test Map
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
@@ -424,8 +424,8 @@ style_mismatch_warning: data => {
 | AIQ-05 | Backtracking detection rejects zigzag stops | unit | `pytest tests/test_validation.py::test_backtracking_detection -x` | Wave 0 |
 
 ### Sampling Rate
-- **Per task commit:** `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/ -x -q`
-- **Per wave merge:** `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/ -v`
+- **Per task commit:** `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/ -x -q`
+- **Per wave merge:** `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/ -v`
 - **Phase gate:** Full suite green before `/gsd:verify-work`
 
 ### Wave 0 Gaps

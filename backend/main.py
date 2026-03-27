@@ -154,7 +154,7 @@ async def lifespan(app: FastAPI):
     await close_session()
 
 
-app = FastAPI(title="Travelman2 API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="DetourAI API", version="1.0.0", lifespan=lifespan)
 
 _CORS_ORIGINS = os.getenv(
     "CORS_ORIGINS",

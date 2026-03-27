@@ -232,7 +232,7 @@ def test_login_success(auth_client, test_user):
     assert "access_token" in data
     assert data["token_type"] == "bearer"
     # HTTP-only refresh cookie should be set
-    assert "travelman_refresh" in r.cookies
+    assert "detour_ai_refresh" in r.cookies
 
 
 def test_login_wrong_password(auth_client, test_user):

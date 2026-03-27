@@ -22,7 +22,7 @@ Users can share saved trip plans via public links (read-only, no auth required) 
 ### Shared View Experience
 - **D-05:** Full guide view (map-centric layout with cards, timeline, stats) in read-only mode — reuses all Phase 4 UI components but hides edit controls, route editing, and owner-only actions
 - **D-06:** Interactive Google Map with markers and polyline (same as owner view, uses API key)
-- **D-07:** Subtle footer note: "Erstellt mit Travelman" at the bottom of shared views
+- **D-07:** Subtle footer note: "Erstellt mit DetourAI" at the bottom of shared views
 
 ### Share Management UX
 - **D-08:** Share button ("Teilen") in the guide view header, next to the trip title
@@ -93,7 +93,7 @@ Users can share saved trip plans via public links (read-only, no auth required) 
 
 - Share toggle should feel lightweight and inline — no modal dialogs
 - Shared view is the same rich guide view, not a dumbed-down version
-- "Erstellt mit Travelman" footer is subtle branding, not a call-to-action
+- "Erstellt mit DetourAI" footer is subtle branding, not a call-to-action
 
 </specifics>
 

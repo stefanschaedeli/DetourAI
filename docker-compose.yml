@@ -13,7 +13,7 @@ services:
       retries: 3
 
   backend:
-    image: travelman/backend:latest
+    image: detour-ai/backend:latest
     build:
       context: .
       dockerfile: infra/Dockerfile.backend
@@ -44,7 +44,7 @@ services:
       - ./logs:/app/logs
 
   celery:
-    image: travelman/backend:latest
+    image: detour-ai/backend:latest
     build:
       context: .
       dockerfile: infra/Dockerfile.backend
@@ -67,7 +67,7 @@ services:
       - ./logs:/app/logs
 
   frontend:
-    image: travelman/frontend:latest
+    image: detour-ai/frontend:latest
     build:
       context: .
       dockerfile: infra/Dockerfile.frontend

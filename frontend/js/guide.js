@@ -60,7 +60,7 @@ function showTravelGuide(plan) {
     if (content && !content.querySelector('.shared-footer')) {
       const footer = document.createElement('div');
       footer.className = 'shared-footer';
-      footer.textContent = 'Erstellt mit Travelman';
+      footer.textContent = 'Erstellt mit DetourAI';
       content.appendChild(footer);
     }
   }

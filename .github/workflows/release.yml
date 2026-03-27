@@ -66,8 +66,8 @@ jobs:
           file: infra/Dockerfile.backend
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-backend:${{ steps.version.outputs.app_version }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-backend:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/detour-ai-backend:${{ steps.version.outputs.app_version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/detour-ai-backend:latest
           platforms: linux/amd64
 
       - name: Build and push frontend image
@@ -77,8 +77,8 @@ jobs:
           file: infra/Dockerfile.frontend
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-frontend:${{ steps.version.outputs.app_version }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/travelman-frontend:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/detour-ai-frontend:${{ steps.version.outputs.app_version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/detour-ai-frontend:latest
           platforms: linux/amd64
 
       - name: Update TrueNAS catalog
@@ -91,12 +91,12 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           ./scripts/update-catalog.sh \
             "${{ steps.version.outputs.app_version }}" \
-            "git@github.com:${{ github.repository_owner }}/travelman-catalog.git"
+            "git@github.com:${{ github.repository_owner }}/detour-ai-catalog.git"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "Travelman ${{ steps.version.outputs.app_version }}"
+          name: "DetourAI ${{ steps.version.outputs.app_version }}"
           generate_release_notes: true
           draft: false

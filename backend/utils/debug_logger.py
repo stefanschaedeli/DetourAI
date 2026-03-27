@@ -155,7 +155,7 @@ class DebugLogger:
         log_path = self._logs_dir / f"{component}.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
-        logger = logging.getLogger(f"travelman.{component.replace('/', '.')}")
+        logger = logging.getLogger(f"detour-ai.{component.replace('/', '.')}")
         logger.setLevel(logging.DEBUG)
         logger.propagate = False
 

@@ -19,12 +19,12 @@ const Router = (() => {
   ];
 
   const _titles = {
-    form:           'Travelman — Reiseplaner',
-    routeBuilder:   'Routenplanung — Travelman',
-    accommodation:  'Unterkünfte — Travelman',
-    progress:       'Planung läuft… — Travelman',
-    travels:        'Meine Reisen — Travelman',
-    settings:       'Einstellungen — Travelman',
+    form:           'DetourAI — Reiseplaner',
+    routeBuilder:   'Routenplanung — DetourAI',
+    accommodation:  'Unterkünfte — DetourAI',
+    progress:       'Planung läuft… — DetourAI',
+    travels:        'Meine Reisen — DetourAI',
+    settings:       'Einstellungen — DetourAI',
   };
 
   // Internal flag to prevent re-entrant dispatch (including across async handlers)
@@ -152,7 +152,7 @@ const Router = (() => {
 
     async _travel(m) {
       const id = parseInt(m[1], 10);
-      document.title = 'Reise wird geladen… — Travelman';
+      document.title = 'Reise wird geladen… — DetourAI';
 
       // Shared view detection
       const shareToken = new URLSearchParams(location.search).get('share');
@@ -165,7 +165,7 @@ const Router = (() => {
           plan._saved_travel_id = id;
           S.result = plan;
           const title = plan.custom_name || plan.title || '';
-          document.title = `Reise: ${title} — Travelman`;
+          document.title = `Reise: ${title} — DetourAI`;
           showTravelGuide(plan);
           showSection('travel-guide');
         } catch (err) {
@@ -200,7 +200,7 @@ const Router = (() => {
       // If the currently loaded result matches, just show it
       if (S.result && S.result._saved_travel_id === id) {
         const title = S.result.custom_name || S.result.title || '';
-        document.title = `Reise: ${title} — Travelman`;
+        document.title = `Reise: ${title} — DetourAI`;
         showTravelGuide(S.result);
         showSection('travel-guide');
         return;
@@ -215,7 +215,7 @@ const Router = (() => {
         S.jobId = plan.job_id || null;
         lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan });
         const title = plan.custom_name || plan.title || '';
-        document.title = `Reise: ${title} — Travelman`;
+        document.title = `Reise: ${title} — DetourAI`;
         showTravelGuide(plan);
         showSection('travel-guide');
       } catch (err) {
@@ -255,7 +255,7 @@ const Router = (() => {
       }
 
       const title = S.result.custom_name || S.result.title || '';
-      document.title = `Reise: ${title} — Travelman`;
+      document.title = `Reise: ${title} — DetourAI`;
       showSection('travel-guide');
       activateGuideTab(tab);
     },
@@ -289,7 +289,7 @@ const Router = (() => {
       }
 
       const title = S.result.custom_name || S.result.title || '';
-      document.title = `Reise: ${title} — Travelman`;
+      document.title = `Reise: ${title} — DetourAI`;
       showSection('travel-guide');
       activateStopDetail(stopId);
     },
@@ -323,7 +323,7 @@ const Router = (() => {
       }
 
       const title = S.result.custom_name || S.result.title || '';
-      document.title = `Reise: ${title} — Travelman`;
+      document.title = `Reise: ${title} — DetourAI`;
       showSection('travel-guide');
       activateDayDetail(dayNum);
     },

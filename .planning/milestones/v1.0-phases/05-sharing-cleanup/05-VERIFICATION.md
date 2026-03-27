@@ -48,7 +48,7 @@ re_verification: false
 | `frontend/js/state.js` | S.sharedMode and S.shareToken | VERIFIED | Lines 61-62: `sharedMode: false`, `shareToken: null` |
 | `frontend/js/api.js` | apiGetShared(), apiShareTravel(), apiUnshareTravel() | VERIFIED | Lines 275, 281, 285; apiGetShared uses plain `fetch()` (not _fetchWithAuth) |
 | `frontend/js/router.js` | Share token detection; navigate() preserves share param | VERIFIED | 4 handlers detect `?share=`; navigate() at line 46 auto-appends |
-| `frontend/js/guide.js` | Share toggle UI, read-only mode, shared footer | VERIFIED | `_renderShareToggle`, `_handleShareToggle`, `_copyShareLink`, `Erstellt mit Travelman` footer, `shared-mode` class management |
+| `frontend/js/guide.js` | Share toggle UI, read-only mode, shared footer | VERIFIED | `_renderShareToggle`, `_handleShareToggle`, `_copyShareLink`, `Erstellt mit DetourAI` footer, `shared-mode` class management |
 | `frontend/styles.css` | Toggle switch CSS, shared-mode hide rules, shared footer | VERIFIED | `.toggle-switch` at line 5638; `.shared-mode` rules at line 5756; `.shared-footer` at line 5717; `.shared-error-page` at line 5729 |
 | `frontend/index.html` | guide-header-actions with share-toggle-container | VERIFIED | Lines 547-548 |
 
@@ -122,7 +122,7 @@ The automated checks cover all structural and behavioral correctness. The follow
 #### 3. Shared View in Incognito Browser
 
 **Test:** Copy the shared URL, open it in a private/incognito window (no login session).
-**Expected:** Full guide loads (stops, days, map, budget). No edit controls visible. "Erstellt mit Travelman" footer appears at the bottom. Sidebar hidden.
+**Expected:** Full guide loads (stops, days, map, budget). No edit controls visible. "Erstellt mit DetourAI" footer appears at the bottom. Sidebar hidden.
 **Why human:** Unauthenticated browser session required to verify the no-auth read-only flow end-to-end.
 
 #### 4. Share Token URL Preservation on Tab Navigation

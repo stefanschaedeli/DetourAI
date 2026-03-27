@@ -1,4 +1,4 @@
-# Requirements: Travelman3
+# Requirements: DetourAI
 
 **Defined:** 2026-03-27
 **Core Value:** Route planning and stop discovery must produce consistently high-quality, geographically correct results for any destination type — mainland, coastal, and island regions alike.
@@ -56,24 +56,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DEBT-01 | — | Pending |
-| DEBT-02 | — | Pending |
-| DEBT-03 | — | Pending |
-| DEBT-04 | — | Pending |
-| STRC-01 | — | Pending |
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
-| NAV-03 | — | Pending |
-| NAV-04 | — | Pending |
-| NAV-05 | — | Pending |
-| NAV-06 | — | Pending |
-| VRFY-01 | — | Pending |
+| DEBT-01 | Phase 8 | Pending |
+| DEBT-02 | Phase 8 | Pending |
+| DEBT-03 | Phase 8 | Pending |
+| DEBT-04 | Phase 8 | Pending |
+| STRC-01 | Phase 9 | Pending |
+| NAV-01 | Phase 10 | Pending |
+| NAV-02 | Phase 10 | Pending |
+| NAV-03 | Phase 10 | Pending |
+| NAV-04 | Phase 10 | Pending |
+| NAV-05 | Phase 10 | Pending |
+| NAV-06 | Phase 10 | Pending |
+| VRFY-01 | Phase 11 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12
+- Mapped to phases: 12
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-27*
-*Last updated: 2026-03-27 after initial definition*
+*Last updated: 2026-03-27 after roadmap creation*

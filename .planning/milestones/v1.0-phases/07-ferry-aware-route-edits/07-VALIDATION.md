@@ -19,16 +19,16 @@ created: 2026-03-26
 |----------|-------|
 | **Framework** | pytest 8.0+ with pytest-asyncio, pytest-mock |
 | **Config file** | `backend/tests/conftest.py` |
-| **Quick run command** | `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/test_route_editing.py tests/test_ferry.py -x -v` |
-| **Full suite command** | `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/ -v` |
+| **Quick run command** | `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/test_route_editing.py tests/test_ferry.py -x -v` |
+| **Full suite command** | `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/ -v` |
 | **Estimated runtime** | ~5 seconds |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/test_route_editing.py tests/test_ferry.py -x -v`
-- **After every plan wave:** Run `cd /Users/stefan/Code/Travelman3/backend && python3 -m pytest tests/ -v`
+- **After every task commit:** Run `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/test_route_editing.py tests/test_ferry.py -x -v`
+- **After every plan wave:** Run `cd /Users/stefan/Code/DetourAI/backend && python3 -m pytest tests/ -v`
 - **Before `/gsd:verify-work`:** Full suite must be green
 - **Max feedback latency:** 5 seconds
 

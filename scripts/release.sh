@@ -45,4 +45,4 @@ git push origin "$NEW_VERSION" "$RELEASE_TAG"
 
 echo ""
 echo "✓ Tags pushed: $NEW_VERSION  $RELEASE_TAG"
-echo "→ Pipeline: https://github.com/stefanschaedeli/travelman3/actions"
+echo "→ Pipeline: https://github.com/stefanschaedeli/DetourAI/actions"

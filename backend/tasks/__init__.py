@@ -4,7 +4,7 @@ from celery import Celery
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
 celery_app = Celery(
-    "travelman",
+    "detour-ai",
     broker=REDIS_URL,
     backend=REDIS_URL,
     include=[

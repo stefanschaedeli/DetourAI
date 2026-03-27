@@ -22,7 +22,7 @@ The sharing feature requires a new `share_token` column on the `travels` table, 
 - **D-04:** No expiry -- link stays active until user explicitly revokes it
 - **D-05:** Full guide view (map-centric layout with cards, timeline, stats) in read-only mode -- reuses all Phase 4 UI components but hides edit controls, route editing, and owner-only actions
 - **D-06:** Interactive Google Map with markers and polyline (same as owner view, uses API key)
-- **D-07:** Subtle footer note: "Erstellt mit Travelman" at the bottom of shared views
+- **D-07:** Subtle footer note: "Erstellt mit DetourAI" at the bottom of shared views
 - **D-08:** Share button ("Teilen") in the guide view header, next to the trip title
 - **D-09:** Inline toggle + copy pattern -- toggle switch enables/disables sharing; when on, shows link with copy button. No modal.
 - **D-10:** Revoke requires confirmation prompt: "Link deaktivieren? Bestehende Empfaenger verlieren Zugriff."
@@ -150,7 +150,7 @@ async _travel(m) {
 - `guide.js` -- hide replan button, share toggle (show only for owner), edit controls
 - `guide.js` -- hide drag-and-drop reorder handlers
 - `guide.js` -- hide remove/replace/add stop buttons
-- `guide.js` -- show "Erstellt mit Travelman" footer
+- `guide.js` -- show "Erstellt mit DetourAI" footer
 - `sidebar.js` -- hide sidebar navigation (shared view is standalone)
 
 **API fetch for shared view:**

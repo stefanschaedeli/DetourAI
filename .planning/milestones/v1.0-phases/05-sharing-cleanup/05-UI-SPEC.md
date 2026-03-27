@@ -53,7 +53,7 @@ Exceptions: none
 | Label | 13px (--text-sm / 0.875rem) | 600 | 1.4 |
 | Heading | 24px (--text-2xl / 1.5rem) | 600 | 1.2 |
 
-Only 3 sizes needed this phase. Two weights: 400 (body text, footer branding) and 600 (labels, headings, buttons). The share toggle label uses Label size. The "Erstellt mit Travelman" footer uses Body at muted color. Copy feedback ("Kopiert!") uses the existing `.btn-sm` font-size (13px).
+Only 3 sizes needed this phase. Two weights: 400 (body text, footer branding) and 600 (labels, headings, buttons). The share toggle label uses Label size. The "Erstellt mit DetourAI" footer uses Body at muted color. Copy feedback ("Kopiert!") uses the existing `.btn-sm` font-size (13px).
 
 ---
 
@@ -113,7 +113,7 @@ Location: bottom of the guide view, below all content, only visible when `S.shar
 **Visual spec:**
 - Full-width bar, `--bg-secondary` background
 - Padding: 16px 24px
-- Text: "Erstellt mit Travelman", 13px, weight 400, `--text-muted` (#9E9BB0), centered
+- Text: "Erstellt mit DetourAI", 13px, weight 400, `--text-muted` (#9E9BB0), centered
 - No link, no logo -- pure text branding per D-07
 
 ### 3. Read-Only Mode Suppressions
@@ -139,7 +139,7 @@ All text in German per project convention.
 | Copy button (default) | "Link kopieren" |
 | Copy button (feedback) | "Kopiert!" |
 | Revoke confirmation | "Link deaktivieren? Bestehende Empfaenger verlieren Zugriff." |
-| Shared view footer | "Erstellt mit Travelman" |
+| Shared view footer | "Erstellt mit DetourAI" |
 | Shared link not found (404) | "Dieser Link ist nicht mehr gueltig oder wurde deaktiviert." |
 | Shared link error (network) | "Link konnte nicht geladen werden. Bitte versuche es erneut." |
 
@@ -235,7 +235,7 @@ The share controls sit in a flex container between the title and the replan butt
 Identical to the owner guide view (Phase 4 map-centric split-panel) with:
 - No sidebar
 - No edit controls
-- "Erstellt mit Travelman" footer appended at bottom
+- "Erstellt mit DetourAI" footer appended at bottom
 - Map is interactive (pan, zoom) per D-06
 
 ---
