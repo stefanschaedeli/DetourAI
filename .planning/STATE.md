@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Polish & Travel View Redesign
 status: executing
-stopped_at: Completed 10-01-PLAN.md
+stopped_at: Completed 10-01-PLAN.md and 10-02-PLAN.md (Wave 1)
 last_updated: "2026-03-27T21:00:21.795Z"
 last_activity: 2026-03-27
 progress:
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 09 P01 | 4 | 2 tasks | 7 files |
 | Phase 09 P02 | 5 | 2 tasks | 1 files |
 | Phase 10 P01 | 4 | 2 tasks | 4 files |
+| Phase 10 P02 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,8 @@ All v1.0 decisions archived in PROJECT.md Key Decisions table and milestones/v1.
 - [Phase 09]: 7 guide module script tags replace single guide.js tag in index.html; guide.js deleted
 - [Phase 10]: Breadcrumb element placed outside #guide-content to persist across renderGuide() calls (anti-pattern from RESEARCH.md avoided)
 - [Phase 10]: _renderBreadcrumb uses imperative DOM with textContent for XSS-safe user data rendering
+- [Phase 10]: panToStop called with (stopId, plan.stops) argument order matching existing maps.js signature
+- [Phase 10]: drillLevel inferred from _activeStopId/_activeDayNum in _updateMapForTab for backward compatibility
 
 ### Pending Todos
 
@@ -77,5 +80,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-03-27T21:00:21.793Z
-Stopped at: Completed 10-01-PLAN.md
+Stopped at: Completed Wave 1 (10-01 + 10-02)
 Resume file: None
