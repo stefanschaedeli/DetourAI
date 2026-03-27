@@ -648,3 +648,67 @@ def test_stop_options_style_enforcement():
     from agents.stop_options_finder import SYSTEM_PROMPT
     assert "STIL-REGEL" in SYSTEM_PROMPT, "SYSTEM_PROMPT missing STIL-REGEL block"
     assert "matches_travel_style" in SYSTEM_PROMPT, "SYSTEM_PROMPT missing matches_travel_style field requirement"
+
+
+# ---------------------------------------------------------------------------
+# Tests: _validate_drive_limits (DEBT-04)
+# ---------------------------------------------------------------------------
+
+def test_validate_drive_limits_all_under():
+    """All stops under soft limit — no warnings, no hard violation."""
+    from orchestrator import TravelPlannerOrchestrator
+    stops = [
+        {"id": 1, "drive_hours": 0},
+        {"id": 2, "drive_hours": 3.0},
+        {"id": 3, "drive_hours": 4.0},
+    ]
+    result, hard = TravelPlannerOrchestrator._validate_drive_limits(stops, 4.5)
+    assert not hard
+    assert all("drive_limit_warning" not in s for s in result)
+
+
+def test_validate_drive_limits_soft_violation():
+    """Stop at 110% of limit — warning flag but accepted."""
+    from orchestrator import TravelPlannerOrchestrator
+    stops = [
+        {"id": 1, "drive_hours": 0},
+        {"id": 2, "drive_hours": 5.0},  # 111% of 4.5
+    ]
+    result, hard = TravelPlannerOrchestrator._validate_drive_limits(stops, 4.5)
+    assert not hard
+    assert "drive_limit_warning" in result[1]
+    assert "Softlimit" in result[1]["drive_limit_warning"]
+
+
+def test_validate_drive_limits_hard_violation():
+    """Stop at 140% of limit — hard violation flagged."""
+    from orchestrator import TravelPlannerOrchestrator
+    stops = [
+        {"id": 1, "drive_hours": 0},
+        {"id": 2, "drive_hours": 6.5},  # 144% of 4.5
+    ]
+    result, hard = TravelPlannerOrchestrator._validate_drive_limits(stops, 4.5)
+    assert hard
+    assert "drive_limit_warning" in result[1]
+    assert "Hardlimit" in result[1]["drive_limit_warning"]
+
+
+def test_validate_drive_limits_ferry_excluded():
+    """Ferry hours not counted — drive_hours=2 with ferry_hours=5 passes 4.5h limit."""
+    from orchestrator import TravelPlannerOrchestrator
+    stops = [
+        {"id": 1, "drive_hours": 0},
+        {"id": 2, "drive_hours": 2.0, "ferry_hours": 5.0},  # Only 2h driving
+    ]
+    result, hard = TravelPlannerOrchestrator._validate_drive_limits(stops, 4.5)
+    assert not hard
+    assert all("drive_limit_warning" not in s for s in result)
+
+
+def test_validate_drive_limits_zero_drive():
+    """Start stop with drive_hours=0 always passes."""
+    from orchestrator import TravelPlannerOrchestrator
+    stops = [{"id": 1, "drive_hours": 0}]
+    result, hard = TravelPlannerOrchestrator._validate_drive_limits(stops, 4.5)
+    assert not hard
+    assert "drive_limit_warning" not in result[0]
