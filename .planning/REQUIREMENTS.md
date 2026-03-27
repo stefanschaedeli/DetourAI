@@ -29,7 +29,7 @@ Requirements for v1.1 Polish & Travel View Redesign. Each maps to roadmap phases
 
 ### Verification
 
-- [ ] **VRFY-01**: 9 pending UI items from v1.0 verified in browser and fixed if broken
+- [ ] **VRFY-01**: 18 pending UI items from Phases 3, 4, and 10 verified in browser and fixed if broken
 
 ## Future Requirements
 
