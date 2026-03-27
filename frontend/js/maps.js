@@ -765,6 +765,52 @@ const GoogleMaps = (() => {
     });
   }
 
+  /**
+   * Dim non-focused markers to 0.35 opacity and keep focused markers at full opacity.
+   * Null-safe: skips markers where _div is not yet set (OverlayView onAdd not fired).
+   * @param {string[]} focusedStopIds - array of stop ID strings to keep at full opacity
+   */
+  function dimNonFocusedMarkers(focusedStopIds) {
+    _guideMarkerList.forEach(function(m) {
+      if (!m || !m._div) return;
+      if (m._stopId === undefined) {
+        // Start pin, ferry lines — dim them too
+        m._div.style.transition = 'opacity 0.3s ease';
+        m._div.style.opacity = '0.35';
+      } else if (focusedStopIds.indexOf(String(m._stopId)) !== -1) {
+        m._div.style.transition = 'opacity 0.3s ease';
+        m._div.style.opacity = '1';
+      } else {
+        m._div.style.transition = 'opacity 0.3s ease';
+        m._div.style.opacity = '0.35';
+      }
+    });
+  }
+
+  /**
+   * Restore all markers to full opacity.
+   */
+  function restoreAllMarkers() {
+    _guideMarkerList.forEach(function(m) {
+      if (!m || !m._div) return;
+      m._div.style.transition = 'opacity 0.3s ease';
+      m._div.style.opacity = '1';
+    });
+  }
+
+  /**
+   * Fit the guide map to show only the provided stops with padding.
+   * @param {Array} stops - array of stop objects with .lat and .lng properties
+   */
+  function fitDayStops(stops) {
+    if (!_guideMap || !stops.length) return;
+    var bounds = new google.maps.LatLngBounds();
+    stops.forEach(function(s) {
+      if (s.lat && s.lng) bounds.extend({ lat: s.lat, lng: s.lng });
+    });
+    _guideMap.fitBounds(bounds, { top: 48, right: 48, bottom: 48, left: 48 });
+  }
+
   return {
     _onApiReady,
     _setApiKey,
@@ -784,6 +830,9 @@ const GoogleMaps = (() => {
     highlightGuideMarker,
     panToStop,
     fitAllStops,
+    dimNonFocusedMarkers,
+    restoreAllMarkers,
+    fitDayStops,
     enableClickToAdd,
     get routeMap() { return _routeMap; },
     get guideMap()  { return _guideMap; },
