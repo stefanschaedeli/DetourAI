@@ -27,7 +27,7 @@
 **Milestone Goal:** Fix all known tech debt and bugs, then redesign the travel view for clarity -- overview-first with drill-down into days/stops.
 
 - [x] **Phase 8: Tech Debt Stabilization** - Fix production bugs and stale-state issues against the current UI (completed 2026-03-27)
-- [ ] **Phase 9: Guide Module Split** - Split guide.js monolith into focused modules with zero behavioral changes
+- [x] **Phase 9: Guide Module Split** - Split guide.js monolith into focused modules with zero behavioral changes (completed 2026-03-27)
 - [ ] **Phase 10: Progressive Disclosure UI** - Three-level drill-down navigation with map focus management
 - [ ] **Phase 11: Browser Verification** - Verify 9 pending UI items against the new progressive disclosure view
 
@@ -55,10 +55,10 @@ Plans:
   1. guide.js is replaced by 5+ focused modules (core, overview, stops, days, map-sync) loaded via script tags in index.html
   2. All existing travel guide functionality works identically -- tab switching, stop/day detail, editing, map sync, SSE handlers
   3. Each module file has a header comment documenting its dependencies and exports
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 09-01-PLAN.md — Extract all 82 functions from guide.js into 7 focused modules
-- [ ] 09-02-PLAN.md — Wire modules into index.html, delete guide.js, verify zero regression
+- [x] 09-01-PLAN.md — Extract all 82 functions from guide.js into 7 focused modules
+- [x] 09-02-PLAN.md — Wire modules into index.html, delete guide.js, verify zero regression
 
 ### Phase 10: Progressive Disclosure UI
 **Goal**: Users navigate their travel plan through a three-level drill-down (overview, day, stop) with the persistent map responding to navigation context
@@ -97,6 +97,6 @@ Plans:
 | 6. Wiring Fixes | v1.0 | 2/2 | Complete | 2026-03-26 |
 | 7. Ferry-Aware Route Edits | v1.0 | 1/1 | Complete | 2026-03-26 |
 | 8. Tech Debt Stabilization | v1.1 | 2/2 | Complete   | 2026-03-27 |
-| 9. Guide Module Split | v1.1 | 0/2 | Planning | - |
+| 9. Guide Module Split | v1.1 | 2/2 | Complete   | 2026-03-27 |
 | 10. Progressive Disclosure UI | v1.1 | 0/0 | Not started | - |
 | 11. Browser Verification | v1.1 | 0/0 | Not started | - |
