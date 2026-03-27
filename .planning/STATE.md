@@ -1,34 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: AI Trip Planner MVP
-status: v1.0 milestone shipped
-stopped_at: Milestone v1.0 archived and tagged
-last_updated: "2026-03-26T18:30:00.000Z"
+milestone: v1.1
+milestone_name: Polish & Travel View Redesign
+status: defining requirements
+stopped_at: null
+last_updated: "2026-03-27T09:59:00.000Z"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 20
-  completed_plans: 20
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-26)
+See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** Route planning and stop discovery must produce consistently high-quality, geographically correct results for any destination type.
-**Current focus:** v1.0 shipped — planning next milestone
+**Current focus:** v1.1 — Fix tech debt, then redesign travel view with overview-first drill-down
 
 ## Current Position
 
-Milestone: v1.0 AI Trip Planner MVP — SHIPPED 2026-03-26
-All 7 phases complete, 20/20 plans executed, 25/25 requirements satisfied.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-27 — Milestone v1.1 started
 
 ## Performance Metrics
 
-**Velocity (18 plans tracked):**
+**Velocity (18 plans tracked from v1.0):**
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
@@ -59,14 +61,14 @@ All v1.0 decisions archived in PROJECT.md Key Decisions table and milestones/v1.
 
 ### Pending Todos
 
-None.
+- RouteArchitect ignores daily drive limits and suggests ferries/islands (from v1.0)
 
 ### Blockers/Concerns
 
-None active — milestone shipped.
+None active.
 
 ## Session Continuity
 
-Last session: 2026-03-26
-Stopped at: v1.0 milestone archived
+Last session: 2026-03-27
+Stopped at: Defining v1.1 requirements
 Resume file: None

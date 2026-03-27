@@ -46,7 +46,20 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 
 ### Active
 
-(None — next milestone requirements will be defined via `/gsd:new-milestone`)
+**Current Milestone: v1.1 Polish & Travel View Redesign**
+
+**Goal:** Fix all known tech debt and bugs, then redesign the travel view for clarity — overview-first with drill-down into days/stops.
+
+**Target features:**
+- Fix map markers/polyline not refreshing after route edits
+- Add `replace_stop_job` to Celery include list
+- Fix stats bar deferred update after edits
+- Fix RouteArchitect ignoring daily drive limits
+- Browser-verify 9 pending UI items
+- Overview-first travel view with compact day cards
+- Day drill-down: focus map on region, show day's elements
+- Stop drill-down: focus map on stop region, show stop details
+- Progressive disclosure — collapse unfocused content, expand focused
 
 ### Out of Scope
 
@@ -112,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-26 after v1.0 milestone completion*
+*Last updated: 2026-03-27 after v1.1 milestone start*
