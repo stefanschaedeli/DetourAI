@@ -43,7 +43,7 @@ Declared values (multiples of 4 only, aligned to existing `--space-*` tokens in 
 | 3xl | 64px | Page-level top/bottom breathing room |
 
 Exceptions:
-- Touch targets for breadcrumb clickable segments: minimum 44px height (accessibility)
+- Touch target for breadcrumb clickable segments: 48px height (closest standard token to Apple HIG 44px minimum — accessibility)
 - Day card thumbnail height: 120px (fixed, not from scale — see Component Inventory)
 
 Source: Existing `--space-*` vars in `styles.css` `:root`. Scale is rem-based (`--space-xs: 0.25rem` = 4px at 16px base). This spec uses px equivalents for precision.
@@ -113,14 +113,14 @@ New CSS classes required in `frontend/styles.css`. No new JS modules created —
 ```
 
 Geometry:
-- Height: 44px (touch target)
+- Height: 48px (touch target, accessibility — nearest multiple-of-4 above 44px)
 - Background: `--bg-elevated` with 1px bottom border `--border-subtle`
 - Horizontal padding: 16px (md)
 - Vertical padding: 0 (vertically centered via flexbox)
 - Hidden at overview level (display: none when no drill depth)
 - Sticky: `position: sticky; top: [stats-bar-height]px; z-index: 10`
 
-Source: CONTEXT.md D-06. Touch target exception: 44px.
+Source: CONTEXT.md D-06. Touch target: 48px (nearest multiple-of-4 to Apple HIG 44px minimum).
 
 ### Day Card Grid (Overview)
 
