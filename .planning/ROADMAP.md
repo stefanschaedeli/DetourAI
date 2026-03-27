@@ -29,7 +29,7 @@
 - [x] **Phase 8: Tech Debt Stabilization** - Fix production bugs and stale-state issues against the current UI (completed 2026-03-27)
 - [x] **Phase 9: Guide Module Split** - Split guide.js monolith into focused modules with zero behavioral changes (completed 2026-03-27)
 - [x] **Phase 10: Progressive Disclosure UI** - Three-level drill-down navigation with map focus management (completed 2026-03-27)
-- [ ] **Phase 11: Browser Verification** - Verify 9 pending UI items against the new progressive disclosure view
+- [ ] **Phase 11: Browser Verification** - Verify 18 pending UI items from Phases 3, 4, and 10 against the progressive disclosure view
 
 ## Phase Details
 
@@ -78,13 +78,15 @@ Plans:
 **UI hint**: yes
 
 ### Phase 11: Browser Verification
-**Goal**: All 9 pending UI items from v1.0 are verified against the new progressive disclosure view and any broken items are fixed
+**Goal**: All 18 pending UI items from Phases 3, 4, and 10 are verified against the progressive disclosure view and any broken items are fixed
 **Depends on**: Phase 10
 **Requirements**: VRFY-01
 **Success Criteria** (what must be TRUE):
-  1. Each of the 9 pending UI verification items has been tested in a browser against the new travel view layout
+  1. Each of the 18 pending UI verification items has been tested in a browser against the current travel view layout
   2. Any items found broken during verification are fixed and re-verified
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 11-01-PLAN.md — Verify all 18 UI items in browser, document results, fix trivial issues inline
 **UI hint**: yes
 
 ## Progress
@@ -103,4 +105,4 @@ Plans:
 | 8. Tech Debt Stabilization | v1.1 | 2/2 | Complete   | 2026-03-27 |
 | 9. Guide Module Split | v1.1 | 2/2 | Complete   | 2026-03-27 |
 | 10. Progressive Disclosure UI | v1.1 | 3/3 | Complete   | 2026-03-27 |
-| 11. Browser Verification | v1.1 | 0/0 | Not started | - |
+| 11. Browser Verification | v1.1 | 0/1 | Not started | - |
