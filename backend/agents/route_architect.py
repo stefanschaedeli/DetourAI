@@ -102,6 +102,16 @@ class RouteArchitectAgent:
                     job_id=self.job_id, agent="RouteArchitect",
                 )
 
+        drive_limit_block = (
+            f"\nFAHRZEITLIMIT (KRITISCH — MUSS eingehalten werden):\n"
+            f"- Maximale Fahrzeit pro Tag: {req.max_drive_hours_per_day}h (NUR reine Fahrzeit, OHNE Fährüberfahrten)\n"
+            f"- Fährzeit zählt NICHT als Fahrzeit. Wenn ein Tag 2h Fahrt + 4h Fähre hat, ist die Fahrzeit = 2h.\n"
+            f"- Jeder Stop muss ein drive_hours Feld haben, das NUR die Fahrzeit (ohne Fähre) angibt.\n"
+            f"- KEIN Stop darf drive_hours > {req.max_drive_hours_per_day}h haben.\n"
+            f"- Bei Inselzielen oder Fährüberfahrten: Plane einen Stopp VOR dem Fährhafen, damit die Fahrzeit zum Hafen unter dem Limit bleibt.\n"
+            f"- Wenn die Distanz zwischen zwei sinnvollen Stopps zu gross ist, füge einen zusätzlichen Zwischenstopp ein.\n"
+        )
+
         prompt = f"""Plane eine Reiseroute mit Zwischenstopps:
 
 Start: {req.start_location}
@@ -110,18 +120,18 @@ Reisedauer: {req.total_days} Tage ({req.start_date} – {req.end_date})
 Reisende: {req.adults} Erwachsene{f', Kinder im Alter {children_ages}' if children_ages else ''}
 Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
 {f'Reisebeschreibung: {req.travel_description}' if req.travel_description else ''}
-Maximale Fahrzeit pro Tag: {req.max_drive_hours_per_day}h
+Maximale Fahrzeit pro Tag: {req.max_drive_hours_per_day}h (STRIKT — siehe FAHRZEITLIMIT unten)
 Nächte pro Stop: {req.min_nights_per_stop}–{req.max_nights_per_stop}
 Budget: CHF {req.budget_chf:,.0f}
-{mandatory_str}{style_block}{plausibility_block}{ferry_block}
+{mandatory_str}{style_block}{plausibility_block}{ferry_block}{drive_limit_block}
 Erstelle eine optimale Route. Der erste Stop MUSS der Startort sein, der letzte Stop MUSS das Hauptziel sein.
 Dazwischen plane 2–5 sinnvolle Zwischenstopps. Verteile die Tage sinnvoll.
 Gib genau dieses JSON zurück:
 {{
   "stops": [
-    {{"id": 1, "region": "{req.start_location}", "country": "CH", "arrival_day": 1, "nights": 0, "drive_hours": 0, "is_fixed": false, "notes": "Startort"}},
-    {{"id": 2, "region": "Annecy", "country": "FR", "arrival_day": 2, "nights": 2, "drive_hours": 3.5, "is_fixed": false, "notes": "..."}},
-    {{"id": 3, "region": "{req.main_destination}", "country": "FR", "arrival_day": 8, "nights": 3, "drive_hours": 4.0, "is_fixed": false, "notes": "Hauptziel"}}
+    {{"id": 1, "region": "{req.start_location}", "country": "CH", "arrival_day": 1, "nights": 0, "drive_hours": 0, "ferry_hours": 0, "is_fixed": false, "notes": "Startort"}},
+    {{"id": 2, "region": "Annecy", "country": "FR", "arrival_day": 2, "nights": 2, "drive_hours": 3.5, "ferry_hours": 0, "is_fixed": false, "notes": "..."}},
+    {{"id": 3, "region": "{req.main_destination}", "country": "FR", "arrival_day": 8, "nights": 3, "drive_hours": 4.0, "ferry_hours": 0, "is_fixed": false, "notes": "Hauptziel"}}
   ],
   "total_drive_days": 3,
   "total_rest_days": 7,
