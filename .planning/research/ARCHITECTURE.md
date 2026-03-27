@@ -1,385 +1,523 @@
-# Architecture Research
+# Architecture Patterns
 
-**Domain:** AI road trip planner -- stabilization + UX redesign
-**Researched:** 2026-03-25
-**Confidence:** HIGH (based on direct codebase analysis + domain knowledge)
+**Domain:** Progressive disclosure travel view redesign within existing vanilla JS SPA
+**Researched:** 2026-03-27
+**Focus:** Map focus/zoom management, router URL evolution, integration with existing tab architecture
 
-## System Overview
+## Current Architecture Analysis
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                         NGINX (reverse proxy)                        │
-│         Static files (frontend/)  +  /api/ → backend:8000            │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ┌─────────────────────┐    SSE     ┌──────────────────────────┐     │
-│  │   Vanilla JS SPA    │◄══════════►│     FastAPI Backend      │     │
-│  │                     │   REST     │     (main.py, 2600+ LoC) │     │
-│  │  state.js (S obj)   │◄══════════►│                          │     │
-│  │  route-builder.js   │            │  Route geometry calc     │     │
-│  │  maps.js (GMaps)    │            │  Agent orchestration     │     │
-│  │  guide.js           │            │  Job lifecycle mgmt      │     │
-│  └─────────────────────┘            └────────┬──────┬──────────┘     │
-│                                              │      │                │
-│                                    ┌─────────┘      └──────────┐     │
-│                                    ▼                           ▼     │
-│                          ┌──────────────┐           ┌──────────────┐ │
-│                          │    Redis     │           │   Celery     │ │
-│                          │  job:{id}    │◄─────────►│   Workers    │ │
-│                          │  sse:{id}    │  events   │              │ │
-│                          │  TTL 24h     │           │  planning    │ │
-│                          └──────────────┘           │  acc-fetch   │ │
-│                                                     │  stop-replace│ │
-│                                                     └──────┬───────┘ │
-│                                                            │         │
-│  ┌──────────────────────────────────────────────────┐      │         │
-│  │              AI Agents (9 agents)                 │◄─────┘         │
-│  │  RouteArchitect  StopOptionsFinder  RegionPlanner │                │
-│  │  AccommodationR. Activities  Restaurants          │                │
-│  │  DayPlanner  TravelGuide  TripAnalysis            │                │
-│  └──────────────────────┬────────────────────────────┘                │
-│                         │                                            │
-│  ┌──────────────────────┴────────────────────────────┐               │
-│  │           External APIs                            │               │
-│  │  Anthropic Claude  |  Google Maps (Geo/Dir/Places) │               │
-│  │  Brave Search      |  Wikipedia  |  Unsplash       │               │
-│  └────────────────────────────────────────────────────┘               │
-│                                                                      │
-│  ┌────────────────────────────────────────────────────┐               │
-│  │           SQLite Persistence                       │               │
-│  │  data/travels.db (plans + users + settings)        │               │
-│  └────────────────────────────────────────────────────┘               │
-└──────────────────────────────────────────────────────────────────────┘
-```
+### Layout Structure (as-is)
 
-### Component Responsibilities
-
-| Component | Responsibility | Key Constraint |
-|-----------|----------------|----------------|
-| **main.py** | HTTP endpoints, SSE streaming, route geometry, job lifecycle | Monolith at 2600+ LoC -- all new endpoints land here |
-| **Orchestrator** | Sequences agents for full planning pipeline | Runs inside Celery task, pushes SSE events via Redis |
-| **AI Agents** | Domain-specific Claude API calls (route, stops, accommodation, etc.) | All follow same pattern: prompt -> call_with_retry -> parse_agent_json |
-| **Redis** | Ephemeral job state (24h TTL) + SSE event bus between Celery and FastAPI | Cross-process bridge -- Celery workers push, SSE endpoint drains |
-| **SQLite** | Persistent travel plans, users, settings | Single file, no concurrent write issues at friends-and-family scale |
-| **Frontend SPA** | Vanilla JS with client-side routing, Google Maps rendering | No framework, no build step -- all DOM manipulation is manual |
-
-## How New Features Integrate
-
-### 1. Geographic Awareness (Ferry/Island Routing)
-
-**Current gap:** The StopOptionsFinder prompt constrains stops to a corridor bounding box between origin and destination. For island destinations (e.g., Greek islands), this corridor is over water. Google Directions returns driving-only results, missing ferries entirely.
-
-**Architecture change: Prompt enrichment layer, not new agents.**
+The travel guide uses a fixed split-panel layout:
 
 ```
-Current flow:
-  _calc_route_geometry() → Google Directions (driving only)
-      → corridor_box, reference_cities → StopOptionsFinder prompt
-
-New flow:
-  _calc_route_geometry() → Google Directions
-      → _detect_water_crossing() [NEW]
-          → if islands/coastal: inject ferry context into geometry dict
-      → corridor_box adjusted for maritime routes
-      → StopOptionsFinder prompt includes ferry/island awareness
++----------------------------------+--------------------+
+|                                  |  guide-content-    |
+|   guide-map-panel (58%, fixed)   |  panel (42%)       |
+|   - Google Maps persistent       |  - Tab bar         |
+|   - Sidebar overlay              |  - Stats bar       |
+|   - Click-to-add popup           |  - #guide-content  |
+|                                  |  (content swap)    |
++----------------------------------+--------------------+
 ```
 
-**Component: `_detect_water_crossing()` in main.py**
-- Checks if destination coordinates are on an island (reverse geocode → check for island-type results, or maintain a small lookup of known island groups)
-- When detected: skip corridor bounding box constraint (meaningless over water), add explicit ferry port context to prompt, set `transport_mode: "ferry+driving"` in geometry dict
-- Google Directions API supports `mode=transit` but not ferries specifically. Better approach: hardcode known ferry port pairs for common island groups (Greek islands, Corsica, Sardinia, Balearics) and inject them as waypoint hints
+- **Map panel:** `position: fixed`, 58% width desktop, sticky 30vh mobile
+- **Content panel:** Scrollable, `margin-left: 58%`, contains tab bar + content
+- **Tab switching:** Full content replacement of `#guide-content` via `renderGuide(plan, tab)`
+- **Map state:** Persistent `GoogleMaps._guideMap` survives tab switches; markers/polyline recreated per tab via `_updateMapForTab()`
 
-**Prompt changes in StopOptionsFinder:**
-- Add transport_mode awareness: when geometry dict contains `ferry_ports`, the system prompt gets a new rule block about coastal/island routing
-- Remove the strict bounding box rule for island segments (rule 7 in current prompt)
-- Add: "Wenn Fährüberfahrten nötig sind, schlage Hafenstädte als Zwischenstopps vor"
-
-**Prompt changes in RouteArchitect:**
-- The `ferry_crossings: []` field already exists in the output schema but is never populated
-- Add explicit instruction: "Identifiziere Fährüberfahrten wenn das Ziel eine Insel ist oder Küstenrouten Wasserüberquerungen erfordern"
-
-**No new agents needed.** This is purely prompt engineering + geometry enrichment.
-
-**Build order implication:** This must come before UI work because correct route data feeds everything downstream.
-
-### 2. User Route Control (Edit/Reorder/Replace Stops)
-
-**Current state:** Users can select stops during route building and replace stops post-planning. No reorder, no manual add, no mid-planning preference changes.
-
-**Architecture change: New endpoints on main.py + frontend route-builder enhancements.**
+### Navigation Flow (as-is)
 
 ```
-New endpoints (all operate on Redis job state):
-
-POST /api/reorder-stops/{job_id}
-  Body: { "stop_ids": [3, 1, 2, 4] }
-  → Reorder selected_stops in job state
-  → Recalculate Google Directions for affected segments
-  → Return updated route with new drive times/distances
-
-POST /api/remove-stop/{job_id}/{stop_id}
-  → Remove from selected_stops
-  → Recalculate remaining route geometry
-  → Return updated route
-
-POST /api/add-custom-stop/{job_id}
-  Body: { "region": "Nice", "country": "FR", "nights": 2 }
-  → Geocode via Google
-  → Insert into selected_stops at correct position
-  → Recalculate route geometry
-  → Return updated route
-
-POST /api/regenerate-options/{job_id}
-  Body: { "extra_instructions": "Mehr Strand, weniger Berge" }
-  → Re-run StopOptionsFinder with updated preferences
-  → Stream new options via SSE (same as current flow)
+Overview tab
+  |
+  +-- switchGuideTab('stops') --> Stops list (cards)
+  |     |
+  |     +-- navigateToStop(id) --> Stop detail (full replace)
+  |           _activeStopId set, renderGuide re-renders with detail
+  |           URL: /travel/{id}/stops/{stopId}
+  |
+  +-- switchGuideTab('days') --> Days timeline (accordion)
+        |
+        +-- _toggleDayExpand(num) --> inline expand (no URL change)
+        +-- navigateToDay(num) --> Day detail (full replace)
+              _activeDayNum set, renderGuide re-renders with detail
+              URL: /travel/{id}/days/{dayNum}
 ```
 
-**SSE flow is NOT broken.** These are all synchronous request-response endpoints that modify job state. The SSE stream only runs during the initial option-finding phase. Route editing happens after options are displayed, so it uses normal REST calls. The only SSE-aware operation is `regenerate-options`, which reuses the existing `route_option_ready` event pattern.
+### Key State Variables
 
-**Frontend changes:**
-- `route-builder.js`: Add drag-to-reorder for confirmed stops (HTML5 drag-and-drop already exists for regions)
-- Add "Remove stop" button per stop card
-- Add "Add custom stop" input field
-- Add "More options like this" / preference adjustment UI
+| Variable | Type | Purpose |
+|----------|------|---------|
+| `activeTab` | string | Current tab: overview/stops/days/calendar/budget |
+| `_activeStopId` | number/null | If set, stops tab shows detail instead of list |
+| `_activeDayNum` | number/null | If set, days tab shows detail instead of timeline |
+| `_guideMapInitialized` | bool | Whether persistent map has been set up |
+| `_userInteractingWithMap` | bool | Suppresses auto-pan during drag |
+| `_cardObserver` | IntersectionObserver | Scroll-sync between cards and map |
 
-**Data flow for reorder:**
-```
-User drags stop → POST /api/reorder-stops/{job_id}
-  → Backend reorders job.selected_stops
-  → Recalculates Google Directions for changed pairs
-  → Returns { stops: [...], route_updated: true }
-  → Frontend re-renders route on map + stop list
-```
+### Current Map Focus Behavior
 
-**Build order implication:** Depends on geographic awareness being done first (correct coordinates and routes are prerequisite for meaningful reordering).
+1. **Tab switch:** `_updateMapForTab()` calls `GoogleMaps.fitAllStops(plan)` -- always zooms out to full route
+2. **Card click:** `_onCardClick(stopId)` calls `panToStop()` + `highlightGuideMarker()` -- smooth pan, no zoom
+3. **Scroll sync:** IntersectionObserver on cards auto-pans to visible card's stop
+4. **Stop detail:** Creates separate `GoogleMaps.initStopOverviewMap()` inside `#guide-content` (NOT the persistent map)
+5. **Day detail:** Creates separate `GoogleMaps.initStopOverviewMap()` for day map inside content panel
+6. **Marker click:** `_onMarkerClick()` highlights marker + scrolls to card, or switches to stops tab
 
-### 3. Map-Centric Responsive Layout
+**Critical finding:** Stop detail and day detail create *independent mini-maps inside the content panel*, ignoring the persistent map entirely. The persistent map stays zoomed to full route even when viewing a single stop.
 
-**Current state:** Google Maps is a secondary element in the UI. The route-builder has a small map alongside option cards. Guide view has a separate map. No responsive design.
+## Recommended Architecture
 
-**Architecture change: CSS/HTML restructure only. No backend changes.**
+### Design Principle: Map as Primary Navigation Surface
 
-**Layout pattern: Split-pane with map as persistent hero.**
+The persistent guide map should respond to drill-down context. When the user drills into a day or stop, the persistent map should focus on that region -- not create a separate embedded map. This eliminates redundant map instances and makes the split-panel layout feel intentional.
 
-```
-┌─────────────────────────────────────────────────────┐
-│  Desktop (>768px)                                    │
-│  ┌────────────────────────┬────────────────────────┐ │
-│  │                        │                        │ │
-│  │      Map (60%)         │   Content Panel (40%)  │ │
-│  │                        │                        │ │
-│  │   Google Maps fills    │   Stop cards           │ │
-│  │   entire left side     │   Day timeline         │ │
-│  │                        │   Guide content        │ │
-│  │   Markers, polylines   │                        │ │
-│  │   update as user       │   Scrollable           │ │
-│  │   interacts with       │                        │ │
-│  │   content panel        │                        │ │
-│  │                        │                        │ │
-│  └────────────────────────┴────────────────────────┘ │
-│                                                      │
-│  Mobile (<768px)                                     │
-│  ┌──────────────────────────────────────────────────┐│
-│  │   Map (top 40vh, collapsible)                    ││
-│  ├──────────────────────────────────────────────────┤│
-│  │   Content (bottom, scrollable)                   ││
-│  │   Stop cards stack vertically                    ││
-│  │   Pull-up sheet pattern for details              ││
-│  └──────────────────────────────────────────────────┘│
-└──────────────────────────────────────────────────────┘
-```
+### Component Boundaries
 
-**Implementation approach:**
-- CSS Grid with `grid-template-columns: 1fr 1fr` (desktop) collapsing to single column (mobile)
-- Map container uses `position: sticky` on desktop so it stays visible while content scrolls
-- One persistent map instance (replace current two-map approach: `_routeMap` + `_guideMap` in maps.js) with a single `GoogleMaps.getMap()` that all views share
-- Content panel transitions between views (route-builder, accommodation, guide) without destroying the map
-- On mobile: map is a collapsible top section with a "Show map" / "Hide map" toggle
+| Component | Responsibility | Communicates With | Change Type |
+|-----------|---------------|-------------------|-------------|
+| `guide.js` (renderGuide) | Tab routing + content rendering | MapFocus, Router | **Modify** -- add focus context to render calls |
+| MapFocus (new logic in guide.js) | Manages persistent map zoom/bounds per view context | GoogleMaps singleton | **New** -- ~80 lines of focus management |
+| Router | URL dispatch + history management | guide.js handlers | **Modify** -- no new routes needed, existing patterns sufficient |
+| GoogleMaps singleton | Map API wrapper, markers, polylines | Called by MapFocus | **Modify** -- add `fitBoundsForStops(stopIds)` helper |
+| Stop detail renderer | Renders stop detail HTML | MapFocus | **Modify** -- remove embedded mini-map, rely on persistent map |
+| Day detail renderer | Renders day detail HTML | MapFocus | **Modify** -- remove embedded mini-map, rely on persistent map |
 
-**Key frontend files affected:**
-- `index.html`: Restructure section layout to two-panel grid
-- `styles.css`: Major rewrite for responsive grid, remove Apple-inspired card layout, add travel-app visual style
-- `maps.js`: Merge `_routeMap` and `_guideMap` into single persistent instance
-- `route-builder.js`, `accommodation.js`, `guide.js`: All render into the content panel, all update the shared map
-- `router.js`: Route transitions must preserve map state
-
-**No backend changes.** The map layout is purely a frontend concern.
-
-**Build order implication:** This is the largest frontend change. Do it as a dedicated phase after backend work is stable. Attempting responsive layout changes while also modifying route-builder logic causes merge conflicts and testing nightmares.
-
-### 4. Public Shareable Links
-
-**Current state:** All endpoints require JWT auth. No share functionality exists. Travel plans are stored in SQLite with user_id ownership.
-
-**Architecture change: New share_token column + public endpoint bypass.**
+### Data Flow
 
 ```
-Database schema addition (travels table):
-  share_token  TEXT UNIQUE      -- random URL-safe token (e.g., secrets.token_urlsafe(16))
-  is_shared    INTEGER DEFAULT 0  -- explicit share toggle
-
-New endpoints:
-  POST   /api/travels/{id}/share     [auth required]
-    → Generate share_token if not exists, set is_shared=1
-    → Return { share_url: "/shared/{share_token}" }
-
-  DELETE /api/travels/{id}/share     [auth required]
-    → Set is_shared=0 (keep token for re-enable)
-    → Return { success: true }
-
-  GET    /api/shared/{share_token}   [NO AUTH -- public]
-    → Look up travel by share_token WHERE is_shared=1
-    → Return full plan JSON (read-only, no user info)
-    → 404 if token invalid or sharing disabled
+User clicks "Stop 3" card
+  |
+  v
+navigateToStop(3)
+  |
+  +-- _activeStopId = 3
+  +-- renderGuide(plan, 'stops')  // renders stop detail content
+  |     |
+  |     +-- #guide-content receives renderStopDetail(plan, 3)
+  |           (NO embedded map -- removed)
+  |
+  +-- _updateMapFocus(plan, 'stops')  // NEW
+        |
+        +-- stop has lat/lng?
+        |     YES --> compute bounds from stop + its POIs
+        |             fitBounds on persistent map
+        |             highlight marker 3
+        |             dim other markers (opacity 0.4)
 ```
 
-**Auth bypass pattern:**
-```python
-# In main.py -- no Depends(get_current_user) on this endpoint
-@app.get("/api/shared/{share_token}")
-async def get_shared_travel(share_token: str):
-    travel = travel_db.get_by_share_token(share_token)
-    if not travel or not travel["is_shared"]:
-        raise HTTPException(404, "Reise nicht gefunden")
-    # Strip sensitive fields (user_id, token counts)
-    plan = json.loads(travel["plan_json"])
-    return {"travel": _sanitize_for_public(plan), "title": travel["title"]}
+```
+User clicks "Tag 5" in days view
+  |
+  v
+navigateToDay(5)
+  |
+  +-- _activeDayNum = 5
+  +-- renderGuide(plan, 'days')  // renders day detail content
+  |     |
+  |     +-- #guide-content receives renderDayDetail(plan, 5)
+  |           (NO embedded map -- removed)
+  |
+  +-- _updateMapFocus(plan, 'days')  // NEW
+        |
+        +-- find stops for day 5 via _findStopsForDay()
+        +-- compute bounds for those stops
+        +-- GoogleMaps.fitBounds(dayBounds)
+        +-- show day's POI markers (activities, restaurants)
+        +-- highlight day's stop markers, dim others
 ```
 
-**Frontend for shared view:**
-- New route: `/shared/{token}` in router.js
-- Renders the guide view (guide.js) in read-only mode
-- No sidebar, no edit controls, no auth check
-- Map + day-by-day timeline + stop details
-- "Geplant mit Travelman" attribution footer
-
-**Nginx config:**
-- `/shared/*` must serve `index.html` (SPA routing) -- same as existing `try_files` pattern
-
-**Security considerations:**
-- `share_token` is 22 chars of URL-safe base64 (128 bits of entropy) -- unguessable
-- No personal data exposed (strip user_id, email from response)
-- Rate limiting on `/api/shared/*` to prevent scraping (optional, low priority at friends-and-family scale)
-
-**Build order implication:** Can be done independently of other features. Small scope, clean boundaries. Good candidate for an early quick-win phase.
-
-## Data Flow Summary
-
-### Current Planning Flow (unchanged)
 ```
-Form → POST /api/plan-trip → Redis job
-  → StopOptionsFinder (SSE streaming) → User selects stops
-  → Confirm route → Celery: accommodation research (SSE)
-  → User selects accommodations → Celery: full planning (SSE)
-  → Result saved to SQLite → Guide view
+User clicks "back" or switches tab
+  |
+  v
+navigateToStopsOverview() / switchGuideTab('overview')
+  |
+  +-- _activeStopId = null, _activeDayNum = null
+  +-- _updateMapFocus(plan, tab)
+        |
+        +-- no active detail --> GoogleMaps.fitAllStops(plan)
+        +-- restore all markers to full opacity
+        +-- clear POI markers
 ```
 
-### New: Route Editing Flow (added)
-```
-During route building (after stops displayed):
-  User drags/removes/adds stop → REST call → Redis job state updated
-  → Google Directions recalculated → Response with updated route
-  → Frontend re-renders map + stop list
+### Map Focus Management (New Logic)
 
-Post-planning:
-  User wants to change stop → POST /api/travels/{id}/replace-stop (existing)
-```
+Add `_updateMapFocus(plan, tab)` to replace the current `_updateMapForTab()`:
 
-### New: Share Flow (added)
-```
-Owner: Guide view → "Teilen" button → POST /api/travels/{id}/share
-  → share_token generated → URL copied to clipboard
+```javascript
+function _updateMapFocus(plan, tab) {
+  if (typeof GoogleMaps === 'undefined' || !_guideMapInitialized) return;
 
-Recipient: Opens /shared/{token} → GET /api/shared/{token}
-  → Read-only guide view rendered (no auth needed)
-```
+  // Clear any day-specific POI markers
+  _clearDayPOIMarkers();
 
-## Suggested Build Order (Dependencies)
+  if (tab === 'stops' && _activeStopId !== null) {
+    // STOP DETAIL: zoom to stop region
+    const stop = (plan.stops || []).find(
+      s => String(s.id) === String(_activeStopId)
+    );
+    if (stop && stop.lat && stop.lng) {
+      const bounds = _computeStopBounds(stop);
+      const map = GoogleMaps.getGuideMap();
+      if (map) map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+      GoogleMaps.highlightGuideMarker(String(_activeStopId));
+      _dimOtherMarkers(String(_activeStopId));
+    }
+    return;
+  }
 
-```
-Phase 1: Geographic Awareness (ferry/island routing)
-  ├── No dependencies on other features
-  ├── Feeds correct data to all downstream features
-  └── Changes: route_architect.py prompts, stop_options_finder.py prompts,
-      main.py geometry functions
+  if (tab === 'days' && _activeDayNum !== null) {
+    // DAY DETAIL: fit to day's stops + show POI markers
+    const dayStops = _findStopsForDay(plan, _activeDayNum);
+    if (dayStops.length) {
+      _fitMapToStops(dayStops);
+      _showDayPOIMarkers(plan, _activeDayNum);
+      const dayStopIds = dayStops.map(s => String(s.id));
+      _dimMarkersExcept(dayStopIds);
+    }
+    return;
+  }
 
-Phase 2: Route Editing Controls
-  ├── Depends on: Phase 1 (correct geography)
-  ├── New endpoints + route-builder.js enhancements
-  └── Changes: main.py (4 new endpoints), route-builder.js, maps.js
-
-Phase 3: Public Shareable Links
-  ├── Independent -- can run parallel with Phase 2
-  ├── Small scope, clean boundaries
-  └── Changes: travel_db.py (schema), main.py (2 endpoints),
-      router.js, new shared-view.js
-
-Phase 4: Map-Centric Responsive Layout
-  ├── Depends on: Phase 2 (route editing UI must be designed first)
-  ├── Largest change -- full CSS/HTML restructure
-  └── Changes: index.html, styles.css, maps.js, route-builder.js,
-      accommodation.js, guide.js, router.js
+  // DEFAULT: show full route
+  GoogleMaps.fitAllStops(plan);
+  _restoreAllMarkers();
+}
 ```
 
-**Rationale for ordering:**
-- Phase 1 first because wrong geography makes everything else unreliable
-- Phase 2 before Phase 4 because you need to know what controls exist before designing the layout
-- Phase 3 is independent and small -- schedule wherever convenient
-- Phase 4 last because it touches every frontend file and must not conflict with Phase 2 changes
+### Marker Dimming Strategy
+
+Use CSS classes on the marker overlay divs rather than recreating markers:
+
+```javascript
+function _dimOtherMarkers(activeStopId) {
+  document.querySelectorAll('.guide-marker').forEach(el => {
+    if (el.dataset.stopId === activeStopId) {
+      el.classList.remove('dimmed');
+      el.classList.add('focused');
+    } else {
+      el.classList.add('dimmed');
+      el.classList.remove('focused');
+    }
+  });
+}
+
+function _dimMarkersExcept(activeStopIds) {
+  document.querySelectorAll('.guide-marker').forEach(el => {
+    if (activeStopIds.includes(el.dataset.stopId)) {
+      el.classList.remove('dimmed');
+    } else {
+      el.classList.add('dimmed');
+    }
+  });
+}
+
+function _restoreAllMarkers() {
+  document.querySelectorAll('.guide-marker').forEach(el => {
+    el.classList.remove('dimmed', 'focused');
+  });
+}
+```
+
+```css
+.guide-marker.dimmed {
+  opacity: 0.35;
+  transform: scale(0.8);
+  transition: opacity 0.3s, transform 0.3s;
+}
+.guide-marker.focused {
+  transform: scale(1.2);
+  transition: transform 0.3s;
+}
+```
+
+### Day POI Markers (Temporary Layer)
+
+When viewing a day detail, overlay temporary markers for that day's activities/restaurants on the persistent map:
+
+```javascript
+let _dayPOIMarkersList = [];
+
+async function _showDayPOIMarkers(plan, dayNum) {
+  _clearDayPOIMarkers();
+  const map = GoogleMaps.getGuideMap();
+  if (!map) return;
+
+  const dayStops = _findStopsForDay(plan, dayNum);
+  const entities = [];
+  dayStops.forEach(stop => {
+    (stop.top_activities || []).forEach((act, i) => {
+      entities.push({
+        key: 'poi-act-' + stop.id + '-' + i,
+        name: act.name, lat: act.lat, lng: act.lon,
+        placeId: act.place_id,
+        stopLat: stop.lat, stopLng: stop.lng,
+        searchType: 'activity', type: 'activity'
+      });
+    });
+    (stop.restaurants || []).forEach((r, i) => {
+      entities.push({
+        key: 'poi-rest-' + stop.id + '-' + i,
+        name: r.name, placeId: r.place_id,
+        stopLat: stop.lat, stopLng: stop.lng,
+        searchType: 'restaurant', type: 'restaurant'
+      });
+    });
+  });
+
+  const coords = await GoogleMaps.resolveEntityCoordinates(entities);
+  entities.forEach(ent => {
+    const coord = coords.get(ent.key);
+    if (!coord) return;
+    const iconClass = ent.type === 'restaurant' ? 'restaurant' : 'activity';
+    const marker = GoogleMaps.createDivMarker(map, coord,
+      '<div class="poi-marker poi-marker--' + iconClass + '"></div>',
+      null
+    );
+    _dayPOIMarkersList.push(marker);
+  });
+}
+
+function _clearDayPOIMarkers() {
+  _dayPOIMarkersList.forEach(m => { if (m) m.setMap(null); });
+  _dayPOIMarkersList = [];
+}
+```
+
+## Router URL Evolution
+
+### Current Routes (no changes needed)
+
+The existing URL patterns already support the drill-down model:
+
+| URL Pattern | Handler | View |
+|-------------|---------|------|
+| `/travel/{id}` | `_travel` | Overview (default tab) |
+| `/travel/{id}/stops` | `_travelTab('stops')` | Stops list |
+| `/travel/{id}/stops/{stopId}` | `_travelStopDetail` | Stop detail |
+| `/travel/{id}/days` | `_travelTab('days')` | Days timeline |
+| `/travel/{id}/days/{dayNum}` | `_travelDayDetail` | Day detail |
+| `/travel/{id}/calendar` | `_travelTab('calendar')` | Calendar |
+| `/travel/{id}/budget` | `_travelTab('budget')` | Budget |
+
+**Recommendation:** Keep all existing routes unchanged. The progressive disclosure is a rendering/map-focus concern, not a URL concern. The URLs already model the drill-down hierarchy correctly.
+
+### Back Navigation
+
+Browser back button already works because `navigateToStop()` / `navigateToDay()` call `Router.navigate()` with `skipDispatch: true`. When user presses back, the router dispatches the previous URL which triggers the correct handler.
+
+**One fix needed:** `navigateToStopsOverview()` and `navigateToDaysOverview()` currently use `Router.navigate(base + '/stops', { skipDispatch: true })`. This means pressing back from stop detail goes to the page before the stops list, not to the stops list. Should change to `{ replace: true, skipDispatch: true }` so the back button correctly returns to the previous context.
+
+## Patterns to Follow
+
+### Pattern 1: Animate Map Transitions
+
+Use Google Maps `panTo` + `fitBounds` with staged animations for smooth transitions:
+
+```javascript
+function _smoothZoomTo(map, targetBounds) {
+  // First pan to center of target bounds
+  const center = targetBounds.getCenter();
+  map.panTo(center);
+  // After pan completes, fit to bounds
+  google.maps.event.addListenerOnce(map, 'idle', () => {
+    map.fitBounds(targetBounds, { top: 40, right: 40, bottom: 40, left: 40 });
+  });
+}
+```
+
+**Why:** Abrupt zoom changes are disorienting. A pan-then-zoom sequence gives the user spatial context of where the detail fits within the overall route.
+
+### Pattern 2: Bounds Computation for Stops
+
+Compute intelligent bounds rather than using fixed zoom levels:
+
+```javascript
+function _computeStopBounds(stop) {
+  const bounds = new google.maps.LatLngBounds();
+  bounds.extend({ lat: stop.lat, lng: stop.lng });
+
+  // Include activities with known coords
+  (stop.top_activities || []).forEach(act => {
+    if (act.lat && act.lon) bounds.extend({ lat: act.lat, lng: act.lon });
+  });
+
+  // If only the stop center (single point), add ~3km padding
+  if (bounds.getNorthEast().equals(bounds.getSouthWest())) {
+    const offset = 0.025; // ~2.5km
+    bounds.extend({ lat: stop.lat + offset, lng: stop.lng + offset });
+    bounds.extend({ lat: stop.lat - offset, lng: stop.lng - offset });
+  }
+  return bounds;
+}
+
+function _fitMapToStops(dayStops) {
+  const map = GoogleMaps.getGuideMap();
+  if (!map) return;
+  const bounds = new google.maps.LatLngBounds();
+  dayStops.forEach(s => {
+    if (s.lat && s.lng) bounds.extend({ lat: s.lat, lng: s.lng });
+  });
+  if (!bounds.isEmpty()) {
+    map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+  }
+}
+```
+
+**Why:** A city stop (Paris) needs wider zoom than a village. Using fitBounds with known POIs gives the right level automatically.
+
+### Pattern 3: Breadcrumb for Drill-Down Context
+
+When in a detail view, show a compact breadcrumb at the top of the content panel:
+
+```javascript
+function _renderDrilldownBreadcrumb(plan, tab) {
+  if (tab === 'stops' && _activeStopId !== null) {
+    const stop = (plan.stops || []).find(
+      s => String(s.id) === String(_activeStopId)
+    );
+    return '<div class="drilldown-breadcrumb">'
+      + '<button onclick="navigateToStopsOverview()" class="breadcrumb-back">'
+      + 'Alle Stopps</button>'
+      + '<span class="breadcrumb-sep">/</span>'
+      + '<span class="breadcrumb-current">' + esc(stop?.region || '') + '</span>'
+      + '</div>';
+  }
+  if (tab === 'days' && _activeDayNum !== null) {
+    const dp = (plan.day_plans || []).find(d => d.day === _activeDayNum);
+    return '<div class="drilldown-breadcrumb">'
+      + '<button onclick="navigateToDaysOverview()" class="breadcrumb-back">'
+      + 'Alle Tage</button>'
+      + '<span class="breadcrumb-sep">/</span>'
+      + '<span class="breadcrumb-current">Tag ' + _activeDayNum
+      + ': ' + esc(dp?.title || '') + '</span>'
+      + '</div>';
+  }
+  return '';
+}
+```
+
+**Why:** User needs a way back and needs to know where they are in the hierarchy. The existing back button is inside the detail card, but a persistent breadcrumb above the content is more discoverable.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: New Agents for Prompt Problems
+### Anti-Pattern 1: Embedded Maps in Detail Views
 
-**What people do:** Create a new "FerryRoutingAgent" or "IslandAwarenessAgent" for geographic improvements.
-**Why it's wrong:** Adds another Claude API call ($$$), more orchestration complexity, more failure points. The problem is prompt quality, not missing agents.
-**Do this instead:** Enrich the existing StopOptionsFinder and RouteArchitect prompts with geographic context from Google APIs and a small ferry-port lookup table.
+**What:** Creating `GoogleMaps.initStopOverviewMap()` inside `renderStopDetail()` and `renderDayDetail()`.
+**Why bad:** Wastes Google Maps API quota (each map instance = API load), creates visual disconnect (two maps on screen), and the persistent map becomes useless during detail views.
+**Instead:** Focus the persistent map on the detail's region. Remove embedded maps from detail renderers.
 
-### Anti-Pattern 2: WebSocket Migration for "Real-Time" Features
+### Anti-Pattern 2: Zoom Level Hardcoding
 
-**What people do:** Replace SSE with WebSockets for route editing "real-time updates."
-**Why it's wrong:** Route editing is request-response, not streaming. SSE is one-directional (server to client) which is exactly right for progress streaming. WebSockets add connection management complexity.
-**Do this instead:** Use REST for route edits (synchronous). Keep SSE only for long-running operations (option finding, planning).
+**What:** Using fixed zoom levels like `setZoom(13)` for all stop details.
+**Why bad:** A city stop (Paris) needs zoom 12, a small village needs zoom 15, a region with multiple POIs needs zoom 11.
+**Instead:** Use `fitBounds()` with a bounds object computed from the stop's known POI coordinates (see Pattern 2).
 
-### Anti-Pattern 3: Separate Public Frontend
+### Anti-Pattern 3: Recreating All Markers on Focus Change
 
-**What people do:** Build a separate HTML page or micro-frontend for the shared view.
-**Why it's wrong:** Duplicates rendering logic (guide.js, maps.js). Two codebases to maintain.
-**Do this instead:** Reuse the existing SPA. Add `/shared/{token}` route that renders guide.js in read-only mode. The `auth.js` module simply skips auth checks when on a `/shared/` route.
+**What:** Calling `GoogleMaps.setGuideMarkers(plan)` every time the view changes.
+**Why bad:** Destroys and recreates all OverlayView instances, causes visible flicker, loses polyline state.
+**Instead:** Keep markers persistent. Use CSS classes (`.dimmed`, `.focused`) to change visual state without re-rendering.
 
-### Anti-Pattern 4: Responsive Retrofit
+### Anti-Pattern 4: Breaking Scroll Position on Tab Sub-Navigation
 
-**What people do:** Add `@media` queries on top of existing desktop layout.
-**Why it's wrong:** The current layout uses fixed widths, absolute positioning, and two separate map instances. Retrofitting responsive on top of this creates a fragile mess.
-**Do this instead:** Redesign the layout from scratch with CSS Grid as the foundation. Mobile-first, then enhance for desktop. Merge the two map instances into one.
+**What:** Scrolling `#guide-content` to top when navigating between stop details.
+**Why bad:** If user is comparing stops, losing scroll position forces re-orientation.
+**Instead:** Only scroll to top when entering a new context (list to detail). For prev/next within details, scroll to top of the detail card.
 
-## Integration Points
+## Integration Points: New vs Modified
 
-### External Services
+### New Code (~200 lines total)
 
-| Service | Integration Pattern | Notes for New Features |
-|---------|---------------------|------------------------|
-| Google Directions API | `google_directions()` in maps_helper.py | Does NOT return ferry routes. Must supplement with ferry-port lookup for island destinations |
-| Google Geocoding API | `geocode_google()` in maps_helper.py | Works fine for islands -- returns correct lat/lon for island cities |
-| Anthropic Claude API | `call_with_retry()` in retry_helper.py | No changes needed -- prompt modifications only |
-| Google Maps JS SDK | `maps.js` singleton | Must merge two map instances into one for responsive layout |
+| Component | Lines (est.) | Location |
+|-----------|-------------|----------|
+| `_updateMapFocus()` | ~40 | `guide.js` (replaces `_updateMapForTab`) |
+| `_dimOtherMarkers()` / `_dimMarkersExcept()` / `_restoreAllMarkers()` | ~25 | `guide.js` |
+| `_showDayPOIMarkers()` / `_clearDayPOIMarkers()` | ~50 | `guide.js` |
+| `_computeStopBounds()` / `_fitMapToStops()` | ~25 | `guide.js` |
+| `_smoothZoomTo()` | ~10 | `guide.js` |
+| CSS marker states (`.dimmed`, `.focused`, `.poi-marker`) | ~40 | `styles.css` |
 
-### Internal Boundaries
+### Modified Code
 
-| Boundary | Communication | Impact of Changes |
-|----------|---------------|-------------------|
-| Frontend <-> Backend | REST + SSE via `/api/` | New endpoints for route editing + sharing. SSE unchanged |
-| Backend <-> Celery | Redis lists (`sse:{job_id}`) | No changes -- route editing is synchronous, not Celery tasks |
-| Backend <-> SQLite | `travel_db.py` functions | Add share_token column + `get_by_share_token()` query |
-| Agents <-> main.py | Direct function calls | Prompt changes only -- no interface changes |
+| File | Function | Change |
+|------|----------|--------|
+| `guide.js` | `renderStopDetail()` | Remove embedded map div (the `<div class="stop-detail-map">` element) |
+| `guide.js` | `renderDayDetail()` | Remove embedded map div (the `<div class="day-detail-map">` element) |
+| `guide.js` | `renderGuide()` | Replace `_updateMapForTab(plan, activeTab)` call with `_updateMapFocus(plan, activeTab)` |
+| `guide.js` | `_initStopMap()` | Delete entirely (no longer needed) |
+| `guide.js` | `_initDayDetailMap()` | Delete entirely (no longer needed) |
+
+### No Changes Needed
+
+| Component | Why unchanged |
+|-----------|---------------|
+| `router.js` | URL patterns already model the drill-down hierarchy |
+| `state.js` | Global `S` object already has `result` with all needed data |
+| `api.js` | No new API calls needed |
+| `sidebar.js` | Sidebar overlay already shows route context |
+| `maps.js` | Existing API sufficient (`panToStop`, `fitAllStops`, `highlightGuideMarker`, `createDivMarker`) |
+| Backend (all) | No data model changes; all coords/POIs already in response |
+
+## Build Order (Dependency-Aware)
+
+### Step 1: Map Focus Foundation
+
+**Prerequisites:** None (independent of content changes)
+**Deliverables:**
+1. Implement `_updateMapFocus()` replacing `_updateMapForTab()`
+2. Implement marker dimming functions
+3. Add CSS for `.dimmed` / `.focused` marker states
+4. Wire into existing `renderGuide()` call
+
+**Verification:** Navigate to stop detail via URL `/travel/{id}/stops/{stopId}`, verify persistent map zooms to stop. Navigate to `/travel/{id}/stops`, verify map zooms out to full route.
+
+### Step 2: Remove Embedded Maps
+
+**Prerequisites:** Step 1 complete (persistent map now handles focus)
+**Deliverables:**
+1. Remove embedded map divs from `renderStopDetail()` output
+2. Remove embedded map divs from `renderDayDetail()` output
+3. Delete `_initStopMap()` and `_initDayDetailMap()` functions
+4. Remove associated CSS for embedded map containers
+
+**Verification:** Stop detail and day detail no longer render duplicate maps. The persistent map shows the correct region.
+
+### Step 3: Day POI Markers
+
+**Prerequisites:** Step 1 (map focus), Step 2 (no embedded map conflict)
+**Deliverables:**
+1. Implement `_showDayPOIMarkers()` / `_clearDayPOIMarkers()`
+2. Add POI marker CSS (small colored dots for activities vs restaurants)
+3. Wire into `_updateMapFocus()` day-detail branch
+
+**Verification:** Navigate to day detail, verify activity/restaurant markers appear on persistent map alongside stop markers. Navigate away, verify POI markers are removed.
+
+### Step 4: Smooth Transitions and Bounds
+
+**Prerequisites:** Steps 1-3 working
+**Deliverables:**
+1. Implement `_computeStopBounds()` for intelligent zoom levels
+2. Implement `_smoothZoomTo()` for animated transitions
+3. Replace direct `fitBounds`/`panTo` calls with smooth versions
+
+**Verification:** Transitions between overview and detail feel animated rather than jarring. Different stop sizes (city vs village) get appropriate zoom levels.
+
+## Mobile Considerations
+
+On mobile (< 768px), the map is a sticky 30vh strip at the top. The same focus management applies:
+- Stop detail: map zooms to stop, 30vh is enough to show the region
+- Day detail: map shows day's stops, POI markers visible
+- Scroll sync still works (cards scroll below sticky map)
+
+No layout changes needed for mobile -- the existing responsive breakpoints handle the split-panel to stacked transition. The focus management logic is viewport-independent.
 
 ## Sources
 
-- Direct codebase analysis of `/Users/stefan/Code/Travelman3/` (all findings verified against actual code)
-- Google Directions API documentation: supports `mode=driving` only for car routes; ferry detection requires supplementary data
-- Existing drag-and-drop implementation in `route-builder.js` (regions) as pattern for stop reordering
-
----
-*Architecture research for: Travelman3 stabilization + UX redesign*
-*Researched: 2026-03-25*
+- Codebase analysis: `frontend/js/guide.js` (3007 lines) -- tab rendering, navigation, map setup, stop/day detail
+- Codebase analysis: `frontend/js/maps.js` (791 lines) -- GoogleMaps singleton, marker management, polyline rendering
+- Codebase analysis: `frontend/js/router.js` (343 lines) -- URL patterns, dispatch handlers
+- Codebase analysis: `frontend/styles.css` (layout rules at lines 1596-1662) -- split panel, responsive breakpoints
+- Codebase analysis: `frontend/index.html` (lines 528-570) -- HTML structure for travel guide section
+- Codebase analysis: `backend/models/travel_response.py` -- TravelStop, DayPlan, TravelPlan data models

@@ -1,138 +1,140 @@
 # Feature Landscape
 
-**Domain:** AI-powered road trip planner (stabilization + UX redesign)
-**Researched:** 2026-03-25
-**Confidence:** MEDIUM (based on competitive analysis of Wanderlog, Furkot, Roadtrippers, Google Travel, Tripsy, and AI planner trend reports)
-
----
+**Domain:** Progressive disclosure travel view redesign for AI road trip planner
+**Researched:** 2026-03-27
+**Confidence:** HIGH (based on existing codebase analysis, competitive travel app patterns, and progressive disclosure UX research)
 
 ## Table Stakes
 
-Features users expect from any travel planning tool in 2025-2026. Missing = product feels incomplete or broken.
+Features users expect from a drill-down travel view. Missing = the redesign feels broken.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **Map as hero element** | Every competitor (Wanderlog, Furkot, Roadtrippers, Google Travel) centers the map. Users orient spatially first, details second. | High | Current app has map but it's secondary. Needs split-panel layout: map left/top, content right/bottom. |
-| **Drag-and-drop stop reordering** | Furkot and Wanderlog both support it. Users who pick stops expect to rearrange them freely. | Medium | Requires backend route recalculation on reorder. Frontend: HTML5 drag API or pointer events. |
-| **Stop add/remove/edit** | Basic CRUD on stops. Furkot, Roadtrippers, and Wanderlog all allow manual stop insertion and deletion at any point. | Medium | Existing "replace stop" flow is a start. Need: add arbitrary stop, delete stop, rename stop. |
-| **Mobile-responsive layout** | 60%+ of travel research happens on mobile. Any app without mobile support loses the "on the road" use case entirely. | High | Current design is desktop-only. Need mobile-first redesign with bottom sheets, collapsible panels, and touch-friendly tap targets. |
-| **Consistent AI output quality** | CNBC (March 2026) reports hallucinations remain the #1 trust killer for AI travel planners. GuideGeek targets 98% accuracy via human-in-the-loop. | High | Current app has inconsistent stop quality, mainland-biased coordinates, and travel-style drift. This is the core product quality issue. |
-| **Photo-rich stop cards** | Google Travel, Wanderlog, and Airbnb all use large imagery for destinations. Text-only stop lists feel outdated. | Medium | Already have image_fetcher.py. Need: larger hero images per stop, fallback handling, lazy loading. |
-| **Real-time progress feedback** | Already exists (SSE streaming). Table stakes because AI planning takes 30-120 seconds. Users need visible progress or they abandon. | Low | Existing. Polish the overlay and skeleton states. |
-| **Save and reload trips** | Already exists. Every competitor offers this. | Low | Existing. No changes needed. |
-| **Budget overview dashboard** | Users need to see where money goes at a glance. Current budget tracking exists but is buried in results. | Medium | Surface the 45/15/fuel/activities split as a visual dashboard element (pie chart or bar segments). |
-
----
+| Overview showing all stops on map + summary stats | First thing users want is "what's my whole trip look like" — already exists | Low | Existing `renderOverview()` and `fitAllStops()` cover this. Needs compact day cards added. |
+| Day drill-down with map zoom to day region | Wanderlog, Google Travel, and every serious trip planner scopes the map when you click a day | Medium | No `fitBoundsForDay()` exists yet. Need to build bounds from `_findStopsForDay()` coordinates + drive waypoints. |
+| Stop drill-down with map zoom to stop | Clicking a stop should pan/zoom map to that stop's location — users expect this from any map-centric app | Low | `panToStop()` already exists. Need to also zoom in (currently only pans). |
+| Breadcrumb navigation (Overview > Day 3 > Stop: Annecy) | Progressive disclosure requires knowing where you are and how to get back | Low | Currently exists partially — day detail has "Alle Tage" back button. Need consistent breadcrumb across all levels. |
+| Collapse unfocused content when drilling down | Core progressive disclosure principle — showing everything defeats the purpose | Medium | Days tab already collapses other days. Need same pattern for overview-to-day and day-to-stop transitions. |
+| Animated map transitions between views | Jarring map jumps feel broken. `panTo()` with smooth animation is expected. | Low | Google Maps `panTo()` already animates. `fitBounds()` with padding animates too. Just need to call them at the right times. |
+| Back button / browser history for drill-down | Users expect browser back to go up one level, not leave the page entirely | Medium | Router already handles tab-level URLs (`/travel/{id}/stops`). Need sub-routes for day and stop drill-down (`/travel/{id}/day/3`, `/travel/{id}/stop/5`). |
+| Responsive drill-down (mobile: map collapses or goes full-width above content) | Current responsive layout already handles split panel. Drill-down must not break mobile. | Low | Existing container queries handle panel sizing. Map focus changes work regardless of panel size. |
 
 ## Differentiators
 
-Features that set the product apart. Not expected, but valued. These create competitive advantage over generic ChatGPT itineraries.
+Features that set this apart from "just another tab view." Not expected, but valued.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Shareable trip links (public, read-only)** | Friends/family can view the full trip plan without accounts. Replaces PDF/PPTX export with something better. No competitor does this as cleanly for road trips specifically. | Medium | New endpoint: `/api/trips/{share_id}/public`. Generate UUID-based share tokens. Render a read-only version of the guide view. |
-| **Interactive route building (pick-your-stops)** | Most AI planners generate a fixed itinerary. Travelman3's "choose from 3 options per leg" is genuinely unique. Polish this into a first-class UX. | Low | Already exists. Improve card design, add map highlighting on hover, animate transitions between legs. |
-| **Region/explore mode** | Let AI suggest a cluster of stops for an area rather than a single point. Competitors don't do this -- they treat every stop as a point, not an area. | Low | Already exists. Surface it more prominently, improve the UI. |
-| **Day-by-day timeline with expandable details** | A scrollable, visual day-planner (morning/afternoon/evening blocks) with driving segments. More structured than competitors' flat lists. | Medium | Current guide.js has tab-based rendering. Redesign as a vertical timeline with expandable cards per activity. |
-| **Mid-trip preference adjustment** | "I want more beach stops" or "switch from culture to food focus" partway through planning. Re-generate only affected legs. | High | Partially exists via stop replacement. Full implementation means: change travel style mid-route and re-run affected agents. |
-| **Weather-aware scheduling** | Show forecast data for each stop's dates. Already have weather.py utility. Surface it in the day planner. | Low | Utility exists. Need: weather icons in day cards, "bring rain gear" hints. |
-| **Driving segment visualization** | Show each drive segment with duration, distance, and notable waypoints on the map. Furkot does this well. | Medium | Google Directions data already fetched. Render polylines per segment with info windows. |
-| **Stop quality scoring (internal)** | Rate AI-generated stops on relevance, geographic accuracy, and style-match. Log scores. Use to improve prompts over time. | Medium | New backend utility. Score each stop option against: correct coordinates (Google geocode verify), style match, uniqueness. Enables quality monitoring. |
-
----
+| Day-scoped route polyline | When drilling into Day 3, show only that day's route segment highlighted, dim the rest | Medium | Currently `_guidePolyline` is one full polyline. Need to segment by day or overlay a highlighted segment. Requires route geometry per day (available from `day_plans[].time_blocks` drive segments). |
+| Day card mini-summaries on overview | Compact day cards showing "Day 1: Liestal to Annecy -- 3.5h drive, 2 activities" without expanding | Low | Data already available. Just a new render function combining `_findStopsForDay()` output into compact cards. |
+| Stop-to-stop transition animation | When navigating between stops, animate the map along the route polyline | High | Impressive but expensive. Google Maps doesn't provide built-in route animation. Would need manual `panTo()` steps along decoded polyline. Defer. |
+| Smart map padding for content panel | When content panel overlaps map (mobile/tablet), adjust map bounds padding so focused area isn't hidden behind content | Low | `fitBounds()` accepts padding parameter `{top, right, bottom, left}`. Calculate from content panel width. |
+| Contextual marker styling per drill-down level | Overview: all markers same style. Day view: day's stops are large/colored, others are small/gray. Stop view: focused stop is large, others are dots. | Medium | Requires updating `_guideMarkerList` icons dynamically. Google Maps `Marker.setIcon()` supports this. |
+| Day weather/drive summary badges | Show weather icon and total drive time as badges on day cards | Low | Weather data may already be in day plans. Drive time is calculable from time blocks. |
+| Keyboard navigation between days/stops | Arrow keys or j/k to move between days in day view, stops in stop view | Low | Simple keydown listener. Good accessibility. |
 
 ## Anti-Features
 
-Features to explicitly NOT build. Each was considered and rejected for good reason.
+Features to explicitly NOT build.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **PDF/PPTX export** | Maintenance burden for a feature nobody uses. Share links are superior. | Remove output_generator.py entirely. Implement shareable web links. |
-| **Real-time collaborative editing** | PROJECT.md explicitly scopes this out. Friends & family audience doesn't need Google Docs-style co-editing. Massive complexity (WebSocket sync, conflict resolution). | Single-user planning + read-only share links cover the use case. |
-| **Native mobile app** | Not justified for the audience size. Responsive web covers mobile needs. | Invest in excellent responsive design instead. |
-| **Social login (Google/Facebook OAuth)** | Adds complexity, privacy concerns, and dependency on third-party auth. Current JWT system works for the audience. | Keep email/password auth. |
-| **Booking integration** | Connecting to Booking.com/Airbnb APIs is a legal/commercial minefield. Breaks constantly. Not needed for planning. | Show accommodation suggestions with external links. Let users book separately. |
-| **Gamification / achievement badges** | Trivializes the travel planning experience. Doesn't fit the Apple-inspired design philosophy. | Focus on beautiful, functional design that creates emotional engagement through imagery and typography. |
-| **Multi-language support** | German-only by design. Translation effort not justified for friends & family. | Keep all text in German. |
-| **Offline/PWA mode** | Adds service worker complexity. Users plan trips with internet access. | Not needed for current audience. |
-| **AI chat interface** | "Talk to your trip planner" is trendy but worse UX than structured forms + guided selection. Chat requires more user effort for worse results. | Keep the structured 5-step form + interactive route builder. More opinionated = better results. |
-
----
+| Separate page/URL per stop with full page reload | Kills the fluidity of drill-down. Travel apps that navigate away from the map lose context. | Keep everything in the split-panel layout. Drill-down updates content panel + map bounds, never navigates away. |
+| 3D map fly-through between stops | Cool demo, terrible UX. Disorienting, slow, can't skip. Google Earth API is heavy. | Smooth 2D `fitBounds()` transitions are sufficient and fast. |
+| Collapsible map panel | Users might collapse the map and lose the core value of the app. Map is always visible. | Map stays fixed. Content panel scrolls. On mobile, map is above content (already works). |
+| Nested tabs within drill-down | Tabs inside tabs inside tabs = cognitive overload. Overview > Days tab > Day 3 > Activities tab > ... | Use flat content sections within each drill-down level. Day view shows time blocks, activities, restaurants in one scrollable view. |
+| Automatic drill-down on page load | Don't auto-drill into Day 1 when opening a trip. Users want the overview first. | Always start at overview level. Let user choose where to drill. |
+| Custom map styles per travel style | Tempting to show "adventure" trips on terrain map, "cultural" on satellite. Adds complexity, low value. | Use standard road map for all trips. Focus on marker and polyline styling instead. |
 
 ## Feature Dependencies
 
 ```
-Map-centric layout ──────────── required before ──→ Driving segment visualization
-                   └──────────── required before ──→ Drag-and-drop stop reordering (map updates)
-
-Mobile-responsive layout ────── required before ──→ Shareable trip links (recipients view on mobile)
-
-Stop add/remove/edit ────────── required before ──→ Mid-trip preference adjustment
-
-Photo-rich stop cards ───────── required before ──→ Day-by-day timeline redesign
-
-AI quality improvements ─────── independent (can run in parallel with UX work)
-
-Shareable trip links ────────── requires: public API endpoint + read-only guide renderer
-
-Budget dashboard ────────────── requires: existing budget data (already available)
-
-Weather integration ─────────── requires: existing weather.py (already available)
+Overview compact day cards → Day drill-down (cards are the entry point to day view)
+Day drill-down → fitBoundsForDay() map function (new)
+Day drill-down → Day-scoped route polyline (differentiator, but strongly coupled)
+Stop drill-down → panToStop() with zoom (minor enhancement to existing)
+Breadcrumb navigation → Router sub-routes for day/stop levels
+Contextual marker styling → Day drill-down (markers change per level)
+Browser history → Router sub-routes (prerequisite)
 ```
 
----
+## Drill-Down Behavior Specification
+
+Based on research of Wanderlog, Google Travel, and progressive disclosure best practices:
+
+### Level 1: Overview (default)
+- **Map:** `fitAllStops()` — entire route visible, all markers shown equally
+- **Content:** Summary stats, compact route line, compact day cards (clickable), trip analysis
+- **Markers:** All stops shown with standard numbered markers
+- **Polyline:** Full route shown
+
+### Level 2: Day View
+- **Map:** `fitBoundsForDay(dayNum)` — zoom to bounding box of that day's stops + route with padding
+- **Content:** Day title, description, time blocks (schedule), stops visited that day, activities, restaurants
+- **Markers:** Day's stops are full-size colored markers; other stops are small gray dots
+- **Polyline:** Full route dimmed (opacity 0.2), day's segment highlighted (opacity 1.0, thicker)
+- **Navigation:** Breadcrumb "Uebersicht > Tag 3", prev/next day buttons, back to overview
+- **Entry:** Click day card on overview, click day in sidebar, URL `/travel/{id}/day/{n}`
+
+### Level 3: Stop View
+- **Map:** `panToStop()` + zoom to ~13 — centered on stop, show nearby POIs
+- **Content:** Stop name, region, accommodation, activities grid, restaurants list, travel guide excerpt
+- **Markers:** Focused stop is large with label; other day stops are medium; rest are tiny dots
+- **Polyline:** Route segments to/from this stop highlighted
+- **Navigation:** Breadcrumb "Uebersicht > Tag 3 > Annecy", prev/next stop buttons, back to day
+- **Entry:** Click stop card in day view, click marker on map, URL `/travel/{id}/stop/{id}`
+
+### Map Focus Patterns (from competitive analysis)
+
+| Pattern | Used By | Implementation |
+|---------|---------|---------------|
+| fitBounds to day's stops | Wanderlog, Google Travel | `LatLngBounds` from day's stop coords, `map.fitBounds(bounds, padding)` |
+| Dim non-focused markers | Airbnb, Google Maps, Wanderlog | `marker.setIcon()` to gray/small, or `marker.setOpacity(0.3)` |
+| Highlighted route segment | Google Directions, Citymapper | Second polyline overlay on top with bolder style; or modify `strokeOpacity` array |
+| Padding for content panel | Google Maps, Apple Maps | `fitBounds({padding: {left: contentPanelWidth}})` |
+| Smooth pan+zoom transition | All map-centric apps | Google Maps API handles this natively with `panTo()` and `fitBounds()` |
 
 ## MVP Recommendation
 
-**Phase 1 priorities (foundation):**
+**Phase 1 — Core drill-down (table stakes):**
+1. Compact day cards on overview (entry point for day drill-down)
+2. `fitBoundsForDay()` map function
+3. Day drill-down view with map zoom
+4. Stop drill-down view with map zoom (enhance existing `panToStop`)
+5. Breadcrumb navigation across all 3 levels
+6. Router sub-routes for day/stop levels (browser history)
 
-1. **AI quality improvements** -- Fix geographic accuracy, travel-style adherence, and stop consistency. This is the core product. A beautiful UI showing wrong destinations is useless.
-2. **Map-centric layout redesign** -- Split-panel: map on left (desktop) or top (mobile), content on right/bottom. Every interaction highlights on map.
-3. **Mobile-responsive layout** -- Mobile-first CSS with bottom sheets for stop details, collapsible panels, touch-friendly interactions.
-
-**Phase 2 priorities (interaction):**
-
-4. **Drag-and-drop stop reordering** -- With automatic route recalculation.
-5. **Stop add/remove** -- Manual stop insertion and deletion.
-6. **Photo-rich stop cards** -- Large images, lazy loading, fallback to placeholder.
-
-**Phase 3 priorities (sharing + polish):**
-
-7. **Shareable trip links** -- Public read-only view with unique URLs.
-8. **Day-by-day timeline** -- Expandable vertical timeline with driving segments.
-9. **Budget dashboard** -- Visual cost breakdown.
-10. **Weather integration** -- Surface existing data in the UI.
+**Phase 2 — Polish (differentiators):**
+7. Contextual marker styling (focused vs dimmed)
+8. Day-scoped route polyline highlighting
+9. Smart map padding for content panel overlap
+10. Keyboard navigation (j/k between days/stops)
 
 **Defer:**
-- Mid-trip preference adjustment: High complexity, low urgency. Existing stop replacement covers 80% of the need.
-- Stop quality scoring (internal): Valuable for long-term quality but not user-facing. Build after AI quality is stabilized.
+- Stop-to-stop route animation: High complexity, low user value
+- 3D/fly-through: Anti-feature territory
+- Day weather badges: Nice but needs weather API data pipeline
 
----
+## Existing Code to Leverage
 
-## Current State vs Target
-
-| Area | Current | Target |
-|------|---------|--------|
-| Map role | Secondary, alongside content | Hero element, always visible, interactive |
-| Stop editing | Replace only (full re-research) | Add, remove, reorder, rename, replace |
-| Mobile support | None (desktop-only) | Full responsive, bottom-sheet patterns |
-| Trip sharing | PDF/PPTX export (deprecated) | Public shareable web links |
-| AI consistency | Inconsistent (island/coastal issues, style drift) | Validated coordinates, style-adherent, scored |
-| Stop presentation | Text-heavy with small images | Card-based with hero photos (Airbnb-style) |
-| Day planning | Tab-based flat view | Scrollable vertical timeline with expandable blocks |
-| Budget visibility | Buried in results | Dashboard with visual breakdown |
-
----
+| Existing | Reuse For |
+|----------|-----------|
+| `_findStopsForDay(plan, dayNum)` | Get stop coordinates for day bounds calculation |
+| `GoogleMaps.panToStop(stopId, stops)` | Stop-level map focus (needs zoom addition) |
+| `GoogleMaps.fitAllStops(plan)` | Template for `fitBoundsForDay()` — same pattern, filtered stops |
+| `renderDaysOverview(plan)` accordion pattern | Day card click → drill-down trigger |
+| `renderDayDetail(plan, dayNum)` | Already exists — needs map integration, breadcrumb, URL support |
+| `renderStopDetail(plan, stopId)` | Already exists — needs breadcrumb, back-to-day navigation |
+| `_updateMapForTab(plan, tab)` | Extend to handle drill-down level, not just tab |
+| Router pattern matching | Add `/travel/{id}/day/{n}` and `/travel/{id}/stop/{id}` routes |
+| `_guidePolyline` | Segment or overlay for day-scoped highlighting |
+| `highlightGuideMarker(stopId)` | Extend for multi-marker contextual styling |
 
 ## Sources
 
-- [CNBC: AI travel planners growing but hallucinations persist (March 2026)](https://www.cnbc.com/2026/03/11/ai-travel-planners-tourism-popularity-trust-hallucinations.html)
-- [Furkot: Drag-and-drop stop reordering](https://help.furkot.com/how-to/reorder-stops.html)
-- [Furkot: Route dragging features](https://help.furkot.com/features/dragging-routes.html)
-- [Wanderlog: Collaborative travel planning](https://wanderlog.com/)
-- [Google: AI-powered travel planning in Search, Maps, Gemini](https://techcrunch.com/2025/03/27/google-rolls-out-new-vacation-planning-features-to-search-maps-and-gemini/)
-- [TravelTime: Interactive map design and UX examples](https://traveltime.com/blog/interactive-map-design-ux-mobile-desktop)
-- [AppInventiv: AI trip planner development guide](https://appinventiv.com/blog/build-ai-trip-planner-app/)
-- [Map UI Patterns](https://mapuipatterns.com/)
-- [Wanderlog vs Tripsy comparison](https://www.wandrly.app/comparisons/wanderlog-vs-tripsy)
-- [Travo: Best AI trip planner 2025](https://travo.me/blog/best-ai-trip-planner-app-2025)
+- [Progressive Disclosure - Nielsen Norman Group](https://www.nngroup.com/articles/progressive-disclosure/)
+- [Progressive disclosure in UX design - LogRocket](https://blog.logrocket.com/ux-design/progressive-disclosure-ux-types-use-cases/)
+- [Wanderlog - Hide lists or days on map](https://help.wanderlog.com/hc/en-us/articles/5159543865499-Hide-lists-or-days-on-map)
+- [Wanderlog - Itinerary compact view](https://help.wanderlog.com/hc/en-us/articles/13356092870427-Itinerary-compact-view)
+- [Google Maps JS API fitBounds pattern](https://gist.github.com/mbeaty/1261182)
+- Codebase analysis: `frontend/js/guide.js`, `frontend/js/maps.js`

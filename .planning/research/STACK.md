@@ -1,239 +1,217 @@
 # Stack Research
 
-**Domain:** AI-powered road trip planner — stabilization and UX redesign
-**Researched:** 2026-03-25
-**Confidence:** MEDIUM-HIGH
+**Domain:** Progressive-disclosure travel view redesign (vanilla JS SPA)
+**Researched:** 2026-03-27
+**Confidence:** HIGH
 
-> This research covers NEW additions only. The existing stack (FastAPI, vanilla JS, Redis, Celery, Docker, Anthropic SDK, Google Maps JS SDK, Leaflet 1.9.4) is not re-evaluated.
+> This research covers stack additions/changes needed ONLY for the progressive-disclosure travel view redesign. The existing stack (FastAPI, vanilla JS, Google Maps JS SDK, Redis, Celery, Docker) is validated and not re-evaluated.
 
 ---
 
-## 1. Geographic Routing with Ferry/Island Awareness
+## Recommended Stack
 
-### Problem Statement
+### No New Libraries Required
 
-The app currently uses the legacy Google Directions API (`mode=driving`) which handles ferries implicitly — if a driving route includes a ferry crossing, the API includes it. But the app has no explicit ferry awareness: stops land on mainland instead of target islands, and the AI agents have no geographic context about which destinations require ferries.
+The progressive-disclosure redesign requires **zero new dependencies**. All needed capabilities exist in current browser APIs and the existing codebase. This is deliberate -- adding libraries to a vanilla JS project with no build step creates maintenance burden and contradicts the project's no-framework constraint.
 
-### Core Technologies
+### Core Technologies (Already Present -- Extend, Don't Replace)
 
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| Google Routes API (Compute Routes) | v2 | Replace legacy Directions API | Legacy Directions API deprecated March 2025. Routes API has identical ferry behavior (ferries included by default in DRIVE mode unless `avoidFerries: true`) plus better pricing tiers and polyline encoding. Migration is straightforward — same auth, same concepts, REST POST instead of GET. | HIGH |
-| Google Geocoding API | existing | Coordinate resolution | Already used. No change needed. The island-misplacement bug is an AI agent prompt problem, not a geocoding problem — geocoding "Santorini" correctly returns island coordinates. | HIGH |
+| Technology | Current Use | New Use for Drill-Down | Confidence |
+|------------|-------------|------------------------|------------|
+| Google Maps JS SDK (raster) | `panTo()`, `fitBounds()` with padding | Animated map focus per drill-down level: overview=fitAll, day=fitDayRegion, stop=panTo+zoom | HIGH |
+| CSS Custom Properties | Design system tokens in `:root` | Add transition timing tokens for drill-down animations | HIGH |
+| IntersectionObserver | `_initScrollSync()` for scroll-map sync | Lazy rendering of off-screen day/stop cards | HIGH |
+| `requestAnimationFrame` | Tab fade-in animation in `renderGuide()` | Coordinate DOM swap + map animation timing | HIGH |
+| CSS Grid / Flexbox | Layout throughout `styles.css` | Collapsible day-card grid, expand/collapse animations via `grid-template-rows` | HIGH |
+| Module-scoped state | `_activeStopId`, `_activeDayNum` in `guide.js` | Add `_drillLevel` for 3-level state machine | HIGH |
 
-### Supporting Libraries
+### New CSS Techniques (Native Browser APIs, Zero Dependencies)
 
-| Library | Version | Purpose | When to Use | Confidence |
-|---------|---------|---------|-------------|------------|
-| `polyline` (Python) | 2.0.2 | Decode Google encoded polylines | Replace the hand-rolled `decode_polyline5()` in `maps_helper.py` with a battle-tested library. Handles edge cases. `pip install polyline` | HIGH |
-| `shapely` | 2.0.7 | Geographic geometry operations | Use for corridor calculations, point-in-polygon checks (is this coordinate on an island?), and bounding-box operations. Replaces manual haversine math for complex spatial queries. | MEDIUM |
+| Technique | Purpose | Why This One | Browser Support | Confidence |
+|-----------|---------|--------------|-----------------|------------|
+| `document.startViewTransition()` | Smooth cross-fade between overview/day/stop views | Native browser API. Replaces the manual opacity/transform fade already in `renderGuide()`. Graceful fallback: instant swap (current behavior). | Chrome 111+, Edge 111+, Safari 18+, Firefox 133+ -- all major browsers in 2026. | HIGH |
+| CSS `grid-template-rows: 0fr/1fr` transition | Animate card expand/collapse for day details, stop sections | Cross-browser. No height measurement needed. Wrap content in a grid child with `min-height: 0` and toggle between `0fr` (collapsed) and `1fr` (expanded). | Chrome 117+, Firefox 117+, Safari 17.2+, Edge 117+ | HIGH |
+| `interpolate-size: allow-keywords` | Animate `height: 0` to `height: auto` | Pure CSS, cleaner than grid hack. Declare on `:root` once. | Chromium-only (Chrome 129+, Edge 129+). Firefox/Safari lack support. **Progressive enhancement only** -- use `grid-template-rows` as primary. | MEDIUM |
+| `scroll-behavior: smooth` + `scrollIntoView()` | Auto-scroll content panel when drilling into a day/stop | Already partially used in `_scrollToAndHighlightCard()`. Extend to drill-down navigation. | All modern browsers. | HIGH |
+| CSS `will-change: transform, opacity` | GPU-accelerate card transitions during drill-down | Apply via class during animation only (not permanently). Prevents layout thrashing on expand/collapse. | All modern browsers. | HIGH |
 
-### Key Insight: The Ferry Problem is Mostly an AI Agent Problem
+### Map Animation Strategy
 
-Google Directions/Routes API already handles ferry routing correctly for DRIVE mode — if you ask for directions from Athens to Santorini, it returns a route including a ferry. The real problems are:
+| Drill-Down Level | Map Behavior | Implementation | Existing Code |
+|------------------|-------------|----------------|---------------|
+| Overview (all stops) | Fit all stops with padding | `GoogleMaps.fitAllStops(plan)` | **Already exists** in `_updateMapForTab()` |
+| Day focus | Fit that day's stops into view | **New:** `GoogleMaps.fitDayStops(dayStops)` -- build `LatLngBounds` from day's stop coordinates, call `fitBounds()` with padding | `fitBounds()` already used throughout |
+| Stop focus | Pan + zoom to single stop | `GoogleMaps.panToStop(stopId)` + set zoom to ~13 | **Already exists** in `maps.js:720`. Add optional zoom parameter. |
 
-1. **Stop Options Finder agent** suggests mainland stops when the destination is an island chain — this is a prompt engineering fix, not an API fix
-2. **Route Architect agent** doesn't understand that some legs require ferries and plans driving times as if everything is connected by road — this needs geographic context in the prompt
-3. **No ferry duration data** — Google includes ferry time in total duration but doesn't break it out, so the day planner can't distinguish "4h driving" from "1h driving + 3h ferry"
+**Key insight:** Google Maps `panTo()` already animates smoothly on raster maps. `fitBounds()` also animates by default. No animation library or vector map migration needed. The existing `panToStop()` does exactly what stop-level drill-down requires.
 
-### Approach: Geographic Context Enrichment
+### Lazy DOM Rendering Strategy
 
-Instead of adding new routing APIs, enrich agent prompts with geographic context:
+| Pattern | When to Use | Implementation | Confidence |
+|---------|-------------|----------------|------------|
+| Render-on-demand | Day cards below fold in overview | Render placeholder skeletons (existing pattern from accommodation loading). Replace with real content when IntersectionObserver fires. | HIGH |
+| DocumentFragment batching | Initial overview render with many day summaries | Build all day summary cards in a DocumentFragment, append once. Single reflow instead of N. | HIGH |
+| Deferred detail content | Stop detail sections (activities, restaurants, accommodation) | Render header/hero immediately, populate detail sections on expand. Already done for images via `_lazyLoadEntityImages()`. | HIGH |
 
-| Approach | Implementation | Why |
-|----------|---------------|-----|
-| Island detection | Pre-check destination coordinates against known island regions (bounding boxes for Greek islands, Balearics, Canaries, etc.) | Tells agents "this is an island destination — ferries required" |
-| Ferry leg flagging | When Google Routes returns a route with ferry steps, parse the `steps` array and flag legs containing `travel_mode: FERRY` | Gives day planner accurate ferry vs. driving breakdown |
-| Region-aware prompting | Add geographic context to agent system prompts: "The destination region contains islands accessible only by ferry" | Prevents mainland stop suggestions |
+**Virtual scroll is NOT needed.** A trip has at most ~15 stops and ~14 days. Total DOM element count stays under 200 even fully expanded. The real bottleneck is image loading and per-stop map initialization, both of which are already lazy-loaded.
 
-### What NOT to Use
+---
+
+## Integration Points
+
+### Existing Code to Extend (Not Replace)
+
+| File | Current Pattern | Extension for Drill-Down |
+|------|----------------|--------------------------|
+| `guide.js` `renderGuide()` | 5-tab switching (`overview`, `stops`, `days`, `calendar`, `budget`) with `innerHTML` swap | Replace tab paradigm with drill-down state: `{level: 'overview'\|'day'\|'stop', dayNum?, stopId?}`. Keep calendar/budget as secondary tabs. |
+| `guide.js` `_updateMapForTab()` | Always calls `fitAllStops()` regardless of tab | Make map focus level-aware: overview=fitAll, day=fitDayRegion, stop=panToStop+zoom |
+| `guide.js` `renderOverview()` | Static stat cards + route line + day plan CTA | Replace with clickable compact day cards that trigger day drill-down |
+| `guide.js` `renderDaysOverview()` | Lists all days in flat layout | Convert to focused single-day view with prev/next navigation + back-to-overview |
+| `guide.js` `renderStopDetail()` | Full stop detail page (accessed via stops tab) | Reuse as-is -- entry point changes from tab to day drill-down click |
+| `maps.js` `panToStop()` | Pans to stop at current zoom level | Add optional `zoom` parameter for stop-level focus (default ~13) |
+| `maps.js` | No day-region fitting capability | Add `fitDayStops(stops)` method using `LatLngBounds` |
+| `router.js` | Routes: `/travel/{id}/stops`, `/travel/{id}/days` | Add: `/travel/{id}/day/{n}`, `/travel/{id}/stop/{id}` for deep-linkable drill-down |
+| `styles.css` | Tab fade-in: `opacity 0.2s ease, transform 0.2s ease` | Add drill-down transition classes, `grid-template-rows` expand/collapse, View Transition fallback styles |
+
+### State Machine
+
+```
+Overview (all stops on map, compact day cards)
+    |
+    v  click day card
+Day Detail (day's stops highlighted on map, activities/restaurants/schedule)
+    |
+    v  click stop within day
+Stop Detail (stop zoomed on map, full accommodation/activity/restaurant details)
+    |
+    ^  back button returns to parent level (stop->day, day->overview)
+```
+
+State lives in existing `guide.js` module variables:
+- `_drillLevel` (new): `'overview'` | `'day'` | `'stop'`
+- `_activeDayNum` (existing): which day is focused
+- `_activeStopId` (existing): which stop is focused
+
+URL reflects state for deep-linking and browser back button support.
+
+---
+
+## CSS Custom Properties to Add
+
+```css
+:root {
+  /* Drill-down transition timing */
+  --drill-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --drill-fade: opacity 0.2s ease, transform 0.2s ease;
+  --card-expand: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Progressive enhancement: animate to height:auto in Chromium */
+  interpolate-size: allow-keywords;
+}
+```
+
+## View Transition API Usage Pattern
+
+```javascript
+function drillTo(level, params) {
+  if (document.startViewTransition) {
+    document.startViewTransition(() => _renderLevel(level, params));
+  } else {
+    _renderLevel(level, params);  // Fallback: instant swap (current behavior)
+  }
+}
+```
+
+No polyfill needed. The fallback IS the existing behavior (direct innerHTML swap with opacity fade).
+
+## Grid Row Expand/Collapse Pattern
+
+```css
+.day-card-details {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: var(--card-expand);
+  overflow: hidden;
+}
+.day-card-details.expanded {
+  grid-template-rows: 1fr;
+}
+.day-card-details > .inner {
+  min-height: 0;  /* Required for grid row animation to work */
+}
+```
+
+Cross-browser pattern for animating expand/collapse without measuring content height. The `.inner` wrapper with `min-height: 0` is essential -- without it, the content won't collapse below its intrinsic height.
+
+---
+
+## Alternatives Considered
+
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| `document.startViewTransition()` | Manual opacity/transform fade (current approach) | Never -- View Transitions degrade gracefully to instant swap. The manual fade is already the fallback. Strictly better. |
+| CSS `grid-template-rows: 0fr/1fr` | `max-height` transition | Never -- `max-height` requires guessing a maximum value. Too high = delayed collapse animation. Too low = content clipped. `grid-template-rows` has neither problem. |
+| CSS `grid-template-rows: 0fr/1fr` | `interpolate-size: allow-keywords` | When Firefox/Safari add support. Currently Chromium-only, so it can only be a progressive enhancement. |
+| IntersectionObserver lazy render | Virtual scroll library | Never for this project. Max ~15 stops / ~14 days does not justify virtual scroll complexity. |
+| Existing Google Maps `panTo()`/`fitBounds()` | Vector maps + `flyCameraTo()` | If wanting cinematic 3D camera flights. Requires `mapId`, Cloud Console map style config, different marker API (AdvancedMarkerElement). Massive migration for marginal visual improvement. |
+| Module-scoped state variables | State management library | Never -- violates no-framework constraint. Three variables (`_drillLevel`, `_activeDayNum`, `_activeStopId`) handle a 3-level drill-down. |
+
+---
+
+## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| OpenRouteService for ferry routing | Known issues with ferry routes — community reports routes avoiding available ferries. Based on OSM data which has incomplete ferry coverage for Mediterranean. | Google Routes API — commercial-grade ferry data |
-| Ferryhopper API | No public developer API (contact-only access). Would add a dependency on a third-party booking platform for schedule data the app doesn't need. | Google Routes API includes ferry segments in driving routes |
-| OSRM (Open Source Routing Machine) | Self-hosted, no ferry support in driving profile, would require maintaining a separate routing server | Google Routes API |
-| Separate transit-mode queries for ferries | Google Routes API TRANSIT mode doesn't support intermediate waypoints and returns public transit schedules, not driving+ferry combinations | Use DRIVE mode which already includes ferries |
-
----
-
-## 2. Responsive Map-Centric Travel UI
-
-### Problem Statement
-
-The app needs a map-centric redesign where the route map is the hero element. Currently uses Google Maps JS SDK for route/guide maps and Leaflet 1.9.4 for zone drawing. The frontend is vanilla JS with no build step — must stay that way.
-
-### Core Technologies
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| Google Maps JS SDK | existing (v3) | Primary map rendering | Already deeply integrated (maps.js, guide.js, route-builder.js). Switching would be a massive rewrite for no gain. The SDK handles route rendering, place markers, info windows, and Places API integration. Keep it. | HIGH |
-| Leaflet | 1.9.4 (CDN) | Zone/corridor drawing only | Already loaded. Keep for the specific draw/corridor functionality where it's used. Don't expand its role — Google Maps is the primary map. | HIGH |
-| CSS Container Queries | native | Responsive component layouts | Use `@container` queries instead of only media queries. Allows map panels and card grids to respond to their container size, not just viewport. Supported in all modern browsers since 2023. No library needed. | HIGH |
-
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use | Confidence |
-|---------|---------|---------|-------------|------------|
-| `@googlemaps/polyline-codec` | 1.0.28 (CDN) | Frontend polyline decoding | Decode route polylines on the frontend for animated route drawing and interactive route segments. Available via CDN: `unpkg.com/@googlemaps/polyline-codec` | MEDIUM |
-
-### UI Architecture Patterns
-
-| Pattern | Implementation | Why |
-|---------|---------------|-----|
-| Split-pane layout | CSS Grid with `grid-template-columns: 1fr 400px` (desktop) collapsing to stacked (mobile) | Map fills available space, sidebar has fixed width. On mobile, map becomes a sticky header and content scrolls below. |
-| Sticky map | `position: sticky; top: 0; height: 100vh` on desktop | Map stays visible while scrolling through stops/days. Standard pattern in Airbnb, Google Travel, Booking.com. |
-| Card-based stops | Semantic HTML + CSS Grid for stop cards | Photo-heavy cards with accommodation/activity previews. Grid auto-fills based on container width. |
-| Bottom sheet (mobile) | CSS `transform: translateY()` + touch events | On mobile, content slides up over the map as a draggable bottom sheet. No library needed — ~100 lines of vanilla JS. |
-| Scroll-driven map sync | `IntersectionObserver` on day/stop sections | As user scrolls through the travel guide, map pans to show the relevant stop. Zero-dependency browser API. |
-
-### Responsive Breakpoints
-
-| Breakpoint | Layout | Map Behavior |
-|------------|--------|-------------|
-| >= 1024px | Side-by-side (map + content panel) | Full-height sticky map, ~60% width |
-| 768-1023px | Side-by-side with narrower panel | Map ~50% width |
-| < 768px | Stacked (map header + scrollable content) | Map sticky at top (~40vh), content below with bottom-sheet option |
-
-### What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| MapLibre GL JS | Would require replacing the entire Google Maps integration (~600+ lines across maps.js, guide.js, route-builder.js). MapLibre uses vector tiles which need a tile server. Adds complexity for a friends-and-family app. | Keep Google Maps JS SDK |
-| Mapbox GL JS | Proprietary license since v2. Requires Mapbox account and access token. Feature overlap with Google Maps which is already integrated. | Keep Google Maps JS SDK |
-| Any CSS framework (Tailwind, Bootstrap) | Project constraint: vanilla JS, no build step. Tailwind requires a build step. Bootstrap adds 30KB+ of CSS the app doesn't need. | Hand-written CSS with CSS Grid + Container Queries |
-| Swiper/Splide for carousels | CSS `scroll-snap` handles horizontal scrolling natively. Adding a carousel library for photo galleries is unnecessary weight. | CSS `scroll-snap-type: x mandatory` |
-| Hammer.js for touch gestures | Only needed for bottom-sheet drag on mobile. Native `touchstart`/`touchmove`/`touchend` events are sufficient for a single drag gesture. | Native touch events |
-
----
-
-## 3. Shareable Public Link System
-
-### Problem Statement
-
-Users want to share trip plans with friends/family via a simple link. Recipients should see a read-only view without needing an account. This replaces the deprecated PDF/PPTX export.
-
-### Core Technologies
-
-| Technology | Version | Purpose | Why Recommended | Confidence |
-|------------|---------|---------|-----------------|------------|
-| `secrets` (Python stdlib) | built-in | Generate share tokens | `secrets.token_urlsafe(16)` produces 22-character URL-safe tokens with 128 bits of entropy. No external dependency. Cryptographically secure. | HIGH |
-| SQLite | existing | Store share links | Add a `shares` table to the existing `travels.db`. Columns: `token`, `travel_id`, `created_at`, `expires_at`, `created_by`. No new database needed. | HIGH |
-| FastAPI | existing | Public endpoint | Add `GET /api/shared/{token}` — no JWT required. Returns full travel plan JSON. Frontend renders the same guide view in read-only mode. | HIGH |
-
-### Architecture
-
-```
-User clicks "Teilen" (Share)
-  → POST /api/travels/{id}/share
-  → Backend generates token via secrets.token_urlsafe(16)
-  → Stores in shares table: (token, travel_id, user_id, created_at, expires_at)
-  → Returns: { "url": "https://app.example/shared/{token}" }
-
-Recipient opens link
-  → Frontend detects /shared/{token} route
-  → GET /api/shared/{token} (no auth required)
-  → Backend looks up token → returns travel plan JSON
-  → Frontend renders read-only guide view (reuse existing guide.js rendering)
-```
-
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use | Confidence |
-|---------|---------|---------|-------------|------------|
-| None needed | — | — | The share system is simple enough that Python stdlib + existing stack covers everything. No external dependencies required. | HIGH |
-
-### Design Decisions
-
-| Decision | Choice | Why |
-|----------|--------|-----|
-| Token format | `secrets.token_urlsafe(16)` = 22 chars | Short enough for URLs, 128-bit entropy prevents guessing. UUIDs work too but are 36 chars — uglier in URLs. |
-| Token lifetime | 90 days default, configurable | Long enough for trip sharing, short enough to not accumulate forever. User can revoke manually. |
-| Auth bypass | Dedicated `/api/shared/{token}` endpoint | Clean separation from authenticated endpoints. No JWT middleware on this route. Token IS the auth. |
-| Read-only enforcement | Backend returns data only, no write endpoints accept share tokens | Share tokens can never modify data. Architecturally impossible, not just permission-checked. |
-| Rate limiting | IP-based rate limit on `/api/shared/` | Prevent token enumeration attacks. 60 requests/minute per IP is reasonable. |
-| Revocation | `DELETE /api/travels/{id}/share` | User can revoke share link. Deletes token from DB. Immediate effect. |
-| Multiple shares | One active share per travel | Simplicity. Revoking creates a new token if user shares again. |
-
-### What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| nanoid (Python) | External dependency for something `secrets.token_urlsafe()` does natively. nanoid adds a pip dependency for zero benefit. | `secrets.token_urlsafe(16)` |
-| JWT-based share tokens | JWTs are self-contained — you can't revoke them without a blocklist. Database tokens can be instantly revoked by deletion. Share tokens don't need to carry claims. | Opaque database-backed tokens |
-| Short URL service (bit.ly, etc.) | Adds external dependency and potential privacy concern (third party sees all shared trips). URLs are already short enough with 22-char tokens. | Direct app URLs |
-| Separate "public" database/schema | Overengineered. A single `shares` table in the existing `travels.db` is sufficient. | Single `shares` table |
-
----
-
-## Installation
-
-### Backend (new dependencies)
-
-```bash
-# Only if adopting polyline + shapely for geographic operations
-pip install polyline==2.0.2 shapely==2.0.7
-```
-
-### Frontend (no new dependencies)
-
-No new frontend dependencies. All recommendations use:
-- Existing Google Maps JS SDK (already loaded)
-- Existing Leaflet 1.9.4 (already loaded via CDN)
-- Native browser APIs (CSS Grid, Container Queries, IntersectionObserver, touch events)
-
----
-
-## Google Routes API Migration Path
-
-The legacy Directions API is deprecated since March 2025. Migration to Routes API is recommended but not urgent — legacy API continues to work.
-
-### Changes Required in `maps_helper.py`
-
-| Current (Legacy) | New (Routes API) | Change |
-|-------------------|------------------|--------|
-| `GET /maps/api/directions/json` | `POST https://routes.googleapis.com/directions/v2:computeRoutes` | HTTP method + URL |
-| `mode=driving` | `"travelMode": "DRIVE"` | Parameter name + format |
-| `waypoints=A\|B` | `"intermediates": [{"address": "A"}, {"address": "B"}]` | Waypoint format |
-| Response: `routes[0].legs[].duration.value` | Response: `routes[0].legs[].duration` (string like "3600s") | Duration format |
-| API key as query param | API key as `X-Goog-Api-Key` header + `X-Goog-FieldMask` header | Auth mechanism |
-
-### Ferry Step Detection (New Capability)
-
-The Routes API response includes step-level travel modes. Parse for ferry segments:
-
-```python
-for step in leg.get("steps", []):
-    if step.get("travelMode") == "FERRY":
-        ferry_duration_s += int(step["staticDuration"].rstrip("s"))
-```
-
-This enables the day planner to distinguish driving time from ferry time — currently impossible with the legacy API's aggregated duration.
+| GSAP / anime.js / Motion One | 15-50KB for effects CSS handles natively. Card expand/collapse + opacity fades do not need a JS animation library. | CSS transitions + `document.startViewTransition()` |
+| Virtual scroll (any library) | Trip data is tiny (max ~15 stops, ~14 days). Zero performance benefit, significant complexity cost. | IntersectionObserver lazy rendering for images/maps |
+| Any JS framework or web components | Project constraint: vanilla JS, no build step. Adding lit-html or similar would be scope creep. | Extend existing `renderX()` functions in `guide.js` |
+| Google Maps vector map migration | Requires `mapId` setup, Cloud Console config, AdvancedMarkerElement migration (current code uses OverlayView for custom markers). 600+ lines of maps.js to rewrite. | Keep raster maps. `panTo()` and `fitBounds()` already animate smoothly. |
+| `max-height` transition for expand/collapse | Timing is always wrong. Must hardcode a max value: too high = collapse appears delayed, too low = content clipped. Visible jump artifacts. | CSS `grid-template-rows: 0fr` to `1fr` transition |
+| `@starting-style` for entry animations | Chrome 117+ only as of 2026. Safari/Firefox support is inconsistent. | Classic `requestAnimationFrame` + class toggle pattern (already proven in codebase). |
+| Swiper/carousel libraries for day navigation | CSS `scroll-snap-type: x mandatory` handles horizontal day card scrolling natively. 0 bytes vs 30KB+. | CSS scroll-snap |
 
 ---
 
 ## Version Compatibility
 
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| polyline 2.0.2 | Python 3.8+ | Pure Python, no C extensions |
-| shapely 2.0.7 | Python 3.8+, requires GEOS lib | Docker: `apt-get install libgeos-dev` in Dockerfile |
-| Google Routes API v2 | Existing `GOOGLE_MAPS_API_KEY` | Must enable "Routes API" in Google Cloud Console (separate from legacy Directions API) |
+| Feature | Chrome | Firefox | Safari | Edge | Primary/Enhancement |
+|---------|--------|---------|--------|------|---------------------|
+| `document.startViewTransition()` | 111+ | 133+ | 18+ | 111+ | Primary -- graceful fallback to instant swap |
+| `grid-template-rows: 0fr/1fr` transition | 117+ | 117+ | 17.2+ | 117+ | Primary -- expand/collapse animation |
+| `interpolate-size: allow-keywords` | 129+ | Not supported | Not supported | 129+ | Enhancement only -- Chromium bonus |
+| IntersectionObserver | 51+ | 55+ | 12.1+ | 15+ | Primary -- already in codebase |
+| CSS Container Queries | 105+ | 110+ | 16+ | 105+ | Available but not required for drill-down (existing responsive approach sufficient) |
+| CSS `scroll-snap` | 69+ | 68+ | 11+ | 79+ | Primary -- horizontal day card navigation |
+
+---
+
+## Installation
+
+```bash
+# No new backend dependencies
+# No new frontend dependencies
+# No new CDN scripts
+
+# Zero changes to requirements.txt
+# Zero changes to index.html script tags
+# Zero changes to Docker images
+```
+
+Everything needed is already in the browser or already loaded.
 
 ---
 
 ## Sources
 
-- [Google Routes API — Route Modifiers](https://developers.google.com/maps/documentation/routes/route-modifiers) — verified avoidFerries parameter, ferry behavior in DRIVE mode (HIGH confidence)
-- [Google Routes API — computeRoutes](https://developers.google.com/maps/documentation/routes/reference/rest/v2/TopLevel/computeRoutes) — verified travel modes, request format (HIGH confidence)
-- [Google Routes API Migration Announcement](https://mapsplatform.google.com/resources/blog/announcing-routes-api-new-enhanced-version-directions-and-distance-matrix-apis/) — confirmed legacy Directions API deprecation March 2025 (HIGH confidence)
-- [Google Directions API Legacy Overview](https://developers.google.com/maps/documentation/directions/overview) — confirmed continued access for existing users (HIGH confidence)
-- [Leaflet 1.9.4 CDN](https://leafletjs.com/download.html) — confirmed latest stable version, v2.0 not yet released (HIGH confidence)
-- [MapLibre GL JS v5.15.0](https://github.com/maplibre/maplibre-gl-js) — evaluated and rejected for this project (MEDIUM confidence)
-- [OpenRouteService ferry routing issues](https://ask.openrouteservice.org/t/route-wont-take-ferry/461) — confirmed unreliable ferry support (MEDIUM confidence)
-- [Python nanoid on PyPI](https://pypi.org/project/nanoid/) — evaluated and rejected in favor of stdlib secrets (HIGH confidence)
-- [Python secrets module](https://docs.python.org/3/library/secrets.html) — stdlib, cryptographically secure token generation (HIGH confidence)
+- [MDN: View Transition API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API) -- same-document API spec, browser support matrix (HIGH confidence)
+- [Can I Use: View Transitions (single-document)](https://caniuse.com/view-transitions) -- Chrome 111+, Safari 18+, Firefox 133+ confirmed (HIGH confidence)
+- [Chrome Developers: Animate to height auto](https://developer.chrome.com/docs/css-ui/animate-to-height-auto) -- `interpolate-size` documentation, Chromium-only status (HIGH confidence)
+- [MDN: interpolate-size](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/interpolate-size) -- Chromium-only confirmed March 2026 (HIGH confidence)
+- [Google Maps: Move Camera Easing](https://developers.google.com/maps/documentation/javascript/examples/move-camera-ease) -- camera animation limited to vector maps / 3D (MEDIUM confidence)
+- [Google Maps: panTo issue tracker](https://issuetracker.google.com/issues/229662872) -- panTo animation behavior on raster maps confirmed (MEDIUM confidence)
+- Codebase analysis: `frontend/js/maps.js` lines 720-750 (`panToStop`), `frontend/js/guide.js` lines 72-145 (`renderGuide`, tab switching, fade animation), `frontend/styles.css` lines 1-80 (design system tokens) -- verified existing patterns (HIGH confidence)
+- [CSS-Tricks: Performant Expandable Animations](https://css-tricks.com/performant-expandable-animations-building-keyframes-on-the-fly/) -- grid-template-rows pattern (HIGH confidence)
 
 ---
-*Stack research for: Travelman3 stabilization and UX redesign*
-*Researched: 2026-03-25*
+*Stack research for: Progressive-disclosure travel view redesign*
+*Researched: 2026-03-27*
