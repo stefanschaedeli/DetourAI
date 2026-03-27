@@ -201,6 +201,10 @@ const Router = (() => {
       if (S.result && S.result._saved_travel_id === id) {
         const title = S.result.custom_name || S.result.title || '';
         document.title = `Reise: ${title} — DetourAI`;
+        // Reset drill state when navigating back to overview URL (browser back/forward)
+        activeTab = 'overview';
+        _activeDayNum = null;
+        _activeStopId = null;
         showTravelGuide(S.result);
         showSection('travel-guide');
         return;
@@ -216,6 +220,10 @@ const Router = (() => {
         lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan });
         const title = plan.custom_name || plan.title || '';
         document.title = `Reise: ${title} — DetourAI`;
+        // Reset drill state for fresh load
+        activeTab = 'overview';
+        _activeDayNum = null;
+        _activeStopId = null;
         showTravelGuide(plan);
         showSection('travel-guide');
       } catch (err) {
