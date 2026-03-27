@@ -5802,3 +5802,163 @@ strong.req-keyword {
   color: #1565C0;
   border-left: 3px solid #90CAF9;
 }
+
+/* ---------------------------------------------------------------------------
+   Phase 10 — Progressive Disclosure UI
+   --------------------------------------------------------------------------- */
+
+/* Breadcrumb Bar (D-06) */
+.guide-breadcrumb {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 var(--space-md);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  gap: var(--space-sm);
+}
+.guide-breadcrumb__segment {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 48px;
+}
+.guide-breadcrumb__segment:hover {
+  color: var(--accent-primary);
+  background: rgba(124, 107, 224, 0.08);
+}
+.guide-breadcrumb__segment--active {
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: default;
+}
+.guide-breadcrumb__segment--active:hover {
+  color: var(--text-primary);
+  background: transparent;
+}
+.guide-breadcrumb__separator {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* Day Cards Grid (D-01) */
+.day-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+@media (max-width: 1023px) {
+  .day-cards-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 479px) {
+  .day-cards-grid { grid-template-columns: 1fr; }
+}
+.day-card-v2 {
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface-card);
+  transition: var(--lift-transition);
+}
+.day-card-v2:hover {
+  transform: var(--lift-y);
+  box-shadow: var(--lift-shadow);
+}
+.day-card-v2:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.day-card-v2__thumb {
+  height: 120px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+.day-card-v2__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.day-card-v2__thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+}
+.day-card-v2__body {
+  padding: var(--space-md);
+}
+.day-card-v2__title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  margin-bottom: var(--space-xs);
+}
+.day-card-v2__meta {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* Collapsible Section (D-02) */
+.overview-collapsible__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) 0;
+  cursor: pointer;
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+.overview-collapsible__toggle:hover {
+  color: var(--accent-primary);
+}
+.overview-collapsible__chevron {
+  display: inline-block;
+  transition: transform 0.3s;
+}
+.overview-collapsible.is-expanded .overview-collapsible__chevron {
+  transform: rotate(180deg);
+}
+.overview-collapsible__body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.overview-collapsible.is-expanded .overview-collapsible__body {
+  max-height: 3000px;
+}
+
+/* Crossfade Panel (D-03) */
+.guide-drill-panel {
+  transition: opacity 0.15s ease-in;
+}
+.guide-drill-panel--exiting {
+  opacity: 0;
+  pointer-events: none;
+}
+.guide-drill-panel--entering {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Reduced motion overrides */
+@media (prefers-reduced-motion: reduce) {
+  .overview-collapsible__body,
+  .overview-collapsible__chevron,
+  .guide-drill-panel {
+    transition-duration: 0.01ms !important;
+  }
+}
