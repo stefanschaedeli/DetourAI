@@ -1,0 +1,332 @@
+// Guide Overview — overview tab rendering.
+// Reads: S (state.js), esc() (state.js).
+// Provides: renderOverview, renderTripAnalysis, renderProse, renderTravelGuide,
+//           renderFurtherActivities, renderBudget, _lazyLoadOverviewImages,
+//           _highlightReqKeywords, _extractReqKeywords, _renderReqTags
+'use strict';
+
+function renderOverview(plan) {
+  const stops = plan.stops || [];
+  const cost  = plan.cost_estimate || {};
+  const mapUrl = plan.google_maps_overview_url || '';
+
+  return `
+    <div class="overview-section">
+      <div class="overview-hero">
+        <h2>Reise: ${esc(plan.start_location)} \u2192 ${esc(stops[stops.length - 1]?.region || '')}</h2>
+        <p>${stops.length} Stops \u00b7 ${plan.day_plans?.length || 0} Tage</p>
+        ${mapUrl ? `<a href="${safeUrl(mapUrl)}" target="_blank" class="btn btn-secondary">
+          Google Maps \u00f6ffnen
+        </a>` : ''}
+      </div>
+
+      <div class="overview-stats">
+        <div class="stat-card">
+          <div class="stat-value">${stops.length}</div>
+          <div class="stat-label">Stops</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${plan.day_plans?.length || 0}</div>
+          <div class="stat-label">Tage</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">CHF ${typeof cost.total_chf === 'number' ? cost.total_chf.toLocaleString('de-CH') : '\u2013'}</div>
+          <div class="stat-label">Gesamtkosten</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">CHF ${typeof cost.budget_remaining_chf === 'number' ? cost.budget_remaining_chf.toLocaleString('de-CH') : '\u2013'}</div>
+          <div class="stat-label">Rest-Budget</div>
+        </div>
+      </div>
+
+      <div class="overview-route">
+        <h3>Route</h3>
+        <div class="route-line">
+          <div class="route-point start">${esc(plan.start_location)}</div>
+          ${stops.map(s => `
+            <div class="route-arrow">\u2192</div>
+            <div class="route-point">
+              ${FLAGS[s.country] || ''} ${esc(s.region)}
+              <small>${s.nights} N.</small>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      ${(plan.day_plans && plan.day_plans.length) ? `
+      <div class="overview-dayplan-cta" onclick="switchGuideTab('days')">
+        <div class="overview-dayplan-cta-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="overview-dayplan-cta-text">
+          <strong>Tagesplan</strong>
+          <span>${plan.day_plans.length} Tage mit st\u00fcndlichen Zeitbl\u00f6cken, Karte und Aktivit\u00e4ten</span>
+        </div>
+        <svg class="overview-dayplan-cta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="9 6 15 12 9 18"/></svg>
+      </div>
+      ` : ''}
+
+      ${renderTripAnalysis(plan.trip_analysis, plan.request)}
+    </div>
+  `;
+}
+
+// Highlight requirement keywords (from plan.request) in an already-escaped string
+function _highlightReqKeywords(escapedText, keywords) {
+  let t = escapedText;
+  keywords.forEach(kw => {
+    if (!kw) return;
+    const safe = esc(kw);
+    const re = new RegExp(safe.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    t = t.replace(re, m => `<strong class="req-keyword">${m}</strong>`);
+  });
+  return t;
+}
+
+// Build a flat list of keywords from plan.request that the user explicitly set
+function _extractReqKeywords(req) {
+  if (!req) return [];
+  const kws = [];
+  (req.travel_styles || []).forEach(s => {
+    const label = (TRAVEL_STYLES.find(t => t.id === s) || {}).label;
+    if (label) kws.push(label);
+  });
+  (req.accommodation_preferences || []).forEach(k => kws.push(k));
+  (req.mandatory_activities || []).forEach(a => kws.push(typeof a === 'string' ? a : a.name));
+  (req.preferred_activities || []).forEach(k => kws.push(k));
+  if (req.main_destination) kws.push(req.main_destination);
+  if (req.destination)      kws.push(req.destination);
+  return kws.filter(Boolean);
+}
+
+// Render inline requirement tags from the original request
+function _renderReqTags(req) {
+  if (!req) return '';
+  const tags = [];
+
+  // Route
+  if (req.start_location) tags.push({ label: req.start_location, cls: 'req-tag-route' });
+  const dest = req.main_destination || req.destination;
+  if (dest) tags.push({ label: dest, cls: 'req-tag-route' });
+
+  // Dates & duration
+  const days = req.total_days || req.duration_days;
+  if (days) tags.push({ label: `${days} Tage`, cls: 'req-tag-meta' });
+  if (req.adults) {
+    const children = (req.children || []).length;
+    const pax = children > 0
+      ? `${req.adults} Erw. + ${children} Kind${children > 1 ? 'er' : ''}`
+      : `${req.adults} Erwachsene`;
+    tags.push({ label: pax, cls: 'req-tag-meta' });
+  }
+  if (req.budget_chf) tags.push({ label: `CHF ${Number(req.budget_chf).toLocaleString('de-CH')}`, cls: 'req-tag-budget' });
+  if (req.max_drive_hours_per_day) tags.push({ label: `Max. ${req.max_drive_hours_per_day}h Fahrt/Tag`, cls: 'req-tag-meta' });
+
+  // Styles
+  (req.travel_styles || []).forEach(s => {
+    const label = (TRAVEL_STYLES.find(t => t.id === s) || {}).label || s;
+    tags.push({ label, cls: 'req-tag-style' });
+  });
+
+  // Accommodation preferences
+  (req.accommodation_preferences || []).forEach(k => tags.push({ label: k, cls: 'req-tag-acc' }));
+
+  // Mandatory activities
+  (req.mandatory_activities || []).forEach(a => {
+    const name = typeof a === 'string' ? a : a.name;
+    tags.push({ label: name, cls: 'req-tag-activity' });
+  });
+
+  if (!tags.length) return '';
+  return `<div class="req-tags">${tags.map(t => `<span class="req-tag ${t.cls}">${esc(t.label)}</span>`).join('')}</div>`;
+}
+
+function renderTripAnalysis(analysis, req) {
+  if (!analysis) return '';
+
+  const score = analysis.requirements_match_score || 0;
+  const scoreColor = score >= 8 ? '#22C55E' : score >= 5 ? '#F59E0B' : '#EF4444';
+  const scoreLabel = score >= 8 ? 'Sehr gut' : score >= 6 ? 'Gut' : score >= 4 ? 'Befriedigend' : 'Verbesserungsbedarf';
+  const pct = Math.round(score / 10 * 100);
+
+  const keywords = _extractReqKeywords(req);
+
+  const impactLabel = { high: 'Hoch', medium: 'Mittel', low: 'Niedrig' };
+  const impactClass = { high: 'impact-high', medium: 'impact-medium', low: 'impact-low' };
+
+  // Use keyword-highlighting instead of plain esc for prose fields
+  const summaryHtml    = _highlightReqKeywords(esc(analysis.settings_summary || ''), keywords);
+  const analysisHtml   = _highlightReqKeywords(esc(analysis.requirements_analysis || ''), keywords);
+
+  const strengths  = (analysis.strengths || []).map(s =>
+    `<li>${_highlightReqKeywords(esc(s), keywords)}</li>`).join('');
+  const weaknesses = (analysis.weaknesses || []).map(w =>
+    `<li>${_highlightReqKeywords(esc(w), keywords)}</li>`).join('');
+
+  const suggestions = (analysis.improvement_suggestions || []).map(s => `
+    <div class="suggestion-item">
+      <div class="suggestion-header">
+        <strong>${esc(s.title)}</strong>
+        <span class="impact-badge ${impactClass[s.impact] || ''}">${impactLabel[s.impact] || esc(s.impact)}</span>
+      </div>
+      <p>${_highlightReqKeywords(esc(s.description), keywords)}</p>
+    </div>
+  `).join('');
+
+  return `
+    <div class="trip-analysis">
+      <div class="trip-analysis-header">
+        <h3 class="trip-analysis-title">Reise-Analyse</h3>
+        <div class="ta-score-chip" style="background:${scoreColor}22; color:${scoreColor}; border-color:${scoreColor}55">
+          <span class="ta-score-num">${score}</span><span class="ta-score-denom">/10</span>
+          <span class="ta-score-label">${scoreLabel}</span>
+        </div>
+      </div>
+
+      <div class="trip-analysis-card">
+        <h4>Ihre Reiseanforderungen</h4>
+        ${_renderReqTags(req)}
+        ${analysis.settings_summary ? `<p class="trip-analysis-text ta-summary">${summaryHtml}</p>` : ''}
+      </div>
+
+      <div class="trip-analysis-card ta-card-score">
+        <h4>Anforderungserf\u00fcllung</h4>
+        <div class="score-bar-wrap">
+          <div class="score-bar-track">
+            <div class="score-bar-fill" style="width:${pct}%; background:${scoreColor}"></div>
+          </div>
+          <span class="score-label" style="color:${scoreColor}">${score}/10</span>
+        </div>
+        <p class="trip-analysis-text">${analysisHtml}</p>
+      </div>
+
+      ${(strengths || weaknesses) ? `
+      <div class="trip-analysis-card">
+        <h4>St\u00e4rken &amp; Schw\u00e4chen</h4>
+        <div class="trip-analysis-swot">
+          ${strengths  ? `<div><p class="swot-col-title strengths-title">St\u00e4rken</p><ul class="swot-list strengths-list">${strengths}</ul></div>`  : ''}
+          ${weaknesses ? `<div><p class="swot-col-title weaknesses-title">Schw\u00e4chen</p><ul class="swot-list weaknesses-list">${weaknesses}</ul></div>` : ''}
+        </div>
+      </div>
+      ` : ''}
+
+      ${suggestions ? `
+      <div class="trip-analysis-card">
+        <h4>Verbesserungsvorschl\u00e4ge</h4>
+        <div class="suggestions-list">${suggestions}</div>
+      </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderProse(text) {
+  if (!text) return '';
+  return text.split(/\n\n+/).map(p => `<p>${esc(p.trim())}</p>`).join('');
+}
+
+function renderTravelGuide(guide) {
+  if (!guide) return '';
+  const sections = [
+    { key: 'history_culture',  label: 'Geschichte & Kultur' },
+    { key: 'food_specialties', label: 'Lokale Spezialit\u00e4ten' },
+    { key: 'local_tips',       label: 'Praktische Tipps' },
+    { key: 'insider_gems',     label: 'Insider-Tipps' },
+    { key: 'best_time_to_visit', label: 'Beste Reisezeit' },
+  ];
+  return `
+    <div class="reisefuehrer-section">
+      <h4 class="reisefuehrer-title">Reisef\u00fchrer</h4>
+      <div class="guide-intro">${renderProse(guide.intro_narrative)}</div>
+      ${sections.map(s => guide[s.key] ? `
+        <details class="guide-collapse">
+          <summary>${esc(s.label)}</summary>
+          <div class="guide-collapse-body">${renderProse(guide[s.key])}</div>
+        </details>
+      ` : '').join('')}
+    </div>
+  `;
+}
+
+function renderFurtherActivities(activities) {
+  if (!activities || !activities.length) return '';
+  return `
+    <div class="further-activities-section">
+      <h4>Weitere Empfehlungen im Umkreis</h4>
+      <div class="further-activities-list">
+        ${activities.map(act => `
+          <div class="further-activity-item">
+            ${buildHeroPhotoLoading('sm')}
+            <div class="further-activity-content">
+              <strong>${esc(act.name)}</strong>
+              <p>${esc(act.description)}</p>
+              <div class="activity-meta">
+                ${act.duration_hours}h
+                ${act.price_chf > 0 ? ` \u00b7 CHF ${act.price_chf}` : ' \u00b7 kostenlos'}
+                ${act.age_group ? ` \u00b7 ${esc(act.age_group)}` : (act.suitable_for_children ? ' \u00b7 familienfreundlich' : '')}
+              </div>
+              ${(act.place_id || act.google_maps_url) ? `<a href="${safeUrl(act.place_id ? `https://www.google.com/maps/place/?q=place_id:${act.place_id}` : act.google_maps_url)}" target="_blank" class="maps-link">Maps</a>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderBudget(plan) {
+  const cost = plan.cost_estimate || {};
+  const total = typeof cost.total_chf === 'number' ? cost.total_chf : 0;
+  const acc   = typeof cost.accommodations_chf === 'number' ? cost.accommodations_chf : 0;
+  const act   = typeof cost.activities_chf === 'number' ? cost.activities_chf : 0;
+  const food  = typeof cost.food_chf === 'number' ? cost.food_chf : 0;
+  const fuel  = typeof cost.fuel_chf === 'number' ? cost.fuel_chf : 0;
+  const ferry = typeof cost.ferries_chf === 'number' ? cost.ferries_chf : 0;
+  const rem   = typeof cost.budget_remaining_chf === 'number' ? cost.budget_remaining_chf : 0;
+
+  const items = [
+    { label: 'Unterkunft',  value: acc,   color: '#0EA5E9' },
+    { label: 'Aktivit\u00e4ten', value: act,   color: '#22C55E' },
+    { label: 'Verpflegung', value: food,  color: '#F59E0B' },
+    { label: 'Treibstoff',  value: fuel,  color: '#EF4444' },
+    { label: 'F\u00e4hren',      value: ferry, color: '#5856d6' },
+  ];
+
+  return `
+    <div class="budget-section">
+      <div class="budget-total">
+        <div class="budget-amount">CHF ${total.toLocaleString('de-CH')}</div>
+        <div class="budget-label">Gesamtkosten</div>
+      </div>
+
+      <div class="budget-breakdown">
+        ${items.filter(it => it.value > 0).map(it => {
+          const pct = total > 0 ? (it.value / total * 100).toFixed(1) : 0;
+          return `
+            <div class="budget-row">
+              <div class="budget-row-label">${esc(it.label)}</div>
+              <div class="budget-bar-wrap">
+                <div class="budget-bar" style="width: ${pct}%; background: ${it.color}"></div>
+              </div>
+              <div class="budget-row-amount">CHF ${it.value.toLocaleString('de-CH')}</div>
+              <div class="budget-row-pct">${pct}%</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="budget-remaining ${rem >= 0 ? 'positive' : 'negative'}">
+        <span>Verbleibendes Budget:</span>
+        <strong>CHF ${rem.toLocaleString('de-CH')}</strong>
+      </div>
+    </div>
+  `;
+}
+
+function _lazyLoadOverviewImages(plan) {
+  const stops = plan.stops || [];
+  stops.forEach(stop => {
+    const card = document.querySelector(`.stop-overview-card[data-stop-id="${stop.id}"]`);
+    if (card) _lazyLoadEntityImages(card, stop.region, stop.lat, stop.lng, 'city', 'sm');
+  });
+}
