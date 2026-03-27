@@ -80,16 +80,14 @@ function renderGuide(plan, tab) {
   const content = document.getElementById('guide-content');
   if (!content) return;
 
-  // Update stats bar -- show on overview, clear on other tabs
+  // Update stats bar -- show on all tabs unconditionally
   // Note: renderStatsBar output uses esc() for all user content (XSS-safe)
   const statsBarEl = document.getElementById('guide-stats-bar');
   if (statsBarEl) {
     statsBarEl.textContent = '';
-    if (activeTab === 'overview') {
-      const tmp = document.createElement('div');
-      tmp.insertAdjacentHTML('afterbegin', renderStatsBar(plan));
-      while (tmp.firstChild) statsBarEl.appendChild(tmp.firstChild);
-    }
+    const tmp = document.createElement('div');
+    tmp.insertAdjacentHTML('afterbegin', renderStatsBar(plan));
+    while (tmp.firstChild) statsBarEl.appendChild(tmp.firstChild);
   }
 
   switch (activeTab) {
