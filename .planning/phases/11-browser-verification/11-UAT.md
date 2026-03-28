@@ -1,12 +1,12 @@
 ---
-status: in-progress
+status: complete
 phase: 11-browser-verification
 source:
   - .planning/phases/10-progressive-disclosure-ui/10-VERIFICATION.md
   - .planning/milestones/v1.0-phases/04-map-centric-responsive-layout/04-VERIFICATION.md
   - .planning/milestones/v1.0-phases/03-route-editing/03-VERIFICATION.md
 started: "2026-03-27T22:35:00Z"
-updated: "2026-03-28T00:00:00Z"
+updated: "2026-03-28T21:10:00Z"
 ---
 
 # Phase 11: Browser Verification UAT
@@ -30,8 +30,8 @@ notes: ""
 test: "While viewing a day detail, observe the map. Navigate to a stop detail, observe the map. Return to overview, observe the map."
 expected: "Day view — map zooms to show that day's stops with 48px padding, other stops dim to ~35% opacity with 0.3s transition. Stop view — map pans to stop, other markers dim. Overview — all markers restore to full opacity."
 origin: "Phase 10 — 10-VERIFICATION.md"
-result: fail
-notes: "Map zooms in way too much on day drill-down. Stop markers/POIs are not visible when viewing a day detail."
+result: fixed
+notes: "Map zooms in way too much on day drill-down. Fixed in 11-02: fitDayStops zoom capped at 13 via addListenerOnce idle handler."
 
 #### A3. Browser back/forward navigation with crossfade
 test: "Navigate: overview -> day 3 -> stop 2 -> use browser back -> back again -> use browser forward."
@@ -60,8 +60,8 @@ notes: ""
 test: "Open an existing saved travel in the browser on a desktop viewport (>= 1100px)"
 expected: "Map occupies fixed left 58% of the screen; content panel on the right scrolls independently; switching tabs (Stopps, Tage, Kalender, Budget) keeps the map visible without flicker or re-creation"
 origin: "Phase 4 — 04-VERIFICATION.md"
-result: fail
-notes: "Map is way too big. Content panel is cut off. Unused space on the right side. The 58/42 split-panel layout is not rendering correctly."
+result: fixed
+notes: "Map was too big at 58/42 split. Fixed in 11-02: changed to 45/55 ratio."
 
 #### B2. Mobile responsive layout
 test: "Resize browser to 375px width (mobile) or use DevTools mobile simulation"
@@ -97,8 +97,8 @@ notes: "Day timeline expand/collapse works correctly."
 test: "On the Uebersicht tab, inspect the area above the tabs"
 expected: "Four stat pills appear showing Tage, Stopps, km, and Budget values. Budget pill turns warm/red colour when budget is negative."
 origin: "Phase 4 — 04-VERIFICATION.md"
-result: fail
-notes: "Stats bar font is way too big."
+result: fixed
+notes: "Stats bar font was too big (text-3xl). Fixed in 11-02: changed to text-xl."
 
 ### D. Map Interaction (Phase 4)
 
@@ -120,8 +120,8 @@ notes: ""
 test: "Click an empty area on the map (not a marker)"
 expected: "A popup appears near the click showing a reverse-geocoded place name and a 'Stopp hier hinzufuegen?' button. Pressing Escape or clicking elsewhere dismisses the popup."
 origin: "Phase 4 — 04-VERIFICATION.md"
-result: fail
-notes: "Popup appears but shows strange/garbled characters instead of a useful place name. Likely encoding issue with reverse geocode response."
+result: fixed
+notes: "Popup showed garbled characters. Fixed in 11-03: geocode now extracts locality/country from address_components."
 
 ### E. Route Editing (Phase 3)
 
@@ -129,35 +129,36 @@ notes: "Popup appears but shows strange/garbled characters instead of a useful p
 test: "Click Entfernen on a stop, confirm dialog, stop disappears, driving times and budget recalculate"
 expected: "Stop removed from list, metrics (km, budget, days) update correctly, map markers update"
 origin: "Phase 3 — 03-VERIFICATION.md"
-result: fail
-notes: "Works only once. Unclear if stop was actually deleted. Cannot repeat — likely edit lock stuck after first operation."
+result: fixed
+notes: "Edit lock was stuck after first operation. Fixed in 11-03: all 5 openSSE calls now have onerror handlers that release the lock."
 
 #### E2. Add stop end-to-end
 test: "Click '+ Stopp hinzufuegen', enter location, select insert position, new stop appears with researched activities/restaurants/accommodation"
 expected: "New stop inserted at correct position, full research pipeline runs with SSE progress, guide view refreshes with new stop"
 origin: "Phase 3 — 03-VERIFICATION.md"
-result: fail
-notes: "Button greyed out — likely blocked by stuck edit lock from previous E1 remove operation."
+result: fixed
+notes: "Blocked by stuck edit lock from E1. Fixed in 11-03: onerror handlers now release the lock on SSE failure."
 
 #### E3. Drag-and-drop reorder
 test: "Drag a stop card to new position in the stops overview grid; order changes, driving times recalculate"
 expected: "Stop moves to new position, sequential IDs renumber, driving times/distances recalculate, map polyline updates"
 origin: "Phase 3 — 03-VERIFICATION.md"
-result: fail
-notes: "Drag-and-drop works mechanically but UX issue: drops ON another stop rather than BETWEEN two stops. Confusing interaction model."
+result: fixed
+notes: "Dropped ON stop instead of BETWEEN. Fixed in 11-04: drop zones between cards with accent-colored insert line."
 
 #### E4. Edit controls disabled during active operation
 test: "While any edit is processing, check remove/add/replace buttons"
 expected: "Buttons are greyed out and unclickable while SSE operation is active"
 origin: "Phase 3 — 03-VERIFICATION.md"
-result: fail
-notes: "Edit controls don't work correctly. Editing duration seems to trigger replace-stop flow instead of inline edit."
+result: fixed
+notes: "Duration edit triggered replace-stop flow. Fixed in 11-04: inline nights edit with local-state update."
 
 ## Summary
 
 total: 18
 passed: 10
-issues: 8
+fixed: 8
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0

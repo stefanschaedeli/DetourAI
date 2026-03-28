@@ -29,7 +29,7 @@
 - [x] **Phase 8: Tech Debt Stabilization** - Fix production bugs and stale-state issues against the current UI (completed 2026-03-27)
 - [x] **Phase 9: Guide Module Split** - Split guide.js monolith into focused modules with zero behavioral changes (completed 2026-03-27)
 - [x] **Phase 10: Progressive Disclosure UI** - Three-level drill-down navigation with map focus management (completed 2026-03-27)
-- [ ] **Phase 11: Browser Verification** - Verify 18 pending UI items from Phases 3, 4, and 10 against the progressive disclosure view
+- [x] **Phase 11: Browser Verification** - Verify 18 pending UI items from Phases 3, 4, and 10 against the progressive disclosure view (completed 2026-03-28)
 
 ## Phase Details
 
@@ -84,7 +84,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Each of the 18 pending UI verification items has been tested in a browser against the current travel view layout
   2. Any items found broken during verification are fixed and re-verified
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 Plans:
 - [x] 11-01-PLAN.md — Verify all 18 UI items in browser, document results, fix trivial issues inline
 - [x] 11-02-PLAN.md — Fix split-panel ratio, stats bar font, and map over-zoom (GAP-01, GAP-02, GAP-03)
@@ -108,4 +108,4 @@ Plans:
 | 8. Tech Debt Stabilization | v1.1 | 2/2 | Complete   | 2026-03-27 |
 | 9. Guide Module Split | v1.1 | 2/2 | Complete   | 2026-03-27 |
 | 10. Progressive Disclosure UI | v1.1 | 3/3 | Complete   | 2026-03-27 |
-| 11. Browser Verification | v1.1 | 3/4 | In Progress|  |
+| 11. Browser Verification | v1.1 | 3/4 | Complete    | 2026-03-28 |
