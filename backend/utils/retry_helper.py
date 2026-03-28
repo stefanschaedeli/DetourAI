@@ -1,7 +1,7 @@
 import asyncio
 import random
 import time
-from anthropic import InternalServerError, RateLimitError
+from anthropic import BadRequestError, InternalServerError, RateLimitError
 from utils.debug_logger import LogLevel, debug_logger
 from utils.settings_store import get_setting
 
@@ -65,6 +65,22 @@ async def call_with_retry(fn, *, job_id: str = None, agent_name: str = None,
                 job_id=job_id, agent=agent_name,
             )
             await asyncio.sleep(delay)
+        except BadRequestError as exc:
+            if "usage limit" in str(exc).lower() or "spending" in str(exc).lower():
+                await debug_logger.log(
+                    LogLevel.ERROR,
+                    f"API-Ausgabenlimit erreicht: {exc}",
+                    job_id=job_id, agent=agent_name,
+                )
+                raise RuntimeError(
+                    "API-Ausgabenlimit erreicht. Bitte Limit in der Anthropic-Konsole erhoehen oder bis zum Reset-Datum warten."
+                ) from exc
+            await debug_logger.log(
+                LogLevel.ERROR,
+                f"BadRequestError in {agent_name or 'agent'}: {exc}",
+                job_id=job_id, agent=agent_name,
+            )
+            raise
         except Exception as exc:
             await debug_logger.log(
                 LogLevel.ERROR,
