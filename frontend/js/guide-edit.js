@@ -123,6 +123,11 @@ async function _executeRemoveStop(stopId) {
         _unlockEditing();
         alert('Fehler beim Entfernen: ' + (data.error || 'Unbekannter Fehler'));
       },
+      onerror: () => {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        _unlockEditing();
+        alert('Verbindung verloren beim Entfernen des Stopps.');
+      },
     });
   } catch (err) {
     _unlockEditing();
@@ -264,6 +269,11 @@ async function _executeAddStop() {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         _unlockEditing();
         alert('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'));
+      },
+      onerror: () => {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        _unlockEditing();
+        alert('Verbindung verloren beim Hinzuf\u00fcgen des Stopps.');
       },
     });
   } catch (err) {
@@ -455,6 +465,11 @@ function _doAddStopFromMap(placeName, afterStopId) {
         _unlockEditing();
         alert('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'));
       },
+      onerror: function() {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        _unlockEditing();
+        alert('Verbindung verloren beim Hinzuf\u00fcgen des Stopps.');
+      },
     });
   }).catch(function(err) {
     _unlockEditing();
@@ -513,6 +528,11 @@ async function _onStopDrop(e, targetIndex) {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         _unlockEditing();
         alert('Fehler beim Sortieren: ' + (data.error || 'Unbekannter Fehler'));
+      },
+      onerror: () => {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        _unlockEditing();
+        alert('Verbindung verloren beim Sortieren.');
       },
     });
   } catch (err) {
@@ -742,6 +762,11 @@ function _listenForReplaceComplete(jobId, travelId) {
     },
     debug_log: (data) => {
       if (data.message) _showReplaceProgress(data.message);
+    },
+    onerror: () => {
+      if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
+      _unlockEditing();
+      alert('Verbindung verloren beim Ersetzen des Stopps.');
     },
   });
 }
