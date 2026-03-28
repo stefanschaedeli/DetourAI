@@ -809,6 +809,10 @@ const GoogleMaps = (() => {
       if (s.lat && s.lng) bounds.extend({ lat: s.lat, lng: s.lng });
     });
     _guideMap.fitBounds(bounds, { top: 48, right: 48, bottom: 48, left: 48 });
+    // Cap zoom to prevent over-zooming on nearby stops (GAP-02)
+    google.maps.event.addListenerOnce(_guideMap, 'idle', function() {
+      if (_guideMap.getZoom() > 13) _guideMap.setZoom(13);
+    });
   }
 
   return {
