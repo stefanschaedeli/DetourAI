@@ -51,6 +51,49 @@
 
 ---
 
+## Milestone: v1.1 — Polish & Travel View Redesign
+
+**Shipped:** 2026-03-28
+**Phases:** 4 | **Plans:** 11 | **Commits:** 34
+**Timeline:** 2 days (2026-03-27 → 2026-03-28)
+
+### What Was Built
+- Tech debt fixes: Celery task registration, map marker/polyline refresh after all 5 edit paths, stats bar on all tabs, two-tier drive limit enforcement with ferry exclusion
+- Guide module split: 3010-line guide.js decomposed into 7 focused modules (82 functions, zero regressions)
+- Progressive disclosure UI: three-level drill-down (overview → day → stop) with crossfade transitions, breadcrumb navigation, map marker dimming and focus management
+- Browser verification: 18 UI items tested, 7 gaps fixed (layout ratio, zoom cap, stats font, SSE error handling, geocode popup, drag-drop zones, inline nights edit)
+
+### What Worked
+- Module split (Phase 9) as prerequisite for progressive disclosure (Phase 10) was the right sequencing — clean module boundaries made drill-down navigation straightforward
+- Browser verification as final phase (Phase 11) caught real issues that automated checks missed (layout ratios, zoom behavior, SSE onerror handling)
+- Milestone audit with 3-source cross-reference (VERIFICATION.md + SUMMARY frontmatter + REQUIREMENTS.md) gave high confidence in completion
+- Gap closure plans (11-02, 11-03, 11-04) were scoped precisely from UAT findings — no wasted work
+
+### What Was Inefficient
+- SUMMARY.md one-liner extraction still produced noisy results — some summaries had rule-bug prefixes or incomplete text
+- Phase 11 roadmap showed "3/4" plans complete while disk had 4/4 — same roadmap sync issue from v1.0
+- Nyquist validation was never completed for 3 of 4 phases — validation framework exists but wasn't prioritized
+
+### Patterns Established
+- `_drillTransition` helper for consistent crossfade between drill levels
+- Breadcrumb placed outside `#guide-content` to persist across `renderGuide()` calls
+- Marker dimming via `OverlayView._div.style.opacity` — simpler than icon swaps
+- Drop zones as separate divs between cards (not on-card drop targets)
+- `addListenerOnce('idle')` to cap map zoom after `fitBounds`
+
+### Key Lessons
+1. **Module split before UI redesign is essential** — trying to add progressive disclosure to a 3010-line monolith would have been extremely error-prone
+2. **Browser verification catches things automated checks miss** — layout ratios, zoom behavior, and SSE error handling all required human eyes
+3. **Gap closure plans should be scoped from UAT results, not guessed** — Phase 11's targeted fixes were efficient because they came from observed browser behavior
+
+### Cost Observations
+- Model mix: quality profile (Opus for orchestration/planning, Sonnet for research agents)
+- Average plan execution: ~5 minutes across 11 plans (slightly higher than v1.0 due to UI complexity)
+- Phase 10 was the most complex with 3 plans touching 4+ files each
+- Phase 11 gap closure plans were efficiently scoped (2-3 files each)
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -58,14 +101,17 @@
 | Milestone | Commits | Phases | Plans | Key Change |
 |-----------|---------|--------|-------|------------|
 | v1.0 | 166 | 7 | 20 | Initial milestone — established GSD workflow with verification + audit loop |
+| v1.1 | 34 | 4 | 11 | Refined gap closure — UAT-driven fixes, milestone audit with 3-source cross-reference |
 
 ### Cumulative Quality
 
 | Milestone | Tests | LOC (Python) | LOC (JS/HTML/CSS) | Requirements |
 |-----------|-------|--------------|--------------------| -------------|
 | v1.0 | 286 | 14,332 | 16,092 | 25/25 |
+| v1.1 | 291 | ~14,400 | ~17,000 | 12/12 |
 
 ### Top Lessons (Verified Across Milestones)
 
-1. Phase ordering matters — fix data quality before building UI on top of it
-2. Integration wiring should be verified continuously, not just at milestone boundaries
+1. Phase ordering matters — fix data quality before building UI on top of it (v1.0), split modules before UI redesign (v1.1)
+2. Integration wiring should be verified continuously, not just at milestone boundaries (v1.0 Celery bug, v1.1 router drill state)
+3. Browser/human verification as a final phase catches real issues that automated checks miss (v1.0 audit, v1.1 UAT)

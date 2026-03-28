@@ -43,23 +43,22 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - ✓ UI redesign: dashboard overview with key trip stats — v1.0
 - ✓ Public shareable links for trip plans (read-only view for friends/family) — v1.0
 - ✓ Remove PDF/PPTX export functionality (deprecated, replaced by shareable links) — v1.0
+- ✓ Celery replace_stop_job registration for production Docker — v1.1
+- ✓ Map markers and polyline refresh after all route edits — v1.1
+- ✓ Stats bar immediate update after route edits — v1.1
+- ✓ RouteArchitect respects max_drive_time_per_day with ferry exclusion — v1.1
+- ✓ guide.js split into 7 focused modules with zero regressions — v1.1
+- ✓ Overview-first travel view with compact day cards and trip summary — v1.1
+- ✓ Day drill-down with map focus on day's region — v1.1
+- ✓ Stop drill-down with map focus on stop area — v1.1
+- ✓ Breadcrumb back-navigation at each drill level — v1.1
+- ✓ Map marker dimming for non-focused stops — v1.1
+- ✓ Browser back/forward with drill-down navigation — v1.1
+- ✓ 18 UI items browser-verified and 7 gaps fixed — v1.1
 
 ### Active
 
-**Current Milestone: v1.1 Polish & Travel View Redesign**
-
-**Goal:** Fix all known tech debt and bugs, then redesign the travel view for clarity — overview-first with drill-down into days/stops.
-
-**Target features:**
-- Fix map markers/polyline not refreshing after route edits
-- Add `replace_stop_job` to Celery include list
-- Fix stats bar deferred update after edits
-- Fix RouteArchitect ignoring daily drive limits
-- Browser-verify 9 pending UI items
-- Overview-first travel view with compact day cards
-- Day drill-down: focus map on region, show day's elements
-- Stop drill-down: focus map on stop region, show stop details
-- Progressive disclosure — collapse unfocused content, expand focused
+No active milestone. Run `/gsd:new-milestone` to define v1.2.
 
 ### Out of Scope
 
@@ -75,15 +74,15 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 ## Context
 
 - Used by friends and family circle, not a public product
-- v1.0 shipped 2026-03-26 with 286 passing tests across 14,332 LOC Python + 16,092 LOC JS/HTML/CSS
+- v1.1 shipped 2026-03-28 with 291 passing tests
 - 9 AI agents orchestrated via Celery workers with SSE streaming
 - Geographic intelligence covers 8 Mediterranean island groups with ferry detection
-- Map-centric responsive layout with split-panel design, stop cards, day timeline
+- Map-centric responsive layout with 45/55 split-panel design
 - Public sharing via token-based links with read-only mode
-- Phase 8 (tech debt) fixed: map markers refresh after edits, replace_stop_job registered, stats bar on all tabs, drive limit enforcement with ferry exclusion
-- Phase 9 split guide.js (3010 lines) into 7 focused modules — pure structural refactor enabling Phase 10 progressive disclosure UI
-- Phase 10 implemented three-level drill-down UI (overview → day → stop) with crossfade transitions, breadcrumb navigation, and map marker dimming/focus management
-- Phase 11 browser-verified all 18 pending UI items — 10 passed, 7 gaps fixed (split-panel ratio, zoom cap, stats font, SSE error handling, geocode popup, drag-drop zones, inline nights edit)
+- Travel view uses three-level progressive disclosure (overview → day → stop) with breadcrumb navigation and map focus management
+- guide.js split into 7 focused modules (core, overview, stops, days, edit, map-sync, nav)
+- All known v1.0 tech debt resolved (Celery registration, map redraw, stats sync, drive limits)
+- Known minor tech debt: router `_travelTab` missing drill state reset (low severity edge case)
 
 ## Constraints
 
@@ -110,8 +109,12 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 | Tags merge with ordered dedup, max 4 | Prevents tag overload while preserving AI + activity sources | ✓ Good (Phase 6) |
 | Ferry-aware directions in all code paths | Route edits on island trips need correct ferry metadata | ✓ Good (Phase 7) |
 | Two-tier drive limit validation (soft 100% + hard 130%) | Prevents uncomfortable overlong driving days while staying flexible | ✓ Good (Phase 8) |
+| 7-module guide split over incremental extraction | Complete split enables safe progressive disclosure work | ✓ Good (Phase 9) |
 | Breadcrumb outside #guide-content | Persists across renderGuide() calls, avoids delegation scope issues | ✓ Good (Phase 10) |
 | Marker dimming via OverlayView _div opacity | Simpler than marker icon swaps, works with custom overlays | ✓ Good (Phase 10) |
+| 45/55 split-panel ratio (map/content) | Better content readability while keeping map visible | ✓ Good (Phase 11) |
+| Drop zones as separate divs between stop cards | Avoids ambiguous on-card drop behavior, clear visual targets | ✓ Good (Phase 11) |
+| Nights edit via prompt() with local-state update | No backend PATCH needed for gap closure, simplest approach | ✓ Good (Phase 11) |
 
 ## Evolution
 
@@ -131,4 +134,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 after Phase 11 (browser-verification) completion*
+*Last updated: 2026-03-28 after v1.1 milestone completion*
