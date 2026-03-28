@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Polish & Travel View Redesign
 status: executing
-stopped_at: Completed 11-02-PLAN.md
-last_updated: "2026-03-28T19:54:09.338Z"
+stopped_at: Completed 11-03-PLAN.md
+last_updated: "2026-03-28T19:54:22.683Z"
 last_activity: 2026-03-28
 progress:
   total_phases: 4
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 10 P01 | 4 | 2 tasks | 4 files |
 | Phase 10 P02 | 5 | 2 tasks | 2 files |
 | Phase 11 P02 | 4 | 2 tasks | 2 files |
+| Phase 11 P03 | 4 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ All v1.0 decisions archived in PROJECT.md Key Decisions table and milestones/v1.
 - [Phase 10]: router _travel handler resets activeTab/_activeDayNum/_activeStopId before showTravelGuide for correct browser back-to-overview behavior
 - [Phase 11]: Split-panel ratio changed to 45/55 (map/content) for better content readability
 - [Phase 11]: fitDayStops uses addListenerOnce idle handler to cap zoom at 13
+- [Phase 11]: onerror handler added to all 5 openSSE call sites — ensures edit lock always releases on connection failure
+- [Phase 11]: address_components preferred over formatted_address for clean city/country name extraction
 
 ### Pending Todos
 
@@ -85,6 +88,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-28T19:53:57.331Z
-Stopped at: Completed 11-02-PLAN.md
+Last session: 2026-03-28T19:54:22.681Z
+Stopped at: Completed 11-03-PLAN.md
 Resume file: None
