@@ -30,20 +30,18 @@
 
 DetourAI lets you plan a complete road trip in minutes. You describe where you want to go and what matters to you; ten specialised Claude agents then collaboratively research the route, stops, accommodations, activities, restaurants, and driving schedule — and hand you back a structured, budget-aware travel guide.
 
-```
-Du füllst ein 5-Schritte-Formular  →  Login/Register (Auth)
-        ↓
-AI plant Regionen (RegionPlannerAgent) → du bestätigst
-        ↓
-AI schlägt Stop-Optionen pro Segment vor — du wählst
-  (kurze Segmente: DetourOptionsAgent schlägt Umwege vor)
-  (Explore-Legs: ExploreZoneAgent entdeckt versteckte Orte)
-        ↓
-AI findet 3 Unterkunfts-Optionen pro Stop — du wählst
-        ↓
-10 Agenten recherchieren alle Details
-        ↓
-Tag-für-Tag Reiseführer · PDF · PPTX · interaktive Tageskarten
+<p align="center">
+  <img src="docs/images/hero-overview.png" alt="DetourAI — completed travel guide with route map" width="800">
+</p>
+
+```mermaid
+flowchart TD
+    A["5-Schritte-Formular\n(Route · Reisende · Legs · Unterkunft · Budget)"] --> B["Login / Register"]
+    B --> C["RegionPlannerAgent\nplant Regionen — du bestätigst"]
+    C --> D["Stop-Optionen pro Segment\n(DetourOptionsAgent bei kurzen Segmenten)\n(ExploreZoneAgent bei Explore-Legs)"]
+    D --> E["3 Unterkunfts-Optionen pro Stop\n(Budget · Komfort · Premium)"]
+    E --> F["10 Agenten recherchieren\nAktivitäten · Restaurants · Tagesplan · Guide"]
+    F --> G["Reiseführer\nÜbersicht · Stops · Tagesplan · Budget\n+ PDF · PPTX · Tageskarten"]
 ```
 
 ---
@@ -162,37 +160,36 @@ docker compose logs -f backend  # follow backend logs
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  Browser  (Vanilla JS, no build step)                   │
-│  Auth → 5-step form → region confirm → route builder →  │
-│  acc grid → guide tabs                                  │
-└──────────────────┬──────────────────────────────────────┘
-                   │  HTTP + SSE  (via Nginx proxy)
-┌──────────────────▼──────────────────────────────────────┐
-│  FastAPI  (routers/auth.py, routers/admin.py + main)    │
-│  JWT middleware                                         │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │  TravelPlannerOrchestrator                       │   │
-│  │  ├── RouteArchitectAgent      (claude-opus-4-5)  │   │
-│  │  ├── RegionPlannerAgent       (claude-opus-4-5)  │   │
-│  │  ├── StopOptionsFinderAgent   (claude-sonnet-4-5)│   │
-│  │  ├── DetourOptionsAgent       (claude-haiku-4-5) │   │
-│  │  ├── ExploreZoneAgent         (claude-sonnet-4-5)│   │
-│  │  ├── AccommodationResearcher  (claude-sonnet-4-5)│   │
-│  │  ├── ActivitiesAgent          (claude-sonnet-4-5)│   │
-│  │  ├── RestaurantsAgent         (claude-sonnet-4-5)│   │
-│  │  ├── DayPlannerAgent          (claude-opus-4-5)  │   │
-│  │  ├── TravelGuideAgent         (claude-sonnet-4-5)│   │
-│  │  └── TripAnalysisAgent        (claude-sonnet-4-5)│   │
-│  └──────────────────────────────────────────────────┘   │
-└──────────┬──────────────────────┬───────────────────────┘
-           │                      │
-    ┌──────▼──────┐        ┌──────▼──────┐
-    │   Redis     │        │   Celery    │
-    │ job state   │        │  workers    │
-    │ (24h TTL)   │        │             │
-    └─────────────┘        └─────────────┘
+```mermaid
+flowchart TD
+    subgraph Browser["Browser (Vanilla JS, no build step)"]
+        UI["Auth → 5-step form → region confirm\n→ route builder → acc grid → guide tabs"]
+    end
+
+    Browser -- "HTTP + SSE" --> Nginx["Nginx (reverse proxy)"]
+    Nginx --> FastAPI
+
+    subgraph FastAPI["FastAPI Backend"]
+        JWT["JWT Middleware"]
+        JWT --> Orchestrator
+        subgraph Orchestrator["TravelPlannerOrchestrator"]
+            A1["RouteArchitectAgent (opus)"]
+            A2["RegionPlannerAgent (opus)"]
+            A3["StopOptionsFinderAgent (sonnet)"]
+            A4["DetourOptionsAgent (haiku)"]
+            A5["ExploreZoneAgent (sonnet)"]
+            A6["AccommodationResearcher (sonnet)"]
+            A7["ActivitiesAgent (sonnet)"]
+            A8["RestaurantsAgent (sonnet)"]
+            A9["DayPlannerAgent (opus)"]
+            A10["TravelGuideAgent (sonnet)"]
+            A11["TripAnalysisAgent (sonnet)"]
+        end
+    end
+
+    FastAPI --> Redis["Redis (job state, 24h TTL)"]
+    FastAPI --> Celery["Celery Workers"]
+    Celery --> Redis
 ```
 
 ### Tech Stack
@@ -336,13 +333,19 @@ Create an account or log in. Admins can manage users and token quotas via the ad
 
 Fill in **Start** and **Destination** plus travel dates. Optionally add via-points. Set the **max drive hours per day** slider. As soon as the required fields are filled, a sticky **"Reise jetzt planen"** bar appears.
 
+<img src="docs/images/form-step1-route.png" alt="Step 1 — Route" width="700">
+
 ### Step 2 — Travellers & Styles
 
 Set adults, add children with ages, and choose travel styles (Abenteuer, Entspannung, Kultur, Romantik, Kulinarik, Roadtrip, Natur, Stadt, Wellness, Sport, Gruppe, Familie, Slow Travel, Party). Add a free-text trip description.
 
+<img src="docs/images/form-step2-travellers.png" alt="Step 2 — Travellers & Styles" width="700">
+
 ### Step 3 — Trip Legs
 
 Define your trip legs as **Transit** (drive from A to B with stops) or **Explore** (discover a geographic zone). Each leg shows a map with the zone or route segment.
+
+<img src="docs/images/form-step3-legs.png" alt="Step 3 — Trip Legs" width="700">
 
 ### Step 4 — Accommodation & Activities
 
@@ -351,10 +354,14 @@ Define your trip legs as **Transit** (drive from A to B with stops) or **Explore
 - Must-do activities as tags, max distance from accommodation
 - Min / max nights per stop
 
+<img src="docs/images/form-step4-accommodation.png" alt="Step 4 — Accommodation & Activities" width="700">
+
 ### Step 5 — Budget & Submit
 
 - Total budget in CHF with % split sliders (accommodation / food / activities)
 - Review summary and submit
+
+<img src="docs/images/form-step5-budget.png" alt="Step 5 — Budget & Submit" width="700">
 
 ### Region Planning
 
@@ -372,14 +379,25 @@ Claude proposes **3 stop options** per segment, evenly spaced via OSRM geometry.
 
 ### Travel Guide
 
-Four tabs in the finished plan:
+#### Übersicht
+Route map, key stats, Google Maps link, downloads.
 
-| Tab | Content |
-|-----|---------|
-| **Übersicht** | Route map, key stats, Google Maps link, downloads |
-| **Stops & Details** | Per-stop card: accommodation, activities, restaurants |
-| **Tagesplan** | Day-by-day breakdown with interactive day maps, driving legs, and highlights |
-| **Budget** | Itemised: accommodation · fuel · activities · food · total vs. budget |
+<img src="docs/images/guide-uebersicht.png" alt="Travel Guide — Übersicht tab" width="700">
+
+#### Stops & Details
+Per-stop card: accommodation, activities, restaurants.
+
+<img src="docs/images/guide-stops.png" alt="Travel Guide — Stops & Details tab" width="700">
+
+#### Tagesplan
+Day-by-day breakdown with interactive day maps, driving legs, and highlights.
+
+<img src="docs/images/guide-tagesplan.png" alt="Travel Guide — Tagesplan tab" width="700">
+
+#### Budget
+Itemised: accommodation · fuel · activities · food · total vs. budget.
+
+<img src="docs/images/guide-budget.png" alt="Travel Guide — Budget tab" width="700">
 
 ---
 
