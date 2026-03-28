@@ -29,6 +29,8 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - COOKIE_SECURE=${COOKIE_SECURE:-true}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_REPO=${GITHUB_REPO:-}
     depends_on:
       redis:
         condition: service_healthy

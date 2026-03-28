@@ -6007,3 +6007,79 @@ strong.req-keyword {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Feedback FAB + Modal
+   --------------------------------------------------------------------------- */
+.feedback-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.feedback-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+.feedback-fab:active {
+  transform: scale(0.95);
+}
+
+.feedback-modal-content {
+  max-width: 520px;
+}
+.feedback-modal-content textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+.feedback-modal-content .modal-actions {
+  display: flex;
+  gap: var(--space-sm, 0.5rem);
+  justify-content: flex-end;
+  margin-top: var(--space-md, 1rem);
+}
+.feedback-screenshot-btn {
+  font-size: 13px;
+}
+.feedback-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.feedback-preview-row img {
+  max-width: 100%;
+  max-height: 150px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #ddd);
+}
+.feedback-screenshot-remove {
+  color: var(--text-sub, #888);
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.feedback-screenshot-remove:hover {
+  color: var(--danger, #e53935);
+}
+
+@media (max-width: 600px) {
+  .feedback-fab {
+    bottom: 16px;
+    right: 16px;
+    width: 44px;
+    height: 44px;
+  }
+}

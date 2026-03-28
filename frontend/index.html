@@ -750,6 +750,9 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
+<!-- ======================================================== html2canvas (for feedback screenshots) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 <!-- ======================================================== JS modules -->
 <script src="/js/loading.js"></script>
 <script src="/js/sse-overlay.js"></script>
@@ -772,6 +775,7 @@
 <script src="/js/travels.js"></script>
 <script src="/js/settings.js"></script>
 <script src="/js/sidebar.js"></script>
+<script src="/js/feedback.js"></script>
 
 <script>
   // ── Auth helpers ──────────────────────────────────────────────────────────────
@@ -1070,6 +1074,12 @@
   setTimeout(advance, randomDelay());
 })();
 </script>
+
+<button class="feedback-fab" onclick="openFeedbackModal()" title="Feedback senden" aria-label="Feedback senden">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+</button>
 
 </body>
 </html>

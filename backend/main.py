@@ -32,6 +32,7 @@ from utils.auth_db import admin_exists, create_user, assign_orphan_trips, get_us
 from utils.migrations import run_migrations
 from routers.auth import router as auth_router
 from routers.admin import router as admin_router
+from routers.feedback import router as feedback_router
 from utils.debug_logger import debug_logger, LogLevel
 from utils.route_edit_lock import acquire_edit_lock
 from utils.maps_helper import (
@@ -170,6 +171,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(admin_router)
+app.include_router(feedback_router)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
