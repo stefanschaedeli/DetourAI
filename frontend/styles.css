@@ -1608,7 +1608,7 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   position: fixed;
   left: 0;
   top: 0;
-  width: 58%;
+  width: 45%;
   height: 100vh; /* fallback for older browsers */
   height: 100dvh;
   z-index: 1;
@@ -1628,8 +1628,8 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 }
 
 .guide-content-panel {
-  margin-left: 58%;
-  width: 42%;
+  margin-left: 45%;
+  width: 55%;
   min-height: 100dvh;
   padding: var(--space-lg);
   overflow-y: auto;
@@ -1825,7 +1825,7 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 
 .stat-pill .stat-num {
   display: block;
-  font-size: var(--text-3xl);
+  font-size: var(--text-xl);
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.1;
