@@ -396,12 +396,13 @@ async def _start_explore_leg(job: dict, job_id: str, request: TravelRequest) -> 
     }
 
 
-def _leg_meta(request: TravelRequest, leg_index: int) -> dict:
+def _leg_meta(request: TravelRequest, leg_index: int, *, is_explore: bool = False) -> dict:
     """Returns leg_index, total_legs, leg_mode fields for meta responses."""
     return {
         "leg_index": leg_index,
         "total_legs": len(request.legs),
         "leg_mode": request.legs[leg_index].mode if leg_index < len(request.legs) else None,
+        "is_explore": is_explore,
     }
 
 
@@ -1215,7 +1216,7 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None, curren
             "segment_target": segment_target,
             "map_anchors": map_anchors,
             "skip_nights_bonus": _calc_skip_bonus(route_status["days_remaining"], request),
-            **_leg_meta(request, job["leg_index"]),
+            **_leg_meta(request, job["leg_index"], is_explore=bool(job.get("explore_regions"))),
         },
     }
 
@@ -1362,7 +1363,7 @@ async def select_stop(job_id: str, body: StopSelectRequest, current_user: Curren
                 "segment_target": segment_target,
                 "map_anchors": map_anchors,
                 "skip_nights_bonus": _calc_skip_bonus(new_status["days_remaining"], request),
-                **_leg_meta(request, job["leg_index"]),
+                **_leg_meta(request, job["leg_index"], is_explore=bool(job.get("explore_regions"))),
             },
         }
 
@@ -1411,7 +1412,7 @@ async def select_stop(job_id: str, body: StopSelectRequest, current_user: Curren
                     "segment_index": seg_idx,
                     "segment_count": n_segments,
                     "segment_target": leg.end_location,
-                    **_leg_meta(request, leg_index),
+                    **_leg_meta(request, leg_index, is_explore=bool(job.get("explore_regions"))),
                 },
             }
 
@@ -1468,7 +1469,7 @@ async def select_stop(job_id: str, body: StopSelectRequest, current_user: Curren
                 "segment_target": segment_target,
                 "map_anchors": map_anchors,
                 "skip_nights_bonus": _calc_skip_bonus(new_status["days_remaining"], request),
-                **_leg_meta(request, job["leg_index"]),
+                **_leg_meta(request, job["leg_index"], is_explore=bool(job.get("explore_regions"))),
             },
         }
 
@@ -1546,7 +1547,7 @@ async def recompute_options(job_id: str, body: RecomputeRequest, current_user: C
             "segment_target": segment_target,
             "map_anchors": map_anchors,
             "skip_nights_bonus": _calc_skip_bonus(route_status["days_remaining"], request),
-            **_leg_meta(request, job["leg_index"]),
+            **_leg_meta(request, job["leg_index"], is_explore=bool(job.get("explore_regions"))),
         },
     }
 
@@ -1684,7 +1685,7 @@ async def patch_job(job_id: str, body: PatchJobRequest, current_user: CurrentUse
             "map_anchors": map_anchors,
             "skip_nights_bonus": _calc_skip_bonus(new_status["days_remaining"], request),
             "total_days": request.total_days,
-            **_leg_meta(request, leg_index),
+            **_leg_meta(request, leg_index, is_explore=bool(job.get("explore_regions"))),
         },
     }
 
@@ -2638,9 +2639,181 @@ async def skip_to_leg_end(job_id: str, current_user: CurrentUser = Depends(get_c
             "options": [],
             "meta": {
                 "route_could_be_complete": True,
-                **_leg_meta(request, leg_index),
+                **_leg_meta(request, leg_index, is_explore=bool(job.get("explore_regions"))),
             },
         }
+
+
+# ---------------------------------------------------------------------------
+# POST /api/skip-segment/{job_id}
+# ---------------------------------------------------------------------------
+
+@app.post("/api/skip-segment/{job_id}")
+async def skip_segment(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
+    """Skip current explore region — create one stop with region name and advance to next region."""
+    job = get_job(job_id)
+    request = TravelRequest(**job["request"])
+    leg_index = job["leg_index"]
+    leg = request.legs[leg_index]
+
+    explore_regions = job.get("explore_regions")
+    explore_budgets = job.get("explore_segment_budgets")
+    if not explore_regions or not explore_budgets:
+        raise HTTPException(409, "Nur im Erkunden-Modus verfügbar")
+
+    seg_idx = job["segment_index"]
+    n_segments = len(leg.via_points) + 1
+    is_last_segment = seg_idx == n_segments - 1
+
+    if seg_idx >= len(explore_regions):
+        raise HTTPException(409, "Kein weiteres Segment zum Überspringen")
+
+    region = explore_regions[seg_idx]
+    region_name = region["name"]
+    region_nights = max(request.min_nights_per_stop, explore_budgets[seg_idx] - 1)
+
+    # Create a single stop for the skipped region
+    job["stop_counter"] += 1
+    skip_stop = {
+        "id": job["stop_counter"],
+        "option_type": "direct",
+        "region": region_name,
+        "country": "XX",
+        "drive_hours": 1.0,
+        "nights": region_nights,
+        "highlights": region.get("highlights", []),
+        "teaser": f"Region übersprungen: {region_name}",
+        "is_fixed": False,
+    }
+    if region.get("lat") and region.get("lon"):
+        skip_stop["lat"] = region["lat"]
+        skip_stop["lon"] = region["lon"]
+
+    job["selected_stops"].append(skip_stop)
+
+    if not is_last_segment:
+        # Advance to next region
+        job["segment_index"] += 1
+        job["segment_stops"] = []
+        new_seg = job["segment_index"]
+
+        if new_seg < len(explore_budgets):
+            job["segment_budget"] = explore_budgets[new_seg]
+        else:
+            job["segment_budget"] = _calc_leg_segment_budget(request, leg_index)
+
+        new_is_last = new_seg == n_segments - 1
+        segment_target = (
+            leg.via_points[new_seg].location
+            if new_seg < len(leg.via_points)
+            else leg.end_location
+        )
+
+        # Region-specific instructions for next region
+        if new_seg < len(explore_regions):
+            er = explore_regions[new_seg]
+            extra_instr = f"Suche Städte/Orte IN der Region {er['name']}. Highlights: {', '.join(er.get('highlights', []))}."
+        else:
+            extra_instr = ""
+
+        prev_loc = region_name
+        stops_in_new_seg = max(1, (job["segment_budget"] - 1) // (1 + request.min_nights_per_stop))
+
+        next_geo = await _calc_route_geometry_cached(
+            job, job_id, prev_loc, segment_target,
+            stops_in_new_seg, request.max_drive_hours_per_day,
+            origin_location=leg.start_location,
+            proximity_origin_pct=request.proximity_origin_pct,
+            proximity_target_pct=request.proximity_target_pct,
+        )
+
+        from agents.stop_options_finder import StopOptionsFinderAgent
+        agent = StopOptionsFinderAgent(job_id=job_id)
+        next_options, map_anchors, estimated_total, _ = await _find_and_stream_options(
+            agent=agent,
+            job_id=job_id,
+            selected_stops=job["selected_stops"],
+            stop_number=job["stop_counter"] + 1,
+            days_remaining=job["segment_budget"],
+            route_could_be_complete=False,
+            segment_target=segment_target,
+            segment_index=new_seg,
+            segment_count=n_segments,
+            prev_location=prev_loc,
+            max_drive_hours=request.max_drive_hours_per_day,
+            route_geometry=next_geo,
+            extra_instructions=extra_instr,
+        )
+
+        job["current_options"] = next_options
+        save_job(job_id, job)
+
+        new_status = _calc_route_status(request, job["segment_stops"], job["segment_budget"], new_is_last)
+
+        return {
+            "job_id": job_id,
+            "selected_stop": skip_stop,
+            "selected_stops": job["selected_stops"],
+            "options": next_options,
+            "meta": {
+                "stop_number": job["stop_counter"] + 1,
+                "days_remaining": new_status["days_remaining"],
+                "estimated_total_stops": estimated_total,
+                "route_could_be_complete": new_status["route_could_be_complete"],
+                "must_complete": new_status["must_complete"],
+                "segment_index": new_seg,
+                "segment_count": n_segments,
+                "segment_target": segment_target,
+                "map_anchors": map_anchors,
+                "skip_nights_bonus": _calc_skip_bonus(new_status["days_remaining"], request),
+                **_leg_meta(request, leg_index, is_explore=True),
+            },
+        }
+
+    else:
+        # Last segment in explore leg
+        total_legs = len(request.legs)
+
+        await debug_logger.push_event(
+            job_id, "leg_complete", None,
+            {"leg_id": leg.leg_id, "leg_index": leg_index, "mode": leg.mode}
+        )
+
+        if leg_index < total_legs - 1:
+            _advance_to_next_leg(job, request)
+            save_job(job_id, job)
+
+            next_leg = request.legs[job["leg_index"]]
+            if next_leg.mode == "explore":
+                result = await _start_explore_leg(job, job_id, request)
+            else:
+                result = await _start_leg_route_building(job, job_id, request)
+
+            result["job_id"] = job_id
+            result["selected_stop"] = skip_stop
+            result["selected_stops"] = job["selected_stops"]
+            return result
+        else:
+            job["current_options"] = []
+            job["route_could_be_complete"] = True
+            save_job(job_id, job)
+            return {
+                "job_id": job_id,
+                "selected_stop": skip_stop,
+                "selected_stops": job["selected_stops"],
+                "options": [],
+                "meta": {
+                    "stop_number": job["stop_counter"] + 1,
+                    "days_remaining": 0,
+                    "estimated_total_stops": len(job["selected_stops"]),
+                    "route_could_be_complete": True,
+                    "must_complete": True,
+                    "segment_index": seg_idx,
+                    "segment_count": n_segments,
+                    "segment_target": leg.end_location,
+                    **_leg_meta(request, leg_index, is_explore=True),
+                },
+            }
 
 
 # ---------------------------------------------------------------------------

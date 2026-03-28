@@ -209,6 +209,10 @@ async function apiSkipToLegEnd(jobId) {
   return (await _fetchQuiet(`${API}/skip-to-leg-end/${jobId}`, { method: 'POST' })).json();
 }
 
+async function apiSkipSegment(jobId) {
+  return (await _fetchQuiet(`${API}/skip-segment/${jobId}`, { method: 'POST' })).json();
+}
+
 async function replaceRegion(jobId, index, instruction) {
   return await _fetchQuiet(`${API}/replace-region/${jobId}`, {
     method: 'POST',

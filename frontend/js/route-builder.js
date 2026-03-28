@@ -722,9 +722,55 @@ async function skipStop() {
   const meta = routeMeta || {};
   const totalLegs = meta.total_legs || 1;
   const legIdx = meta.leg_index || 0;
+  const isExplore = meta.is_explore || false;
 
-  if (totalLegs > 1 && legIdx < totalLegs - 1) {
-    // Multi-leg: skip to current leg's end and advance
+  if (isExplore) {
+    // Explore mode: skip current region only, create one stop with region name
+    S.loadingOptions = true;
+    _clearMap();
+    if (S.jobId) {
+      progressOverlay.open('Region wird übersprungen…');
+      openRouteSSE(S.jobId);
+    }
+    _showSkeletonCards();
+
+    try {
+      const data = await apiSkipSegment(S.jobId);
+      if (data.selected_stop) addBuiltStop(data.selected_stop);
+      saveRouteState();
+
+      const options = data.options || [];
+      const newMeta = data.meta || {};
+
+      if (data.explore_pending) {
+        progressOverlay.close();
+        closeRouteSSE();
+        _streamingOptions = [];
+        S.loadingOptions = false;
+        routeMeta = { ...routeMeta, ...newMeta };
+        renderBuiltStops();
+        _updateRouteStatus(newMeta);
+        return;
+      }
+
+      progressOverlay.close();
+      closeRouteSSE();
+      _streamingOptions = [];
+
+      if (options.length === 0 && newMeta.route_could_be_complete) {
+        renderOptions([], newMeta);
+      } else {
+        renderOptions(options, newMeta);
+      }
+    } catch (err) {
+      const container = document.getElementById('route-options-container');
+      if (container) container.textContent = `Fehler: ${err.message}`;
+      progressOverlay.close();
+      closeRouteSSE();
+      S.loadingOptions = false;
+    }
+  } else if (totalLegs > 1 && legIdx < totalLegs - 1) {
+    // Multi-leg transit: skip to current leg's end and advance
     S.loadingOptions = true;
     _clearMap();
     if (S.jobId) {
