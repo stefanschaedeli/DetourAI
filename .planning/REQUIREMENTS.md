@@ -29,7 +29,7 @@ Requirements for v1.1 Polish & Travel View Redesign. Each maps to roadmap phases
 
 ### Verification
 
-- [ ] **VRFY-01**: 18 pending UI items from Phases 3, 4, and 10 verified in browser and fixed if broken
+- [x] **VRFY-01**: 18 pending UI items from Phases 3, 4, and 10 verified in browser and fixed if broken
 
 ## Future Requirements
 
@@ -67,7 +67,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NAV-04 | Phase 10 | Complete |
 | NAV-05 | Phase 10 | Complete |
 | NAV-06 | Phase 10 | Complete |
-| VRFY-01 | Phase 11 | Pending |
+| VRFY-01 | Phase 11 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 12 total

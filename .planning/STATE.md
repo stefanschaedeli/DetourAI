@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Polish & Travel View Redesign
 status: executing
-stopped_at: Phase 11 context gathered
-last_updated: "2026-03-27T21:21:16.260Z"
-last_activity: 2026-03-27
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-03-28T19:54:09.338Z"
+last_activity: 2026-03-28
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 11
+  completed_plans: 9
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** Route planning and stop discovery must produce consistently high-quality, geographically correct results for any destination type.
-**Current focus:** Phase 10 — progressive-disclosure-ui
+**Current focus:** Phase 11 — browser-verification
 
 ## Current Position
 
-Phase: 10 (progressive-disclosure-ui) — EXECUTING
-Plan: 2 of 3
+Phase: 11 (browser-verification) — EXECUTING
+Plan: 3 of 4
 Status: Ready to execute
-Last activity: 2026-03-27
+Last activity: 2026-03-28
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 09 P02 | 5 | 2 tasks | 1 files |
 | Phase 10 P01 | 4 | 2 tasks | 4 files |
 | Phase 10 P02 | 5 | 2 tasks | 2 files |
+| Phase 11 P02 | 4 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ All v1.0 decisions archived in PROJECT.md Key Decisions table and milestones/v1.
 - [Phase 10]: _initBreadcrumbDelegation() uses separate listener on #guide-breadcrumb — breadcrumb outside #guide-content delegation scope
 - [Phase 10]: activateDayDetail/activateStopDetail use _drillTransition for consistent UX on browser back/forward
 - [Phase 10]: router _travel handler resets activeTab/_activeDayNum/_activeStopId before showTravelGuide for correct browser back-to-overview behavior
+- [Phase 11]: Split-panel ratio changed to 45/55 (map/content) for better content readability
+- [Phase 11]: fitDayStops uses addListenerOnce idle handler to cap zoom at 13
 
 ### Pending Todos
 
@@ -82,6 +85,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-27T21:21:16.258Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-browser-verification/11-CONTEXT.md
+Last session: 2026-03-28T19:53:57.331Z
+Stopped at: Completed 11-02-PLAN.md
+Resume file: None
