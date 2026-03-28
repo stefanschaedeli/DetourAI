@@ -2,7 +2,8 @@
 // Reads: S (state.js), esc() (state.js), activeTab/_activeStopId (guide-core.js).
 // Provides: renderStopCard, renderStopsOverview, renderStopDetail, navigateToStop,
 //           navigateToStopsOverview, activateStopDetail, _onCardClick, _lazyLoadCardImages,
-//           _lazyLoadSingleStopImages, _initStopMap, _buildStopMapPin, _buildStopMapPopup
+//           _lazyLoadSingleStopImages, _initStopMap, _buildStopMapPin, _buildStopMapPopup,
+//           stop-drop-zone elements (for drag-and-drop between cards)
 'use strict';
 
 let _initializedStopMaps = new Set();
@@ -15,6 +16,8 @@ function renderStopCard(stop, i, totalStops) {
     if (stop.drive_km_from_prev > 0) driveInfo += ' \u00b7 ' + esc(String(stop.drive_km_from_prev)) + ' km';
   }
   var nightsText = stop.nights + ' Nacht' + (stop.nights !== 1 ? 'e' : '');
+  var nightsHtml = '<span class="stop-nights-editable" onclick="event.stopPropagation(); _editStopNights(' + stop.id + ', ' + stop.nights + ')">' +
+    esc(nightsText) + ' <svg class="inline-edit-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>';
 
   var tagsHtml = '';
   if (stop.tags && stop.tags.length > 0) {
@@ -50,10 +53,7 @@ function renderStopCard(stop, i, totalStops) {
 
   return '<div class="stop-card-row" data-stop-id="' + stop.id + '" data-stop-index="' + i + '" draggable="true" ' +
     'ondragstart="_onStopDragStart(event, ' + i + ')" ' +
-    'ondragend="_onStopDragEnd(event)" ' +
-    'ondragover="event.preventDefault(); this.classList.add(\'drag-over\')" ' +
-    'ondragleave="this.classList.remove(\'drag-over\')" ' +
-    'ondrop="_onStopDrop(event, ' + i + ')">' +
+    'ondragend="_onStopDragEnd(event)">' +
     '<div class="stop-card-photo">' + buildHeroPhotoLoading('sm') + '</div>' +
     '<div class="stop-card-info">' +
       '<div class="stop-card-title">' +
@@ -62,7 +62,7 @@ function renderStopCard(stop, i, totalStops) {
       '</div>' +
       '<div class="stop-card-meta">' +
         (driveInfo ? '<span>' + driveInfo + '</span>' : '') +
-        '<span>' + esc(nightsText) + '</span>' +
+        nightsHtml +
       '</div>' +
       tagsHtml +
       descHtml +
@@ -77,11 +77,24 @@ function renderStopCard(stop, i, totalStops) {
 
 function renderStopsOverview(plan) {
   var stops = plan.stops || [];
-  var cards = stops.map(function (stop, i) {
-    return renderStopCard(stop, i, stops.length);
-  }).join('');
+  var html = '';
+  for (var i = 0; i < stops.length; i++) {
+    // Drop zone before each card (insert at position i)
+    html += '<div class="stop-drop-zone" data-drop-index="' + i + '" ' +
+      'ondragover="event.preventDefault(); this.classList.add(\'drop-zone-active\')" ' +
+      'ondragleave="this.classList.remove(\'drop-zone-active\')" ' +
+      'ondrop="_onDropZoneDrop(event, ' + i + ')">' +
+      '<div class="drop-zone-line"></div></div>';
+    html += renderStopCard(stops[i], i, stops.length);
+  }
+  // Drop zone after last card (insert at end = stops.length)
+  html += '<div class="stop-drop-zone" data-drop-index="' + stops.length + '" ' +
+    'ondragover="event.preventDefault(); this.classList.add(\'drop-zone-active\')" ' +
+    'ondragleave="this.classList.remove(\'drop-zone-active\')" ' +
+    'ondrop="_onDropZoneDrop(event, ' + stops.length + ')">' +
+    '<div class="drop-zone-line"></div></div>';
 
-  return '<div class="stop-cards-list">' + cards + '</div>' +
+  return '<div class="stop-cards-list">' + html + '</div>' +
     '<div class="stops-overview-actions">' +
       '<button class="btn btn-primary add-stop-btn" onclick="_openAddStopModal()">+ Stopp hinzuf\u00fcgen</button>' +
     '</div>';

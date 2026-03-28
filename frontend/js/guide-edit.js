@@ -5,6 +5,7 @@
 //           _openAddStopModal, _executeAddStop, _haversineKm, _onMapClickToAdd,
 //           _showClickToAddPopup, _hideClickToAddPopup, _confirmClickToAdd,
 //           _doAddStopFromMap, _onStopDragStart, _onStopDragEnd, _onStopDrop,
+//           _onDropZoneDrop, _editStopNights,
 //           openReplaceStopModal, closeReplaceStopModal, _switchReplaceTab,
 //           _showReplaceProgress, _hideReplaceProgress, _doManualReplace,
 //           _doSearchReplace, _selectSearchOption, _listenForReplaceComplete
@@ -513,6 +514,7 @@ function _onStopDragStart(e, index) {
 
 function _onStopDragEnd(e) {
   e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.stop-drop-zone').forEach(z => z.classList.remove('drop-zone-active'));
 }
 
 async function _onStopDrop(e, targetIndex) {
@@ -562,6 +564,63 @@ async function _onStopDrop(e, targetIndex) {
     _unlockEditing();
     alert('Fehler: ' + err.message);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Drop Zone handler for between-card drag-and-drop (GAP-06)
+// Must be top-level (not inside an IIFE) for inline HTML ondrop attributes.
+// ---------------------------------------------------------------------------
+
+async function _onDropZoneDrop(e, dropBeforeIndex) {
+  e.preventDefault();
+  document.querySelectorAll('.stop-drop-zone').forEach(z => z.classList.remove('drop-zone-active'));
+
+  if (_dragStopSourceIndex === null) return;
+  var sourceIdx = _dragStopSourceIndex;
+
+  // Convert "insert before dropBeforeIndex" to "move to position"
+  // If dragging downward, the removal of source shifts indexes
+  var targetIdx = dropBeforeIndex;
+  if (sourceIdx < dropBeforeIndex) targetIdx = dropBeforeIndex - 1;
+
+  if (sourceIdx === targetIdx) {
+    _dragStopSourceIndex = null;
+    return;
+  }
+
+  // Delegate to existing _onStopDrop
+  _onStopDrop(e, targetIdx);
+}
+
+// ---------------------------------------------------------------------------
+// Inline nights edit — local-state-only update (GAP-07)
+// ---------------------------------------------------------------------------
+
+function _editStopNights(stopId, currentNights) {
+  if (_editInProgress) return;
+  var input = prompt('Anzahl N\u00e4chte:', currentNights);
+  if (input === null) return;
+  var nights = parseInt(input);
+  if (isNaN(nights) || nights < 1 || nights > 14) {
+    alert('Bitte eine Zahl zwischen 1 und 14 eingeben.');
+    return;
+  }
+  if (nights === currentNights) return;
+
+  // Update local state only — persisted when travel is saved
+  var stops = (S.result && S.result.stops) || [];
+  for (var i = 0; i < stops.length; i++) {
+    if (stops[i].id === stopId) {
+      stops[i].nights = nights;
+      break;
+    }
+  }
+
+  // Update localStorage cache
+  lsSet(LS_RESULT, { savedAt: new Date().toISOString(), plan: S.result });
+
+  // Re-render stops view to show updated nights
+  renderGuide(S.result, 'stops');
 }
 
 // ---------------------------------------------------------------------------

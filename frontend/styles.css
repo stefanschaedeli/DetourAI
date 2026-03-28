@@ -1878,12 +1878,57 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   box-shadow: 0 4px 16px rgba(124,107,224,0.12);
 }
 
-.stop-card-row.drag-over {
-  border: 2px dashed var(--accent-primary);
-}
-
 .stop-card-row.dragging {
   opacity: 0.5;
+}
+
+/* Drop zone between stop cards for drag reorder (GAP-06) */
+.stop-drop-zone {
+  height: 8px;
+  position: relative;
+  transition: height 0.2s ease;
+}
+
+.stop-drop-zone .drop-zone-line {
+  display: none;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  margin: 0 var(--space-md);
+}
+
+.stop-drop-zone.drop-zone-active {
+  height: 20px;
+}
+
+.stop-drop-zone.drop-zone-active .drop-zone-line {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+}
+
+/* Inline nights edit trigger (GAP-07) */
+.stop-nights-editable {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stop-nights-editable:hover {
+  color: var(--accent);
+}
+
+.stop-nights-editable .inline-edit-icon {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.stop-nights-editable:hover .inline-edit-icon {
+  opacity: 1;
 }
 
 .stop-card-photo {
