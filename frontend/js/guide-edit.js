@@ -303,8 +303,31 @@ function _onMapClickToAdd(latLng) {
   _hideClickToAddPopup();
   var geocoder = new google.maps.Geocoder();
   geocoder.geocode({ location: { lat: latLng.lat(), lng: latLng.lng() } }, function(results, status) {
-    if (status !== 'OK' || !results || !results[0]) return;
-    var placeName = results[0].formatted_address || '';
+    if (status !== 'OK' || !results || !results.length) return;
+
+    // Build a clean short name from address components (avoids garbled full addresses)
+    var placeName = '';
+    var components = results[0].address_components || [];
+    var locality = '';
+    var region = '';
+    var country = '';
+    for (var c = 0; c < components.length; c++) {
+      var types = components[c].types || [];
+      if (types.indexOf('locality') !== -1) locality = components[c].long_name;
+      else if (types.indexOf('administrative_area_level_1') !== -1) region = components[c].long_name;
+      else if (types.indexOf('country') !== -1) country = components[c].long_name;
+    }
+
+    if (locality) {
+      placeName = locality + (country ? ', ' + country : '');
+    } else if (region) {
+      placeName = region + (country ? ', ' + country : '');
+    } else {
+      // Fallback: first two parts of formatted_address
+      var parts = (results[0].formatted_address || '').split(',');
+      placeName = parts.slice(0, 2).join(',').trim();
+    }
+
     _showClickToAddPopup(latLng, placeName);
   });
 }
