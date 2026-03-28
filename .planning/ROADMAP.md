@@ -84,12 +84,12 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Each of the 18 pending UI verification items has been tested in a browser against the current travel view layout
   2. Any items found broken during verification are fixed and re-verified
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 Plans:
 - [x] 11-01-PLAN.md — Verify all 18 UI items in browser, document results, fix trivial issues inline
 - [x] 11-02-PLAN.md — Fix split-panel ratio, stats bar font, and map over-zoom (GAP-01, GAP-02, GAP-03)
 - [x] 11-03-PLAN.md — Fix SSE edit lock release and reverse geocode encoding (GAP-04, GAP-05)
-- [ ] 11-04-PLAN.md — Fix drag-and-drop drop zones and inline duration editing (GAP-06, GAP-07)
+- [x] 11-04-PLAN.md — Fix drag-and-drop drop zones and inline duration editing (GAP-06, GAP-07)
 **UI hint**: yes
 
 ## Progress
@@ -108,4 +108,4 @@ Plans:
 | 8. Tech Debt Stabilization | v1.1 | 2/2 | Complete   | 2026-03-27 |
 | 9. Guide Module Split | v1.1 | 2/2 | Complete   | 2026-03-27 |
 | 10. Progressive Disclosure UI | v1.1 | 3/3 | Complete   | 2026-03-27 |
-| 11. Browser Verification | v1.1 | 2/4 | In Progress|  |
+| 11. Browser Verification | v1.1 | 3/4 | In Progress|  |

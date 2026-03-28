@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Polish & Travel View Redesign
 status: executing
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-03-28T19:54:22.683Z"
+stopped_at: Completed 11-04-PLAN.md
+last_updated: "2026-03-28T19:55:53.758Z"
 last_activity: 2026-03-28
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 ## Current Position
 
 Phase: 11 (browser-verification) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-03-28
 
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 10 P02 | 5 | 2 tasks | 2 files |
 | Phase 11 P02 | 4 | 2 tasks | 2 files |
 | Phase 11 P03 | 4 | 2 tasks | 1 files |
+| Phase 11 P04 | 8 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ All v1.0 decisions archived in PROJECT.md Key Decisions table and milestones/v1.
 - [Phase 11]: fitDayStops uses addListenerOnce idle handler to cap zoom at 13
 - [Phase 11]: onerror handler added to all 5 openSSE call sites — ensures edit lock always releases on connection failure
 - [Phase 11]: address_components preferred over formatted_address for clean city/country name extraction
+- [Phase 11]: Drop zones as separate divs between stop cards; cards are drag sources only — avoids ambiguous on-card drop behavior
+- [Phase 11]: Nights edit uses prompt() with local-state-only update; no backend PATCH endpoint needed for gap closure
 
 ### Pending Todos
 
@@ -88,6 +91,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-28T19:54:22.681Z
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-03-28T19:55:53.756Z
+Stopped at: Completed 11-04-PLAN.md
 Resume file: None
