@@ -288,7 +288,7 @@ Gib exakt dieses JSON zurück:
                 gp_match = None
 
             # ACC-01: haversine distance check for Geheimtipp
-            if is_geheimtipp and gp_match and gp_match.get("lat") and gp_match.get("lon"):
+            if is_geheimtipp and lat and lon and gp_match and gp_match.get("lat") and gp_match.get("lon"):
                 dist_km = haversine_km((lat, lon), (gp_match["lat"], gp_match["lon"]))
                 if dist_km > req.hotel_radius_km:
                     await debug_logger.log(

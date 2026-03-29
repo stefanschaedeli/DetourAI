@@ -33,19 +33,19 @@ function renderStopCard(stop, i, totalStops) {
 
   // Edit action buttons — always visible (D-08)
   var removeBtn = totalStops > 1
-    ? '<button class="stop-edit-icon stop-edit-remove" aria-label="Stopp entfernen" ' +
+    ? '<button class="stop-edit-icon stop-edit-remove" aria-label="Stopp entfernen" data-tooltip="Entfernen" ' +
       'onclick="event.stopPropagation(); _confirmRemoveStop(' + stop.id + ')">' +
       '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
       '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
     : '';
 
-  var replaceBtn = '<button class="stop-edit-icon stop-edit-replace" aria-label="Stopp ersetzen" ' +
+  var replaceBtn = '<button class="stop-edit-icon stop-edit-replace" aria-label="Stopp ersetzen" data-tooltip="Ersetzen" ' +
     'onclick="event.stopPropagation(); openReplaceStopModal(' + stop.id + ', ' + stop.nights + ')">' +
     '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
     '<path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>';
 
-  var dragBtn = '<button class="stop-edit-icon stop-edit-drag" aria-label="Stopp verschieben">' +
+  var dragBtn = '<button class="stop-edit-icon stop-edit-drag" aria-label="Stopp verschieben" data-tooltip="Verschieben">' +
     '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">' +
     '<circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>' +
     '<circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>' +
@@ -128,10 +128,41 @@ function _lazyLoadCardImages(plan) {
     var stop = stops[idx];
     if (!stop) return;
     var photoContainer = card.querySelector('.stop-card-photo');
-    if (photoContainer) {
-      _lazyLoadEntityImages(photoContainer, stop.region, stop.lat, stop.lng, 'destination', 'sm');
-    }
+    if (!photoContainer) return;
+    // Pass place_id when available for Tier 0 (Place Details) image lookup
+    var pid = stop.place_id || null;
+    _lazyLoadEntityImagesForCard(photoContainer, stop.region, stop.lat, stop.lng, pid);
   });
+}
+
+async function _lazyLoadEntityImagesForCard(containerEl, placeName, lat, lng, placeId) {
+  var placeholder = containerEl ? containerEl.querySelector('.hero-photo-loading') : null;
+  if (!containerEl || typeof GoogleMaps === 'undefined') {
+    if (placeholder) placeholder.remove();
+    return;
+  }
+  var timer = placeholder && setTimeout(function() { if (placeholder.isConnected) placeholder.remove(); }, 12000);
+  try {
+    var urls = await GoogleMaps.getPlaceImages(placeName, lat, lng, 'destination', placeId);
+    clearTimeout(timer);
+    if (!urls || urls.length === 0) {
+      if (placeholder) placeholder.remove();
+      return;
+    }
+    var newHtml = buildHeroPhoto(urls, placeName, 'sm');
+    if (!newHtml) {
+      if (placeholder) placeholder.remove();
+      return;
+    }
+    if (placeholder) {
+      var tmp = document.createElement('div');
+      tmp.innerHTML = newHtml;  // buildHeroPhoto generates safe img tags from URL strings
+      placeholder.replaceWith(tmp.firstElementChild);
+    }
+  } catch (e) {
+    clearTimeout(timer);
+    if (placeholder) placeholder.remove();
+  }
 }
 
 // ---------------------------------------------------------------------------

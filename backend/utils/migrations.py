@@ -4,9 +4,42 @@ Versioned SQLite migration runner.
 Add new migrations by appending to MIGRATIONS — never modify existing entries.
 Each migration runs in a transaction; failure rolls back and raises (startup aborts).
 """
+import json
 import sqlite3
 from datetime import datetime, timezone
 from typing import Callable, List, Tuple, Union
+
+
+def _fix_arrival_day_chaining(conn: sqlite3.Connection) -> None:
+    """Re-chain arrival_day on all saved travels to fix v1.1 nights-edit drift."""
+    cur = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='travels'"
+    )
+    if cur.fetchone() is None:
+        return
+    rows = conn.execute("SELECT id, plan_json FROM travels").fetchall()
+    for row in rows:
+        try:
+            plan = json.loads(row[1])
+        except (json.JSONDecodeError, TypeError):
+            continue
+        stops = plan.get("stops")
+        if not stops or len(stops) == 0:
+            continue
+        # Rechain arrival_day: stop 0 = day 1, each subsequent = prev + prev.nights + 1
+        changed = False
+        expected = 1
+        for stop in stops:
+            if stop.get("arrival_day") != expected:
+                stop["arrival_day"] = expected
+                changed = True
+            expected = expected + stop.get("nights", 1) + 1
+        if changed:
+            conn.execute(
+                "UPDATE travels SET plan_json = ? WHERE id = ?",
+                (json.dumps(plan), row[0]),
+            )
+
 
 # (version, name, sql_string_or_callable)
 MIGRATIONS: List[Tuple[int, str, Union[str, Callable]]] = [
@@ -60,6 +93,11 @@ MIGRATIONS: List[Tuple[int, str, Union[str, Callable]]] = [
         6,
         "travels_add_share_token",
         lambda conn: _add_column_if_missing(conn, "travels", "share_token", "TEXT"),
+    ),
+    (
+        7,
+        "fix_arrival_day_chaining",
+        _fix_arrival_day_chaining,
     ),
 ]
 

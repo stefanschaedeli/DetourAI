@@ -499,7 +499,24 @@ function _initMap(anchors, options) {
   const bounds = new google.maps.LatLngBounds();
   let hasBounds = false;
 
-  // Start pin (green S)
+  // Show all previously selected stops as dimmed numbered markers
+  S.selectedStops.forEach((stop, i) => {
+    if (!stop.lat || !stop.lon) return;
+    // Skip the last stop — it gets the "S" marker below
+    if (i === S.selectedStops.length - 1) return;
+    const pos = { lat: stop.lat, lng: stop.lon };
+    const flag = (typeof FLAGS !== 'undefined' && FLAGS[stop.country]) || '';
+    const infoWin = new google.maps.InfoWindow({ content: `<b>Stop ${i + 1}: ${flag} ${esc(stop.region || '')}</b>` });
+    const m = GoogleMaps.createDivMarker(map, pos,
+      `<div class="map-marker-history">${i + 1}</div>`,
+      () => infoWin.open({ map, position: pos })
+    );
+    _rbMarkers.push(m);
+    bounds.extend(pos);
+    hasBounds = true;
+  });
+
+  // Start pin (green S) — current departure point (last selected stop)
   if (anchors.prev_lat && anchors.prev_lon) {
     const pos = { lat: anchors.prev_lat, lng: anchors.prev_lon };
     const infoWin = new google.maps.InfoWindow({ content: `<b>Start: ${esc(anchors.prev_label || '')}</b>` });

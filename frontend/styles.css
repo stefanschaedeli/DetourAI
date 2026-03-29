@@ -796,6 +796,17 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 .map-marker-anchor.start-pin { background: #66BB6A; }
 /* Segment-target pin: red */
 .map-marker-anchor.target-pin { background: #EF5350; }
+/* History markers: dimmed previously selected stops during route building */
+.map-marker-history {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--text-muted, #888);
+  opacity: 0.5;
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600;
+  border: 1.5px solid #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
 
 /* Leaflet Tooltip für Kartenmarker */
 .map-marker-tooltip-wrap {
@@ -2092,6 +2103,31 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 
 .stop-edit-drag { cursor: grab; }
 .stop-edit-drag:active { cursor: grabbing; }
+
+/* Tooltip for edit buttons via data-tooltip attribute */
+.stop-edit-icon[data-tooltip] {
+  position: relative;
+}
+.stop-edit-icon[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: var(--surface-elevated, #1d1d1f);
+  color: var(--text-on-dark, #fff);
+  font-size: var(--text-xs, 11px);
+  border-radius: var(--radius-sm, 4px);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+.stop-edit-icon[data-tooltip]:hover::after {
+  opacity: 1;
+}
 
 @media (max-width: 767px) {
   .stop-card-photo { width: 90px; }

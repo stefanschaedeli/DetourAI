@@ -264,6 +264,9 @@ const Router = (() => {
 
       const title = S.result.custom_name || S.result.title || '';
       document.title = `Reise: ${title} — DetourAI`;
+      // Reset drill state when navigating to a tab URL directly
+      _activeStopId = null;
+      _activeDayNum = null;
       showSection('travel-guide');
       activateGuideTab(tab);
     },
