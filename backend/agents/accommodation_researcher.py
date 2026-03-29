@@ -9,6 +9,7 @@ from utils.image_fetcher import fetch_unsplash_images
 from utils.brave_search import search_places
 from utils.google_places import search_hotels, place_photo_url
 from utils.currency import detect_currency, get_chf_rate
+from utils.maps_helper import haversine_km
 from agents._client import get_client, get_model, get_max_tokens
 from utils.settings_store import get_setting
 
@@ -115,11 +116,15 @@ class AccommodationResearcherAgent:
             rate = await get_chf_rate(local_currency)
             currency_block = f"\nDas Land verwendet {local_currency}. Gib Preise trotzdem in CHF an.\nAktueller Kurs: 1 {local_currency} = {rate:.4f} CHF\n"
 
+        coord_hint = ""
+        if lat and lon:
+            coord_hint = f"\nStopzentrum: {lat:.4f}N, {lon:.4f}E — alle Unterkuenfte muessen innerhalb von {req.hotel_radius_km} km davon liegen."
+
         prompt = f"""Finde genau 4 Unterkunftsoptionen in {region}, {country}.
 
 Reisende: {req.adults} Erwachsene{f', {children_count} Kinder' if children_count else ''}
 Nächte: {nights}
-Suchradius: {req.hotel_radius_km} km
+Suchradius: {req.hotel_radius_km} km{coord_hint}
 Preisrahmen pro Nacht: CHF {budget_min:.0f} – CHF {budget_max:.0f}{children_hint}{extra_hint}{mandatory_line}{pref_line}{desc_line}{currency_block}
 
 REGELN:
@@ -282,6 +287,17 @@ Gib exakt dieses JSON zurück:
             else:
                 gp_match = None
 
+            # ACC-01: haversine distance check for Geheimtipp
+            if is_geheimtipp and gp_match and gp_match.get("lat") and gp_match.get("lon"):
+                dist_km = haversine_km((lat, lon), (gp_match["lat"], gp_match["lon"]))
+                if dist_km > req.hotel_radius_km:
+                    await debug_logger.log(
+                        LogLevel.DEBUG,
+                        f"Geheimtipp '{hotel_name}' zu weit entfernt ({dist_km:.1f} km > {req.hotel_radius_km} km) — entfernt",
+                        job_id=self.job_id, agent=AGENT_KEY,
+                    )
+                    opt["_geheimtipp_too_far"] = True
+
             if gp_match and gp_match.get("photo_reference"):
                 opt["image_overview"] = place_photo_url(gp_match["photo_reference"])
                 opt["image_mood"] = None
@@ -294,7 +310,23 @@ Gib exakt dieses JSON zurück:
                 opt["place_id"] = gp_match["place_id"]
             return opt
 
-        options = await asyncio.gather(*[enrich_option(opt) for opt in result.get("options", [])])
-        result["options"] = list(options)
+        options = list(await asyncio.gather(*[enrich_option(opt) for opt in result.get("options", [])]))
+
+        # ACC-01: drop geheimtipps that are too far from stop center
+        options = [o for o in options if not o.pop("_geheimtipp_too_far", False)]
+
+        # ACC-02: name-based dedup within stop (case-insensitive)
+        seen_names: set = set()
+        deduped = []
+        for opt in options:
+            key = opt.get("name", "").strip().lower()
+            if key and key not in seen_names:
+                seen_names.add(key)
+                deduped.append(opt)
+            elif not key:
+                deduped.append(opt)  # keep options without names
+        options = deduped
+
+        result["options"] = options
 
         return result

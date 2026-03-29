@@ -1210,3 +1210,372 @@ def test_stop_options_nights_recommendation(mocker):
     assert "FÜR DIESEN STOP" in prompt
     assert "Empfehle 2 Nächte" in prompt
     assert "Elsass" in prompt
+
+
+# ---------------------------------------------------------------------------
+# Accommodation researcher — Geheimtipp distance filter (ACC-01)
+# ---------------------------------------------------------------------------
+
+def test_geheimtipp_distance_filter(mocker):
+    """ACC-01: Geheimtipp with gp_match beyond hotel_radius_km is dropped."""
+    import asyncio
+    from agents.accommodation_researcher import AccommodationResearcherAgent
+
+    # Stop center: Annecy ~45.899, 6.129
+    stop_lat, stop_lon = 45.899, 6.129
+
+    # Geheimtipp gp_match 50 km away (should be dropped with radius=25)
+    far_gp = {"name": "Geheimes Chalet", "lat": 46.35, "lon": 6.5, "rating": 9.0,
+               "user_ratings_total": 20, "address": "Weit weg", "place_id": "gp_far",
+               "photo_reference": None}
+    # Close non-geheimtipp gp_match (10 km away — should pass)
+    close_gp = {"name": "Hotel Seeblick", "lat": 45.95, "lon": 6.13, "rating": 8.5,
+                "user_ratings_total": 100, "address": "Nah", "place_id": "gp_close",
+                "photo_reference": None}
+
+    mock_options = [
+        {
+            "id": "acc_1_1", "name": "Hotel Seeblick", "type": "hotel",
+            "price_per_night_chf": 120, "total_price_chf": 240,
+            "separate_rooms_available": False, "max_persons": 4, "rating": 8.5,
+            "features": ["WiFi"], "teaser": "Normal hotel", "description": "Ein Hotel.",
+            "suitable_for_children": True, "is_geheimtipp": False,
+            "preference_index": 0, "matched_must_haves": [], "hotel_website_url": None,
+        },
+        {
+            "id": "acc_1_4", "name": "Geheimes Chalet", "type": "chalet",
+            "price_per_night_chf": 80, "total_price_chf": 160,
+            "separate_rooms_available": True, "max_persons": 4, "rating": 9.2,
+            "features": ["Natur"], "teaser": "Geheim", "description": "Sehr weit weg.",
+            "suitable_for_children": True, "is_geheimtipp": True,
+            "preference_index": None, "matched_must_haves": [], "hotel_website_url": None,
+            "geheimtipp_hinweis": "Direkt buchen.",
+        },
+    ]
+
+    mock_api_response = MagicMock()
+    mock_api_response.content = [MagicMock(text=json.dumps({
+        "stop_id": 1, "region": "Annecy", "options": mock_options
+    }))]
+
+    mock_client = MagicMock()
+    mocker.patch('agents.accommodation_researcher.get_client', return_value=mock_client)
+    mocker.patch('utils.retry_helper.asyncio.to_thread', new=AsyncMock(return_value=mock_api_response))
+    mocker.patch('utils.image_fetcher.fetch_unsplash_images', new=AsyncMock(
+        return_value={"image_overview": None, "image_mood": None, "image_customer": None}
+    ))
+    # search_hotels: return the far gp for the geheimtipp lookup, close gp for the normal hotel
+    mocker.patch(
+        'agents.accommodation_researcher.search_hotels',
+        new=AsyncMock(return_value=[close_gp, far_gp]),
+    )
+
+    request = _make_single_transit_req(budget_chf=5000)
+    agent = AccommodationResearcherAgent(request, "test_job")
+
+    stop = {"id": 1, "region": "Annecy", "country": "FR", "nights": 2,
+            "arrival_day": 3, "lat": stop_lat, "lon": stop_lon}
+
+    async def _run():
+        return await agent.find_options(stop, budget_per_night=150.0)
+
+    result = asyncio.run(_run())
+    options = result.get("options", [])
+
+    names = [o["name"] for o in options]
+    # Geheimtipp 50 km away must be dropped
+    assert "Geheimes Chalet" not in names, f"Expected far geheimtipp to be dropped, got: {names}"
+    # Normal hotel must remain
+    assert "Hotel Seeblick" in names
+
+
+def test_geheimtipp_close_passes_through(mocker):
+    """ACC-01: Geheimtipp with gp_match within hotel_radius_km passes through."""
+    import asyncio
+    from agents.accommodation_researcher import AccommodationResearcherAgent
+
+    stop_lat, stop_lon = 45.899, 6.129
+
+    # Geheimtipp gp_match only 5 km away (well within 25 km radius)
+    close_gt_gp = {"name": "Waldbauernhof", "lat": 45.93, "lon": 6.15, "rating": 9.1,
+                   "user_ratings_total": 30, "address": "Nahe Annecy", "place_id": "gp_gt",
+                   "photo_reference": None}
+
+    mock_options = [
+        {
+            "id": "acc_1_4", "name": "Waldbauernhof", "type": "bauernhof",
+            "price_per_night_chf": 90, "total_price_chf": 180,
+            "separate_rooms_available": True, "max_persons": 4, "rating": 9.1,
+            "features": ["Natur", "Tiere"], "teaser": "Geheim nah", "description": "Nah am Zentrum.",
+            "suitable_for_children": True, "is_geheimtipp": True,
+            "preference_index": None, "matched_must_haves": [], "hotel_website_url": None,
+            "geheimtipp_hinweis": "Direkt buchen.",
+        },
+    ]
+
+    mock_api_response = MagicMock()
+    mock_api_response.content = [MagicMock(text=json.dumps({
+        "stop_id": 1, "region": "Annecy", "options": mock_options
+    }))]
+
+    mock_client = MagicMock()
+    mocker.patch('agents.accommodation_researcher.get_client', return_value=mock_client)
+    mocker.patch('utils.retry_helper.asyncio.to_thread', new=AsyncMock(return_value=mock_api_response))
+    mocker.patch('utils.image_fetcher.fetch_unsplash_images', new=AsyncMock(
+        return_value={"image_overview": None, "image_mood": None, "image_customer": None}
+    ))
+    mocker.patch(
+        'agents.accommodation_researcher.search_hotels',
+        new=AsyncMock(return_value=[close_gt_gp]),
+    )
+
+    request = _make_single_transit_req(budget_chf=5000)
+    agent = AccommodationResearcherAgent(request, "test_job")
+    stop = {"id": 1, "region": "Annecy", "country": "FR", "nights": 2,
+            "arrival_day": 3, "lat": stop_lat, "lon": stop_lon}
+
+    async def _run():
+        return await agent.find_options(stop, budget_per_night=150.0)
+
+    result = asyncio.run(_run())
+    options = result.get("options", [])
+    names = [o["name"] for o in options]
+    assert "Waldbauernhof" in names, f"Close geheimtipp should NOT be dropped, got: {names}"
+
+
+def test_geheimtipp_no_gp_match_passes_through(mocker):
+    """ACC-01: Geheimtipp with no gp_match (None) must never be dropped."""
+    import asyncio
+    from agents.accommodation_researcher import AccommodationResearcherAgent
+
+    stop_lat, stop_lon = 45.899, 6.129
+
+    mock_options = [
+        {
+            "id": "acc_1_4", "name": "Unbekanntes Haus", "type": "pension",
+            "price_per_night_chf": 70, "total_price_chf": 140,
+            "separate_rooms_available": True, "max_persons": 3, "rating": 8.5,
+            "features": ["Ruhig"], "teaser": "Unbekannt", "description": "Nicht auf Google.",
+            "suitable_for_children": False, "is_geheimtipp": True,
+            "preference_index": None, "matched_must_haves": [], "hotel_website_url": None,
+            "geheimtipp_hinweis": "Direkt buchen.",
+        },
+    ]
+
+    mock_api_response = MagicMock()
+    mock_api_response.content = [MagicMock(text=json.dumps({
+        "stop_id": 1, "region": "Annecy", "options": mock_options
+    }))]
+
+    mock_client = MagicMock()
+    mocker.patch('agents.accommodation_researcher.get_client', return_value=mock_client)
+    mocker.patch('utils.retry_helper.asyncio.to_thread', new=AsyncMock(return_value=mock_api_response))
+    mocker.patch('utils.image_fetcher.fetch_unsplash_images', new=AsyncMock(
+        return_value={"image_overview": None, "image_mood": None, "image_customer": None}
+    ))
+    # search_hotels returns no match for this geheimtipp name
+    mocker.patch(
+        'agents.accommodation_researcher.search_hotels',
+        new=AsyncMock(return_value=[]),
+    )
+
+    request = _make_single_transit_req(budget_chf=5000)
+    agent = AccommodationResearcherAgent(request, "test_job")
+    stop = {"id": 1, "region": "Annecy", "country": "FR", "nights": 2,
+            "arrival_day": 3, "lat": stop_lat, "lon": stop_lon}
+
+    async def _run():
+        return await agent.find_options(stop, budget_per_night=150.0)
+
+    result = asyncio.run(_run())
+    options = result.get("options", [])
+    names = [o["name"] for o in options]
+    assert "Unbekanntes Haus" in names, f"Geheimtipp without gp_match must pass through, got: {names}"
+
+
+def test_non_geheimtipp_never_dropped(mocker):
+    """ACC-01: Non-geheimtipp options are never dropped regardless of distance."""
+    import asyncio
+    from agents.accommodation_researcher import AccommodationResearcherAgent
+
+    stop_lat, stop_lon = 45.899, 6.129
+
+    # gp_match very far away — but option is NOT a geheimtipp, should still pass
+    far_normal_gp = {"name": "Hotel Grand", "lat": 46.5, "lon": 7.0, "rating": 8.0,
+                     "user_ratings_total": 500, "address": "Weit", "place_id": "gp_far_n",
+                     "photo_reference": None}
+
+    mock_options = [
+        {
+            "id": "acc_1_1", "name": "Hotel Grand", "type": "hotel",
+            "price_per_night_chf": 200, "total_price_chf": 400,
+            "separate_rooms_available": False, "max_persons": 2, "rating": 8.0,
+            "features": ["WiFi"], "teaser": "Grosses Hotel", "description": "Ein grosses Hotel.",
+            "suitable_for_children": False, "is_geheimtipp": False,
+            "preference_index": 0, "matched_must_haves": [], "hotel_website_url": None,
+        },
+    ]
+
+    mock_api_response = MagicMock()
+    mock_api_response.content = [MagicMock(text=json.dumps({
+        "stop_id": 1, "region": "Annecy", "options": mock_options
+    }))]
+
+    mock_client = MagicMock()
+    mocker.patch('agents.accommodation_researcher.get_client', return_value=mock_client)
+    mocker.patch('utils.retry_helper.asyncio.to_thread', new=AsyncMock(return_value=mock_api_response))
+    mocker.patch('utils.image_fetcher.fetch_unsplash_images', new=AsyncMock(
+        return_value={"image_overview": None, "image_mood": None, "image_customer": None}
+    ))
+    mocker.patch(
+        'agents.accommodation_researcher.search_hotels',
+        new=AsyncMock(return_value=[far_normal_gp]),
+    )
+
+    request = _make_single_transit_req(budget_chf=5000)
+    agent = AccommodationResearcherAgent(request, "test_job")
+    stop = {"id": 1, "region": "Annecy", "country": "FR", "nights": 2,
+            "arrival_day": 3, "lat": stop_lat, "lon": stop_lon}
+
+    async def _run():
+        return await agent.find_options(stop, budget_per_night=150.0)
+
+    result = asyncio.run(_run())
+    options = result.get("options", [])
+    names = [o["name"] for o in options]
+    assert "Hotel Grand" in names, f"Non-geheimtipp must never be dropped, got: {names}"
+
+
+# ---------------------------------------------------------------------------
+# Accommodation researcher — Name-based dedup (ACC-02)
+# ---------------------------------------------------------------------------
+
+def test_geheimtipp_dedup(mocker):
+    """ACC-02: Two options with the same name (case-insensitive) within one stop are deduplicated."""
+    import asyncio
+    from agents.accommodation_researcher import AccommodationResearcherAgent
+
+    stop_lat, stop_lon = 45.899, 6.129
+
+    mock_options = [
+        {
+            "id": "acc_1_1", "name": "Hotel Seeblick", "type": "hotel",
+            "price_per_night_chf": 120, "total_price_chf": 240,
+            "separate_rooms_available": False, "max_persons": 4, "rating": 8.0,
+            "features": ["WiFi"], "teaser": "A", "description": "Erstes Exemplar.",
+            "suitable_for_children": True, "is_geheimtipp": False,
+            "preference_index": 0, "matched_must_haves": [], "hotel_website_url": None,
+        },
+        {
+            "id": "acc_1_2", "name": "hotel seeblick", "type": "hotel",  # same name, different case
+            "price_per_night_chf": 130, "total_price_chf": 260,
+            "separate_rooms_available": True, "max_persons": 4, "rating": 8.2,
+            "features": ["Parkplatz"], "teaser": "B", "description": "Zweites Exemplar.",
+            "suitable_for_children": True, "is_geheimtipp": False,
+            "preference_index": 1, "matched_must_haves": [], "hotel_website_url": None,
+        },
+        {
+            "id": "acc_1_3", "name": "Naturhotel Alpental", "type": "hotel",  # different name — kept
+            "price_per_night_chf": 140, "total_price_chf": 280,
+            "separate_rooms_available": True, "max_persons": 4, "rating": 8.8,
+            "features": ["Natur"], "teaser": "C", "description": "Natur pur.",
+            "suitable_for_children": True, "is_geheimtipp": False,
+            "preference_index": 2, "matched_must_haves": [], "hotel_website_url": None,
+        },
+    ]
+
+    mock_api_response = MagicMock()
+    mock_api_response.content = [MagicMock(text=json.dumps({
+        "stop_id": 1, "region": "Annecy", "options": mock_options
+    }))]
+
+    mock_client = MagicMock()
+    mocker.patch('agents.accommodation_researcher.get_client', return_value=mock_client)
+    mocker.patch('utils.retry_helper.asyncio.to_thread', new=AsyncMock(return_value=mock_api_response))
+    mocker.patch('utils.image_fetcher.fetch_unsplash_images', new=AsyncMock(
+        return_value={"image_overview": None, "image_mood": None, "image_customer": None}
+    ))
+    mocker.patch(
+        'agents.accommodation_researcher.search_hotels',
+        new=AsyncMock(return_value=[]),
+    )
+
+    request = _make_single_transit_req(budget_chf=5000)
+    agent = AccommodationResearcherAgent(request, "test_job")
+    stop = {"id": 1, "region": "Annecy", "country": "FR", "nights": 2,
+            "arrival_day": 3, "lat": stop_lat, "lon": stop_lon}
+
+    async def _run():
+        return await agent.find_options(stop, budget_per_night=150.0)
+
+    result = asyncio.run(_run())
+    options = result.get("options", [])
+
+    names = [o["name"].lower() for o in options]
+    # "hotel seeblick" should appear only once after dedup
+    assert names.count("hotel seeblick") == 1, f"Expected dedup to remove duplicate, got: {names}"
+    # "naturhotel alpental" should remain
+    assert "naturhotel alpental" in names
+
+
+def test_dedup_different_names_all_kept(mocker):
+    """ACC-02: Options with different names are all kept (no false dedup)."""
+    import asyncio
+    from agents.accommodation_researcher import AccommodationResearcherAgent
+
+    stop_lat, stop_lon = 45.899, 6.129
+
+    mock_options = [
+        {
+            "id": "acc_1_1", "name": "Hotel Alpha", "type": "hotel",
+            "price_per_night_chf": 120, "total_price_chf": 240,
+            "separate_rooms_available": False, "max_persons": 4, "rating": 8.0,
+            "features": [], "teaser": "A", "description": "Alpha.",
+            "suitable_for_children": True, "is_geheimtipp": False,
+            "preference_index": 0, "matched_must_haves": [], "hotel_website_url": None,
+        },
+        {
+            "id": "acc_1_2", "name": "Hotel Beta", "type": "hotel",
+            "price_per_night_chf": 130, "total_price_chf": 260,
+            "separate_rooms_available": True, "max_persons": 4, "rating": 8.5,
+            "features": [], "teaser": "B", "description": "Beta.",
+            "suitable_for_children": True, "is_geheimtipp": False,
+            "preference_index": 1, "matched_must_haves": [], "hotel_website_url": None,
+        },
+        {
+            "id": "acc_1_3", "name": "Ferienwohnung Gamma", "type": "apartment",
+            "price_per_night_chf": 100, "total_price_chf": 200,
+            "separate_rooms_available": True, "max_persons": 5, "rating": 8.8,
+            "features": [], "teaser": "C", "description": "Gamma.",
+            "suitable_for_children": True, "is_geheimtipp": False,
+            "preference_index": 2, "matched_must_haves": [], "hotel_website_url": None,
+        },
+    ]
+
+    mock_api_response = MagicMock()
+    mock_api_response.content = [MagicMock(text=json.dumps({
+        "stop_id": 1, "region": "Annecy", "options": mock_options
+    }))]
+
+    mock_client = MagicMock()
+    mocker.patch('agents.accommodation_researcher.get_client', return_value=mock_client)
+    mocker.patch('utils.retry_helper.asyncio.to_thread', new=AsyncMock(return_value=mock_api_response))
+    mocker.patch('utils.image_fetcher.fetch_unsplash_images', new=AsyncMock(
+        return_value={"image_overview": None, "image_mood": None, "image_customer": None}
+    ))
+    mocker.patch(
+        'agents.accommodation_researcher.search_hotels',
+        new=AsyncMock(return_value=[]),
+    )
+
+    request = _make_single_transit_req(budget_chf=5000)
+    agent = AccommodationResearcherAgent(request, "test_job")
+    stop = {"id": 1, "region": "Annecy", "country": "FR", "nights": 2,
+            "arrival_day": 3, "lat": stop_lat, "lon": stop_lon}
+
+    async def _run():
+        return await agent.find_options(stop, budget_per_night=150.0)
+
+    result = asyncio.run(_run())
+    options = result.get("options", [])
+    assert len(options) == 3, f"All 3 different-named options should be kept, got {len(options)}"
