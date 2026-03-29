@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: AI-Qualität & Routenplanung
 status: executing
-stopped_at: Wave 1 complete (15-01, 15-02)
-last_updated: "2026-03-29T20:17:31.566Z"
+stopped_at: Completed 15-03-PLAN.md
+last_updated: "2026-03-29T20:23:26.912Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 9
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 ## Current Position
 
 Phase: 15 (hotel-geheimtipp-quality-day-plan-recalculation) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 15
-Last activity: 2026-03-29 -- Phase 15 execution started
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0% (v1.2 milestone)
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0% (v1.2 milestone)
 | Phase 13-architect-pre-plan-for-interactive-flow P01 | 2 | 2 tasks | 4 files |
 | Phase 13-architect-pre-plan-for-interactive-flow P02 | 3.5 | 2 tasks | 3 files |
 | Phase 15 P02 | 8 | 2 tasks | 4 files |
+| Phase 15 P03 | 8 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,7 @@ Recent decisions affecting v1.2:
 - [Phase 13]: Other _find_and_stream_options call sites receive architect_context=None by default — only _start_leg_route_building passes context
 - [Phase 13]: architect_plan persists across legs (not reset in _advance_to_next_leg) — pre-plan covers whole trip
 - [Phase 15]: POST /api/travels/{id}/update-nights: validates 1-14 nights range at endpoint before lock acquisition
+- [Phase 15]: Used _fetchQuiet for apiUpdateNights — SSE overlay provides progress, no loading overlay needed
 
 ### Pending Todos
 
@@ -85,6 +87,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T20:17:31.565Z
-Stopped at: Wave 1 complete (15-01, 15-02)
+Last session: 2026-03-29T20:23:26.910Z
+Stopped at: Completed 15-03-PLAN.md
 Resume file: None

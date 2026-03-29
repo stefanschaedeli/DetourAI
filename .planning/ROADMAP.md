@@ -42,7 +42,7 @@
 - [x] **Phase 12: Context Infrastructure + Wishes Forwarding** — Globales Wunschfeld im Formular; alle 9 Agents erhalten travel_description, preferred_activities, mandatory_activities (completed 2026-03-29)
 - [x] **Phase 13: Architect Pre-Plan for Interactive Flow** — Lightweight Sonnet pre-plan vor StopOptionsFinder; Regionen und Nächte-Empfehlungen in job state (completed 2026-03-29)
 - [x] **Phase 14: Stop History Awareness + Night Distribution** — StopOptionsFinder kennt alle bisherigen Stops; Nächte-Verteilung nach Ort-Potenzial; Dedup-Safety-Net (completed 2026-03-29)
-- [ ] **Phase 15: Hotel Geheimtipp Quality + Day Plan Recalculation** — Haversine-Validierung für Geheimtipps; Tagesplan-Neuberechnung nach Nächte-Änderungen
+- [x] **Phase 15: Hotel Geheimtipp Quality + Day Plan Recalculation** — Haversine-Validierung für Geheimtipps; Tagesplan-Neuberechnung nach Nächte-Änderungen (completed 2026-03-29)
 - [ ] **Phase 16: Frontend UI Fixes + Polish** — Karte auf Route fokussiert, korrekte Stop-Bilder, Tooltips, Stop-Auswahl-Karte mit History
 
 ## Phase Details
@@ -98,11 +98,11 @@ Plans:
   3. Nach einer Nächteänderung an einem Stop werden arrival_day für alle nachfolgenden Stops korrekt aktualisiert
   4. User kann Nächte pro Stop über einen dedizierten Button anpassen (nicht nur via prompt() Dialog)
   5. Nach einer Nächte- oder Stop-Änderung startet eine Tagesplan-Neuberechnung via Celery und zeigt SSE-Fortschritt
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 Plans:
-- [ ] 15-01-PLAN.md — Geheimtipp quality: prompt coordinates + haversine post-filter + name dedup + tests
-- [ ] 15-02-PLAN.md — Backend nights update: Celery task + POST endpoint + _fire_task registration + tests
-- [ ] 15-03-PLAN.md — Frontend nights edit: inline editor replacing prompt() + SSE wiring + checkpoint
+- [x] 15-01-PLAN.md — Geheimtipp quality: prompt coordinates + haversine post-filter + name dedup + tests
+- [x] 15-02-PLAN.md — Backend nights update: Celery task + POST endpoint + _fire_task registration + tests
+- [x] 15-03-PLAN.md — Frontend nights edit: inline editor replacing prompt() + SSE wiring + checkpoint
 
 ### Phase 16: Frontend UI Fixes + Polish
 **Goal**: Die Karte zeigt sofort die Route, Stop-Bilder sind korrekt, Edit-Buttons sind selbsterklärend, die Stop-Auswahlkarte gibt vollständigen Kontext
@@ -134,5 +134,5 @@ Plans:
 | 12. Context Infrastructure + Wishes Forwarding | v1.2 | 2/2 | Complete    | 2026-03-29 |
 | 13. Architect Pre-Plan for Interactive Flow | v1.2 | 2/2 | Complete    | 2026-03-29 |
 | 14. Stop History Awareness + Night Distribution | v1.2 | 0/2 | Complete    | 2026-03-29 |
-| 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 0/3 | Planning complete | - |
+| 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 3/3 | Complete   | 2026-03-29 |
 | 16. Frontend UI Fixes + Polish | v1.2 | 0/? | Not started | - |
