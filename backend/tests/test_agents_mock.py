@@ -843,6 +843,102 @@ def test_wishes_absent_when_empty(mocker):
     assert "Pflichtaktivitäten:" not in prompt
 
 
+# ---------------------------------------------------------------------------
+# ArchitectPrePlanAgent — region pre-plan before stop selection (RTE-01, RTE-05)
+# ---------------------------------------------------------------------------
+
+def test_architect_pre_plan_agent(mocker):
+    """RTE-01: run() returns dict with regions list containing required fields."""
+    import asyncio
+    from agents.architect_pre_plan import ArchitectPrePlanAgent
+
+    pre_plan_response = {
+        "regions": [
+            {"name": "Provence", "recommended_nights": 3, "max_drive_hours": 3.0},
+            {"name": "Paris", "recommended_nights": 6, "max_drive_hours": 4.0},
+        ],
+        "total_nights": 9,
+    }
+
+    mock_api_response = MagicMock()
+    mock_api_response.content = [MagicMock(text=json.dumps(pre_plan_response))]
+    mock_api_response.usage = MagicMock(input_tokens=100, output_tokens=50)
+
+    mock_client = MagicMock()
+    mocker.patch('agents.architect_pre_plan.get_client', return_value=mock_client)
+
+    async def fake_to_thread(fn):
+        return fn()
+    mocker.patch('utils.retry_helper.asyncio.to_thread', side_effect=fake_to_thread)
+    mock_client.messages.create.return_value = mock_api_response
+
+    request = _make_single_transit_req()
+    agent = ArchitectPrePlanAgent(request, "test_job")
+
+    async def _run():
+        return await agent.run()
+
+    result = asyncio.run(_run())
+
+    assert "regions" in result
+    assert len(result["regions"]) == 2
+    for region in result["regions"]:
+        assert "name" in region
+        assert "recommended_nights" in region
+        assert "max_drive_hours" in region
+
+
+def test_architect_pre_plan_prompt_includes_context(mocker):
+    """RTE-05: _build_prompt() includes travel_description, styles, preferred_activities."""
+    from agents.architect_pre_plan import ArchitectPrePlanAgent
+    from models.travel_request import MandatoryActivity
+
+    request = _make_single_transit_req(
+        travel_description="Kulturreise",
+        travel_styles=["Kultur", "Kulinarik"],
+        preferred_activities=["Museen"],
+    )
+    agent = ArchitectPrePlanAgent(request, "test_job")
+    prompt = agent._build_prompt()
+
+    assert "Kulturreise" in prompt
+    assert "Kultur" in prompt
+    assert "Kulinarik" in prompt
+    assert "Museen" in prompt
+    # Leg start/end
+    assert "Liestal" in prompt
+    assert "Paris" in prompt
+    # Nights budget: total_days - 1 = (2026-06-10 - 2026-06-01).days - 1 = 9 - 1 = 8
+    assert "8" in prompt
+
+
+def test_architect_pre_plan_prompt_drive_limit(mocker):
+    """D-03: _build_prompt() includes the max_drive_hours_per_day value."""
+    from agents.architect_pre_plan import ArchitectPrePlanAgent
+
+    request = _make_single_transit_req(max_drive_hours_per_day=3.5)
+    agent = ArchitectPrePlanAgent(request, "test_job")
+    prompt = agent._build_prompt()
+
+    assert "3.5" in prompt
+
+
+def test_architect_pre_plan_nights_budget(mocker):
+    """D-06: _build_prompt() uses total_days - 1 as nights budget."""
+    from agents.architect_pre_plan import ArchitectPrePlanAgent
+    from datetime import date
+
+    # 10-day leg: end_date - start_date = 10 days, so nights_budget = 9
+    request = _make_single_transit_req(
+        start_date=date(2026, 7, 1),
+        end_date=date(2026, 7, 11),
+    )
+    agent = ArchitectPrePlanAgent(request, "test_job")
+    prompt = agent._build_prompt()
+
+    assert "9" in prompt
+
+
 def test_restaurants_agent_includes_wishes(mocker):
     """CTX-02 + CTX-03: RestaurantsAgent prompt contains all 3 wishes fields when set."""
     import asyncio
