@@ -607,6 +607,56 @@ def test_edit_lock_conflict(client, mocker):
 
 
 # ---------------------------------------------------------------------------
+# Update nights endpoint
+# ---------------------------------------------------------------------------
+
+def test_update_nights_success(client, mocker):
+    """POST /api/travels/{id}/update-nights with valid stop_id and nights returns 200 with job_id."""
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    mocker.patch('main.acquire_edit_lock', return_value=True)
+    mocker.patch('main.save_job')
+    mocker.patch('main._fire_task')
+    r = client.post("/api/travels/1/update-nights", json={"stop_id": 1, "nights": 3})
+    assert r.status_code == 200
+    data = r.json()
+    assert "job_id" in data
+    assert data["status"] == "editing"
+
+
+def test_update_nights_invalid_nights(client, mocker):
+    """POST with nights=0 or nights=15 returns 400."""
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    r = client.post("/api/travels/1/update-nights", json={"stop_id": 1, "nights": 0})
+    assert r.status_code == 400
+    r = client.post("/api/travels/1/update-nights", json={"stop_id": 1, "nights": 15})
+    assert r.status_code == 400
+
+
+def test_update_nights_stop_not_found(client, mocker):
+    """POST with unknown stop_id returns 400."""
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    r = client.post("/api/travels/1/update-nights", json={"stop_id": 999, "nights": 2})
+    assert r.status_code == 400
+    assert "nicht gefunden" in r.json()["detail"]
+
+
+def test_update_nights_travel_not_found(client, mocker):
+    """POST on nonexistent travel returns 404."""
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=None))
+    r = client.post("/api/travels/999/update-nights", json={"stop_id": 1, "nights": 2})
+    assert r.status_code == 404
+
+
+def test_update_nights_lock_conflict(client, mocker):
+    """POST when edit lock held returns 409."""
+    mocker.patch('main.get_travel', new=AsyncMock(return_value=SAMPLE_PLAN_3STOPS))
+    mocker.patch('main.acquire_edit_lock', return_value=False)
+    r = client.post("/api/travels/1/update-nights", json={"stop_id": 1, "nights": 2})
+    assert r.status_code == 409
+    assert "Bearbeitung laeuft bereits" in r.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
 # Share endpoints
 # ---------------------------------------------------------------------------
 

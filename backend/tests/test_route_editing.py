@@ -492,3 +492,65 @@ def test_edit_lock_contention():
 
         assert acquire_edit_lock(42) is True
         assert acquire_edit_lock(42) is False
+
+
+# ---------------------------------------------------------------------------
+# Tests: update_nights_job
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_update_nights_job_recalcs_arrival_days():
+    """_update_nights_job updates stop nights and rechains arrival_day correctly."""
+    from tasks.update_nights_job import _update_nights_job
+
+    # stops: arrival_day 1, 4, 7 (nights 2, 2, 2)
+    # After changing stop[0] nights to 3: arrival_day should become 1, 5, 8
+    stops = [
+        _make_stop(1, nights=2, arrival_day=1),
+        _make_stop(2, nights=2, arrival_day=4),
+        _make_stop(3, nights=2, arrival_day=7),
+    ]
+    plan = {
+        "stops": stops,
+        "start_location": "Liestal, Schweiz",
+        "request": _sample_request(),
+        "day_plans": [],
+        "cost_estimate": {},
+    }
+
+    job_state = {
+        "travel_id": 1,
+        "user_id": 1,
+        "stop_id": 1,
+        "stop_index": 0,
+        "nights": 3,
+    }
+
+    mock_store = MagicMock()
+    mock_store.get.return_value = json.dumps(job_state).encode()
+
+    with patch("tasks.update_nights_job._get_store", return_value=mock_store), \
+         patch("utils.travel_db.get_travel", new_callable=AsyncMock, return_value=plan), \
+         patch("utils.travel_db.update_plan_json", new_callable=AsyncMock) as mock_update, \
+         patch("agents.day_planner.DayPlannerAgent") as mock_day, \
+         patch("utils.debug_logger.debug_logger") as mock_logger, \
+         patch("utils.route_edit_lock.release_edit_lock") as mock_release:
+
+        mock_logger.log = AsyncMock()
+        mock_logger.push_event = AsyncMock()
+        mock_day.return_value.run = AsyncMock(return_value={"day_plans": []})
+
+        await _update_nights_job("test-job-id")
+
+    # stops[0] nights updated to 3
+    assert stops[0]["nights"] == 3
+    # stops[1].arrival_day = 1 + 3 + 1 = 5
+    assert stops[1]["arrival_day"] == 5
+    # stops[2].arrival_day = 5 + 2 + 1 = 8
+    assert stops[2]["arrival_day"] == 8
+
+    # update_plan_json was called
+    mock_update.assert_called_once()
+
+    # release_edit_lock was called in finally
+    mock_release.assert_called_once_with(1)

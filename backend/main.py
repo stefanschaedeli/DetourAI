@@ -110,6 +110,9 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
         elif task_name == "reorder_stops_job":
             from tasks.reorder_stops_job import reorder_stops_job_task
             reorder_stops_job_task.delay(job_id)
+        elif task_name == "update_nights_job":
+            from tasks.update_nights_job import update_nights_job_task
+            update_nights_job_task.delay(job_id)
     else:
         # Run inline as a fire-and-forget asyncio task
         if task_name == "prefetch_accommodations":
@@ -130,6 +133,9 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
         elif task_name == "reorder_stops_job":
             from tasks.reorder_stops_job import _reorder_stops_job
             asyncio.ensure_future(_reorder_stops_job(job_id))
+        elif task_name == "update_nights_job":
+            from tasks.update_nights_job import _update_nights_job
+            asyncio.ensure_future(_update_nights_job(job_id))
 
 
 async def _periodic_subscriber_cleanup():
@@ -2312,6 +2318,11 @@ class ReorderStopsRequest(BaseModel):
     new_index: int
 
 
+class UpdateNightsRequest(BaseModel):
+    stop_id: int
+    nights: int  # 1-14
+
+
 @app.post("/api/travels/{travel_id}/replace-stop")
 async def api_replace_stop(travel_id: int, body: ReplaceStopRequest, current_user: CurrentUser = Depends(get_current_user)):
     from agents.stop_options_finder import StopOptionsFinderAgent
@@ -2581,6 +2592,43 @@ async def api_reorder_stops(travel_id: int, body: ReorderStopsRequest, current_u
     }
     save_job(job_id, job)
     _fire_task("reorder_stops_job", job_id)
+    return {"job_id": job_id, "status": "editing"}
+
+
+# ---------------------------------------------------------------------------
+# POST /api/travels/{travel_id}/update-nights
+# Update nights for a stop and recalculate day plans
+# ---------------------------------------------------------------------------
+
+@app.post("/api/travels/{travel_id}/update-nights")
+async def api_update_nights(travel_id: int, body: UpdateNightsRequest, current_user: CurrentUser = Depends(get_current_user)):
+    if body.nights < 1 or body.nights > 14:
+        raise HTTPException(400, detail="Naechte muessen zwischen 1 und 14 liegen")
+
+    plan = await get_travel(travel_id, current_user.id)
+    if plan is None:
+        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+
+    stops = plan.get("stops", [])
+    stop_index = next((i for i, s in enumerate(stops) if s.get("id") == body.stop_id), None)
+    if stop_index is None:
+        raise HTTPException(400, detail=f"Stop {body.stop_id} nicht gefunden")
+
+    if not acquire_edit_lock(travel_id):
+        raise HTTPException(409, detail="Eine Bearbeitung laeuft bereits")
+
+    job_id = uuid.uuid4().hex
+    job = {
+        "status": "editing",
+        "travel_id": travel_id,
+        "operation": "update_nights",
+        "stop_id": body.stop_id,
+        "stop_index": stop_index,
+        "nights": body.nights,
+        "user_id": current_user.id,
+    }
+    save_job(job_id, job)
+    _fire_task("update_nights_job", job_id)
     return {"job_id": job_id, "status": "editing"}
 
 
