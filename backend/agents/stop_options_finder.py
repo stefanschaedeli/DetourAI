@@ -55,13 +55,32 @@ class StopOptionsFinderAgent:
 
         prev_stop = selected_stops[-1]["region"] if selected_stops else req.start_location
 
+        MAX_HISTORY_FULL = 8
+        TAIL_COUNT = 5
+
+        capped_stops = selected_stops
+        history_prefix = ""
+        if len(selected_stops) > MAX_HISTORY_FULL:
+            capped_stops = selected_stops[-TAIL_COUNT:]
+            history_prefix = f"{len(selected_stops)} bisherige Stopps, letzte {TAIL_COUNT}: "
+
         stops_str = ""
         if selected_stops:
             parts = [
                 f"Stop {s['id']}: {s['region']} ({s.get('country','?')}, {s.get('nights',1)} Nächte, {s.get('drive_km','?')} km vom Vorgänger)"
-                for s in selected_stops
+                for s in capped_stops
             ]
-            stops_str = "Bisherige Stopps: " + ", ".join(parts) + "\n"
+            stops_str = f"Bisherige Stopps: {history_prefix}" + ", ".join(parts) + "\n"
+
+        exclusion_rule = ""
+        if selected_stops:
+            excluded_names = ", ".join(s["region"] for s in selected_stops)
+            exclusion_rule = (
+                "KRITISCH — Duplikat-Vermeidung: Schlage KEINEN der folgenden bereits "
+                "ausgewählten Stopps erneut vor: "
+                + excluded_names
+                + ". Diese Orte sind bereits Teil der Route.\n"
+            )
 
         complete_hint = ""
         if route_could_be_complete:
@@ -130,6 +149,19 @@ class StopOptionsFinderAgent:
                     f"\nARCHITECT-EMPFEHLUNG: {summary}\n"
                     f"Die Nächteangaben sind Empfehlungen basierend auf dem Potential der Orte — du kannst davon abweichen.\n"
                 )
+                # D-07: Per-stop nights suggestion based on position in region list
+                estimated_total = architect_context.get("estimated_total_stops", len(regions))
+                if estimated_total > 0:
+                    region_idx = min(
+                        int((stop_number - 1) / max(1, estimated_total) * len(regions)),
+                        len(regions) - 1
+                    )
+                    current_region = regions[region_idx]
+                    rec_nights = current_region.get("recommended_nights", 2)
+                    architect_block += (
+                        f"FÜR DIESEN STOP: Empfehle {rec_nights} Nächte "
+                        f"(basierend auf Potential der Region {current_region['name']}).\n"
+                    )
 
         # Bearing context for backtracking prevention (D-10)
         prev_coords = geo.get("_from_coords")
@@ -237,7 +269,7 @@ Start der Gesamtreise: {req.start_location}
 Letzter Stop (Abfahrtspunkt): {prev_stop}
 Endziel dieses Segments: {segment_target}
 Aktueller Stop #{stop_number}
-{stops_str}
+{stops_str}{exclusion_rule}
 {geo_block}{architect_block}{bearing_block}Verbleibende Tage im Segment: {days_remaining}
 Maximale Fahrzeit pro Etappe: {req.max_drive_hours_per_day}h
 Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
