@@ -270,6 +270,7 @@ def _calc_route_status(request: TravelRequest, segment_stops: list, segment_budg
 
     return {
         "days_remaining": days_remaining,
+        "nights_remaining": max(0, days_remaining - 1),
         "must_complete": must_complete,
         "route_could_be_complete": could_complete or must_complete,
     }
@@ -843,6 +844,17 @@ async def _find_and_stream_options(
             if not coords:
                 return None
 
+            # Dedup check: reject options whose region matches a selected stop (D-03, D-04, D-05)
+            opt_region = opt.get("region", "").lower()
+            already_selected = {s.get("region", "").lower() for s in selected_stops}
+            if opt_region in already_selected:
+                await debug_logger.log(
+                    LogLevel.DEBUG,
+                    f"  Verworfen (Duplikat bereits ausgewählt: {opt.get('region')})",
+                    job_id=job_id, agent="StopOptionsFinder",
+                )
+                return None
+
             opt["lat"] = coords[0]
             opt["lon"] = coords[1]
             if geo_result:
@@ -1367,6 +1379,7 @@ async def select_stop(job_id: str, body: StopSelectRequest, current_user: Curren
                 max_drive_hours=request.max_drive_hours_per_day,
                 route_geometry=next_geo,
                 extra_instructions=extra_instr,
+                architect_context=job.get("architect_plan"),
             )
         job["current_options"] = next_options
         job["route_could_be_complete"] = route_complete
@@ -1383,6 +1396,7 @@ async def select_stop(job_id: str, body: StopSelectRequest, current_user: Curren
             "meta": {
                 "stop_number": job["stop_counter"] + 1,
                 "days_remaining": new_status["days_remaining"],
+                "nights_remaining": new_status["nights_remaining"],
                 "estimated_total_stops": estimated_total,
                 "route_could_be_complete": new_status["route_could_be_complete"],
                 "must_complete": new_status["must_complete"],
@@ -1475,6 +1489,7 @@ async def select_stop(job_id: str, body: StopSelectRequest, current_user: Curren
                 prev_location=prev_loc_else,
                 max_drive_hours=request.max_drive_hours_per_day,
                 route_geometry=next_geo,
+                architect_context=job.get("architect_plan"),
             )
         job["current_options"] = next_options
         job["route_could_be_complete"] = route_complete
@@ -1489,6 +1504,7 @@ async def select_stop(job_id: str, body: StopSelectRequest, current_user: Curren
             "meta": {
                 "stop_number": job["stop_counter"] + 1,
                 "days_remaining": new_status["days_remaining"],
+                "nights_remaining": new_status["nights_remaining"],
                 "estimated_total_stops": estimated_total,
                 "route_could_be_complete": new_status["route_could_be_complete"],
                 "must_complete": new_status["must_complete"],
@@ -1554,6 +1570,7 @@ async def recompute_options(job_id: str, body: RecomputeRequest, current_user: C
             max_drive_hours=request.max_drive_hours_per_day,
             route_geometry=recompute_geo,
             extra_instructions=body.extra_instructions,
+            architect_context=job.get("architect_plan"),
         )
 
     job["current_options"] = options
@@ -1567,6 +1584,7 @@ async def recompute_options(job_id: str, body: RecomputeRequest, current_user: C
         "meta": {
             "stop_number": stop_number,
             "days_remaining": route_status["days_remaining"],
+            "nights_remaining": route_status["nights_remaining"],
             "estimated_total_stops": estimated_total_stops,
             "route_could_be_complete": route_status["route_could_be_complete"],
             "must_complete": route_status["must_complete"],

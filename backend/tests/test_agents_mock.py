@@ -1143,3 +1143,70 @@ def test_restaurants_agent_includes_wishes(mocker):
     assert "Bevorzugte Aktivitäten: Weinproben, Kochen" in prompt
     # Content agent uses name-only (no location)
     assert "Pflichtaktivitäten: Eiffelturm" in prompt
+
+
+# ---------------------------------------------------------------------------
+# StopOptionsFinder — dedup exclusion rule + history capping (RTE-03)
+# ---------------------------------------------------------------------------
+
+def test_stop_options_exclusion_rule(mocker):
+    """RTE-03: _build_prompt includes KRITISCH exclusion rule when stops exist."""
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    mocker.patch('agents.stop_options_finder.get_client')
+    mocker.patch('agents.stop_options_finder.get_model', return_value="claude-haiku-4-5")
+    mocker.patch('agents.stop_options_finder.get_max_tokens', return_value=4096)
+
+    request = _make_single_transit_req()
+    agent = StopOptionsFinderAgent(request, "test-job")
+    stops = [
+        {"id": 1, "region": "Freiburg", "country": "DE", "nights": 2, "drive_km": 100},
+        {"id": 2, "region": "Colmar", "country": "FR", "nights": 1, "drive_km": 80},
+    ]
+    prompt = agent._build_prompt(stops, 3, 7, False, "Paris", 0, 1, "", {})
+    assert "KRITISCH" in prompt
+    assert "Duplikat-Vermeidung" in prompt
+    assert "Freiburg" in prompt
+    assert "Colmar" in prompt
+
+
+def test_stop_history_cap(mocker):
+    """RTE-03: History capped to last 5 stops when >8 selected."""
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    mocker.patch('agents.stop_options_finder.get_client')
+    mocker.patch('agents.stop_options_finder.get_model', return_value="claude-haiku-4-5")
+    mocker.patch('agents.stop_options_finder.get_max_tokens', return_value=4096)
+
+    request = _make_single_transit_req()
+    agent = StopOptionsFinderAgent(request, "test-job")
+    stops = [{"id": i, "region": f"City{i}", "country": "XX", "nights": 1, "drive_km": 50} for i in range(1, 11)]
+    prompt = agent._build_prompt(stops, 11, 10, False, "Paris", 0, 1, "", {})
+    # Should show count summary
+    assert "10 bisherige Stopps" in prompt
+    # Exclusion rule must still list ALL stops (not capped)
+    assert "City1" in prompt  # from exclusion rule
+    assert "City10" in prompt  # from both exclusion rule and stops_str tail
+
+
+def test_stop_options_nights_recommendation(mocker):
+    """D-07: Per-stop nights recommendation from architect plan."""
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    mocker.patch('agents.stop_options_finder.get_client')
+    mocker.patch('agents.stop_options_finder.get_model', return_value="claude-haiku-4-5")
+    mocker.patch('agents.stop_options_finder.get_max_tokens', return_value=4096)
+
+    request = _make_single_transit_req()
+    agent = StopOptionsFinderAgent(request, "test-job")
+    architect = {
+        "regions": [
+            {"name": "Elsass", "recommended_nights": 2, "max_drive_hours": 3},
+            {"name": "Paris", "recommended_nights": 3, "max_drive_hours": 4},
+        ],
+        "estimated_total_stops": 4,
+    }
+    prompt = agent._build_prompt([], 1, 10, False, "Paris", 0, 1, "", {}, architect)
+    assert "FÜR DIESEN STOP" in prompt
+    assert "Empfehle 2 Nächte" in prompt
+    assert "Elsass" in prompt
