@@ -265,7 +265,18 @@
 
       <div class="form-group">
         <label for="travel-description">Beschreibung Ihrer Wunschreise (optional)</label>
-        <textarea id="travel-description" rows="3" placeholder="Was soll diese Reise besonders machen?"></textarea>
+        <textarea id="travel-description" rows="3" placeholder="Beschreibe deine Traumreise... z.B. Romantischer Roadtrip durch die Provence mit Weinproben und kleinen Doerfern"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Bevorzugte Aktivitäten (optional)</label>
+        <div class="tag-input-row">
+          <input type="text" id="preferred-tag-input"
+            placeholder="z.B. Weinproben, Wandern, Museumsbesuche"
+            onkeydown="if(event.key==='Enter'){addPreferredTagFromInput();event.preventDefault()}">
+          <button class="btn btn-secondary" onclick="addPreferredTagFromInput()">Hinzufügen</button>
+        </div>
+        <div class="tags-container" id="preferred-tags"></div>
       </div>
 
       <div class="form-nav">
