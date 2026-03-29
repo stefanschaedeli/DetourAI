@@ -1,217 +1,288 @@
 # Stack Research
 
-**Domain:** Progressive-disclosure travel view redesign (vanilla JS SPA)
-**Researched:** 2026-03-27
+**Domain:** AI route planning quality — day distribution, agent context, budget management, map viewport
+**Researched:** 2026-03-28
 **Confidence:** HIGH
 
-> This research covers stack additions/changes needed ONLY for the progressive-disclosure travel view redesign. The existing stack (FastAPI, vanilla JS, Google Maps JS SDK, Redis, Celery, Docker) is validated and not re-evaluated.
+> This research covers ONLY what v1.2 adds. The existing stack (FastAPI, vanilla JS, Google Maps JS SDK,
+> Redis, Celery, Docker, Anthropic SDK, aiohttp) is validated and not re-evaluated.
+
+---
+
+## Summary Answer: No New Libraries Required
+
+All v1.2 capabilities are achievable with the existing stack. The changes are algorithmic (Python logic
+in existing agents/utilities), prompt engineering (structured context blocks added to agent prompts),
+and frontend-side vanilla JS/CSS (map viewport calls, tooltip attributes). Zero new pip packages, zero
+new JS libraries.
 
 ---
 
 ## Recommended Stack
 
-### No New Libraries Required
+### Core Technologies (Already Present — Extend, Don't Replace)
 
-The progressive-disclosure redesign requires **zero new dependencies**. All needed capabilities exist in current browser APIs and the existing codebase. This is deliberate -- adding libraries to a vanilla JS project with no build step creates maintenance burden and contradicts the project's no-framework constraint.
+| Technology | Current Use | v1.2 Extension | Confidence |
+|------------|-------------|----------------|------------|
+| Python stdlib `math` | `math.sqrt` in maps_helper | Weighted night distribution formula — `math.ceil/floor` for integer allocation | HIGH |
+| Anthropic SDK `>=0.28.0` | All 9 agents via `call_with_retry()` | Add `cache_control` block on static system prompts for stop_options_finder (prompt caching). No version bump needed — feature available in current SDK. | HIGH |
+| Google Maps JS SDK (raster) | `fitBounds()` in maps.js + guide-map.js | Auto-fit bounds on route-builder open (extend `_setupRouteMap`) + after stop selection | HIGH |
+| Pydantic `>=2.7.0` | All API models | Extend `TravelRequest` with optional `global_wishes: str` field (max 500 chars) | HIGH |
+| CSS `title` attribute | Scattered `title=""` on buttons | Native tooltip via `title=""` is sufficient for edit/adjust buttons — no library needed | HIGH |
+| Redis + job state dict | All job fields in `job:{job_id}` | Add `selected_stop_names: list[str]` key to track history across stop-selection calls | HIGH |
 
-### Core Technologies (Already Present -- Extend, Don't Replace)
+### What Each v1.2 Feature Needs Technically
 
-| Technology | Current Use | New Use for Drill-Down | Confidence |
-|------------|-------------|------------------------|------------|
-| Google Maps JS SDK (raster) | `panTo()`, `fitBounds()` with padding | Animated map focus per drill-down level: overview=fitAll, day=fitDayRegion, stop=panTo+zoom | HIGH |
-| CSS Custom Properties | Design system tokens in `:root` | Add transition timing tokens for drill-down animations | HIGH |
-| IntersectionObserver | `_initScrollSync()` for scroll-map sync | Lazy rendering of off-screen day/stop cards | HIGH |
-| `requestAnimationFrame` | Tab fade-in animation in `renderGuide()` | Coordinate DOM swap + map animation timing | HIGH |
-| CSS Grid / Flexbox | Layout throughout `styles.css` | Collapsible day-card grid, expand/collapse animations via `grid-template-rows` | HIGH |
-| Module-scoped state | `_activeStopId`, `_activeDayNum` in `guide.js` | Add `_drillLevel` for 3-level state machine | HIGH |
+#### 1. Intelligent Day/Night Distribution
 
-### New CSS Techniques (Native Browser APIs, Zero Dependencies)
+**What it is:** RouteArchitect currently assigns nights with a simple min/max range. v1.2 needs to weight nights by destination potential (major city vs transit stop) to avoid under-spending at high-value stops.
 
-| Technique | Purpose | Why This One | Browser Support | Confidence |
-|-----------|---------|--------------|-----------------|------------|
-| `document.startViewTransition()` | Smooth cross-fade between overview/day/stop views | Native browser API. Replaces the manual opacity/transform fade already in `renderGuide()`. Graceful fallback: instant swap (current behavior). | Chrome 111+, Edge 111+, Safari 18+, Firefox 133+ -- all major browsers in 2026. | HIGH |
-| CSS `grid-template-rows: 0fr/1fr` transition | Animate card expand/collapse for day details, stop sections | Cross-browser. No height measurement needed. Wrap content in a grid child with `min-height: 0` and toggle between `0fr` (collapsed) and `1fr` (expanded). | Chrome 117+, Firefox 117+, Safari 17.2+, Edge 117+ | HIGH |
-| `interpolate-size: allow-keywords` | Animate `height: 0` to `height: auto` | Pure CSS, cleaner than grid hack. Declare on `:root` once. | Chromium-only (Chrome 129+, Edge 129+). Firefox/Safari lack support. **Progressive enhancement only** -- use `grid-template-rows` as primary. | MEDIUM |
-| `scroll-behavior: smooth` + `scrollIntoView()` | Auto-scroll content panel when drilling into a day/stop | Already partially used in `_scrollToAndHighlightCard()`. Extend to drill-down navigation. | All modern browsers. | HIGH |
-| CSS `will-change: transform, opacity` | GPU-accelerate card transitions during drill-down | Apply via class during animation only (not permanently). Prevents layout thrashing on expand/collapse. | All modern browsers. | HIGH |
+**Implementation pattern — pure Python, no library:**
 
-### Map Animation Strategy
-
-| Drill-Down Level | Map Behavior | Implementation | Existing Code |
-|------------------|-------------|----------------|---------------|
-| Overview (all stops) | Fit all stops with padding | `GoogleMaps.fitAllStops(plan)` | **Already exists** in `_updateMapForTab()` |
-| Day focus | Fit that day's stops into view | **New:** `GoogleMaps.fitDayStops(dayStops)` -- build `LatLngBounds` from day's stop coordinates, call `fitBounds()` with padding | `fitBounds()` already used throughout |
-| Stop focus | Pan + zoom to single stop | `GoogleMaps.panToStop(stopId)` + set zoom to ~13 | **Already exists** in `maps.js:720`. Add optional zoom parameter. |
-
-**Key insight:** Google Maps `panTo()` already animates smoothly on raster maps. `fitBounds()` also animates by default. No animation library or vector map migration needed. The existing `panToStop()` does exactly what stop-level drill-down requires.
-
-### Lazy DOM Rendering Strategy
-
-| Pattern | When to Use | Implementation | Confidence |
-|---------|-------------|----------------|------------|
-| Render-on-demand | Day cards below fold in overview | Render placeholder skeletons (existing pattern from accommodation loading). Replace with real content when IntersectionObserver fires. | HIGH |
-| DocumentFragment batching | Initial overview render with many day summaries | Build all day summary cards in a DocumentFragment, append once. Single reflow instead of N. | HIGH |
-| Deferred detail content | Stop detail sections (activities, restaurants, accommodation) | Render header/hero immediately, populate detail sections on expand. Already done for images via `_lazyLoadEntityImages()`. | HIGH |
-
-**Virtual scroll is NOT needed.** A trip has at most ~15 stops and ~14 days. Total DOM element count stays under 200 even fully expanded. The real bottleneck is image loading and per-stop map initialization, both of which are already lazy-loaded.
-
----
-
-## Integration Points
-
-### Existing Code to Extend (Not Replace)
-
-| File | Current Pattern | Extension for Drill-Down |
-|------|----------------|--------------------------|
-| `guide.js` `renderGuide()` | 5-tab switching (`overview`, `stops`, `days`, `calendar`, `budget`) with `innerHTML` swap | Replace tab paradigm with drill-down state: `{level: 'overview'\|'day'\|'stop', dayNum?, stopId?}`. Keep calendar/budget as secondary tabs. |
-| `guide.js` `_updateMapForTab()` | Always calls `fitAllStops()` regardless of tab | Make map focus level-aware: overview=fitAll, day=fitDayRegion, stop=panToStop+zoom |
-| `guide.js` `renderOverview()` | Static stat cards + route line + day plan CTA | Replace with clickable compact day cards that trigger day drill-down |
-| `guide.js` `renderDaysOverview()` | Lists all days in flat layout | Convert to focused single-day view with prev/next navigation + back-to-overview |
-| `guide.js` `renderStopDetail()` | Full stop detail page (accessed via stops tab) | Reuse as-is -- entry point changes from tab to day drill-down click |
-| `maps.js` `panToStop()` | Pans to stop at current zoom level | Add optional `zoom` parameter for stop-level focus (default ~13) |
-| `maps.js` | No day-region fitting capability | Add `fitDayStops(stops)` method using `LatLngBounds` |
-| `router.js` | Routes: `/travel/{id}/stops`, `/travel/{id}/days` | Add: `/travel/{id}/day/{n}`, `/travel/{id}/stop/{id}` for deep-linkable drill-down |
-| `styles.css` | Tab fade-in: `opacity 0.2s ease, transform 0.2s ease` | Add drill-down transition classes, `grid-template-rows` expand/collapse, View Transition fallback styles |
-
-### State Machine
-
-```
-Overview (all stops on map, compact day cards)
-    |
-    v  click day card
-Day Detail (day's stops highlighted on map, activities/restaurants/schedule)
-    |
-    v  click stop within day
-Stop Detail (stop zoomed on map, full accommodation/activity/restaurant details)
-    |
-    ^  back button returns to parent level (stop->day, day->overview)
+```python
+def distribute_nights(total_nights: int, stops: list[dict],
+                      min_nights: int, max_nights: int) -> list[int]:
+    """
+    Weight nights proportionally to stop_potential score (1-3 scale).
+    Claude already assigns stop_potential in the route JSON.
+    """
+    weights = [s.get("stop_potential", 2) for s in stops]
+    total_weight = sum(weights)
+    raw = [total_nights * w / total_weight for w in weights]
+    # Integer allocation with floor + distribute remainder to highest-potential stops
+    floored = [max(min_nights, min(max_nights, math.floor(r))) for r in raw]
+    remainder = total_nights - sum(floored)
+    fractional = sorted(range(len(raw)), key=lambda i: raw[i] - math.floor(raw[i]), reverse=True)
+    for i in fractional[:remainder]:
+        floored[i] = min(max_nights, floored[i] + 1)
+    return floored
 ```
 
-State lives in existing `guide.js` module variables:
-- `_drillLevel` (new): `'overview'` | `'day'` | `'stop'`
-- `_activeDayNum` (existing): which day is focused
-- `_activeStopId` (existing): which stop is focused
+**Where it lives:** New utility function in `backend/utils/route_utils.py` (new file) OR directly in `RouteArchitectAgent._build_prompt()` as a post-processing step. The agent prompt already includes `stop_potential` in the output schema — the distribution logic validates and corrects the AI's output.
 
-URL reflects state for deep-linking and browser back button support.
+**Confidence:** HIGH — this is arithmetic over the route JSON Claude already returns. No external library needed.
 
----
+#### 2. Agent Context/History Passing (Stop Finder History Awareness)
 
-## CSS Custom Properties to Add
+**What it is:** `StopOptionsFinderAgent` already passes `selected_stops` as a compact list of names. The gap is that Claude sees them as a label string but may still suggest duplicates or stylistically similar options. The fix is a more structured "already visited" block + explicit exclusion instruction.
 
-```css
-:root {
-  /* Drill-down transition timing */
-  --drill-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --drill-fade: opacity 0.2s ease, transform 0.2s ease;
-  --card-expand: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+**Current pattern (already works, needs tightening):**
 
-  /* Progressive enhancement: animate to height:auto in Chromium */
-  interpolate-size: allow-keywords;
-}
+```python
+# In stop_options_finder.py _build_prompt()
+stops_str = "Bisherige Stopps: " + ", ".join(parts)
 ```
 
-## View Transition API Usage Pattern
+**v1.2 pattern — structured exclusion block:**
+
+```python
+already_visited = [s["region"] for s in selected_stops]
+exclusion_block = (
+    f"\nBEREITS AUSGEWÄHLT (NICHT WIEDERHOLEN): {', '.join(already_visited)}\n"
+    f"Keine Option darf geografisch innerhalb 80 km eines bereits ausgewählten Stopps liegen.\n"
+)
+```
+
+**Why no new framework:** The Anthropic Messages API is stateless — each call sends the full context. The existing `selected_stops` list IS the history. The improvement is prompt engineering, not architecture. (Source: Anthropic context engineering guide — "passing structured history in the system/user turn is the canonical pattern.")
+
+**Prompt caching opportunity:** The RouteArchitect system prompt is static (400+ tokens). Adding `cache_control: {"type": "ephemeral"}` to the system message block reduces cost by ~90% on repeated calls during the same planning session. Supported in current `anthropic>=0.28.0` SDK.
+
+```python
+# Pattern for adding prompt caching to any agent:
+response = client.messages.create(
+    model=self.model,
+    system=[{
+        "type": "text",
+        "text": SYSTEM_PROMPT,
+        "cache_control": {"type": "ephemeral"}  # 5-min TTL, 1.25x write cost, 0.1x read cost
+    }],
+    messages=[{"role": "user", "content": user_prompt}],
+    max_tokens=max_tokens,
+)
+```
+
+**Confidence:** HIGH — documented feature in current SDK version, well-tested in production by Anthropic.
+
+#### 3. Budget Management and Distribution
+
+**What it is:** Budget percentages (accommodation/food/activities) are already stored in `TravelRequest`. The gap is that per-stop budget calculations use `total_days` evenly but ignore the actual `nights` distribution — a 1-night transit stop gets the same food budget as a 4-night destination. Fix is arithmetic adjustments using actual nights from the resolved route.
+
+**Implementation:** Adjust `ActivitiesAgent`, `RestaurantsAgent`, and `AccommodationResearcherAgent` to use `stop.get("nights", min_nights)` (already done) but also to pass a total nights sum so fractional budget is correct:
+
+```python
+# In ActivitiesAgent (already uses nights — verify consistency):
+total_nights = sum(s.get("nights", req.min_nights_per_stop) for s in stops)
+budget_per_night = req.budget_chf * (req.budget_activities_pct / 100) / max(1, total_nights)
+budget_for_stop = budget_per_night * stop_nights
+```
+
+**Tage-Neuberechnung trigger:** When nights change (via the `prompt()` nights-edit already in v1.1), the day plan needs recalculation. This requires a lightweight `POST /api/travels/{id}/recalculate-days` endpoint that re-runs `DayPlannerAgent` on the modified stop list. Pattern already exists for `replace_stop` — mirror it.
+
+**No new library:** Pure arithmetic in existing agent code. No optimization solver needed.
+
+**Confidence:** HIGH — arithmetic only, pattern already exists in codebase.
+
+#### 4. Map Viewport Management
+
+**What it is:** Two specific gaps identified in v1.2 requirements:
+1. Travel view opens with default zoom (Switzerland area), not fitted to route
+2. Route-builder: zoom should show all selected stops + new options, not just new options
+
+**Implementation — extend existing `fitBounds()` calls:**
+
+`fitBounds(bounds, padding)` already works in the codebase (lines 689, 749, 811 in maps.js). The padding parameter accepts both a number and an object `{top, right, bottom, left}` — confirmed by Google Maps JS API reference (HIGH confidence from official docs fetch).
+
+**Gap 1 fix — travel view auto-fit:**
 
 ```javascript
-function drillTo(level, params) {
-  if (document.startViewTransition) {
-    document.startViewTransition(() => _renderLevel(level, params));
-  } else {
-    _renderLevel(level, params);  // Fallback: instant swap (current behavior)
-  }
+// In guide-map.js _initGuideMap(), after all markers added:
+if (hasBounds) {
+  map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+  // ← This already exists. The bug is timing: called before map is fully ready.
+  // Fix: wrap in google.maps.event.addListenerOnce(map, 'idle', () => {...})
 }
 ```
 
-No polyfill needed. The fallback IS the existing behavior (direct innerHTML swap with opacity fade).
+**Gap 2 fix — route-builder viewport includes history:**
 
-## Grid Row Expand/Collapse Pattern
+```javascript
+// In route-builder.js _renderOptions(), extend bounds to include already-selected stops:
+const allPoints = [...selectedStops.map(s => ({lat: s.lat, lng: s.lng})),
+                   ...options.map(o => ({lat: o.lat, lng: o.lon}))];
+const bounds = allPoints.reduce((b, p) => b.extend(p), new google.maps.LatLngBounds());
+map.fitBounds(bounds, { top: 60, right: 40, bottom: 40, left: 40 });
+```
+
+**Confidence:** HIGH — `fitBounds` with padding object is confirmed in Google Maps JS API reference. Pattern already used at 3 locations in maps.js.
+
+#### 5. Global Wishes Field in Trip Form
+
+**What it is:** A new optional free-text field on the trip form (`global_wishes`) that gets passed verbatim to all agents. Different from `travel_description` (about style/context) — this is specific user instructions ("avoid motorways", "include wine regions", "stop near Michelin restaurants").
+
+**Implementation:**
+
+```python
+# In TravelRequest (models/travel_request.py):
+global_wishes: Optional[str] = Field(default=None, max_length=500)
+```
+
+Pass to each agent prompt as a dedicated block:
+```python
+wishes_block = f"\nNUTZERWÜNSCHE: {req.global_wishes}\n" if req.global_wishes else ""
+```
+
+**Frontend:** Single `<textarea>` in the form step (step 1 or step 5), max 500 chars, with character counter. Vanilla JS, no library.
+
+**Confidence:** HIGH — trivial model + UI change.
+
+#### 6. Tooltips for Edit Buttons
+
+**What it is:** Edit, replace, remove, and "adjust nights" buttons on stop cards currently have `title=""` attributes (confirmed in `guide-stops.js:189-193`). The native browser tooltip is sufficient for desktop. Mobile users don't hover, so tooltip is not critical.
+
+**Recommendation:** Use native `title=""` attribute (already present on some buttons, just needs consistent application). No JS tooltip library needed.
+
+**If custom styling is desired:** A pure CSS tooltip using `[data-tooltip]::after` pseudo-element with `content: attr(data-tooltip)` is zero-dependency and already a standard pattern. ~15 lines of CSS.
 
 ```css
-.day-card-details {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: var(--card-expand);
-  overflow: hidden;
+[data-tooltip] { position: relative; }
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+  background: #333; color: #fff; padding: 4px 8px; border-radius: 4px;
+  font-size: 12px; white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity 0.15s;
 }
-.day-card-details.expanded {
-  grid-template-rows: 1fr;
-}
-.day-card-details > .inner {
-  min-height: 0;  /* Required for grid row animation to work */
-}
+[data-tooltip]:hover::after { opacity: 1; }
 ```
 
-Cross-browser pattern for animating expand/collapse without measuring content height. The `.inner` wrapper with `min-height: 0` is essential -- without it, the content won't collapse below its intrinsic height.
+**Confidence:** HIGH — CSS-only, no browser incompatibilities, zero dependencies.
 
----
+#### 7. Hotel Geheimtipps: Distance Enforcement
 
-## Alternatives Considered
+**What it is:** `is_geheimtipp: true` options are already distance-limited by the prompt instruction (`hotel_radius_km`), but the enforcement is only in the prompt — no backend validation. Add a Python guard that checks the geheimtipp's coordinates against the stop's geocoded position.
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| `document.startViewTransition()` | Manual opacity/transform fade (current approach) | Never -- View Transitions degrade gracefully to instant swap. The manual fade is already the fallback. Strictly better. |
-| CSS `grid-template-rows: 0fr/1fr` | `max-height` transition | Never -- `max-height` requires guessing a maximum value. Too high = delayed collapse animation. Too low = content clipped. `grid-template-rows` has neither problem. |
-| CSS `grid-template-rows: 0fr/1fr` | `interpolate-size: allow-keywords` | When Firefox/Safari add support. Currently Chromium-only, so it can only be a progressive enhancement. |
-| IntersectionObserver lazy render | Virtual scroll library | Never for this project. Max ~15 stops / ~14 days does not justify virtual scroll complexity. |
-| Existing Google Maps `panTo()`/`fitBounds()` | Vector maps + `flyCameraTo()` | If wanting cinematic 3D camera flights. Requires `mapId`, Cloud Console map style config, different marker API (AdvancedMarkerElement). Massive migration for marginal visual improvement. |
-| Module-scoped state variables | State management library | Never -- violates no-framework constraint. Three variables (`_drillLevel`, `_activeDayNum`, `_activeStopId`) handle a 3-level drill-down. |
+**Implementation:**
 
----
+```python
+import math
 
-## What NOT to Use
+def _haversine_km(lat1, lon1, lat2, lon2) -> float:
+    R = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+    return R * 2 * math.asin(math.sqrt(a))
+```
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| GSAP / anime.js / Motion One | 15-50KB for effects CSS handles natively. Card expand/collapse + opacity fades do not need a JS animation library. | CSS transitions + `document.startViewTransition()` |
-| Virtual scroll (any library) | Trip data is tiny (max ~15 stops, ~14 days). Zero performance benefit, significant complexity cost. | IntersectionObserver lazy rendering for images/maps |
-| Any JS framework or web components | Project constraint: vanilla JS, no build step. Adding lit-html or similar would be scope creep. | Extend existing `renderX()` functions in `guide.js` |
-| Google Maps vector map migration | Requires `mapId` setup, Cloud Console config, AdvancedMarkerElement migration (current code uses OverlayView for custom markers). 600+ lines of maps.js to rewrite. | Keep raster maps. `panTo()` and `fitBounds()` already animate smoothly. |
-| `max-height` transition for expand/collapse | Timing is always wrong. Must hardcode a max value: too high = collapse appears delayed, too low = content clipped. Visible jump artifacts. | CSS `grid-template-rows: 0fr` to `1fr` transition |
-| `@starting-style` for entry animations | Chrome 117+ only as of 2026. Safari/Firefox support is inconsistent. | Classic `requestAnimationFrame` + class toggle pattern (already proven in codebase). |
-| Swiper/carousel libraries for day navigation | CSS `scroll-snap-type: x mandatory` handles horizontal day card scrolling natively. 0 bytes vs 30KB+. | CSS scroll-snap |
+This 6-line function (no library) is already the right tool. `math` is stdlib. No new dependency.
 
----
-
-## Version Compatibility
-
-| Feature | Chrome | Firefox | Safari | Edge | Primary/Enhancement |
-|---------|--------|---------|--------|------|---------------------|
-| `document.startViewTransition()` | 111+ | 133+ | 18+ | 111+ | Primary -- graceful fallback to instant swap |
-| `grid-template-rows: 0fr/1fr` transition | 117+ | 117+ | 17.2+ | 117+ | Primary -- expand/collapse animation |
-| `interpolate-size: allow-keywords` | 129+ | Not supported | Not supported | 129+ | Enhancement only -- Chromium bonus |
-| IntersectionObserver | 51+ | 55+ | 12.1+ | 15+ | Primary -- already in codebase |
-| CSS Container Queries | 105+ | 110+ | 16+ | 105+ | Available but not required for drill-down (existing responsive approach sufficient) |
-| CSS `scroll-snap` | 69+ | 68+ | 11+ | 79+ | Primary -- horizontal day card navigation |
+**Confidence:** HIGH — stdlib math only.
 
 ---
 
 ## Installation
 
 ```bash
-# No new backend dependencies
-# No new frontend dependencies
-# No new CDN scripts
+# Backend: ZERO new packages
+# requirements.txt unchanged
 
-# Zero changes to requirements.txt
-# Zero changes to index.html script tags
-# Zero changes to Docker images
+# Frontend: ZERO new libraries
+# index.html script tags unchanged
+# No CDN additions
+
+# New backend file (utility only):
+# backend/utils/route_utils.py  ← day distribution helper
 ```
 
-Everything needed is already in the browser or already loaded.
+---
+
+## Alternatives Considered
+
+| Recommended | Alternative | Why Not |
+|-------------|-------------|---------|
+| Pure Python arithmetic for night distribution | OR-Tools / scipy.optimize | Massive overkill. The problem is bounded integer allocation with weights — 10 lines of Python with `math.floor`. OR-Tools would add 50MB to the Docker image. |
+| Structured exclusion block in prompt for history | Vector embeddings + semantic dedup | Overkill for ~10 stop names. String comparison is sufficient. Embeddings require a new service or API call. |
+| CSS `[data-tooltip]` pseudo-element | Tippy.js / Floating UI | ~5KB vs 0KB. The project has zero JS dependencies in the frontend. Adding a tooltip library to a vanilla JS project is scope creep. |
+| Anthropic prompt caching (`cache_control`) | Context window management / summarization | Prompt caching is the right tool for repeated static system prompts. No compression needed — the context is already small. |
+| `map.fitBounds()` with `'idle'` listener | Manual timeout / `setTimeout` delay | `'idle'` is the correct Google Maps event for "map is fully rendered and ready for viewport changes". Timeout-based approaches produce jank. |
+| Haversine in `utils/route_utils.py` (stdlib math) | `geopy` / `haversine` package | 6 lines of stdlib vs a new pip dependency. The formula is well-known and needs no abstraction. |
+
+---
+
+## What NOT to Add
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `scipy` / `numpy` for distribution math | Night distribution is bounded integer arithmetic — no optimization solver needed. These packages add ~50MB to the Docker image. | `math.floor`, `math.ceil`, and a sort with index tracking |
+| OR-Tools / route optimization libraries | v1.2 is about AI prompt quality and UI fixes, not route graph optimization. The AI (Claude Opus) IS the route optimizer. | Better-structured prompts to `RouteArchitectAgent` |
+| `tippy.js` or any tooltip library | Zero benefit over CSS `[data-tooltip]::after`. Adds network request + init JS. | CSS pseudo-element tooltip (15 lines) |
+| `langchain` / `llama-index` / agent frameworks | The project has a clean, well-tested custom agent pattern. LangChain would add a large dependency graph and obscure the agent logic behind abstractions the team doesn't control. | Current `call_with_retry()` + `parse_agent_json()` pattern |
+| SQLite full-text search extension | Stop history deduplication works on a list of ~10 names — no search index needed. | Simple Python list membership check (`region not in already_visited`) |
+| Websockets to replace SSE | SSE is simpler, unidirectional, and already deployed with Nginx + Celery. No bidirectional communication is needed for v1.2. | Extend existing SSE event types |
+
+---
+
+## Version Compatibility
+
+All changes are within already-pinned dependency versions:
+
+| Package | Current Pin | v1.2 Feature Used | Notes |
+|---------|-------------|-------------------|-------|
+| `anthropic>=0.28.0` | >=0.28.0 | `cache_control` on system messages | Prompt caching available since 0.25+. No version bump needed. |
+| `pydantic>=2.7.0` | >=2.7.0 | `Optional[str]` field on `TravelRequest` | Standard Pydantic v2 pattern. |
+| Google Maps JS SDK | Weekly auto-updated CDN | `fitBounds(bounds, {top,right,bottom,left})` | Padding object supported since 2017 per official docs. Already used in codebase. |
+| Python `math` | stdlib | `floor`, `ceil`, `sqrt`, `radians` | No changes. |
 
 ---
 
 ## Sources
 
-- [MDN: View Transition API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API) -- same-document API spec, browser support matrix (HIGH confidence)
-- [Can I Use: View Transitions (single-document)](https://caniuse.com/view-transitions) -- Chrome 111+, Safari 18+, Firefox 133+ confirmed (HIGH confidence)
-- [Chrome Developers: Animate to height auto](https://developer.chrome.com/docs/css-ui/animate-to-height-auto) -- `interpolate-size` documentation, Chromium-only status (HIGH confidence)
-- [MDN: interpolate-size](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/interpolate-size) -- Chromium-only confirmed March 2026 (HIGH confidence)
-- [Google Maps: Move Camera Easing](https://developers.google.com/maps/documentation/javascript/examples/move-camera-ease) -- camera animation limited to vector maps / 3D (MEDIUM confidence)
-- [Google Maps: panTo issue tracker](https://issuetracker.google.com/issues/229662872) -- panTo animation behavior on raster maps confirmed (MEDIUM confidence)
-- Codebase analysis: `frontend/js/maps.js` lines 720-750 (`panToStop`), `frontend/js/guide.js` lines 72-145 (`renderGuide`, tab switching, fade animation), `frontend/styles.css` lines 1-80 (design system tokens) -- verified existing patterns (HIGH confidence)
-- [CSS-Tricks: Performant Expandable Animations](https://css-tricks.com/performant-expandable-animations-building-keyframes-on-the-fly/) -- grid-template-rows pattern (HIGH confidence)
+- Google Maps JS API reference `Map.fitBounds()` — padding accepts `number | Padding` object; codebase already uses `{top:40, right:40, bottom:40, left:40}` at 3 locations (HIGH confidence — verified in maps.js)
+- [Anthropic Prompt Caching docs](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) — `cache_control: {"type": "ephemeral"}` on system messages, 5-min TTL, 90% cost reduction for static prefixes (HIGH confidence — official docs)
+- [Anthropic Context Engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) — structured history in user turn is canonical pattern; "just-in-time" context is preferred over pre-loading (HIGH confidence — official Anthropic engineering blog)
+- Codebase analysis — `backend/agents/stop_options_finder.py:55-63` (existing history passing), `backend/agents/accommodation_researcher.py:96-129` (geheimtipp radius enforcement), `frontend/js/guide-map.js:39-90` (fitBounds timing), `frontend/js/maps.js:615-650` (fitBounds with padding) — verified existing patterns (HIGH confidence)
+- [Google Maps: `idle` event](https://developers.google.com/maps/documentation/javascript/reference/map#Map.idle) — fires after map viewport is fully rendered, correct hook for post-init `fitBounds` (HIGH confidence — official docs)
 
 ---
-*Stack research for: Progressive-disclosure travel view redesign*
-*Researched: 2026-03-27*
+*Stack research for: v1.2 AI route quality — day distribution, agent context, budget, map viewport*
+*Researched: 2026-03-28*
