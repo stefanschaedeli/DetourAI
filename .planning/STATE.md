@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.2
-milestone_name: "AI-Qualität & Routenplanung"
-status: active
-stopped_at: Roadmap created, ready to plan Phase 12
-last_updated: "2026-03-29T00:00:00.000Z"
-last_activity: 2026-03-29
+milestone_name: AI-Qualität & Routenplanung
+status: planning
+stopped_at: Phase 12 context gathered
+last_updated: "2026-03-29T10:45:21.086Z"
+last_activity: 2026-03-29 — v1.2 roadmap created (Phases 12-16, 16 requirements)
 progress:
   total_phases: 5
   completed_phases: 0
@@ -57,6 +57,7 @@ All v1.0 decisions archived in milestones/v1.0-ROADMAP.md.
 All v1.1 decisions archived in milestones/v1.1-ROADMAP.md and PROJECT.md Key Decisions table.
 
 Recent decisions affecting v1.2:
+
 - [v1.2 research]: No new libraries needed — stdlib math for haversine + night distribution, CSS [data-tooltip] for tooltips
 - [v1.2 research]: Architect pre-plan uses Sonnet (not Opus) to stay under 2-3s latency budget; graceful degradation if timeout
 - [Phase 11]: Nights edit via prompt() — to be replaced with dedicated button in Phase 15
@@ -73,6 +74,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29
-Stopped at: Roadmap created for v1.2, ready to plan Phase 12
-Resume file: None
+Last session: 2026-03-29T10:45:21.083Z
+Stopped at: Phase 12 context gathered
+Resume file: .planning/phases/12-context-infrastructure-wishes-forwarding/12-CONTEXT.md
