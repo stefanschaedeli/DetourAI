@@ -126,7 +126,7 @@ Plans:
 | 10. Progressive Disclosure UI | v1.1 | 3/3 | Complete | 2026-03-27 |
 | 11. Browser Verification | v1.1 | 4/4 | Complete | 2026-03-28 |
 | 12. Context Infrastructure + Wishes Forwarding | v1.2 | 2/2 | Complete    | 2026-03-29 |
-| 13. Architect Pre-Plan for Interactive Flow | v1.2 | 2/2 | Complete   | 2026-03-29 |
+| 13. Architect Pre-Plan for Interactive Flow | v1.2 | 2/2 | Complete    | 2026-03-29 |
 | 14. Stop History Awareness + Night Distribution | v1.2 | 0/? | Not started | - |
 | 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 0/? | Not started | - |
 | 16. Frontend UI Fixes + Polish | v1.2 | 0/? | Not started | - |
