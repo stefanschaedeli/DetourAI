@@ -948,6 +948,100 @@ def test_architect_pre_plan_nights_budget(mocker):
     assert "9" in prompt
 
 
+# ---------------------------------------------------------------------------
+# StopOptionsFinder — architect_context injection (RTE-02)
+# ---------------------------------------------------------------------------
+
+def test_stop_options_finder_architect_context_in_prompt(mocker):
+    """RTE-02: _build_prompt() renders ARCHITECT-EMPFEHLUNG block when architect_context has regions."""
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    mock_client = MagicMock()
+    mocker.patch('agents.stop_options_finder.get_client', return_value=mock_client)
+
+    request = _make_single_transit_req()
+    agent = StopOptionsFinderAgent(request, "test_job")
+
+    architect_context = {
+        "regions": [
+            {"name": "Provence", "recommended_nights": 3, "max_drive_hours": 3.0},
+            {"name": "Paris", "recommended_nights": 6, "max_drive_hours": 4.0},
+        ],
+        "total_nights": 9,
+    }
+
+    prompt = agent._build_prompt(
+        selected_stops=[],
+        stop_number=1,
+        days_remaining=9,
+        route_could_be_complete=False,
+        segment_target="Paris",
+        segment_index=0,
+        segment_count=1,
+        extra_instructions="",
+        route_geometry={},
+        architect_context=architect_context,
+    )
+
+    assert "ARCHITECT-EMPFEHLUNG" in prompt
+    assert "Provence" in prompt
+    assert "3N" in prompt
+    assert "Paris" in prompt
+    assert "6N" in prompt
+
+
+def test_stop_options_finder_no_architect_context(mocker):
+    """RTE-02: _build_prompt() does NOT render ARCHITECT-EMPFEHLUNG when architect_context is None."""
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    mock_client = MagicMock()
+    mocker.patch('agents.stop_options_finder.get_client', return_value=mock_client)
+
+    request = _make_single_transit_req()
+    agent = StopOptionsFinderAgent(request, "test_job")
+
+    prompt = agent._build_prompt(
+        selected_stops=[],
+        stop_number=1,
+        days_remaining=9,
+        route_could_be_complete=False,
+        segment_target="Paris",
+        segment_index=0,
+        segment_count=1,
+        extra_instructions="",
+        route_geometry={},
+        architect_context=None,
+    )
+
+    assert "ARCHITECT-EMPFEHLUNG" not in prompt
+
+
+def test_stop_options_finder_empty_architect_context(mocker):
+    """RTE-02: _build_prompt() does NOT render ARCHITECT-EMPFEHLUNG when regions list is empty."""
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    mock_client = MagicMock()
+    mocker.patch('agents.stop_options_finder.get_client', return_value=mock_client)
+
+    request = _make_single_transit_req()
+    agent = StopOptionsFinderAgent(request, "test_job")
+
+    prompt = agent._build_prompt(
+        selected_stops=[],
+        stop_number=1,
+        days_remaining=9,
+        route_could_be_complete=False,
+        segment_target="Paris",
+        segment_index=0,
+        segment_count=1,
+        extra_instructions="",
+        route_geometry={},
+        architect_context={"regions": []},
+    )
+
+    assert "ARCHITECT-EMPFEHLUNG" not in prompt
+
+
 def test_restaurants_agent_includes_wishes(mocker):
     """CTX-02 + CTX-03: RestaurantsAgent prompt contains all 3 wishes fields when set."""
     import asyncio

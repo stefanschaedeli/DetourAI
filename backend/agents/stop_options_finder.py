@@ -47,6 +47,7 @@ class StopOptionsFinderAgent:
         segment_count: int,
         extra_instructions: str,
         route_geometry: dict,
+        architect_context: dict = None,
     ) -> str:
         req = self.request
         geo = route_geometry or {}
@@ -113,6 +114,22 @@ class StopOptionsFinderAgent:
             )
 
         geo_block = "\n".join(geo_lines) + "\n" if geo_lines else ""
+
+        # Architect pre-plan context block (RTE-02)
+        architect_block = ""
+        if architect_context:
+            regions = architect_context.get("regions", [])
+            if regions:
+                region_lines = []
+                for r in regions:
+                    nights_hint = f"{r['recommended_nights']}N"
+                    drive_hint = f", ~{r['max_drive_hours']}h" if r.get('max_drive_hours') else ""
+                    region_lines.append(f"{r['name']} ({nights_hint}{drive_hint})")
+                summary = " → ".join(region_lines)
+                architect_block = (
+                    f"\nARCHITECT-EMPFEHLUNG: {summary}\n"
+                    f"Die Nächteangaben sind Empfehlungen basierend auf dem Potential der Orte — du kannst davon abweichen.\n"
+                )
 
         # Bearing context for backtracking prevention (D-10)
         prev_coords = geo.get("_from_coords")
@@ -221,7 +238,7 @@ Letzter Stop (Abfahrtspunkt): {prev_stop}
 Endziel dieses Segments: {segment_target}
 Aktueller Stop #{stop_number}
 {stops_str}
-{geo_block}{bearing_block}Verbleibende Tage im Segment: {days_remaining}
+{geo_block}{architect_block}{bearing_block}Verbleibende Tage im Segment: {days_remaining}
 Maximale Fahrzeit pro Etappe: {req.max_drive_hours_per_day}h
 Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
 Reisende: {req.adults} Erwachsene{', ' + str(len(req.children)) + ' Kinder (Alter: ' + ', '.join(str(c) for c in req.children) + ')' if req.children else ''}
@@ -265,6 +282,7 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
         segment_count: int = 1,
         extra_instructions: str = "",
         route_geometry: dict = None,
+        architect_context: dict = None,
     ) -> dict:
         prompt = self._build_prompt(
             selected_stops=selected_stops,
@@ -276,6 +294,7 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
             segment_count=segment_count,
             extra_instructions=extra_instructions,
             route_geometry=route_geometry,
+            architect_context=architect_context,
         )
 
         await debug_logger.log(LogLevel.API, f"→ Anthropic API call: {self.model}", job_id=self.job_id, agent="StopOptionsFinder")
@@ -336,6 +355,7 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
         segment_count: int = 1,
         extra_instructions: str = "",
         route_geometry: dict = None,
+        architect_context: dict = None,
     ) -> AsyncIterator[dict]:
         """
         Calls Claude with streaming and yields individual option dicts as soon
@@ -353,6 +373,7 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
             segment_count=segment_count,
             extra_instructions=extra_instructions,
             route_geometry=route_geometry,
+            architect_context=architect_context,
         )
 
         await debug_logger.log(LogLevel.API, f"→ Anthropic API stream: {self.model}", job_id=self.job_id, agent="StopOptionsFinder")
