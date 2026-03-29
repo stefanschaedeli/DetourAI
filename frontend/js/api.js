@@ -364,6 +364,14 @@ async function apiReplaceStopSelect(travelId, jobId, optionIndex) {
   }, 'Option wird übernommen…')).json();
 }
 
+async function apiUpdateNights(travelId, stopId, nights) {
+  return (await _fetchQuiet(`${API}/travels/${travelId}/update-nights`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stop_id: stopId, nights: nights }),
+  })).json();
+}
+
 /**
  * Open SSE connection for a job.
  * @param {string} jobId
@@ -385,6 +393,7 @@ function openSSE(jobId, handlers) {
     'remove_stop_progress', 'remove_stop_complete',
     'add_stop_progress', 'add_stop_complete',
     'reorder_stops_progress', 'reorder_stops_complete',
+    'update_nights_progress', 'update_nights_complete',
     'style_mismatch_warning', 'ferry_detected',
   ];
 

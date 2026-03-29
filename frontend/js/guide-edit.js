@@ -5,7 +5,7 @@
 //           _openAddStopModal, _executeAddStop, _haversineKm, _onMapClickToAdd,
 //           _showClickToAddPopup, _hideClickToAddPopup, _confirmClickToAdd,
 //           _doAddStopFromMap, _onStopDragStart, _onStopDragEnd, _onStopDrop,
-//           _onDropZoneDrop, _editStopNights,
+//           _onDropZoneDrop, _editStopNights, _listenForNightsComplete,
 //           openReplaceStopModal, closeReplaceStopModal, _switchReplaceTab,
 //           _showReplaceProgress, _hideReplaceProgress, _doManualReplace,
 //           _doSearchReplace, _selectSearchOption, _listenForReplaceComplete
@@ -593,34 +593,121 @@ async function _onDropZoneDrop(e, dropBeforeIndex) {
 }
 
 // ---------------------------------------------------------------------------
-// Inline nights edit — local-state-only update (GAP-07)
+// Inline nights edit — triggers backend recalculation via update-nights endpoint
 // ---------------------------------------------------------------------------
 
 function _editStopNights(stopId, currentNights) {
   if (_editInProgress) return;
-  var input = prompt('Anzahl N\u00e4chte:', currentNights);
-  if (input === null) return;
-  var nights = parseInt(input);
-  if (isNaN(nights) || nights < 1 || nights > 14) {
-    alert('Bitte eine Zahl zwischen 1 und 14 eingeben.');
+
+  var plan = S.result;
+  if (!plan || !plan._saved_travel_id) {
+    alert('Reise muss zuerst gespeichert werden.');
     return;
   }
-  if (nights === currentNights) return;
 
-  // Update local state only — persisted when travel is saved
-  var stops = (S.result && S.result.stops) || [];
-  for (var i = 0; i < stops.length; i++) {
-    if (stops[i].id === stopId) {
-      stops[i].nights = nights;
-      break;
+  // Find the nights span and replace with inline editor
+  var nightsSpan = document.querySelector('[data-nights-stop="' + stopId + '"]');
+  if (!nightsSpan) return;
+
+  // Build inline editor using DOM methods (XSS-safe — no user data in HTML)
+  var editor = document.createElement('span');
+  editor.className = 'nights-inline-editor';
+
+  var input = document.createElement('input');
+  input.type = 'number';
+  input.min = '1';
+  input.max = '14';
+  input.value = currentNights;
+  input.className = 'nights-input';
+
+  var confirmBtn = document.createElement('button');
+  confirmBtn.className = 'nights-confirm';
+  confirmBtn.title = 'Best\u00e4tigen';
+  confirmBtn.textContent = '\u2713';
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'nights-cancel';
+  cancelBtn.title = 'Abbrechen';
+  cancelBtn.textContent = '\u2717';
+
+  editor.appendChild(input);
+  editor.appendChild(confirmBtn);
+  editor.appendChild(cancelBtn);
+
+  nightsSpan.parentNode.replaceChild(editor, nightsSpan);
+  input.focus();
+  input.select();
+
+  function doConfirm() {
+    var nights = parseInt(input.value);
+    if (isNaN(nights) || nights < 1 || nights > 14) {
+      alert('Bitte eine Zahl zwischen 1 und 14 eingeben.');
+      return;
     }
+    if (nights === currentNights) {
+      renderGuide(S.result, 'stops');
+      return;
+    }
+
+    _lockEditing();
+    var travelId = plan._saved_travel_id;
+    apiUpdateNights(travelId, stopId, nights)
+      .then(function(resp) {
+        _listenForNightsComplete(resp.job_id, travelId);
+      })
+      .catch(function(err) {
+        _unlockEditing();
+        alert('Fehler: ' + err.message);
+        renderGuide(S.result, 'stops');
+      });
   }
 
-  // Update localStorage cache
-  lsSet(LS_RESULT, { savedAt: new Date().toISOString(), plan: S.result });
+  function doCancel() {
+    renderGuide(S.result, 'stops');
+  }
 
-  // Re-render stops view to show updated nights
-  renderGuide(S.result, 'stops');
+  confirmBtn.onclick = function(e) {
+    e.stopPropagation();
+    doConfirm();
+  };
+
+  cancelBtn.onclick = function(e) {
+    e.stopPropagation();
+    doCancel();
+  };
+
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      doConfirm();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      doCancel();
+    }
+  });
+}
+
+function _listenForNightsComplete(jobId, travelId) {
+  var _nightsSSE = openSSE(jobId, {
+    update_nights_progress: function(data) {
+      // Progress events received — SSE overlay provides visual feedback
+    },
+    update_nights_complete: function(data) {
+      _nightsSSE.close();
+      data._saved_travel_id = travelId;
+      S.result = data;
+      lsSet(LS_RESULT, { savedAt: new Date().toISOString(), plan: data });
+      _unlockEditing();
+      renderGuide(data, activeTab);
+      if (typeof GoogleMaps !== 'undefined') GoogleMaps.setGuideMarkers(data, _onMarkerClick);
+    },
+    job_error: function(data) {
+      _nightsSSE.close();
+      _unlockEditing();
+      alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+      renderGuide(S.result, 'stops');
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------

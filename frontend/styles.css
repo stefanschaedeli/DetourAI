@@ -1931,6 +1931,42 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   opacity: 1;
 }
 
+/* Inline nights number editor (Phase 15, Plan 03) */
+.nights-inline-editor {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nights-input {
+  width: 50px;
+  text-align: center;
+  font-size: inherit;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.nights-confirm {
+  color: var(--success, #22c55e);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 1.1em;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.nights-cancel {
+  color: var(--danger, #ef4444);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 1.1em;
+  padding: 0 2px;
+  line-height: 1;
+}
+
 .stop-card-photo {
   flex-shrink: 0;
   width: 120px;

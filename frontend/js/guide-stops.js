@@ -16,7 +16,7 @@ function renderStopCard(stop, i, totalStops) {
     if (stop.drive_km_from_prev > 0) driveInfo += ' \u00b7 ' + esc(String(stop.drive_km_from_prev)) + ' km';
   }
   var nightsText = stop.nights + ' Nacht' + (stop.nights !== 1 ? 'e' : '');
-  var nightsHtml = '<span class="stop-nights-editable" onclick="event.stopPropagation(); _editStopNights(' + stop.id + ', ' + stop.nights + ')">' +
+  var nightsHtml = '<span class="stop-nights-editable" data-nights-stop="' + stop.id + '" onclick="event.stopPropagation(); _editStopNights(' + stop.id + ', ' + stop.nights + ')">' +
     esc(nightsText) + ' <svg class="inline-edit-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>';
 
   var tagsHtml = '';
