@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: AI-Qualität & Routenplanung
-status: planning
-stopped_at: Phase 12 context gathered
-last_updated: "2026-03-29T10:45:21.086Z"
-last_activity: 2026-03-29 — v1.2 roadmap created (Phases 12-16, 16 requirements)
+status: executing
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-03-29T11:47:11.917Z"
+last_activity: 2026-03-29
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Route planning and stop discovery must produce consistently high-quality, geographically correct results for any destination type.
-**Current focus:** Phase 12 — Context Infrastructure + Wishes Forwarding
+**Current focus:** Phase 12 — context-infrastructure-wishes-forwarding
 
 ## Current Position
 
-Phase: 12 of 16 (Context Infrastructure + Wishes Forwarding)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-03-29 — v1.2 roadmap created (Phases 12-16, 16 requirements)
+Phase: 12 (context-infrastructure-wishes-forwarding) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0% (v1.2 milestone)
 
@@ -48,6 +48,7 @@ Progress: [░░░░░░░░░░] 0% (v1.2 milestone)
 | Phase 8-11 | 11 | ~45min | ~4min |
 
 **Average:** ~3.7 min/plan across 29 plans
+| Phase 12-context-infrastructure-wishes-forwarding P01 | 5 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,7 @@ Recent decisions affecting v1.2:
 - [v1.2 research]: No new libraries needed — stdlib math for haversine + night distribution, CSS [data-tooltip] for tooltips
 - [v1.2 research]: Architect pre-plan uses Sonnet (not Opus) to stay under 2-3s latency budget; graceful degradation if timeout
 - [Phase 11]: Nights edit via prompt() — to be replaced with dedicated button in Phase 15
+- [Phase 12-context-infrastructure-wishes-forwarding]: Kept preferred tag functions separate from mandatory tag functions — no unification per RESEARCH.md Pitfall 5
 
 ### Pending Todos
 
@@ -74,6 +76,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T10:45:21.083Z
-Stopped at: Phase 12 context gathered
-Resume file: .planning/phases/12-context-infrastructure-wishes-forwarding/12-CONTEXT.md
+Last session: 2026-03-29T11:47:11.915Z
+Stopped at: Completed 12-01-PLAN.md
+Resume file: None
