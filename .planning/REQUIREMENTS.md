@@ -23,9 +23,9 @@ Requirements for milestone v1.2: AI-Qualität & Routenplanung. Each maps to road
 
 ### Budget & Tagesplanung
 
-- [ ] **BDG-01**: `arrival_day` wird bei jeder Nächte-Änderung korrekt neu berechnet
-- [ ] **BDG-02**: User kann Nächte pro Stop anpassen (dedizierter Edit-Button)
-- [ ] **BDG-03**: Tagesplan wird nach Nächte- oder Stop-Änderungen neu berechnet (Celery Task)
+- [x] **BDG-01**: `arrival_day` wird bei jeder Nächte-Änderung korrekt neu berechnet
+- [x] **BDG-02**: User kann Nächte pro Stop anpassen (dedizierter Edit-Button)
+- [x] **BDG-03**: Tagesplan wird nach Nächte- oder Stop-Änderungen neu berechnet (Celery Task)
 
 ### Unterkunftsqualität
 
@@ -78,9 +78,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RTE-04 | Phase 14 | Pending |
 | ACC-01 | Phase 15 | Pending |
 | ACC-02 | Phase 15 | Pending |
-| BDG-01 | Phase 15 | Pending |
-| BDG-02 | Phase 15 | Pending |
-| BDG-03 | Phase 15 | Pending |
+| BDG-01 | Phase 15 | Complete |
+| BDG-02 | Phase 15 | Complete |
+| BDG-03 | Phase 15 | Complete |
 | UIX-01 | Phase 16 | Pending |
 | UIX-02 | Phase 16 | Pending |
 | UIX-03 | Phase 16 | Pending |

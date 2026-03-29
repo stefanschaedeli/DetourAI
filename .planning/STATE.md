@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: AI-Qualität & Routenplanung
 status: executing
-stopped_at: Phase 14 context gathered
-last_updated: "2026-03-29T19:32:58.336Z"
+stopped_at: Completed 15-02-PLAN.md
+last_updated: "2026-03-29T20:17:31.566Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 5
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0% (v1.2 milestone)
 | Phase 12 P02 | 8 | 2 tasks | 9 files |
 | Phase 13-architect-pre-plan-for-interactive-flow P01 | 2 | 2 tasks | 4 files |
 | Phase 13-architect-pre-plan-for-interactive-flow P02 | 3.5 | 2 tasks | 3 files |
+| Phase 15 P02 | 8 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,7 @@ Recent decisions affecting v1.2:
 - [Phase 13-01]: Used max_attempts=1 in call_with_retry per D-14 (no retry on pre-plan fallback)
 - [Phase 13]: Other _find_and_stream_options call sites receive architect_context=None by default — only _start_leg_route_building passes context
 - [Phase 13]: architect_plan persists across legs (not reset in _advance_to_next_leg) — pre-plan covers whole trip
+- [Phase 15]: POST /api/travels/{id}/update-nights: validates 1-14 nights range at endpoint before lock acquisition
 
 ### Pending Todos
 
@@ -83,6 +85,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T16:48:03.327Z
-Stopped at: Phase 14 context gathered
-Resume file: .planning/phases/14-stop-history-awareness-night-distribution/14-CONTEXT.md
+Last session: 2026-03-29T20:17:31.565Z
+Stopped at: Completed 15-02-PLAN.md
+Resume file: None
