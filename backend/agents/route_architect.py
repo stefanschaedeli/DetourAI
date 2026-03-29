@@ -49,6 +49,8 @@ class RouteArchitectAgent:
             acts = [f"{a.name}" + (f" ({a.location})" if a.location else "") for a in req.mandatory_activities]
             mandatory_str = f"Pflichtaktivitäten: {', '.join(acts)}\n"
 
+        pref_str = f"Bevorzugte Aktivitäten: {', '.join(req.preferred_activities)}\n" if req.preferred_activities else ""
+
         # Travel style routing block (D-06)
         style_block = ""
         if req.travel_styles:
@@ -123,7 +125,7 @@ Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
 Maximale Fahrzeit pro Tag: {req.max_drive_hours_per_day}h (STRIKT — siehe FAHRZEITLIMIT unten)
 Nächte pro Stop: {req.min_nights_per_stop}–{req.max_nights_per_stop}
 Budget: CHF {req.budget_chf:,.0f}
-{mandatory_str}{style_block}{plausibility_block}{ferry_block}{drive_limit_block}
+{mandatory_str}{pref_str}{style_block}{plausibility_block}{ferry_block}{drive_limit_block}
 Erstelle eine optimale Route. Der erste Stop MUSS der Startort sein, der letzte Stop MUSS das Hauptziel sein.
 Dazwischen plane 2–5 sinnvolle Zwischenstopps. Verteile die Tage sinnvoll.
 Gib genau dieses JSON zurück:

@@ -55,13 +55,18 @@ class RestaurantsAgent:
                 if lines:
                     real_data_block = "\n\nEchte Suchergebnisse für Restaurants in der Region:\n" + "\n".join(lines) + "\nBevorzuge diese echten Orte in deiner Empfehlung.\n"
 
+        # Optionale Wunsch-Kontextblöcke (CTX-02, CTX-03)
+        desc_line = f"\nReisebeschreibung: {req.travel_description}" if req.travel_description else ""
+        pref_line = f"\nBevorzugte Aktivitäten: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
+        mandatory_line = f"\nPflichtaktivitäten: {', '.join(a.name for a in req.mandatory_activities)}" if req.mandatory_activities else ""
+
         prompt = f"""Empfehle Restaurants in {region}, {country}:
 
 Reisende: {req.adults} Erwachsene{f', {children_count} Kinder' if children_count else ''}
 Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
 Suchradius: {req.activities_radius_km} km
 Max. Restaurants: {req.max_restaurants_per_stop}
-Budget pro Mahlzeit/Person: ca. CHF {budget_per_meal:.0f}
+Budget pro Mahlzeit/Person: ca. CHF {budget_per_meal:.0f}{mandatory_line}{pref_line}{desc_line}
 
 WICHTIG: Alle Restaurants müssen innerhalb des Suchradius von {req.activities_radius_km} km vom Übernachtungsort in {region} liegen. Keine Ausnahmen.
 

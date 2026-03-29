@@ -36,11 +36,16 @@ class TravelGuideAgent:
         if wiki and wiki.get("extract"):
             wiki_block = f"\n\nWikipedia-Zusammenfassung über {region}:\n{wiki['extract'][:500]}\nNutze diese Fakten als Grundlage für deinen Reiseführer.\n"
 
+        # Optionale Wunsch-Kontextblöcke (CTX-02, CTX-03)
+        desc_line = f"\nReisebeschreibung: {req.travel_description}" if req.travel_description else ""
+        pref_line = f"\nBevorzugte Aktivitäten: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
+        mandatory_line = f"\nPflichtaktivitäten: {', '.join(a.name for a in req.mandatory_activities)}" if req.mandatory_activities else ""
+
         prompt = f"""Schreibe einen Reiseführer für {region}, {country}:
 
 Aufenthalt: {nights} Nächte
 Reisende: {req.adults} Erwachsene{f', {len(req.children)} Kinder' if req.children else ''}
-Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
+Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}{mandatory_line}{pref_line}{desc_line}
 Bereits geplante Aktivitäten (NICHT wiederholen): {existing_names_str}
 
 Gib exakt dieses JSON zurück:

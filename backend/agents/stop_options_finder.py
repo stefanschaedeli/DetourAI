@@ -199,6 +199,11 @@ class StopOptionsFinderAgent:
                 f"Die 3. Option darf ein ueberraschender Geheimtipp sein.\n"
             )
 
+        # Optionale Wunsch-Kontextblöcke (CTX-02, CTX-03)
+        desc_line = f"\nReisebeschreibung: {req.travel_description}" if req.travel_description else ""
+        pref_line = f"\nBevorzugte Aktivitäten: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
+        mandatory_line = f"\nPflichtaktivitäten: {', '.join(f'{a.name}' + (f' ({a.location})' if a.location else '') for a in req.mandatory_activities)}" if req.mandatory_activities else ""
+
         # JSON example option_types
         if is_rundreise:
             ex1_type = "umweg_links"
@@ -221,7 +226,7 @@ Maximale Fahrzeit pro Etappe: {req.max_drive_hours_per_day}h
 Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
 Reisende: {req.adults} Erwachsene{', ' + str(len(req.children)) + ' Kinder (Alter: ' + ', '.join(str(c) for c in req.children) + ')' if req.children else ''}
 {complete_hint}{extra_hint}
-{option_block}{style_emphasis}
+{option_block}{style_emphasis}{mandatory_line}{pref_line}{desc_line}
 {rules_block}Nächte: {req.min_nights_per_stop}–{req.max_nights_per_stop}.
 
 Befülle folgende Felder kontextabhängig:

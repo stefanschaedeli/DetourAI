@@ -139,6 +139,13 @@ class RegionPlannerAgent:
         if req.children:
             travellers += f", Kinder: {len(req.children)}"
         lines.append(travellers)
+        if req.travel_description:
+            lines.append(f"Reisebeschreibung: {req.travel_description}")
+        if req.preferred_activities:
+            lines.append(f"Bevorzugte Aktivitäten: {', '.join(req.preferred_activities)}")
+        if req.mandatory_activities:
+            acts = [f"{a.name}" + (f" ({a.location})" if a.location else "") for a in req.mandatory_activities]
+            lines.append(f"Pflichtaktivitäten: {', '.join(acts)}")
         return "\n".join(lines)
 
     async def _extract_json(self, response) -> dict:
