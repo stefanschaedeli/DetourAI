@@ -134,5 +134,5 @@ Plans:
 | 12. Context Infrastructure + Wishes Forwarding | v1.2 | 2/2 | Complete    | 2026-03-29 |
 | 13. Architect Pre-Plan for Interactive Flow | v1.2 | 2/2 | Complete    | 2026-03-29 |
 | 14. Stop History Awareness + Night Distribution | v1.2 | 0/2 | Complete    | 2026-03-29 |
-| 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 3/3 | Complete   | 2026-03-29 |
+| 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 3/3 | Complete    | 2026-03-29 |
 | 16. Frontend UI Fixes + Polish | v1.2 | 0/? | Not started | - |
