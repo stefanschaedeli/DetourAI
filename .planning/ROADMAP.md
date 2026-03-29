@@ -56,7 +56,10 @@
   2. Eingegebene Wünsche erscheinen im Prompt aller 9 Agents (verifizierbar per Logs)
   3. mandatory_activities sind in StopOptionsFinder- und ActivitiesAgent-Prompts sichtbar
   4. Wenn kein Wunschtext eingegeben wird, funktionieren alle Agents weiterhin unverändert
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — Frontend UI: preferred_activities tag input + travel_description placeholder
+- [ ] 12-02-PLAN.md — Backend: wishes context in all 8 agent prompts + test coverage
 
 ### Phase 13: Architect Pre-Plan for Interactive Flow
 **Goal**: StopOptionsFinder erhält Regions- und Nächtekontext vom Architect vor der ersten Stop-Auswahl
@@ -119,7 +122,7 @@
 | 9. Guide Module Split | v1.1 | 2/2 | Complete | 2026-03-27 |
 | 10. Progressive Disclosure UI | v1.1 | 3/3 | Complete | 2026-03-27 |
 | 11. Browser Verification | v1.1 | 4/4 | Complete | 2026-03-28 |
-| 12. Context Infrastructure + Wishes Forwarding | v1.2 | 0/? | Not started | - |
+| 12. Context Infrastructure + Wishes Forwarding | v1.2 | 0/2 | Planning | - |
 | 13. Architect Pre-Plan for Interactive Flow | v1.2 | 0/? | Not started | - |
 | 14. Stop History Awareness + Night Distribution | v1.2 | 0/? | Not started | - |
 | 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 0/? | Not started | - |
