@@ -40,6 +40,8 @@ VERBOSITY_FILTER: dict[VerbosityLevel, set[LogLevel]] = {
 
 # Agent class name → log file path (relative to logs dir)
 _COMPONENT_MAP: dict[str, str] = {
+    "ArchitectPrePlan": "agents/architect_pre_plan",
+    "ArchitectPrePlanAgent": "agents/architect_pre_plan",
     "RouteArchitect": "agents/route_architect",
     "RouteArchitectAgent": "agents/route_architect",
     "StopOptionsFinder": "agents/stop_options_finder",

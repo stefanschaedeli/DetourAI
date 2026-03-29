@@ -17,6 +17,7 @@ _CACHE_TTL = 60.0
 
 DEFAULTS: dict[str, Any] = {
     # ── Agent-Modelle ──
+    "agent.architect_pre_plan.model": "claude-sonnet-4-5",
     "agent.route_architect.model": "claude-opus-4-5",
     "agent.stop_options_finder.model": "claude-haiku-4-5",
     "agent.region_planner.model": "claude-opus-4-5",
@@ -28,6 +29,7 @@ DEFAULTS: dict[str, Any] = {
     "agent.trip_analysis.model": "claude-opus-4-5",
 
     # ── Agent max_tokens ──
+    "agent.architect_pre_plan.max_tokens": 1024,
     "agent.route_architect.max_tokens": 2048,
     "agent.stop_options_finder.max_tokens": 4096,
     "agent.region_planner.max_tokens": 4096,
@@ -65,6 +67,7 @@ ALLOWED_MODELS = ["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5"]
 
 # ── Validation ranges ──
 _RANGES: dict[str, tuple[Any, Any]] = {
+    "agent.architect_pre_plan.max_tokens": (512, 4096),
     "agent.route_architect.max_tokens": (512, 8192),
     "agent.stop_options_finder.max_tokens": (512, 8192),
     "agent.region_planner.max_tokens": (512, 8192),
