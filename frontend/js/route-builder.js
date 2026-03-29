@@ -336,7 +336,11 @@ function _updateRouteStatus(meta) {
     ? `Etappe ${legIdx + 1}/${totalLegs} (${modeLabel})`
     : '';
 
-  const parts = [legInfo, `Stop #${stopNum}`, segInfo, daysRem ? `${daysRem} Tage verbleibend` : ''].filter(Boolean);
+  const nightsRem = (meta.nights_remaining != null) ? meta.nights_remaining : (daysRem > 0 ? daysRem - 1 : 0);
+  const budgetInfo = daysRem
+    ? `${nightsRem} Nächte · ${daysRem} Tage verbleibend`
+    : '';
+  const parts = [legInfo, `Stop #${stopNum}`, segInfo, budgetInfo].filter(Boolean);
   subtitle.textContent = parts.join(' · ');
 
   // Update options count badge
