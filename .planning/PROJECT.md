@@ -55,26 +55,22 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - ✓ Map marker dimming for non-focused stops — v1.1
 - ✓ Browser back/forward with drill-down navigation — v1.1
 - ✓ 18 UI items browser-verified and 7 gaps fixed — v1.1
+- ✓ Global wishes field forwarded to all 9 agents (travel_description, preferred_activities, mandatory_activities) — v1.2
+- ✓ ArchitectPrePlanAgent for strategic region/nights pre-planning before stop selection — v1.2
+- ✓ StopOptionsFinder history awareness with dedup safety net — v1.2
+- ✓ Nights-remaining budget display during route building — v1.2
+- ✓ Geheimtipp distance validation (prompt coordinates + haversine post-filter) — v1.2
+- ✓ Geheimtipp name-based dedup within stops — v1.2
+- ✓ Inline nights editor replacing prompt() with backend Celery recalculation — v1.2
+- ✓ Day plan recalculation after nights changes via Celery + SSE — v1.2
 
 ### Active
 
-## Current Milestone: v1.2 AI-Qualität & Routenplanung
-
-**Goal:** Die AI-gesteuerte Routenplanung und Stop-Auswahl grundlegend verbessern — intelligentere Tageverteilung, bessere Kontextweiterleitung, und UI-Korrekturen für eine nutzbare Reiseplanung.
-
-**Target features:**
-- ✓ Strategische Tage-Verteilung pro Region nach Ort-Potenzial — Phase 13 (ArchitectPrePlanAgent)
-- ✓ Kundenwünsche (Aktivitäten, Stil) korrekt durch alle Agents weiterleiten — Phase 12
-- ✓ Stopfinder: Historie-Bewusstsein, keine Wiederholungen, Nächte-Anzeige — Phase 14
-- Stopfinder Performance-Optimierung
-- ✓ Hotel-Geheimtipps: Haversine-Distanzfilter + Name-Dedup — Phase 15
-- ✓ Nächte-Bearbeitung mit dediziertem Inline-Editor und Backend-Recalculation — Phase 15
-- ✓ Tagesplan-Neuberechnung bei Nächte-Änderungen via Celery + SSE — Phase 15
-- ✓ Globales Wunsch-Feld im Trip-Formular — Phase 12
-- Karte beim Öffnen auf Route fokussiert
+- Karte beim Öffnen auf Route fokussiert (fitBounds)
 - Korrekte Bilder in Stopp-Übersicht
-- Tooltips für Edit-Buttons + Tage-Anpassen-Button
+- Tooltips für Edit-Buttons
 - Stopauswahl: alle bisherigen Stops sichtbar, Zoom auf letzte + neue
+- Stopfinder Performance-Optimierung
 
 ### Out of Scope
 
@@ -90,8 +86,8 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 ## Context
 
 - Used by friends and family circle, not a public product
-- v1.1 shipped 2026-03-28; v1.2 Phase 15 complete with 319 passing tests
-- 9 AI agents orchestrated via Celery workers with SSE streaming
+- v1.2 shipped 2026-03-29 with 319 passing tests; 4 UI polish items deferred to next milestone
+- 10 AI agents orchestrated via Celery workers with SSE streaming (9 original + ArchitectPrePlanAgent)
 - Geographic intelligence covers 8 Mediterranean island groups with ferry detection
 - Map-centric responsive layout with 45/55 split-panel design
 - Public sharing via token-based links with read-only mode
@@ -152,4 +148,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-29 after Phase 15 completion*
+*Last updated: 2026-03-29 after v1.2 milestone*

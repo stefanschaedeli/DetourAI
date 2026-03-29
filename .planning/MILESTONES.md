@@ -1,5 +1,32 @@
 # Milestones
 
+## v1.2 AI-Qualität & Routenplanung (Shipped: 2026-03-29)
+
+**Phases:** 4 (of 5 planned) | **Plans:** 9 | **Tasks:** 10
+**Timeline:** 2 days (2026-03-28 → 2026-03-29) | **Commits:** 66
+**Source changes:** 69 files changed, +8,874 / -96 lines
+**Tests:** 319 passing (up from 291)
+**Requirements:** 12/16 satisfied (CTX 1-3, RTE 1-5, BDG 1-3, ACC 1-2)
+
+**Delivered:** Improved AI route planning intelligence with strategic region pre-planning, stop deduplication, wishes forwarding to all agents, Geheimtipp quality enforcement, and proper nights editing with day plan recalculation.
+
+**Key accomplishments:**
+
+1. **Context Infrastructure + Wishes Forwarding** — Global wishes field (travel_description, preferred_activities, mandatory_activities) forwarded to all 9 agents via conditional prompt injection
+2. **Architect Pre-Plan** — New ArchitectPrePlanAgent (Sonnet, 5s timeout) creates strategic region/nights plan before first stop selection; advisory nights based on destination potential
+3. **Stop Deduplication** — KRITISCH exclusion rule in StopOptionsFinder prompt + post-processing safety net; history capping for large routes; nights-remaining budget display
+4. **Geheimtipp Quality** — Explicit lat/lon coordinates in accommodation prompt + haversine post-filter drops distant hotels; case-insensitive name dedup within stops
+5. **Nights Edit + Day Plan Recalc** — Inline number editor replacing prompt(); new Celery task with arrival_day rechaining + day planner refresh; SSE progress streaming
+
+**Known gaps (Phase 16 deferred):**
+
+- UIX-01: Map fitBounds on route load
+- UIX-02: Correct stop images in overview
+- UIX-03: Tooltips for edit buttons
+- UIX-04: Stop selection map with history and zoom
+
+---
+
 ## v1.1 Polish & Travel View Redesign (Shipped: 2026-03-28)
 
 **Phases:** 4 | **Plans:** 11 | **Tasks:** 16

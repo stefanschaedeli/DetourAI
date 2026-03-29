@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: AI-Qualität & Routenplanung
 status: executing
-stopped_at: Completed 15-03-PLAN.md
-last_updated: "2026-03-29T20:28:36.748Z"
+stopped_at: Milestone v1.2 summary generated
+last_updated: "2026-03-29T20:46:21.470Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 5
@@ -87,6 +87,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T20:23:26.910Z
-Stopped at: Completed 15-03-PLAN.md
-Resume file: None
+Last session: 2026-03-29T20:38:09.128Z
+Stopped at: Milestone v1.2 summary generated
+Resume file: .planning/reports/MILESTONE_SUMMARY-v1.2.md

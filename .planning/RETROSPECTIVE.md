@@ -94,6 +94,52 @@
 
 ---
 
+## Milestone: v1.2 — AI-Qualität & Routenplanung
+
+**Shipped:** 2026-03-29
+**Phases:** 4 (of 5 planned) | **Plans:** 9 | **Commits:** 66
+**Timeline:** 2 days (2026-03-28 → 2026-03-29)
+
+### What Was Built
+- Context infrastructure: global wishes field forwarded to all 9 agents via conditional prompt injection
+- Architect pre-plan: new ArchitectPrePlanAgent creates strategic region/nights distribution before stop selection
+- Stop deduplication: KRITISCH exclusion rule in prompt + post-processing safety net + history capping
+- Nights-remaining display in route builder during interactive stop selection
+- Geheimtipp quality: explicit coordinates in prompt + haversine post-filter + name dedup
+- Inline nights editor: DOM-based number input replacing prompt(), Celery task for arrival_day rechaining + day plan refresh with SSE progress
+
+### What Worked
+- Two independent streams per phase (e.g., Phase 15: ACC + BDG) allowed parallel Wave 1 execution with no conflicts
+- Reusing existing helpers (recalc_arrival_days, run_day_planner_refresh, haversine_km) kept implementation time low
+- Context discussion before planning (CONTEXT.md) prevented architectural debates during execution
+- Auto-advance mode (plan → execute → verify) allowed completing Phase 15 in a single session
+
+### What Was Inefficient
+- Phase 16 (UI polish) was planned but never started — scope was too ambitious for a milestone focused on AI quality
+- SUMMARY.md one-liner extraction still unreliable — many plans produced empty "One-liner:" fields
+- REQUIREMENTS.md traceability table wasn't updated when phases completed (ACC-01/02 and RTE-03/04 stayed "Pending")
+- No milestone audit was run — proceeding with known gaps instead of formal verification
+
+### Patterns Established
+- Conditional prompt injection: `if travel_description: prompt += f"\n\nReisebeschreibung: {travel_description}"`
+- Pre-plan advisory pattern: lightweight agent → job state → optional consumption by downstream agent
+- Sentinel flag pattern for async filtering: `_geheimtipp_too_far` flag set during gather, filtered after
+- Inline edit UI pattern: DOM createElement (XSS-safe) → _fetchQuiet → openSSE → re-render on complete
+
+### Key Lessons
+1. **Prompt-level fixes are more effective than post-processing** — Geheimtipp distance improved dramatically with explicit coordinates in the prompt; haversine filter is secondary safety net
+2. **Scope UI polish separately from AI improvements** — AI quality and UI polish have different testing needs; mixing them dilutes both
+3. **REQUIREMENTS.md traceability needs automated sync** — manual checkbox updates drift; `roadmap analyze` catches plan state but not requirement status
+4. **Auto-advance is powerful for sequential phases** — discuss → plan → execute → verify in one session eliminates context switching
+
+### Cost Observations
+- Model mix: quality profile (Opus for planner, Sonnet for researcher/executor/verifier)
+- Phase 15 execution: ~13 min across 3 plans (2 parallel + 1 sequential)
+- Worktree isolation enabled true parallel execution with zero merge conflicts on code files
+- Most complex task: update_nights_job.py (Celery task touching 4 files with endpoint + tests)
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -102,6 +148,7 @@
 |-----------|---------|--------|-------|------------|
 | v1.0 | 166 | 7 | 20 | Initial milestone — established GSD workflow with verification + audit loop |
 | v1.1 | 34 | 4 | 11 | Refined gap closure — UAT-driven fixes, milestone audit with 3-source cross-reference |
+| v1.2 | 66 | 4 | 9 | AI quality focus — pre-planning, dedup, prompt engineering, auto-advance workflow |
 
 ### Cumulative Quality
 
@@ -109,9 +156,12 @@
 |-----------|-------|--------------|--------------------| -------------|
 | v1.0 | 286 | 14,332 | 16,092 | 25/25 |
 | v1.1 | 291 | ~14,400 | ~17,000 | 12/12 |
+| v1.2 | 319 | ~15,200 | ~17,500 | 12/16 |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Phase ordering matters — fix data quality before building UI on top of it (v1.0), split modules before UI redesign (v1.1)
 2. Integration wiring should be verified continuously, not just at milestone boundaries (v1.0 Celery bug, v1.1 router drill state)
 3. Browser/human verification as a final phase catches real issues that automated checks miss (v1.0 audit, v1.1 UAT)
+4. Prompt-level fixes outperform post-processing for AI quality — give agents better context rather than filtering bad output (v1.2 Geheimtipp distance)
+5. Scope UI polish separately from AI/backend improvements — different testing needs, different verification cycles (v1.2 Phase 16 deferred)
