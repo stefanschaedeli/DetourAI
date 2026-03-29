@@ -98,8 +98,11 @@ Plans:
   3. Nach einer Nächteänderung an einem Stop werden arrival_day für alle nachfolgenden Stops korrekt aktualisiert
   4. User kann Nächte pro Stop über einen dedizierten Button anpassen (nicht nur via prompt() Dialog)
   5. Nach einer Nächte- oder Stop-Änderung startet eine Tagesplan-Neuberechnung via Celery und zeigt SSE-Fortschritt
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 3 plans
+Plans:
+- [ ] 15-01-PLAN.md — Geheimtipp quality: prompt coordinates + haversine post-filter + name dedup + tests
+- [ ] 15-02-PLAN.md — Backend nights update: Celery task + POST endpoint + _fire_task registration + tests
+- [ ] 15-03-PLAN.md — Frontend nights edit: inline editor replacing prompt() + SSE wiring + checkpoint
 
 ### Phase 16: Frontend UI Fixes + Polish
 **Goal**: Die Karte zeigt sofort die Route, Stop-Bilder sind korrekt, Edit-Buttons sind selbsterklärend, die Stop-Auswahlkarte gibt vollständigen Kontext
@@ -131,5 +134,5 @@ Plans:
 | 12. Context Infrastructure + Wishes Forwarding | v1.2 | 2/2 | Complete    | 2026-03-29 |
 | 13. Architect Pre-Plan for Interactive Flow | v1.2 | 2/2 | Complete    | 2026-03-29 |
 | 14. Stop History Awareness + Night Distribution | v1.2 | 0/2 | Complete    | 2026-03-29 |
-| 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 0/? | Not started | - |
+| 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 0/3 | Planning complete | - |
 | 16. Frontend UI Fixes + Polish | v1.2 | 0/? | Not started | - |
