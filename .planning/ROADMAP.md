@@ -41,7 +41,7 @@
 
 - [x] **Phase 12: Context Infrastructure + Wishes Forwarding** — Globales Wunschfeld im Formular; alle 9 Agents erhalten travel_description, preferred_activities, mandatory_activities (completed 2026-03-29)
 - [x] **Phase 13: Architect Pre-Plan for Interactive Flow** — Lightweight Sonnet pre-plan vor StopOptionsFinder; Regionen und Nächte-Empfehlungen in job state (completed 2026-03-29)
-- [ ] **Phase 14: Stop History Awareness + Night Distribution** — StopOptionsFinder kennt alle bisherigen Stops; Nächte-Verteilung nach Ort-Potenzial; Dedup-Safety-Net
+- [x] **Phase 14: Stop History Awareness + Night Distribution** — StopOptionsFinder kennt alle bisherigen Stops; Nächte-Verteilung nach Ort-Potenzial; Dedup-Safety-Net (completed 2026-03-29)
 - [ ] **Phase 15: Hotel Geheimtipp Quality + Day Plan Recalculation** — Haversine-Validierung für Geheimtipps; Tagesplan-Neuberechnung nach Nächte-Änderungen
 - [ ] **Phase 16: Frontend UI Fixes + Polish** — Karte auf Route fokussiert, korrekte Stop-Bilder, Tooltips, Stop-Auswahl-Karte mit History
 
@@ -83,7 +83,7 @@ Plans:
   1. Bereits ausgewählte Stops erscheinen nicht erneut als Optionen im StopOptionsFinder
   2. Post-Processing Dedup entfernt doppelte Städte als Safety Net, auch wenn der Prompt-Constraint greift
   3. Streaming bleibt nach dem enriched-History-Prompt stabil (erste Option erscheint weiterhin innerhalb 5s)
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 14-01-PLAN.md — Backend dedup + night distribution: prompt exclusion rule, post-processing dedup, architect_context wiring, nights_remaining field, tests
 - [ ] 14-02-PLAN.md — Frontend: nights remaining display in route builder status
@@ -130,6 +130,6 @@ Plans:
 | 11. Browser Verification | v1.1 | 4/4 | Complete | 2026-03-28 |
 | 12. Context Infrastructure + Wishes Forwarding | v1.2 | 2/2 | Complete    | 2026-03-29 |
 | 13. Architect Pre-Plan for Interactive Flow | v1.2 | 2/2 | Complete    | 2026-03-29 |
-| 14. Stop History Awareness + Night Distribution | v1.2 | 0/2 | Planned | - |
+| 14. Stop History Awareness + Night Distribution | v1.2 | 0/2 | Complete    | 2026-03-29 |
 | 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 0/? | Not started | - |
 | 16. Frontend UI Fixes + Polish | v1.2 | 0/? | Not started | - |
