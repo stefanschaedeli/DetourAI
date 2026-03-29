@@ -86,6 +86,11 @@ class AccommodationResearcherAgent:
         if self.extra_instructions:
             extra_hint = f"\nZusätzliche Wünsche des Gastes: {self.extra_instructions}"
 
+        # Optionale Wunsch-Kontextblöcke (CTX-02, CTX-03)
+        desc_line = f"\nReisebeschreibung: {req.travel_description}" if req.travel_description else ""
+        pref_line = f"\nBevorzugte Aktivitäten: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
+        mandatory_line = f"\nPflichtaktivitäten: {', '.join(a.name for a in req.mandatory_activities)}" if req.mandatory_activities else ""
+
         # Pre-fetch: echte Hoteldaten + Wechselkurse
         lat = stop.get("lat")
         lon = stop.get("lon")
@@ -115,7 +120,7 @@ class AccommodationResearcherAgent:
 Reisende: {req.adults} Erwachsene{f', {children_count} Kinder' if children_count else ''}
 Nächte: {nights}
 Suchradius: {req.hotel_radius_km} km
-Preisrahmen pro Nacht: CHF {budget_min:.0f} – CHF {budget_max:.0f}{children_hint}{extra_hint}{currency_block}
+Preisrahmen pro Nacht: CHF {budget_min:.0f} – CHF {budget_max:.0f}{children_hint}{extra_hint}{mandatory_line}{pref_line}{desc_line}{currency_block}
 
 REGELN:
 1. Option 1 (preference_index: 0): Entspricht diesem Wunsch des Gastes: "{pref0}"

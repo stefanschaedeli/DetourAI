@@ -43,6 +43,8 @@ class TripAnalysisAgent:
         children_str = f", {len(req.children)} Kinder (Alter: {', '.join(str(c.age) for c in req.children)})" if req.children else ""
         prefs_str = "; ".join(req.accommodation_preferences) if req.accommodation_preferences else "keine"
         mandatory_acts = ", ".join(a.name for a in req.mandatory_activities) if req.mandatory_activities else "keine"
+        travel_desc_line = f"\n- Reisebeschreibung: {req.travel_description}" if req.travel_description else ""
+        pref_acts_line = f"\n- Bevorzugte Aktivitäten: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
 
         prompt = f"""Analysiere diesen Reiseplan kritisch und bewerte, wie gut er die Anforderungen des Benutzers erfüllt.
 
@@ -54,7 +56,7 @@ class TripAnalysisAgent:
 - Reisende: {req.adults} Erwachsene{children_str}
 - Reisestile: {travel_styles_str}
 - Unterkunftswünsche: {prefs_str}
-- Pflichtaktivitäten: {mandatory_acts}
+- Pflichtaktivitäten: {mandatory_acts}{travel_desc_line}{pref_acts_line}
 - Max. Fahrtzeit/Tag: {req.max_drive_hours_per_day}h
 - Min. Nächte pro Stop: {req.min_nights_per_stop}
 

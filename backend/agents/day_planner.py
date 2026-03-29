@@ -288,6 +288,12 @@ class DayPlannerAgent:
                 f"Plane die Faehre als eigenen time_block mit activity_type 'ferry' ein.\n"
             )
 
+        # Optionale Wunsch-Kontextblöcke (CTX-02, CTX-03)
+        req = self.request
+        desc_line = f"\nReisebeschreibung: {req.travel_description}" if req.travel_description else ""
+        pref_line = f"\nBevorzugte Aktivitäten: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
+        mandatory_line = f"\nPflichtaktivitäten: {', '.join(f'{a.name}' + (f' ({a.location})' if a.location else '') for a in req.mandatory_activities)}" if req.mandatory_activities else ""
+
         prompt = f"""WICHTIG: Verwende in den time_blocks die exakten Namen der unten genannten Aktivitäten und Restaurants als "title" und "location".
 
 Erstelle einen stündlichen Tagesplan für Tag {day_num} ({date_str}):
@@ -297,7 +303,7 @@ Abfahrt von: {prev_region}
 Fahrtzeit: {drive_hours:.1f}h
 Aktivitäten: {acts_str or 'keine spezifischen'}
 Restaurants: {rests_str or 'keine spezifischen'}
-Reisende: {self.request.adults} Erwachsene{f', {len(self.request.children)} Kinder' if self.request.children else ''}
+Reisende: {self.request.adults} Erwachsene{f', {len(self.request.children)} Kinder' if self.request.children else ''}{mandatory_line}{pref_line}{desc_line}
 {weather_block}{ferry_info}
 Starte um 08:00 Uhr. Erstelle einen realistischen Zeitplan.
 
