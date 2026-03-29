@@ -37,6 +37,7 @@ const S = {
   children: [],
   travelStyles: [],
   mandatoryTags: [],
+  preferredTags: [],
   legs: [],
   jobId: null,
   sse: null,
