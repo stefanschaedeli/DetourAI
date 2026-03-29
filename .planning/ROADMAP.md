@@ -70,7 +70,10 @@ Plans:
   2. StopOptionsFinder-Prompts enthalten Regionsempfehlungen und vorgeschlagene Nächte pro Region
   3. Nächte-Empfehlung basiert auf Ort-Potenzial (z.B. Paris 3 Nächte, Transitort 1 Nacht), nicht immer Minimum
   4. Bei Timeout oder Fehler des Pre-Plans läuft StopOptionsFinder ohne Architect-Kontext weiter (graceful degradation)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 13-01-PLAN.md — Create ArchitectPrePlanAgent + register in debug_logger/settings_store + tests
+- [ ] 13-02-PLAN.md — Wire pre-plan into main.py job flow + inject context into StopOptionsFinder
 
 ### Phase 14: Stop History Awareness + Night Distribution
 **Goal**: StopOptionsFinder schlägt keine bereits ausgewählten Orte vor; Nächteverteilung folgt dem Architect-Plan
@@ -123,7 +126,7 @@ Plans:
 | 10. Progressive Disclosure UI | v1.1 | 3/3 | Complete | 2026-03-27 |
 | 11. Browser Verification | v1.1 | 4/4 | Complete | 2026-03-28 |
 | 12. Context Infrastructure + Wishes Forwarding | v1.2 | 2/2 | Complete    | 2026-03-29 |
-| 13. Architect Pre-Plan for Interactive Flow | v1.2 | 0/? | Not started | - |
+| 13. Architect Pre-Plan for Interactive Flow | v1.2 | 0/2 | Planned | - |
 | 14. Stop History Awareness + Night Distribution | v1.2 | 0/? | Not started | - |
 | 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 0/? | Not started | - |
 | 16. Frontend UI Fixes + Polish | v1.2 | 0/? | Not started | - |
