@@ -83,7 +83,10 @@ Plans:
   1. Bereits ausgewählte Stops erscheinen nicht erneut als Optionen im StopOptionsFinder
   2. Post-Processing Dedup entfernt doppelte Städte als Safety Net, auch wenn der Prompt-Constraint greift
   3. Streaming bleibt nach dem enriched-History-Prompt stabil (erste Option erscheint weiterhin innerhalb 5s)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 14-01-PLAN.md — Backend dedup + night distribution: prompt exclusion rule, post-processing dedup, architect_context wiring, nights_remaining field, tests
+- [ ] 14-02-PLAN.md — Frontend: nights remaining display in route builder status
 
 ### Phase 15: Hotel Geheimtipp Quality + Day Plan Recalculation
 **Goal**: Geheimtipps liegen wirklich in der Nähe des Stops; Tagespläne bleiben nach Nächteänderungen korrekt
@@ -127,6 +130,6 @@ Plans:
 | 11. Browser Verification | v1.1 | 4/4 | Complete | 2026-03-28 |
 | 12. Context Infrastructure + Wishes Forwarding | v1.2 | 2/2 | Complete    | 2026-03-29 |
 | 13. Architect Pre-Plan for Interactive Flow | v1.2 | 2/2 | Complete    | 2026-03-29 |
-| 14. Stop History Awareness + Night Distribution | v1.2 | 0/? | Not started | - |
+| 14. Stop History Awareness + Night Distribution | v1.2 | 0/2 | Planned | - |
 | 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 0/? | Not started | - |
 | 16. Frontend UI Fixes + Polish | v1.2 | 0/? | Not started | - |
