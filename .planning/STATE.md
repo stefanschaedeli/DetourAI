@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: AI-Qualität & Routenplanung
 status: executing
-stopped_at: Phase 14 context gathered
-last_updated: "2026-03-29T19:32:58.336Z"
+stopped_at: Phase 15 context gathered
+last_updated: "2026-03-29T19:40:56.504Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 5
@@ -83,6 +83,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T16:48:03.327Z
-Stopped at: Phase 14 context gathered
-Resume file: .planning/phases/14-stop-history-awareness-night-distribution/14-CONTEXT.md
+Last session: 2026-03-29T19:40:56.502Z
+Stopped at: Phase 15 context gathered
+Resume file: .planning/phases/15-hotel-geheimtipp-quality-day-plan-recalculation/15-CONTEXT.md
