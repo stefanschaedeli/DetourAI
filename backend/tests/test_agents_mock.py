@@ -712,3 +712,178 @@ def test_validate_drive_limits_zero_drive():
     result, hard = TravelPlannerOrchestrator._validate_drive_limits(stops, 4.5)
     assert not hard
     assert "drive_limit_warning" not in result[0]
+
+
+# ---------------------------------------------------------------------------
+# Wishes forwarding — CTX-02, CTX-03
+# ---------------------------------------------------------------------------
+
+def test_route_architect_includes_preferred_activities(mocker):
+    """CTX-02: RouteArchitect prompt contains preferred_activities when set."""
+    import asyncio
+    from models.travel_request import TravelRequest, MandatoryActivity
+    from agents.route_architect import RouteArchitectAgent
+
+    captured = {}
+
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text='{"stops": [], "total_drive_days": 2, "total_rest_days": 8, "ferry_crossings": []}')]
+    mock_response.usage = MagicMock(input_tokens=100, output_tokens=50)
+
+    mock_messages = MagicMock()
+    mock_messages.create.side_effect = lambda **kwargs: (
+        captured.update({"prompt": kwargs["messages"][0]["content"]}) or mock_response
+    )
+    mock_client = MagicMock()
+    mock_client.messages = mock_messages
+
+    mocker.patch('agents.route_architect.get_client', return_value=mock_client)
+    mocker.patch('agents.route_architect.geocode_google', new=AsyncMock(return_value=None))
+
+    async def fake_to_thread(fn):
+        return fn()
+    mocker.patch('utils.retry_helper.asyncio.to_thread', side_effect=fake_to_thread)
+
+    request = _make_single_transit_req(preferred_activities=["Weinproben", "Wandern"])
+    agent = RouteArchitectAgent(request, "test_job")
+
+    asyncio.run(agent.run())
+
+    prompt = captured.get("prompt", "")
+    assert "Bevorzugte Aktivitäten: Weinproben, Wandern" in prompt
+
+
+def test_stop_options_finder_includes_all_wishes(mocker):
+    """CTX-02 + CTX-03: StopOptionsFinder prompt contains all 3 wishes fields when set."""
+    import asyncio
+    from models.travel_request import TravelRequest, MandatoryActivity
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    captured = {}
+
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text='{"options": [], "estimated_total_stops": 2, "route_could_be_complete": false}')]
+    mock_response.usage = MagicMock(input_tokens=100, output_tokens=50)
+
+    mock_messages = MagicMock()
+    mock_messages.create.side_effect = lambda **kwargs: (
+        captured.update({"prompt": kwargs["messages"][0]["content"]}) or mock_response
+    )
+    mock_client = MagicMock()
+    mock_client.messages = mock_messages
+
+    mocker.patch('agents.stop_options_finder.get_client', return_value=mock_client)
+
+    async def fake_to_thread(fn):
+        return fn()
+    mocker.patch('utils.retry_helper.asyncio.to_thread', side_effect=fake_to_thread)
+    mocker.patch('agents.stop_options_finder.get_city_summary', new=AsyncMock(return_value=None))
+
+    request = _make_single_transit_req(
+        travel_description="Romantischer Roadtrip",
+        preferred_activities=["Weinproben"],
+        mandatory_activities=[MandatoryActivity(name="Eiffelturm", location="Paris")],
+    )
+    agent = StopOptionsFinderAgent(request, "test_job")
+
+    asyncio.run(agent.find_options(
+        selected_stops=[],
+        stop_number=1,
+        days_remaining=5,
+        route_could_be_complete=False,
+        segment_target="Paris",
+    ))
+
+    prompt = captured.get("prompt", "")
+    assert "Reisebeschreibung: Romantischer Roadtrip" in prompt
+    assert "Bevorzugte Aktivitäten: Weinproben" in prompt
+    assert "Pflichtaktivitäten: Eiffelturm (Paris)" in prompt
+
+
+def test_wishes_absent_when_empty(mocker):
+    """CTX-02: When all wishes fields empty, agent prompts do NOT contain wishes lines."""
+    import asyncio
+    from agents.stop_options_finder import StopOptionsFinderAgent
+
+    captured = {}
+
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text='{"options": [], "estimated_total_stops": 2, "route_could_be_complete": false}')]
+    mock_response.usage = MagicMock(input_tokens=100, output_tokens=50)
+
+    mock_messages = MagicMock()
+    mock_messages.create.side_effect = lambda **kwargs: (
+        captured.update({"prompt": kwargs["messages"][0]["content"]}) or mock_response
+    )
+    mock_client = MagicMock()
+    mock_client.messages = mock_messages
+
+    mocker.patch('agents.stop_options_finder.get_client', return_value=mock_client)
+
+    async def fake_to_thread(fn):
+        return fn()
+    mocker.patch('utils.retry_helper.asyncio.to_thread', side_effect=fake_to_thread)
+    mocker.patch('agents.stop_options_finder.get_city_summary', new=AsyncMock(return_value=None))
+
+    # Request with empty wishes fields (defaults)
+    request = _make_single_transit_req()
+    agent = StopOptionsFinderAgent(request, "test_job")
+
+    asyncio.run(agent.find_options(
+        selected_stops=[],
+        stop_number=1,
+        days_remaining=5,
+        route_could_be_complete=False,
+        segment_target="Paris",
+    ))
+
+    prompt = captured.get("prompt", "")
+    assert "Reisebeschreibung:" not in prompt
+    assert "Bevorzugte Aktivitäten:" not in prompt
+    assert "Pflichtaktivitäten:" not in prompt
+
+
+def test_restaurants_agent_includes_wishes(mocker):
+    """CTX-02 + CTX-03: RestaurantsAgent prompt contains all 3 wishes fields when set."""
+    import asyncio
+    from models.travel_request import MandatoryActivity
+    from agents.restaurants_agent import RestaurantsAgent
+
+    captured = {}
+
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text='{"stop_id": 1, "region": "Lyon", "restaurants": []}')]
+    mock_response.usage = MagicMock(input_tokens=100, output_tokens=50)
+
+    mock_messages = MagicMock()
+    mock_messages.create.side_effect = lambda **kwargs: (
+        captured.update({"prompt": kwargs["messages"][0]["content"]}) or mock_response
+    )
+    mock_client = MagicMock()
+    mock_client.messages = mock_messages
+
+    mocker.patch('agents.restaurants_agent.get_client', return_value=mock_client)
+    mocker.patch('agents.restaurants_agent.gp_search_restaurants', new=AsyncMock(return_value=[]))
+    mocker.patch('agents.restaurants_agent.search_places', new=AsyncMock(return_value=[]))
+    mocker.patch('utils.image_fetcher.fetch_unsplash_images', new=AsyncMock(
+        return_value={"image_overview": None, "image_mood": None, "image_customer": None}
+    ))
+
+    async def fake_to_thread(fn):
+        return fn()
+    mocker.patch('utils.retry_helper.asyncio.to_thread', side_effect=fake_to_thread)
+
+    request = _make_single_transit_req(
+        travel_description="Genussreise durch Frankreich",
+        preferred_activities=["Weinproben", "Kochen"],
+        mandatory_activities=[MandatoryActivity(name="Eiffelturm")],
+    )
+    agent = RestaurantsAgent(request, "test_job")
+
+    asyncio.run(agent.run_stop({"id": 1, "region": "Lyon", "country": "FR", "nights": 2, "arrival_day": 3}))
+
+    prompt = captured.get("prompt", "")
+    assert "Reisebeschreibung: Genussreise durch Frankreich" in prompt
+    assert "Bevorzugte Aktivitäten: Weinproben, Kochen" in prompt
+    # Content agent uses name-only (no location)
+    assert "Pflichtaktivitäten: Eiffelturm" in prompt
