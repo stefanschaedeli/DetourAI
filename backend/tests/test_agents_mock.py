@@ -893,6 +893,9 @@ def test_architect_pre_plan_prompt_includes_context(mocker):
     from agents.architect_pre_plan import ArchitectPrePlanAgent
     from models.travel_request import MandatoryActivity
 
+    mock_client = MagicMock()
+    mocker.patch('agents.architect_pre_plan.get_client', return_value=mock_client)
+
     request = _make_single_transit_req(
         travel_description="Kulturreise",
         travel_styles=["Kultur", "Kulinarik"],
@@ -916,6 +919,9 @@ def test_architect_pre_plan_prompt_drive_limit(mocker):
     """D-03: _build_prompt() includes the max_drive_hours_per_day value."""
     from agents.architect_pre_plan import ArchitectPrePlanAgent
 
+    mock_client = MagicMock()
+    mocker.patch('agents.architect_pre_plan.get_client', return_value=mock_client)
+
     request = _make_single_transit_req(max_drive_hours_per_day=3.5)
     agent = ArchitectPrePlanAgent(request, "test_job")
     prompt = agent._build_prompt()
@@ -927,6 +933,9 @@ def test_architect_pre_plan_nights_budget(mocker):
     """D-06: _build_prompt() uses total_days - 1 as nights budget."""
     from agents.architect_pre_plan import ArchitectPrePlanAgent
     from datetime import date
+
+    mock_client = MagicMock()
+    mocker.patch('agents.architect_pre_plan.get_client', return_value=mock_client)
 
     # 10-day leg: end_date - start_date = 10 days, so nights_budget = 9
     request = _make_single_transit_req(
