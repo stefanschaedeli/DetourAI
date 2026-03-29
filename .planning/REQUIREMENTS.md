@@ -15,11 +15,11 @@ Requirements for milestone v1.2: AI-Qualität & Routenplanung. Each maps to road
 
 ### Route Intelligence
 
-- [ ] **RTE-01**: Vor der Stopauswahl erstellt ein Architect Pre-Plan die Regionen und Nächte-Verteilung
-- [ ] **RTE-02**: StopOptionsFinder erhält Architect-Kontext (Regionen, empfohlene Nächte, Route-Logik)
+- [x] **RTE-01**: Vor der Stopauswahl erstellt ein Architect Pre-Plan die Regionen und Nächte-Verteilung
+- [x] **RTE-02**: StopOptionsFinder erhält Architect-Kontext (Regionen, empfohlene Nächte, Route-Logik)
 - [ ] **RTE-03**: StopOptionsFinder kennt alle bisherigen Stops und schlägt keine Duplikate vor
 - [ ] **RTE-04**: Post-Processing Dedup verhindert doppelte Städte als Safety Net
-- [ ] **RTE-05**: Nächte-Verteilung basiert auf Ort-Potenzial statt immer Minimum
+- [x] **RTE-05**: Nächte-Verteilung basiert auf Ort-Potenzial statt immer Minimum
 
 ### Budget & Tagesplanung
 
@@ -71,9 +71,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CTX-01 | Phase 12 | Complete |
 | CTX-02 | Phase 12 | Complete |
 | CTX-03 | Phase 12 | Complete |
-| RTE-01 | Phase 13 | Pending |
-| RTE-02 | Phase 13 | Pending |
-| RTE-05 | Phase 13 | Pending |
+| RTE-01 | Phase 13 | Complete |
+| RTE-02 | Phase 13 | Complete |
+| RTE-05 | Phase 13 | Complete |
 | RTE-03 | Phase 14 | Pending |
 | RTE-04 | Phase 14 | Pending |
 | ACC-01 | Phase 15 | Pending |
