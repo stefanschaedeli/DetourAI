@@ -577,6 +577,42 @@ function removeTag(idx) {
   saveFormToCache();
 }
 
+function addPreferredTagFromInput() {
+  const input = document.getElementById('preferred-tag-input');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val && !S.preferredTags.includes(val)) {
+    S.preferredTags.push(val);
+    renderPreferredTags();
+    input.value = '';
+    saveFormToCache();
+  }
+}
+
+function renderPreferredTags() {
+  const container = document.getElementById('preferred-tags');
+  if (!container) return;
+  while (container.firstChild) container.removeChild(container.firstChild);
+  S.preferredTags.forEach((tag, i) => {
+    const span = document.createElement('span');
+    span.className = 'tag';
+    span.textContent = tag;
+    const btn = document.createElement('button');
+    btn.textContent = '×';
+    btn.title = 'Entfernen';
+    btn.setAttribute('aria-label', `Tag '${tag}' entfernen`);
+    btn.addEventListener('click', () => removePreferredTag(i));
+    span.appendChild(btn);
+    container.appendChild(span);
+  });
+}
+
+function removePreferredTag(idx) {
+  S.preferredTags.splice(idx, 1);
+  renderPreferredTags();
+  saveFormToCache();
+}
+
 // ---------------------------------------------------------------------------
 // Children
 // ---------------------------------------------------------------------------
@@ -759,7 +795,7 @@ function buildPayload() {
     travel_styles:    S.travelStyles,
     travel_description: (document.getElementById('travel-description') || {}).value || '',
     mandatory_activities: S.mandatoryTags.map(name => ({ name })),
-    preferred_activities: [],
+    preferred_activities: S.preferredTags,
     max_activities_per_stop: parseInt(document.getElementById('max-activities')?.value) || 5,
     max_restaurants_per_stop: parseInt(document.getElementById('max-restaurants')?.value) || 3,
     activities_radius_km: parseInt(document.getElementById('activities-radius')?.value) || 30,
@@ -808,6 +844,7 @@ function renderSummary() {
       <div class="summary-item"><span class="summary-label">Budget</span><span>CHF ${(p.budget_chf || 0).toLocaleString('de-CH')} (Unterkunft ${p.budget_accommodation_pct}% / Essen ${p.budget_food_pct}% / Aktivitäten ${p.budget_activities_pct}%)</span></div>
       <div class="summary-item"><span class="summary-label">Max. Fahrzeit</span><span>${p.max_drive_hours_per_day}h/Tag</span></div>
       ${p.mandatory_activities.length ? `<div class="summary-item"><span class="summary-label">Pflichtaktivitäten</span><span>${p.mandatory_activities.map(a => esc(a.name)).join(', ')}</span></div>` : ''}
+      ${p.preferred_activities.length ? `<div class="summary-item"><span class="summary-label">Bevorzugte Aktivitäten</span><span>${p.preferred_activities.map(a => esc(a)).join(', ')}</span></div>` : ''}
       <div class="summary-item"><span class="summary-label">Segmente</span><span>${legsDisplay}</span></div>
     </div>
   `;
@@ -874,7 +911,7 @@ async function submitTrip() {
 
 function saveFormToCache() {
   const p = buildPayload();
-  lsSet(LS_FORM, { ...p, travelStyles: S.travelStyles, children: S.children, mandatoryTags: S.mandatoryTags });
+  lsSet(LS_FORM, { ...p, travelStyles: S.travelStyles, children: S.children, mandatoryTags: S.mandatoryTags, preferredTags: S.preferredTags });
   updateQuickSubmitBar();
 }
 
@@ -935,6 +972,11 @@ function restoreFormFromCache() {
   if (cached.mandatoryTags) {
     S.mandatoryTags = cached.mandatoryTags;
     renderTags();
+  }
+
+  if (cached.preferredTags) {
+    S.preferredTags = cached.preferredTags;
+    renderPreferredTags();
   }
 
   if (cached.children) {
