@@ -58,7 +58,23 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 
 ### Active
 
-No active milestone. Run `/gsd:new-milestone` to define v1.2.
+## Current Milestone: v1.2 AI-Qualität & Routenplanung
+
+**Goal:** Die AI-gesteuerte Routenplanung und Stop-Auswahl grundlegend verbessern — intelligentere Tageverteilung, bessere Kontextweiterleitung, und UI-Korrekturen für eine nutzbare Reiseplanung.
+
+**Target features:**
+- Strategische Tage-Verteilung pro Region nach Ort-Potenzial
+- Kundenwünsche (Aktivitäten, Stil) korrekt durch alle Agents weiterleiten
+- Stopfinder: Historie-Bewusstsein, keine Wiederholungen, Gesamtroute-Kontext
+- Stopfinder Performance-Optimierung
+- Hotel-Geheimtipps: Entfernungslimit, keine Duplikate
+- Budget/Tage-Verwaltung korrekt verteilen und tracken
+- Tagesplan-Neuberechnung bei Nächte- oder Stop-Änderungen
+- Globales Wunsch-Feld im Trip-Formular
+- Karte beim Öffnen auf Route fokussiert
+- Korrekte Bilder in Stopp-Übersicht
+- Tooltips für Edit-Buttons + Tage-Anpassen-Button
+- Stopauswahl: alle bisherigen Stops sichtbar, Zoom auf letzte + neue
 
 ### Out of Scope
 
@@ -134,4 +150,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 after v1.1 milestone completion*
+*Last updated: 2026-03-29 after v1.2 milestone start*
