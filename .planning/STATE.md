@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: AI-Qualität & Routenplanung
-status: verifying
-stopped_at: Phase 14 context gathered
+status: planned
+stopped_at: Phase 14 planned — ready for execution
 last_updated: "2026-03-29T16:48:03.329Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 4
+  total_plans: 6
   completed_plans: 4
   percent: 0
 ---
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Route planning and stop discovery must produce consistently high-quality, geographically correct results for any destination type.
-**Current focus:** Phase 13 — architect-pre-plan-for-interactive-flow
+**Current focus:** Phase 14 — stop-history-awareness-night-distribution
 
 ## Current Position
 
 Phase: 14
-Plan: Not started
-Status: Phase complete — ready for verification
+Plan: 2 plans in 2 waves
+Status: Planned — ready for execution
 Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0% (v1.2 milestone)
