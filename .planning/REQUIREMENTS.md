@@ -68,29 +68,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CTX-01 | — | Pending |
-| CTX-02 | — | Pending |
-| CTX-03 | — | Pending |
-| RTE-01 | — | Pending |
-| RTE-02 | — | Pending |
-| RTE-03 | — | Pending |
-| RTE-04 | — | Pending |
-| RTE-05 | — | Pending |
-| BDG-01 | — | Pending |
-| BDG-02 | — | Pending |
-| BDG-03 | — | Pending |
-| ACC-01 | — | Pending |
-| ACC-02 | — | Pending |
-| UIX-01 | — | Pending |
-| UIX-02 | — | Pending |
-| UIX-03 | — | Pending |
-| UIX-04 | — | Pending |
+| CTX-01 | Phase 12 | Pending |
+| CTX-02 | Phase 12 | Pending |
+| CTX-03 | Phase 12 | Pending |
+| RTE-01 | Phase 13 | Pending |
+| RTE-02 | Phase 13 | Pending |
+| RTE-05 | Phase 13 | Pending |
+| RTE-03 | Phase 14 | Pending |
+| RTE-04 | Phase 14 | Pending |
+| ACC-01 | Phase 15 | Pending |
+| ACC-02 | Phase 15 | Pending |
+| BDG-01 | Phase 15 | Pending |
+| BDG-02 | Phase 15 | Pending |
+| BDG-03 | Phase 15 | Pending |
+| UIX-01 | Phase 16 | Pending |
+| UIX-02 | Phase 16 | Pending |
+| UIX-03 | Phase 16 | Pending |
+| UIX-04 | Phase 16 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-29*
-*Last updated: 2026-03-29 after initial definition*
+*Last updated: 2026-03-29 after roadmap creation*
