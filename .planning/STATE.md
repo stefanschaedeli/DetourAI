@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Polish & Travel View Redesign
-status: completed
-stopped_at: Milestone v1.1 archived
-last_updated: "2026-03-28T21:35:00.000Z"
-last_activity: 2026-03-28
+milestone: v1.2
+milestone_name: "AI-Qualit\xE4t & Routenplanung"
+status: active
+stopped_at: Defining requirements
+last_updated: "2026-03-29T00:00:00.000Z"
+last_activity: 2026-03-29
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-28)
+See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Route planning and stop discovery must produce consistently high-quality, geographically correct results for any destination type.
-**Current focus:** Milestone v1.1 complete. Run `/gsd:new-milestone` to define v1.2.
+**Current focus:** Milestone v1.2 — AI-Qualität & Routenplanung
 
 ## Current Position
 
-Phase: All complete
-Plan: All complete
-Status: Milestone v1.1 shipped
-Last activity: 2026-03-28
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-29 — Milestone v1.2 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -65,6 +65,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-28
-Stopped at: Milestone v1.1 archived
+Last session: 2026-03-29
+Stopped at: Defining requirements for v1.2
 Resume file: None
