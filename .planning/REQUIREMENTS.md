@@ -10,8 +10,8 @@ Requirements for milestone v1.2: AI-Qualität & Routenplanung. Each maps to road
 ### Context Forwarding
 
 - [x] **CTX-01**: User kann globale Aktivitätswünsche als Freitext im Trip-Formular eingeben
-- [ ] **CTX-02**: `travel_description` und `preferred_activities` werden an alle 9 Agents weitergeleitet
-- [ ] **CTX-03**: `mandatory_activities` werden an StopOptionsFinder und ActivitiesAgent weitergeleitet
+- [x] **CTX-02**: `travel_description` und `preferred_activities` werden an alle 9 Agents weitergeleitet
+- [x] **CTX-03**: `mandatory_activities` werden an StopOptionsFinder und ActivitiesAgent weitergeleitet
 
 ### Route Intelligence
 
@@ -69,8 +69,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CTX-01 | Phase 12 | Complete |
-| CTX-02 | Phase 12 | Pending |
-| CTX-03 | Phase 12 | Pending |
+| CTX-02 | Phase 12 | Complete |
+| CTX-03 | Phase 12 | Complete |
 | RTE-01 | Phase 13 | Pending |
 | RTE-02 | Phase 13 | Pending |
 | RTE-05 | Phase 13 | Pending |

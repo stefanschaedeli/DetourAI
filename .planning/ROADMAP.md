@@ -39,7 +39,7 @@
 
 **Milestone Goal:** Die AI-gesteuerte Routenplanung und Stop-Auswahl grundlegend verbessern — intelligentere Tagesverteilung, bessere Kontextweiterleitung, und UI-Korrekturen für eine nutzbare Reiseplanung.
 
-- [ ] **Phase 12: Context Infrastructure + Wishes Forwarding** — Globales Wunschfeld im Formular; alle 9 Agents erhalten travel_description, preferred_activities, mandatory_activities
+- [x] **Phase 12: Context Infrastructure + Wishes Forwarding** — Globales Wunschfeld im Formular; alle 9 Agents erhalten travel_description, preferred_activities, mandatory_activities (completed 2026-03-29)
 - [ ] **Phase 13: Architect Pre-Plan for Interactive Flow** — Lightweight Sonnet pre-plan vor StopOptionsFinder; Regionen und Nächte-Empfehlungen in job state
 - [ ] **Phase 14: Stop History Awareness + Night Distribution** — StopOptionsFinder kennt alle bisherigen Stops; Nächte-Verteilung nach Ort-Potenzial; Dedup-Safety-Net
 - [ ] **Phase 15: Hotel Geheimtipp Quality + Day Plan Recalculation** — Haversine-Validierung für Geheimtipps; Tagesplan-Neuberechnung nach Nächte-Änderungen
@@ -56,10 +56,10 @@
   2. Eingegebene Wünsche erscheinen im Prompt aller 9 Agents (verifizierbar per Logs)
   3. mandatory_activities sind in StopOptionsFinder- und ActivitiesAgent-Prompts sichtbar
   4. Wenn kein Wunschtext eingegeben wird, funktionieren alle Agents weiterhin unverändert
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 12-01-PLAN.md — Frontend UI: preferred_activities tag input + travel_description placeholder
-- [ ] 12-02-PLAN.md — Backend: wishes context in all 8 agent prompts + test coverage
+- [x] 12-02-PLAN.md — Backend: wishes context in all 8 agent prompts + test coverage
 
 ### Phase 13: Architect Pre-Plan for Interactive Flow
 **Goal**: StopOptionsFinder erhält Regions- und Nächtekontext vom Architect vor der ersten Stop-Auswahl
@@ -122,7 +122,7 @@ Plans:
 | 9. Guide Module Split | v1.1 | 2/2 | Complete | 2026-03-27 |
 | 10. Progressive Disclosure UI | v1.1 | 3/3 | Complete | 2026-03-27 |
 | 11. Browser Verification | v1.1 | 4/4 | Complete | 2026-03-28 |
-| 12. Context Infrastructure + Wishes Forwarding | v1.2 | 1/2 | In Progress|  |
+| 12. Context Infrastructure + Wishes Forwarding | v1.2 | 2/2 | Complete   | 2026-03-29 |
 | 13. Architect Pre-Plan for Interactive Flow | v1.2 | 0/? | Not started | - |
 | 14. Stop History Awareness + Night Distribution | v1.2 | 0/? | Not started | - |
 | 15. Hotel Geheimtipp Quality + Day Plan Recalculation | v1.2 | 0/? | Not started | - |
