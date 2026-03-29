@@ -63,7 +63,7 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 **Goal:** Die AI-gesteuerte Routenplanung und Stop-Auswahl grundlegend verbessern — intelligentere Tageverteilung, bessere Kontextweiterleitung, und UI-Korrekturen für eine nutzbare Reiseplanung.
 
 **Target features:**
-- Strategische Tage-Verteilung pro Region nach Ort-Potenzial
+- ✓ Strategische Tage-Verteilung pro Region nach Ort-Potenzial — Phase 13 (ArchitectPrePlanAgent)
 - ✓ Kundenwünsche (Aktivitäten, Stil) korrekt durch alle Agents weiterleiten — Phase 12
 - Stopfinder: Historie-Bewusstsein, keine Wiederholungen, Gesamtroute-Kontext
 - Stopfinder Performance-Optimierung
@@ -90,7 +90,7 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 ## Context
 
 - Used by friends and family circle, not a public product
-- v1.1 shipped 2026-03-28; v1.2 Phase 12 complete with 295 passing tests
+- v1.1 shipped 2026-03-28; v1.2 Phase 13 complete with 304 passing tests
 - 9 AI agents orchestrated via Celery workers with SSE streaming
 - Geographic intelligence covers 8 Mediterranean island groups with ferry detection
 - Map-centric responsive layout with 45/55 split-panel design
@@ -150,4 +150,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-29 after Phase 12 completion*
+*Last updated: 2026-03-29 after Phase 13 completion*
