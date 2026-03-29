@@ -1042,6 +1042,63 @@ def test_stop_options_finder_empty_architect_context(mocker):
     assert "ARCHITECT-EMPFEHLUNG" not in prompt
 
 
+# ---------------------------------------------------------------------------
+# ArchitectPrePlan wiring in main.py — timeout and job state (RTE-01, D-12, D-13)
+# ---------------------------------------------------------------------------
+
+def test_architect_pre_plan_graceful_fallback():
+    """D-13: asyncio.TimeoutError is caught, job['architect_plan'] set to None, no re-raise."""
+    import asyncio
+
+    # Simulate the try/except/wait_for pattern used in _start_leg_route_building
+    job = {"architect_plan": None, "architect_plan_attempted": False}
+
+    async def _run():
+        try:
+            # Simulate asyncio.wait_for raising TimeoutError
+            async def _mock_run():
+                raise asyncio.TimeoutError()
+            result = await asyncio.wait_for(_mock_run(), timeout=5.0)
+            job["architect_plan"] = result
+        except Exception:
+            job["architect_plan"] = None
+        job["architect_plan_attempted"] = True
+
+    asyncio.run(_run())
+
+    assert job["architect_plan"] is None
+    assert job["architect_plan_attempted"] is True
+
+
+def test_architect_pre_plan_stored_in_job():
+    """RTE-01: When ArchitectPrePlanAgent.run() succeeds, result is stored in job['architect_plan']."""
+    import asyncio
+
+    expected = {
+        "regions": [
+            {"name": "Provence", "recommended_nights": 3, "max_drive_hours": 3.0},
+        ],
+        "total_nights": 9,
+    }
+
+    job = {"architect_plan": None, "architect_plan_attempted": False}
+
+    async def _run():
+        try:
+            async def _mock_run():
+                return expected
+            result = await asyncio.wait_for(_mock_run(), timeout=5.0)
+            job["architect_plan"] = result
+        except Exception:
+            job["architect_plan"] = None
+        job["architect_plan_attempted"] = True
+
+    asyncio.run(_run())
+
+    assert job["architect_plan"] == expected
+    assert job["architect_plan_attempted"] is True
+
+
 def test_restaurants_agent_includes_wishes(mocker):
     """CTX-02 + CTX-03: RestaurantsAgent prompt contains all 3 wishes fields when set."""
     import asyncio

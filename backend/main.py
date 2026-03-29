@@ -316,6 +316,25 @@ async def _start_leg_route_building(job: dict, job_id: str, request: TravelReque
         proximity_target_pct=request.proximity_target_pct,
     )
 
+    # Architect Pre-Plan: run once before first stop selection (D-09, D-12, D-13, D-14)
+    architect_plan = job.get("architect_plan")
+    if not job.get("architect_plan_attempted") and job["leg_index"] == 0 and job["stop_counter"] == 0:
+        from agents.architect_pre_plan import ArchitectPrePlanAgent
+        try:
+            pre_plan_agent = ArchitectPrePlanAgent(request, job_id)
+            architect_plan = await asyncio.wait_for(pre_plan_agent.run(), timeout=5.0)
+            job["architect_plan"] = architect_plan
+            await debug_logger.log(LogLevel.AGENT, "Architect Pre-Plan erstellt", job_id=job_id, agent="ArchitectPrePlan")
+        except Exception as exc:
+            await debug_logger.log(
+                LogLevel.WARNING,
+                f"Architect Pre-Plan fehlgeschlagen ({type(exc).__name__}) — StopOptionsFinder läuft ohne Kontext",
+                job_id=job_id, agent="ArchitectPrePlan",
+            )
+            job["architect_plan"] = None
+        job["architect_plan_attempted"] = True
+        save_job(job_id, job)
+
     agent = StopOptionsFinderAgent(request, job_id)
     options, map_anchors, estimated_total, route_complete = \
         await _find_and_stream_options(
@@ -332,6 +351,7 @@ async def _start_leg_route_building(job: dict, job_id: str, request: TravelReque
             max_drive_hours=request.max_drive_hours_per_day,
             route_geometry=route_geo,
             extra_instructions=extra_instructions,
+            architect_context=architect_plan,
         )
 
     job["current_options"] = options
@@ -452,6 +472,10 @@ def _new_job(job_id: str, request: TravelRequest) -> dict:
         "segment_index": 0,
         "segment_budget": _calc_leg_segment_budget(request, 0),
         "segment_stops": [],
+
+        # Architect pre-plan (per-trip, not reset per leg — covers whole trip)
+        "architect_plan": None,              # ArchitectPrePlan result
+        "architect_plan_attempted": False,   # True after first attempt (success or failure)
 
         # Explore/Region leg state (reset on each explore leg transition)
         "region_plan": None,           # RegionPlan dict after planning
@@ -706,6 +730,7 @@ async def _find_and_stream_options(
     max_drive_hours: float,
     route_geometry: dict,
     extra_instructions: str = "",
+    architect_context: dict = None,
 ) -> tuple[list, dict, int, bool]:
     """
     Runs StopOptionsFinder in streaming mode. Each option is individually
@@ -796,6 +821,7 @@ async def _find_and_stream_options(
             segment_count=segment_count,
             extra_instructions=extra_instr,
             route_geometry=route_geometry,
+            architect_context=architect_context,
         ):
             if "_all_options" in item:
                 estimated = item.get("estimated_total_stops", 4)
