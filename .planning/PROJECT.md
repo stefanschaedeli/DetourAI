@@ -67,9 +67,9 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 - ✓ Kundenwünsche (Aktivitäten, Stil) korrekt durch alle Agents weiterleiten — Phase 12
 - ✓ Stopfinder: Historie-Bewusstsein, keine Wiederholungen, Nächte-Anzeige — Phase 14
 - Stopfinder Performance-Optimierung
-- Hotel-Geheimtipps: Entfernungslimit, keine Duplikate
-- Budget/Tage-Verwaltung korrekt verteilen und tracken
-- Tagesplan-Neuberechnung bei Nächte- oder Stop-Änderungen
+- ✓ Hotel-Geheimtipps: Haversine-Distanzfilter + Name-Dedup — Phase 15
+- ✓ Nächte-Bearbeitung mit dediziertem Inline-Editor und Backend-Recalculation — Phase 15
+- ✓ Tagesplan-Neuberechnung bei Nächte-Änderungen via Celery + SSE — Phase 15
 - ✓ Globales Wunsch-Feld im Trip-Formular — Phase 12
 - Karte beim Öffnen auf Route fokussiert
 - Korrekte Bilder in Stopp-Übersicht
@@ -90,7 +90,7 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 ## Context
 
 - Used by friends and family circle, not a public product
-- v1.1 shipped 2026-03-28; v1.2 Phase 14 complete with 307 passing tests
+- v1.1 shipped 2026-03-28; v1.2 Phase 15 complete with 319 passing tests
 - 9 AI agents orchestrated via Celery workers with SSE streaming
 - Geographic intelligence covers 8 Mediterranean island groups with ferry detection
 - Map-centric responsive layout with 45/55 split-panel design
@@ -130,7 +130,9 @@ Route planning and stop discovery must produce consistently high-quality, geogra
 | Marker dimming via OverlayView _div opacity | Simpler than marker icon swaps, works with custom overlays | ✓ Good (Phase 10) |
 | 45/55 split-panel ratio (map/content) | Better content readability while keeping map visible | ✓ Good (Phase 11) |
 | Drop zones as separate divs between stop cards | Avoids ambiguous on-card drop behavior, clear visual targets | ✓ Good (Phase 11) |
-| Nights edit via prompt() with local-state update | No backend PATCH needed for gap closure, simplest approach | ✓ Good (Phase 11) |
+| Nights edit via prompt() with local-state update | No backend PATCH needed for gap closure, simplest approach | Superseded (Phase 15) |
+| Inline nights editor with backend Celery recalculation | Proper UI + server-side arrival_day rechaining + day plan refresh | ✓ Good (Phase 15) |
+| Haversine post-filter for Geheimtipps (secondary to prompt coordinates) | Prompt improvement is primary fix; haversine is safety net | ✓ Good (Phase 15) |
 
 ## Evolution
 
@@ -150,4 +152,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-29 after Phase 13 completion*
+*Last updated: 2026-03-29 after Phase 15 completion*
