@@ -223,7 +223,8 @@ class DebugLogger:
     # ── Public logging API ────────────────────────────────────────
 
     async def log(self, level: LogLevel, message: str, *,
-                  job_id: str = None, agent: str = None, data: dict = None):
+                  job_id: str = None, agent: str = None, data: dict = None,
+                  message_key: str = None):
         # Terminal output (ANSI colors)
         color = {
             LogLevel.DEBUG:   "\033[94m",
@@ -248,6 +249,7 @@ class DebugLogger:
                 "type": "debug_log",
                 "level": level.value,
                 "message": message,
+                "message_key": message_key,
                 "agent": agent,
                 "data": data,
                 "ts": datetime.now().isoformat(),

@@ -37,27 +37,26 @@ function onProgressDebugLog(data) {
   S.logs.push(data);
   updateDebugLog();
   // Overlay-Zeilen aus bekannten Log-Nachrichten
-  const msg = data.message || '';
-  if (msg.includes('Orchestrator startet')) {
+  const key = data.message_key || '';
+  const count = (data.data && data.data.count) ? data.data.count : 0;
+  if (key === 'progress.orchestrator_start') {
     progressOverlay.addLine('orchestrator', t('progress.orchestrator_starting'));
     progressOverlay.completeLine('orchestrator', '');
-  } else if (msg.includes('RouteArchitect startet')) {
+  } else if (key === 'progress.route_architect_start') {
     progressOverlay.addLine('route_arch', t('progress.route_analysis'));
-  } else if (msg.match(/Forschungsphase:\s*(\d+)/)) {
-    const n = msg.match(/Forschungsphase:\s*(\d+)/)[1];
-    progressOverlay.addLine('research_phase', t('progress.research_activities', {count: n}));
+  } else if (key === 'progress.research_phase') {
+    progressOverlay.addLine('research_phase', t('progress.research_activities', {count}));
     progressOverlay.completeLine('research_phase', '');
-  } else if (msg.match(/Reiseführer-Recherche für (\d+)/)) {
-    const n = msg.match(/Reiseführer-Recherche für (\d+)/)[1];
-    progressOverlay.addLine('guide_phase', t('progress.guide_writing', {count: n}));
-  } else if (msg.includes('Tagesplaner startet')) {
+  } else if (key === 'progress.guide_writing') {
+    progressOverlay.addLine('guide_phase', t('progress.guide_writing', {count}));
+  } else if (key === 'progress.day_planner_start') {
     progressOverlay.completeLine('guide_phase', t('progress.guide_complete'));
     progressOverlay.addLine('day_planner', t('progress.day_planner_starting'));
-  } else if (msg.includes('Reise-Analyse wird erstellt')) {
+  } else if (key === 'progress.analysis_start') {
     progressOverlay.completeLine('day_planner', t('progress.day_plan_complete'));
     progressOverlay.addLine('trip_analysis', t('progress.trip_analysis_starting'));
     _addAnalysisTimelineRow();
-  } else if (msg.includes('Reise-Analyse fehlgeschlagen')) {
+  } else if (key === 'progress.analysis_failed') {
     progressOverlay.completeLine('trip_analysis', t('progress.analysis_skipped'));
     _completeAnalysisTimelineRow();
   }

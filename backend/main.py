@@ -28,7 +28,7 @@ from models.stop_option import StopSelectRequest
 from models.accommodation_option import AccommodationSelectRequest, BudgetState, AccommodationResearchRequest
 from models.trip_leg import ReplaceRegionRequest, RecomputeRegionsRequest, GeocodeRegionRequest, ConfirmRegionsBody
 from utils.auth import get_current_user, get_current_user_sse, CurrentUser, verify_jwt_secret, hash_password
-from utils.i18n import get_request_language, SUPPORTED_LANGUAGES
+from utils.i18n import get_request_language, SUPPORTED_LANGUAGES, t as i18n_t
 from utils.auth_db import admin_exists, create_user, assign_orphan_trips, get_user_by_username
 from utils.migrations import run_migrations
 from routers.auth import router as auth_router
@@ -248,12 +248,17 @@ FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 _JOB_ID_RE = re.compile(r'^[a-f0-9]{32}$')
 
 
+def _job_lang(job: dict) -> str:
+    """Extract language from a stored job dict (falls back to 'de')."""
+    return job.get("request", {}).get("language", "de")
+
+
 def get_job(job_id: str) -> dict:
     if not _JOB_ID_RE.match(job_id):
-        raise HTTPException(status_code=404, detail="Job nicht gefunden")
+        raise HTTPException(status_code=404, detail=i18n_t("error.job_not_found", "de"))
     raw = redis_client.get(f"job:{job_id}")
     if not raw:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} nicht gefunden")
+        raise HTTPException(status_code=404, detail=i18n_t("error.job_not_found", "de"))
     return json.loads(raw)
 
 
@@ -1136,17 +1141,12 @@ async def _check_user_quota(user_id: int, estimated_cost: int = 0) -> None:
     if used >= quota:
         raise HTTPException(
             status_code=402,
-            detail=f"Token-Kontingent erschöpft ({used:,} / {quota:,} Tokens verwendet). Bitte kontaktieren Sie den Administrator.",
+            detail=i18n_t("error.quota_exhausted", "de", total=f"{used:,}", quota=f"{quota:,}"),
         )
     if estimated_cost > 0 and used + estimated_cost > quota:
-        remaining = quota - used
         raise HTTPException(
             status_code=402,
-            detail=(
-                f"Nicht genügend Token-Kontingent für diese Reise. "
-                f"Verbleibend: {remaining:,} | Geschätzt benötigt: {estimated_cost:,}. "
-                "Bitte kontaktieren Sie den Administrator."
-            ),
+            detail=i18n_t("error.quota_exhausted", "de", total=f"{used:,}", quota=f"{quota:,}"),
         )
 
 
@@ -1293,7 +1293,7 @@ async def select_stop(job_id: str, body: StopSelectRequest, current_user: Curren
 
     options = job.get("current_options", [])
     if body.option_index >= len(options):
-        raise HTTPException(status_code=400, detail="Ungültiger option_index")
+        raise HTTPException(status_code=400, detail=i18n_t("error.invalid_option_index", _job_lang(job)))
 
     selected = options[body.option_index]
     job["stop_counter"] += 1
@@ -1654,7 +1654,7 @@ async def patch_job(job_id: str, body: PatchJobRequest, current_user: CurrentUse
 
     elif body.action == "add_via_point":
         if not body.via_point_location.strip():
-            raise HTTPException(status_code=400, detail="via_point_location darf nicht leer sein")
+            raise HTTPException(status_code=400, detail=i18n_t("error.location_empty", _job_lang(job)))
         seg_idx = job.get("segment_index", 0)
         # Insert the new via-point before the current segment target in the current leg
         legs_list = req_data.get("legs", [])
@@ -1677,7 +1677,7 @@ async def patch_job(job_id: str, body: PatchJobRequest, current_user: CurrentUse
         job["segment_budget"] = _calc_leg_segment_budget(request_tmp, leg_index)
 
     else:
-        raise HTTPException(status_code=400, detail=f"Unbekannte Aktion: {body.action}")
+        raise HTTPException(status_code=400, detail=i18n_t("error.unknown_mode", _job_lang(job)))
 
     save_job(job_id, job)
 
@@ -1767,7 +1767,7 @@ async def confirm_route(job_id: str, current_user: CurrentUser = Depends(get_cur
     # Guard: all legs must be complete before confirming route
     if job["leg_index"] < len(request.legs) - 1:
         raise HTTPException(status_code=409,
-            detail="Nicht alle Etappen abgeschlossen — Route kann noch nicht bestätigt werden")
+            detail=i18n_t("error.not_all_legs_complete", _job_lang(job)))
 
     selected_stops = job["selected_stops"]
 
@@ -1838,7 +1838,7 @@ async def confirm_route(job_id: str, current_user: CurrentUser = Depends(get_cur
 async def start_accommodations(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
     job = get_job(job_id)
     if job.get("status") != "loading_accommodations":
-        raise HTTPException(status_code=400, detail="Job nicht im Status loading_accommodations")
+        raise HTTPException(status_code=400, detail=i18n_t("error.not_loading_accommodations", _job_lang(job)))
 
     _fire_task("prefetch_accommodations", job_id)
 
@@ -1965,7 +1965,7 @@ async def research_accommodation(job_id: str, body: AccommodationResearchRequest
     stop_id_int = int(body.stop_id) if body.stop_id.isdigit() else None
     stop = next((s for s in selected_stops if s.get("id") == stop_id_int), None)
     if stop is None:
-        raise HTTPException(status_code=404, detail=f"Stop {body.stop_id} nicht gefunden")
+        raise HTTPException(status_code=404, detail=i18n_t("error.stop_not_found", _job_lang(job), stop_id=body.stop_id))
 
     total_nights = sum(s.get("nights", request.min_nights_per_stop) for s in selected_stops)
     acc_budget = request.budget_chf * (get_setting("budget.accommodation_pct") / 100.0)
@@ -2027,7 +2027,7 @@ async def progress(job_id: str, request: Request, token: Optional[str] = None, c
         _job_check = json.loads(raw)
         _job_user_id = _job_check.get("user_id")
         if _job_user_id is not None and _job_user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Kein Zugriff auf diesen Job")
+            raise HTTPException(status_code=403, detail=i18n_t("error.no_access", _job_check.get("request", {}).get("language", "de")))
     get_job(job_id)
 
     queue = debug_logger.subscribe(job_id)
@@ -2213,7 +2213,7 @@ async def api_save_travel(body: SaveTravelRequest, current_user: CurrentUser = D
 async def api_update_travel(travel_id: int, body: UpdateTravelRequest, current_user: CurrentUser = Depends(get_current_user)):
     updated = await update_travel(travel_id, current_user.id, body.custom_name, body.rating)
     if not updated:
-        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
     return {"updated": True, "id": travel_id}
 
 
@@ -2221,14 +2221,14 @@ async def api_update_travel(travel_id: int, body: UpdateTravelRequest, current_u
 async def api_get_travel(travel_id: int, current_user: CurrentUser = Depends(get_current_user)):
     plan = await get_travel(travel_id, current_user.id)
     if plan is None:
-        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
     return plan
 
 
 @app.delete("/api/travels/{travel_id}")
 async def api_delete_travel(travel_id: int, current_user: CurrentUser = Depends(get_current_user)):
     if not await delete_travel(travel_id, current_user.id):
-        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
     return {"deleted": True, "id": travel_id}
 
 
@@ -2242,7 +2242,7 @@ async def api_delete_travel(travel_id: int, current_user: CurrentUser = Depends(
 async def api_replan_travel(travel_id: int, current_user: CurrentUser = Depends(get_current_user)):
     plan = await get_travel(travel_id, current_user.id)
     if plan is None:
-        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
 
     # Reconstruct TravelRequest from the saved plan
     # The plan must contain a "request" snapshot; fall back to deriving minimal fields.
@@ -2340,25 +2340,25 @@ async def api_replace_stop(travel_id: int, body: ReplaceStopRequest, current_use
 
     plan = await get_travel(travel_id, current_user.id)
     if plan is None:
-        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
 
     stops = plan.get("stops", [])
     stop_index = next((i for i, s in enumerate(stops) if s.get("id") == body.stop_id), None)
     if stop_index is None:
-        raise HTTPException(400, detail=f"Stop {body.stop_id} nicht gefunden")
+        raise HTTPException(400, detail=i18n_t("error.stop_not_found", "de", stop_id=body.stop_id))
 
     old_stop = stops[stop_index]
 
     if body.mode == "manual":
         if not body.manual_location or not body.manual_location.strip():
-            raise HTTPException(400, detail="Ortsname darf nicht leer sein")
+            raise HTTPException(400, detail=i18n_t("error.location_empty", "de"))
 
         geo_result = await geocode_google(body.manual_location.strip())
         if not geo_result:
-            raise HTTPException(400, detail=f"Ort '{body.manual_location}' konnte nicht gefunden werden")
+            raise HTTPException(400, detail=i18n_t("error.location_not_found", "de", location=body.manual_location))
 
         if not acquire_edit_lock(travel_id):
-            raise HTTPException(409, detail="Eine Bearbeitung laeuft bereits")
+            raise HTTPException(409, detail=i18n_t("error.edit_in_progress", "de"))
 
         nights = body.manual_nights if body.manual_nights and body.manual_nights > 0 else old_stop.get("nights", 1)
 
@@ -2441,7 +2441,7 @@ async def api_replace_stop(travel_id: int, body: ReplaceStopRequest, current_use
         return {"job_id": job_id, "options": options, "map_anchors": map_anchors}
 
     else:
-        raise HTTPException(400, detail=f"Unbekannter Modus: {body.mode}")
+        raise HTTPException(400, detail=i18n_t("error.unknown_mode", "de"))
 
 
 # ---------------------------------------------------------------------------
@@ -2458,16 +2458,16 @@ class ReplaceStopSelectRequest(BaseModel):
 async def api_replace_stop_select(travel_id: int, body: ReplaceStopSelectRequest, current_user: CurrentUser = Depends(get_current_user)):
     job = get_job(body.job_id)
     if job.get("travel_id") != travel_id:
-        raise HTTPException(400, detail="Job gehört nicht zu dieser Reise")
+        raise HTTPException(400, detail=i18n_t("error.job_not_travel", _job_lang(job)))
 
     options = job.get("options", [])
     if body.option_index < 0 or body.option_index >= len(options):
-        raise HTTPException(400, detail="Ungültiger option_index")
+        raise HTTPException(400, detail=i18n_t("error.invalid_option_index", _job_lang(job)))
 
     selected = options[body.option_index]
     plan = await get_travel(travel_id, current_user.id)
     if plan is None:
-        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
 
     stops = plan.get("stops", [])
     stop_index = job["stop_index"]
@@ -2501,17 +2501,17 @@ async def api_replace_stop_select(travel_id: int, body: ReplaceStopSelectRequest
 async def api_remove_stop(travel_id: int, body: RemoveStopRequest, current_user: CurrentUser = Depends(get_current_user)):
     plan = await get_travel(travel_id, current_user.id)
     if plan is None:
-        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
 
     stops = plan.get("stops", [])
     stop_index = next((i for i, s in enumerate(stops) if s.get("id") == body.stop_id), None)
     if stop_index is None:
-        raise HTTPException(400, detail=f"Stop {body.stop_id} nicht gefunden")
+        raise HTTPException(400, detail=i18n_t("error.stop_not_found", "de", stop_id=body.stop_id))
     if len(stops) <= 1:
-        raise HTTPException(400, detail="Mindestens ein Stopp muss verbleiben")
+        raise HTTPException(400, detail=i18n_t("error.min_one_stop", "de"))
 
     if not acquire_edit_lock(travel_id):
-        raise HTTPException(409, detail="Eine Bearbeitung laeuft bereits")
+        raise HTTPException(409, detail=i18n_t("error.edit_in_progress", "de"))
 
     job_id = uuid.uuid4().hex
     job = {
@@ -2534,23 +2534,23 @@ async def api_remove_stop(travel_id: int, body: RemoveStopRequest, current_user:
 @app.post("/api/travels/{travel_id}/add-stop")
 async def api_add_stop(travel_id: int, body: AddStopRequest, current_user: CurrentUser = Depends(get_current_user)):
     if not body.location or not body.location.strip():
-        raise HTTPException(400, detail="Ortsname darf nicht leer sein")
+        raise HTTPException(400, detail=i18n_t("error.location_empty", "de"))
 
     plan = await get_travel(travel_id, current_user.id)
     if plan is None:
-        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
 
     stops = plan.get("stops", [])
     insert_after_index = next((i for i, s in enumerate(stops) if s.get("id") == body.insert_after_stop_id), None)
     if insert_after_index is None:
-        raise HTTPException(400, detail=f"Stop {body.insert_after_stop_id} nicht gefunden")
+        raise HTTPException(400, detail=i18n_t("error.stop_not_found", "de", stop_id=body.insert_after_stop_id))
 
     geo_result = await geocode_google(body.location.strip())
     if not geo_result:
-        raise HTTPException(400, detail=f"Ort '{body.location}' konnte nicht gefunden werden")
+        raise HTTPException(400, detail=i18n_t("error.location_not_found", "de", location=body.location))
 
     if not acquire_edit_lock(travel_id):
-        raise HTTPException(409, detail="Eine Bearbeitung laeuft bereits")
+        raise HTTPException(409, detail=i18n_t("error.edit_in_progress", "de"))
 
     job_id = uuid.uuid4().hex
     job = {
@@ -2579,18 +2579,18 @@ async def api_add_stop(travel_id: int, body: AddStopRequest, current_user: Curre
 async def api_reorder_stops(travel_id: int, body: ReorderStopsRequest, current_user: CurrentUser = Depends(get_current_user)):
     plan = await get_travel(travel_id, current_user.id)
     if plan is None:
-        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
 
     stops = plan.get("stops", [])
     if body.old_index < 0 or body.old_index >= len(stops):
-        raise HTTPException(400, detail=f"Ungueltiger Quell-Index {body.old_index}")
+        raise HTTPException(400, detail=i18n_t("error.invalid_source_index", "de"))
     if body.new_index < 0 or body.new_index >= len(stops):
-        raise HTTPException(400, detail=f"Ungueltiger Ziel-Index {body.new_index}")
+        raise HTTPException(400, detail=i18n_t("error.invalid_target_index", "de"))
     if body.old_index == body.new_index:
-        raise HTTPException(400, detail="Quell- und Ziel-Index sind identisch")
+        raise HTTPException(400, detail=i18n_t("error.same_index", "de"))
 
     if not acquire_edit_lock(travel_id):
-        raise HTTPException(409, detail="Eine Bearbeitung laeuft bereits")
+        raise HTTPException(409, detail=i18n_t("error.edit_in_progress", "de"))
 
     job_id = uuid.uuid4().hex
     job = {
@@ -2614,19 +2614,19 @@ async def api_reorder_stops(travel_id: int, body: ReorderStopsRequest, current_u
 @app.post("/api/travels/{travel_id}/update-nights")
 async def api_update_nights(travel_id: int, body: UpdateNightsRequest, current_user: CurrentUser = Depends(get_current_user)):
     if body.nights < 1 or body.nights > 14:
-        raise HTTPException(400, detail="Naechte muessen zwischen 1 und 14 liegen")
+        raise HTTPException(400, detail=i18n_t("error.nights_range", "de"))
 
     plan = await get_travel(travel_id, current_user.id)
     if plan is None:
-        raise HTTPException(404, detail=f"Reise {travel_id} nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
 
     stops = plan.get("stops", [])
     stop_index = next((i for i, s in enumerate(stops) if s.get("id") == body.stop_id), None)
     if stop_index is None:
-        raise HTTPException(400, detail=f"Stop {body.stop_id} nicht gefunden")
+        raise HTTPException(400, detail=i18n_t("error.stop_not_found", "de", stop_id=body.stop_id))
 
     if not acquire_edit_lock(travel_id):
-        raise HTTPException(409, detail="Eine Bearbeitung laeuft bereits")
+        raise HTTPException(409, detail=i18n_t("error.edit_in_progress", "de"))
 
     job_id = uuid.uuid4().hex
     job = {
@@ -2652,7 +2652,7 @@ async def api_share_travel(travel_id: int, current_user: CurrentUser = Depends(g
     token = secrets.token_urlsafe(16)
     ok = await set_share_token(travel_id, current_user.id, token)
     if not ok:
-        raise HTTPException(404, detail="Reise nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
     return {"share_token": token, "share_url": f"/travel/{travel_id}?share={token}"}
 
 
@@ -2664,7 +2664,7 @@ async def api_share_travel(travel_id: int, current_user: CurrentUser = Depends(g
 async def api_unshare_travel(travel_id: int, current_user: CurrentUser = Depends(get_current_user)):
     ok = await set_share_token(travel_id, current_user.id, None)
     if not ok:
-        raise HTTPException(404, detail="Reise nicht gefunden")
+        raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
     return {"status": "unshared"}
 
 
@@ -2676,7 +2676,7 @@ async def api_unshare_travel(travel_id: int, current_user: CurrentUser = Depends
 async def api_get_shared_travel(token: str):
     plan = await get_travel_by_share_token(token)
     if plan is None:
-        raise HTTPException(404, detail="Geteilter Link nicht gefunden oder deaktiviert")
+        raise HTTPException(404, detail=i18n_t("error.shared_link_invalid", "de"))
     return plan
 
 
@@ -2764,14 +2764,14 @@ async def skip_segment(job_id: str, current_user: CurrentUser = Depends(get_curr
     explore_regions = job.get("explore_regions")
     explore_budgets = job.get("explore_segment_budgets")
     if not explore_regions or not explore_budgets:
-        raise HTTPException(409, "Nur im Erkunden-Modus verfügbar")
+        raise HTTPException(409, i18n_t("error.explore_mode_only", _job_lang(job)))
 
     seg_idx = job["segment_index"]
     n_segments = len(leg.via_points) + 1
     is_last_segment = seg_idx == n_segments - 1
 
     if seg_idx >= len(explore_regions):
-        raise HTTPException(409, "Kein weiteres Segment zum Überspringen")
+        raise HTTPException(409, i18n_t("error.no_segment_to_skip", _job_lang(job)))
 
     region = explore_regions[seg_idx]
     region_name = region["name"]
@@ -2932,11 +2932,11 @@ async def replace_region(job_id: str, body: ReplaceRegionRequest, current_user: 
 
     job = get_job(job_id)
     if not job.get("region_plan"):
-        raise HTTPException(status_code=409, detail="Kein Regionen-Plan vorhanden")
+        raise HTTPException(status_code=409, detail=i18n_t("error.no_region_plan", _job_lang(job)))
 
     current_plan = RegionPlan(**job["region_plan"])
     if body.index >= len(current_plan.regions):
-        raise HTTPException(status_code=400, detail="Ungültiger Region-Index")
+        raise HTTPException(status_code=400, detail=i18n_t("error.invalid_region_index", _job_lang(job)))
 
     request = TravelRequest(**job["request"])
     agent = RegionPlannerAgent(request, job_id)
@@ -2970,7 +2970,7 @@ async def recompute_regions(job_id: str, body: RecomputeRegionsRequest, current_
 
     job = get_job(job_id)
     if not job.get("region_plan"):
-        raise HTTPException(status_code=409, detail="Kein Regionen-Plan vorhanden")
+        raise HTTPException(status_code=409, detail=i18n_t("error.no_region_plan", _job_lang(job)))
 
     current_plan = RegionPlan(**job["region_plan"])
     request = TravelRequest(**job["request"])
@@ -3003,7 +3003,7 @@ async def geocode_region_endpoint(job_id: str, body: GeocodeRegionRequest, curre
 
     geo_result = await geocode_google(body.name.strip())
     if not geo_result:
-        raise HTTPException(status_code=400, detail=f"Ort '{body.name}' konnte nicht gefunden werden")
+        raise HTTPException(status_code=400, detail=i18n_t("error.location_not_found", "de", location=body.name))
 
     lat, lon, place_id = geo_result
     region = {
@@ -3028,7 +3028,7 @@ async def confirm_regions(job_id: str, body: ConfirmRegionsBody = None, current_
 
     job = get_job(job_id)
     if not job.get("region_plan"):
-        raise HTTPException(status_code=409, detail="Kein Regionen-Plan vorhanden")
+        raise HTTPException(status_code=409, detail=i18n_t("error.no_region_plan", _job_lang(job)))
 
     region_plan = RegionPlan(**job["region_plan"])
 

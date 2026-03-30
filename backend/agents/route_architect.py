@@ -39,9 +39,12 @@ class RouteArchitectAgent:
         self.model = get_model("claude-opus-4-5", AGENT_KEY)
 
     async def run(self) -> dict:
+        lang = getattr(self.request, 'language', 'de')
         await debug_logger.log(
             LogLevel.AGENT, "RouteArchitect startet",
             job_id=self.job_id, agent="RouteArchitect",
+            message_key="progress.route_architect_start",
+            data={"lang": lang},
         )
 
         req = self.request

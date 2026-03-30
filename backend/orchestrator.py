@@ -12,6 +12,7 @@ from agents.travel_guide_agent import TravelGuideAgent
 from agents.trip_analysis_agent import TripAnalysisAgent
 from models.trip_leg import RegionPlan
 from utils.debug_logger import debug_logger, LogLevel
+from utils.i18n import t as i18n_t
 from utils.image_fetcher import fetch_unsplash_images
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
@@ -71,7 +72,9 @@ class TravelPlannerOrchestrator:
         self._token_accumulator = []
 
         try:
-            await debug_logger.log(LogLevel.INFO, "Orchestrator startet", job_id=job_id)
+            lang = getattr(req, 'language', 'de')
+            await debug_logger.log(LogLevel.INFO, i18n_t("progress.orchestrator_start", lang),
+                                   job_id=job_id, message_key="progress.orchestrator_start")
 
             # Phase 1: Route (leg-sequential)
             if pre_built_stops and len(pre_built_stops) > 0:
@@ -287,7 +290,10 @@ class TravelPlannerOrchestrator:
         loc_img_map: dict = {}
         all_research: list = []
 
-        await debug_logger.log(LogLevel.INFO, f"Forschungsphase: {len(stops)} Stops", job_id=job_id)
+        lang = getattr(req, 'language', 'de')
+        await debug_logger.log(LogLevel.INFO, i18n_t("progress.research_phase", lang, count=len(stops)),
+                               job_id=job_id, message_key="progress.research_phase",
+                               data={"count": len(stops)})
 
         async def research_activities(stop):
             sid = stop.get("id")
@@ -351,7 +357,9 @@ class TravelPlannerOrchestrator:
             })
 
         # Phase 2b: Travel Guide pro Stop (parallel)
-        await debug_logger.log(LogLevel.INFO, f"Reiseführer-Recherche für {len(stops)} Stops gestartet", job_id=job_id)
+        await debug_logger.log(LogLevel.INFO, i18n_t("progress.guide_writing", lang, count=len(stops)),
+                               job_id=job_id, message_key="progress.guide_writing",
+                               data={"count": len(stops)})
         guide_map: dict = {}
 
         async def research_travel_guide(stop):
@@ -377,7 +385,8 @@ class TravelPlannerOrchestrator:
                 )
                 act.update(images)
 
-        await debug_logger.log(LogLevel.INFO, "Tagesplaner startet", job_id=job_id)
+        await debug_logger.log(LogLevel.INFO, i18n_t("progress.day_planner_start", lang),
+                               job_id=job_id, message_key="progress.day_planner_start")
 
         # Phase 3: Day Planner
         route_for_planner = {"stops": stops}
@@ -395,13 +404,15 @@ class TravelPlannerOrchestrator:
         await debug_logger.log(LogLevel.SUCCESS, "Reiseplan fertig!", job_id=job_id)
 
         # Phase 4: Reise-Analyse
-        await debug_logger.log(LogLevel.INFO, "Reise-Analyse wird erstellt…", job_id=job_id)
+        await debug_logger.log(LogLevel.INFO, i18n_t("progress.analysis_start", lang),
+                               job_id=job_id, message_key="progress.analysis_start")
         try:
             analysis_result = await TripAnalysisAgent(req, job_id, token_accumulator=self._token_accumulator).run(plan, req)
             plan["trip_analysis"] = analysis_result
         except Exception as exc:
             await debug_logger.log(LogLevel.WARNING,
-                f"Reise-Analyse fehlgeschlagen (nicht kritisch): {exc}", job_id=job_id)
+                f"Reise-Analyse fehlgeschlagen (nicht kritisch): {exc}", job_id=job_id,
+                message_key="progress.analysis_failed")
             plan["trip_analysis"] = None
 
         # Inject token counts as internal metadata
