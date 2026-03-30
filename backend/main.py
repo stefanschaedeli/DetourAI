@@ -874,6 +874,8 @@ async def _find_and_stream_options(
                     LogLevel.DEBUG,
                     f"  Verworfen (Duplikat bereits ausgewählt: {opt.get('region')})",
                     job_id=job_id, agent="StopOptionsFinder",
+                    message_key="progress.duplicate_discarded",
+                    data={"place": opt.get("region", "")},
                 )
                 return None
 
@@ -908,6 +910,8 @@ async def _find_and_stream_options(
                         LogLevel.DEBUG,
                         f"  Verworfen (zu nahe am Startpunkt {origin_location}: {d_origin:.0f} km < {min_km_from_origin:.0f} km): {place}",
                         job_id=job_id, agent="StopOptionsFinder",
+                        message_key="progress.rejected_near_origin",
+                        data={"place": place},
                     )
                     return None
 
@@ -919,6 +923,8 @@ async def _find_and_stream_options(
                         LogLevel.DEBUG,
                         f"  Verworfen (zu nahe am Ziel {segment_target}: {d_target:.0f} km < {min_km_from_target:.0f} km): {place}",
                         job_id=job_id, agent="StopOptionsFinder",
+                        message_key="progress.rejected_near_target",
+                        data={"place": place},
                     )
                     return None
 
@@ -1042,6 +1048,8 @@ async def _find_and_stream_options(
             LogLevel.INFO,
             f"Nur {len(enriched_options)} gültige Option(en) — Retry mit Abstandshinweis",
             job_id=job_id, agent="StopOptionsFinder",
+            message_key="progress.retry_with_hint",
+            data={"count": len(enriched_options)},
         )
         retry_options, estimated_total_stops, final_route_could_be_complete = await _run_one_pass(combined)
         # Merge: keep original valid options + fill up from retry

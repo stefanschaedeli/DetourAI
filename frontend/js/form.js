@@ -811,6 +811,7 @@ function buildPayload() {
     budget_food_pct:          parseInt(document.getElementById('budget-food-pct')?.value) || 20,
     budget_activities_pct:    parseInt(document.getElementById('budget-act-pct')?.value)  || 20,
     log_verbosity:            document.getElementById('log-verbosity')?.value || 'normal',
+    language:                 (typeof getLocale === 'function') ? getLocale() : 'de',
   };
 }
 

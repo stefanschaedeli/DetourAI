@@ -17,12 +17,10 @@
   "header.log_debug": "Debug",
   "header.open_all_settings": "Open all settings",
   "header.language_label": "Language",
-
   "sidebar.aria_label": "Trip progress",
   "sidebar.title": "Trip",
   "sidebar.collapse_aria": "Toggle sidebar",
   "sidebar.mobile_toggle_aria": "Show trip progress",
-
   "login.title": "DetourAI",
   "login.subtitle": "AI-powered travel planner",
   "login.username_label": "Username",
@@ -32,14 +30,12 @@
   "login.loading": "Loading…",
   "login.welcome": "Welcome, {username}!",
   "login.error": "Sign in failed",
-
   "form.step.route": "Route",
   "form.step.travelers": "Travelers",
   "form.step.activities": "Activities",
   "form.step.accommodation": "Accommodation",
   "form.step.budget": "Budget",
   "form.step.summary": "Summary",
-
   "form.plan_trip": "Plan your trip",
   "form.legs_label": "Trip segments",
   "form.legs_hint": "Each segment defines a section of your trip with start, destination, and dates.",
@@ -54,7 +50,6 @@
   "form.next": "Next",
   "form.back": "Back",
   "form.back_to_step_aria": "Back to step {step}",
-
   "form.step2_title": "Who's traveling?",
   "form.adults_label": "Adults",
   "form.decrease_adults_aria": "Decrease adults",
@@ -70,12 +65,10 @@
   "form.preferred_activities_placeholder": "e.g., Wine tastings, hiking, museum visits",
   "form.add_tag": "Add",
   "form.tag_remove_aria": "Remove tag '{tag}'",
-
   "form.step3_title": "Activities & Experiences",
   "form.mandatory_activities_label": "Must-have activities",
   "form.mandatory_activities_placeholder": "e.g., Visit Eiffel Tower",
   "form.activities_radius_label": "Max distance to accommodation:",
-
   "form.step4_title": "Accommodation",
   "form.accommodation_prefs_label": "What type of accommodations do you want? (up to 3 preferences)",
   "form.accommodation_pref1_placeholder": "e.g., Romantic B&B by the lake with breakfast",
@@ -85,7 +78,6 @@
   "form.hotel_radius_label": "Hotel radius:",
   "form.min_nights_label": "Min. nights per stop",
   "form.max_nights_label": "Max. nights per stop",
-
   "form.step5_title": "Budget",
   "form.budget_total_label": "Total budget (CHF)",
   "form.budget_distribution_label": "Budget distribution",
@@ -95,7 +87,6 @@
   "form.budget_activities_label": "Activities",
   "form.budget_available_label": "Available:",
   "form.budget_sum_error": "— must be 100%",
-
   "form.summary_title": "Summary",
   "form.submit": "Plan trip",
   "form.planning_trip": "Planning trip…",
@@ -110,7 +101,6 @@
   "form.end_date_after_start": "End date must be after start date.",
   "form.segment_too_short_to_split": "Segment has too few days to split. Please adjust end date first.",
   "form.confirm_clear_data": "Clear all saved data and restart? Form fields will be kept.",
-
   "form.leg_from_label": "From",
   "form.leg_from_placeholder": "e.g., Liestal, Switzerland",
   "form.leg_to_label": "To",
@@ -135,10 +125,8 @@
   "form.mandatory_summary_label": "Must-have activities",
   "form.preferred_summary_label": "Preferred activities",
   "form.segments_summary_label": "Segments",
-
   "form.language_label": "Travel language",
   "form.language_hint": "AI-generated content will be created in this language.",
-
   "travel_styles.adventure": "Adventure",
   "travel_styles.relaxation": "Relaxation",
   "travel_styles.culture": "Culture",
@@ -153,10 +141,8 @@
   "travel_styles.kids": "Family Activities",
   "travel_styles.slow_travel": "Slow Travel",
   "travel_styles.party": "Nightlife",
-
   "loading.default": "Please wait…",
   "loading.pending_requests": "{count} requests pending…",
-
   "api.session_expired": "Session expired. Please sign in again.",
   "api.default_loading": "Loading…",
   "api.confirming_route": "Confirming route…",
@@ -170,7 +156,6 @@
   "api.adding_stop": "Adding stop…",
   "api.reordering_stops": "Reordering stops…",
   "api.adopting_option": "Adopting option…",
-
   "route_builder.title": "Build Route",
   "route_builder.back_to_form": "Back to form",
   "route_builder.selected_stops": "Selected Stops",
@@ -193,7 +178,6 @@
   "route_builder.confirming_regions": "Confirming regions…",
   "route_builder.confirm_regions_error": "Confirming regions failed:",
   "route_builder.enter_location": "Please enter a location for the stop.",
-
   "accommodation.title": "Choose Accommodation",
   "accommodation.subtitle": "Choose an accommodation for each stop.",
   "accommodation.redo_route": "Choose route again",
@@ -220,7 +204,6 @@
   "accommodation.planning_starting": "Starting planning…",
   "accommodation.started": "started",
   "accommodation.planning_error": "Error starting planning:",
-
   "progress.header": "Creating travel plan…",
   "progress.agent_status": "Agents starting…",
   "progress.duration_hint": "This process typically takes 30–90 seconds.",
@@ -252,7 +235,6 @@
   "progress.unknown_error": "Unknown error",
   "progress.analysis_label": "Trip analysis",
   "progress.analysis_complete": "Analysis complete",
-
   "guide.title": "Your Travel Plan",
   "guide.replan_title": "Regenerate travel guide, activities, restaurants, and hourly daily plans with AI — route and accommodations remain",
   "guide.replan_btn": "Recalculate",
@@ -273,7 +255,6 @@
   "guide.unknown_error": "Unknown error",
   "guide.error_retry": "Error — try again",
   "guide.open_google_maps": "Open Google Maps",
-
   "guide.google_search": "Google Search",
   "guide.maps": "Maps",
   "guide.accommodation_section": "Accommodation",
@@ -283,7 +264,6 @@
   "guide.booking_search": "Search on Booking.com",
   "guide.hotel_website": "Hotel website",
   "guide.alternative_options": "Alternative options ({count})",
-
   "guide.month_1": "January",
   "guide.month_2": "February",
   "guide.month_3": "March",
@@ -296,7 +276,6 @@
   "guide.month_10": "October",
   "guide.month_11": "November",
   "guide.month_12": "December",
-
   "travels.star_aria": "{stars} star",
   "travels.stars_aria": "{stars} stars",
   "travels.rating_failed": "Rating failed:",
@@ -316,7 +295,6 @@
   "travels.recalculating": "Recalculating travel guide and daily plans…",
   "travels.drawer_title": "My Trips",
   "travels.drawer_close_aria": "Close",
-
   "settings.route_architect_role": "Route planning",
   "settings.stop_options_role": "Stop suggestions",
   "settings.region_planner_role": "Region planning",
@@ -353,7 +331,6 @@
   "settings.nominatim_timeout_label": "Nominatim timeout",
   "settings.osrm_timeout_label": "OSRM timeout",
   "settings.wikipedia_timeout_label": "Wikipedia timeout",
-
   "admin.title": "User Management",
   "admin.subtitle": "Manage accounts, quotas, and access rights",
   "admin.refresh_aria": "Refresh",
@@ -380,7 +357,6 @@
   "admin.password_placeholder": "Min. 8 characters",
   "admin.create_btn": "Create user",
   "admin.create_success": "User \"{username}\" created successfully.",
-
   "feedback.fab_title": "Send feedback",
   "feedback.modal_title": "Send Feedback",
   "feedback.modal_description": "Help us improve DetourAI! Describe your concern or suggestion.",
@@ -396,23 +372,20 @@
   "feedback.screenshot_failed": "Screenshot failed.",
   "feedback.cancel": "Cancel",
   "feedback.submit": "Submit",
-
   "lightbox.close_aria": "Close lightbox",
   "lightbox.prev_aria": "Previous image",
   "lightbox.next_aria": "Next image",
-
   "debug.toggle_btn": "Debug",
   "debug.header": "Debug Log",
-
   "quick_submit.hint": "All settings configured?",
   "quick_submit.btn": "Plan trip now",
-
   "error.maps_api_key": "GOOGLE_MAPS_API_KEY not configured — map will not load",
   "error.maps_sdk_load": "Google Maps SDK could not be loaded — check API key",
-
   "router.accommodation_title": "Accommodations — DetourAI",
   "router.progress_title": "Planning… — DetourAI",
   "router.shared_link_invalid": "This link is no longer valid or has been disabled.",
-
-  "photos": "Photos"
+  "photos": "Photos",
+  "route_builder.rejected_near_origin": "{place} — too close to start, skipping",
+  "route_builder.rejected_near_target": "{place} — too close to destination, skipping",
+  "route_builder.retry_with_hint": "Only {count} valid option(s) — searching further..."
 }

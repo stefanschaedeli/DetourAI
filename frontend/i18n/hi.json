@@ -17,12 +17,10 @@
   "header.log_debug": "डीबग",
   "header.open_all_settings": "सभी सेटिंग्स खोलें",
   "header.language_label": "भाषा",
-
   "sidebar.aria_label": "यात्रा प्रगति",
   "sidebar.title": "यात्रा",
   "sidebar.collapse_aria": "साइडबार टॉगल करें",
   "sidebar.mobile_toggle_aria": "यात्रा प्रगति दिखाएं",
-
   "login.title": "DetourAI",
   "login.subtitle": "एआई-संचालित यात्रा योजनाकार",
   "login.username_label": "उपयोगकर्ता नाम",
@@ -32,14 +30,12 @@
   "login.loading": "लोड हो रहा है…",
   "login.welcome": "स्वागत है, {username}!",
   "login.error": "साइन इन विफल",
-
   "form.step.route": "मार्ग",
   "form.step.travelers": "यात्री",
   "form.step.activities": "गतिविधियां",
   "form.step.accommodation": "आवास",
   "form.step.budget": "बजट",
   "form.step.summary": "सारांश",
-
   "form.plan_trip": "अपनी यात्रा की योजना बनाएं",
   "form.legs_label": "यात्रा खंड",
   "form.legs_hint": "प्रत्येक खंड आपकी यात्रा के एक भाग को शुरुआत, गंतव्य और तारीखों के साथ परिभाषित करता है।",
@@ -54,7 +50,6 @@
   "form.next": "अगला",
   "form.back": "पीछे",
   "form.back_to_step_aria": "चरण {step} पर वापस जाएं",
-
   "form.step2_title": "कौन यात्रा कर रहा है?",
   "form.adults_label": "वयस्क",
   "form.decrease_adults_aria": "वयस्कों को कम करें",
@@ -70,12 +65,10 @@
   "form.preferred_activities_placeholder": "जैसे, वाइन टेस्टिंग, लंबी पैदल यात्रा, संग्रहालय दौरे",
   "form.add_tag": "जोड़ें",
   "form.tag_remove_aria": "टैग '{tag}' हटाएं",
-
   "form.step3_title": "गतिविधियां और अनुभव",
   "form.mandatory_activities_label": "अनिवार्य गतिविधियां",
   "form.mandatory_activities_placeholder": "जैसे, एइफ़ल टावर देखें",
   "form.activities_radius_label": "आवास से अधिकतम दूरी:",
-
   "form.step4_title": "आवास",
   "form.accommodation_prefs_label": "आप किस प्रकार के आवास चाहते हैं? (3 तक प्राथमिकताएं)",
   "form.accommodation_pref1_placeholder": "जैसे, झील के किनारे रोमांटिक बी एंड बी नाश्ते के साथ",
@@ -85,7 +78,6 @@
   "form.hotel_radius_label": "होटल त्रिज्या:",
   "form.min_nights_label": "प्रति स्टॉप न्यूनतम रातें",
   "form.max_nights_label": "प्रति स्टॉप अधिकतम रातें",
-
   "form.step5_title": "बजट",
   "form.budget_total_label": "कुल बजट (CHF)",
   "form.budget_distribution_label": "बजट वितरण",
@@ -95,7 +87,6 @@
   "form.budget_activities_label": "गतिविधियां",
   "form.budget_available_label": "उपलब्ध:",
   "form.budget_sum_error": "— 100% होना चाहिए",
-
   "form.summary_title": "सारांश",
   "form.submit": "यात्रा की योजना बनाएं",
   "form.planning_trip": "यात्रा की योजना बन रही है…",
@@ -110,7 +101,6 @@
   "form.end_date_after_start": "समाप्ति तारीख शुरुआत की तारीख के बाद होनी चाहिए।",
   "form.segment_too_short_to_split": "खंड को विभाजित करने के लिए बहुत कम दिन हैं। कृपया पहले समाप्ति तारीख समायोजित करें।",
   "form.confirm_clear_data": "सभी सहेजे गए डेटा को साफ़ करें और पुनः शुरू करें? फ़ॉर्म फ़ील्ड रखे जाएंगे।",
-
   "form.leg_from_label": "से",
   "form.leg_from_placeholder": "जैसे, Liestal, स्विट्जरलैंड",
   "form.leg_to_label": "को",
@@ -135,10 +125,8 @@
   "form.mandatory_summary_label": "अनिवार्य गतिविधियां",
   "form.preferred_summary_label": "पसंदीदा गतिविधियां",
   "form.segments_summary_label": "खंड",
-
   "form.language_label": "यात्रा भाषा",
   "form.language_hint": "एआई-जनित सामग्री इस भाषा में बनाई जाएगी।",
-
   "travel_styles.adventure": "रोमांच",
   "travel_styles.relaxation": "विश्राम",
   "travel_styles.culture": "संस्कृति",
@@ -153,10 +141,8 @@
   "travel_styles.kids": "पारिवारिक गतिविधियां",
   "travel_styles.slow_travel": "धीमी यात्रा",
   "travel_styles.party": "नाइटलाइफ",
-
   "loading.default": "कृपया प्रतीक्षा करें…",
   "loading.pending_requests": "{count} अनुरोध लंबित हैं…",
-
   "api.session_expired": "सत्र समाप्त हो गया। कृपया फिर से साइन इन करें।",
   "api.default_loading": "लोड हो रहा है…",
   "api.confirming_route": "मार्ग की पुष्टि की जा रही है…",
@@ -170,7 +156,6 @@
   "api.adding_stop": "स्टॉप जोड़ा जा रहा है…",
   "api.reordering_stops": "स्टॉप फिर से सॉर्ट किए जा रहे हैं…",
   "api.adopting_option": "विकल्प अपनाया जा रहा है…",
-
   "route_builder.title": "मार्ग बनाएं",
   "route_builder.back_to_form": "फॉर्म पर वापस",
   "route_builder.selected_stops": "चयनित स्टॉप",
@@ -193,7 +178,6 @@
   "route_builder.confirming_regions": "क्षेत्रों की पुष्टि की जा रही है…",
   "route_builder.confirm_regions_error": "क्षेत्रों की पुष्टि विफल:",
   "route_builder.enter_location": "कृपया स्टॉप के लिए एक स्थान दर्ज करें।",
-
   "accommodation.title": "आवास चुनें",
   "accommodation.subtitle": "प्रत्येक स्टॉप के लिए एक आवास चुनें।",
   "accommodation.redo_route": "मार्ग फिर से चुनें",
@@ -220,7 +204,6 @@
   "accommodation.planning_starting": "योजना शुरू की जा रही है…",
   "accommodation.started": "शुरू किया गया",
   "accommodation.planning_error": "योजना शुरू करने में त्रुटि:",
-
   "progress.header": "यात्रा योजना बनाई जा रही है…",
   "progress.agent_status": "एजेंट शुरू हो रहे हैं…",
   "progress.duration_hint": "यह प्रक्रिया आमतौर पर 30–90 सेकंड लेती है।",
@@ -252,7 +235,6 @@
   "progress.unknown_error": "अज्ञात त्रुटि",
   "progress.analysis_label": "यात्रा विश्लेषण",
   "progress.analysis_complete": "विश्लेषण पूर्ण",
-
   "guide.title": "आपकी यात्रा योजना",
   "guide.replan_title": "एआई के साथ यात्रा गाइड, गतिविधियां, रेस्तरां और प्रति घंटा दैनिक योजनाएं पुनः उत्पन्न करें — मार्ग और आवास बने रहते हैं",
   "guide.replan_btn": "पुनः गणना करें",
@@ -273,7 +255,6 @@
   "guide.unknown_error": "अज्ञात त्रुटि",
   "guide.error_retry": "त्रुटि — फिर से प्रयास करें",
   "guide.open_google_maps": "गूगल मानचित्र खोलें",
-
   "guide.google_search": "गूगल खोज",
   "guide.maps": "मानचित्र",
   "guide.accommodation_section": "आवास",
@@ -283,7 +264,6 @@
   "guide.booking_search": "Booking.com पर खोजें",
   "guide.hotel_website": "होटल वेबसाइट",
   "guide.alternative_options": "वैकल्पिक विकल्प ({count})",
-
   "guide.month_1": "जनवरी",
   "guide.month_2": "फरवरी",
   "guide.month_3": "मार्च",
@@ -296,7 +276,6 @@
   "guide.month_10": "अक्टूबर",
   "guide.month_11": "नवंबर",
   "guide.month_12": "दिसंबर",
-
   "travels.star_aria": "{stars} सितारा",
   "travels.stars_aria": "{stars} सितारे",
   "travels.rating_failed": "रेटिंग विफल:",
@@ -316,7 +295,6 @@
   "travels.recalculating": "यात्रा गाइड और दैनिक योजनाओं की पुनः गणना की जा रही है…",
   "travels.drawer_title": "मेरी यात्राएं",
   "travels.drawer_close_aria": "बंद करें",
-
   "settings.route_architect_role": "मार्ग योजना",
   "settings.stop_options_role": "स्टॉप सुझाव",
   "settings.region_planner_role": "क्षेत्र योजना",
@@ -353,7 +331,6 @@
   "settings.nominatim_timeout_label": "Nominatim समय समाप्ति",
   "settings.osrm_timeout_label": "OSRM समय समाप्ति",
   "settings.wikipedia_timeout_label": "विकिपीडिया समय समाप्ति",
-
   "admin.title": "उपयोगकर्ता प्रबंधन",
   "admin.subtitle": "खातों, कोटा और एक्सेस अधिकारों को प्रबंधित करें",
   "admin.refresh_aria": "ताज़ा करें",
@@ -380,7 +357,6 @@
   "admin.password_placeholder": "न्यूनतम 8 वर्ण",
   "admin.create_btn": "उपयोगकर्ता बनाएं",
   "admin.create_success": "उपयोगकर्ता \"{username}\" सफलतापूर्वक बनाया गया।",
-
   "feedback.fab_title": "प्रतिक्रिया भेजें",
   "feedback.modal_title": "प्रतिक्रिया भेजें",
   "feedback.modal_description": "DetourAI को बेहतर बनाने में हमारी मदद करें! अपनी चिंता या सुझाव का वर्णन करें।",
@@ -396,23 +372,20 @@
   "feedback.screenshot_failed": "स्क्रीनशॉट विफल।",
   "feedback.cancel": "रद्द करें",
   "feedback.submit": "जमा करें",
-
   "lightbox.close_aria": "लाइटबॉक्स बंद करें",
   "lightbox.prev_aria": "पिछली छवि",
   "lightbox.next_aria": "अगली छवि",
-
   "debug.toggle_btn": "डीबग",
   "debug.header": "डीबग लॉग",
-
   "quick_submit.hint": "सभी सेटिंग्स कॉन्फ़िगर की गई हैं?",
   "quick_submit.btn": "अभी यात्रा की योजना बनाएं",
-
   "error.maps_api_key": "GOOGLE_MAPS_API_KEY कॉन्फ़िगर नहीं — मानचित्र लोड नहीं होगा",
   "error.maps_sdk_load": "Google Maps SDK लोड नहीं हो सका — API कुंजी जांचें",
-
   "router.accommodation_title": "आवास — DetourAI",
   "router.progress_title": "योजना चल रही है… — DetourAI",
   "router.shared_link_invalid": "यह लिंक अब वैध नहीं है या अक्षम कर दिया गया है।",
-
-  "photos": "फ़ोटो"
+  "photos": "फ़ोटो",
+  "route_builder.rejected_near_origin": "{place} — शुरुआत के बहुत पास, छोड़ा जा रहा है",
+  "route_builder.rejected_near_target": "{place} — गंतव्य के बहुत पास, छोड़ा जा रहा है",
+  "route_builder.retry_with_hint": "केवल {count} वैध विकल्प — आगे खोज जारी..."
 }

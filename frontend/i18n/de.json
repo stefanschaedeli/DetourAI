@@ -17,12 +17,10 @@
   "header.log_debug": "Debug",
   "header.open_all_settings": "Alle Einstellungen öffnen",
   "header.language_label": "Sprache",
-
   "sidebar.aria_label": "Reisefortschritt",
   "sidebar.title": "Reise",
   "sidebar.collapse_aria": "Sidebar ein-/ausblenden",
   "sidebar.mobile_toggle_aria": "Reisefortschritt anzeigen",
-
   "login.title": "DetourAI",
   "login.subtitle": "KI-gestützter Reiseplaner",
   "login.username_label": "Benutzername",
@@ -32,14 +30,12 @@
   "login.loading": "Wird geladen…",
   "login.welcome": "Willkommen, {username}!",
   "login.error": "Anmeldung fehlgeschlagen",
-
   "form.step.route": "Route",
   "form.step.travelers": "Reisende",
   "form.step.activities": "Aktivitäten",
   "form.step.accommodation": "Unterkunft",
   "form.step.budget": "Budget",
   "form.step.summary": "Zusammenfassung",
-
   "form.plan_trip": "Reise planen",
   "form.legs_label": "Reisesegmente",
   "form.legs_hint": "Jedes Segment definiert einen Abschnitt deiner Reise mit Start, Ziel und Daten.",
@@ -54,7 +50,6 @@
   "form.next": "Weiter",
   "form.back": "Zurück",
   "form.back_to_step_aria": "Zurück zu Schritt {step}",
-
   "form.step2_title": "Wer reist mit?",
   "form.adults_label": "Erwachsene",
   "form.decrease_adults_aria": "Erwachsene reduzieren",
@@ -70,12 +65,10 @@
   "form.preferred_activities_placeholder": "z.B. Weinproben, Wandern, Museumsbesuche",
   "form.add_tag": "Hinzufügen",
   "form.tag_remove_aria": "Tag '{tag}' entfernen",
-
   "form.step3_title": "Aktivitäten & Erlebnisse",
   "form.mandatory_activities_label": "Pflichtaktivitäten",
   "form.mandatory_activities_placeholder": "z.B. Eiffelturm besuchen",
   "form.activities_radius_label": "Max. Distanz zu Übernachtungsort:",
-
   "form.step4_title": "Unterkunft",
   "form.accommodation_prefs_label": "Was für Unterkünfte möchtest du? (bis zu 3 Wünsche)",
   "form.accommodation_pref1_placeholder": "z.B. romantisches B&B am See mit Frühstück",
@@ -85,7 +78,6 @@
   "form.hotel_radius_label": "Hotelradius:",
   "form.min_nights_label": "Min. Nächte pro Stop",
   "form.max_nights_label": "Max. Nächte pro Stop",
-
   "form.step5_title": "Budget",
   "form.budget_total_label": "Gesamtbudget (CHF)",
   "form.budget_distribution_label": "Budgetaufteilung",
@@ -95,7 +87,6 @@
   "form.budget_activities_label": "Aktivitäten",
   "form.budget_available_label": "Verfügbar:",
   "form.budget_sum_error": "— muss 100% sein",
-
   "form.summary_title": "Zusammenfassung",
   "form.submit": "Reise planen",
   "form.planning_trip": "Plane Reise…",
@@ -110,7 +101,6 @@
   "form.end_date_after_start": "Enddatum muss nach dem Startdatum liegen.",
   "form.segment_too_short_to_split": "Das Segment hat zu wenige Tage zum Aufteilen. Bitte zuerst das Enddatum anpassen.",
   "form.confirm_clear_data": "Alle gespeicherten Daten löschen und neu starten? Die Formularfelder bleiben erhalten.",
-
   "form.leg_from_label": "Von",
   "form.leg_from_placeholder": "z.B. Liestal, Schweiz",
   "form.leg_to_label": "Nach",
@@ -135,10 +125,8 @@
   "form.mandatory_summary_label": "Pflichtaktivitäten",
   "form.preferred_summary_label": "Bevorzugte Aktivitäten",
   "form.segments_summary_label": "Segmente",
-
   "form.language_label": "Reisesprache",
   "form.language_hint": "Die KI-generierten Inhalte werden in dieser Sprache erstellt.",
-
   "travel_styles.adventure": "Abenteuer",
   "travel_styles.relaxation": "Entspannung",
   "travel_styles.culture": "Kultur",
@@ -153,10 +141,8 @@
   "travel_styles.kids": "Familienaktiv.",
   "travel_styles.slow_travel": "Slow Travel",
   "travel_styles.party": "Nightlife",
-
   "loading.default": "Bitte warten…",
   "loading.pending_requests": "{count} Anfragen laufen…",
-
   "api.session_expired": "Sitzung abgelaufen. Bitte erneut anmelden.",
   "api.default_loading": "Anfrage läuft…",
   "api.confirming_route": "Route wird bestätigt…",
@@ -170,7 +156,6 @@
   "api.adding_stop": "Stopp wird hinzugefügt…",
   "api.reordering_stops": "Stopps werden neu sortiert…",
   "api.adopting_option": "Option wird übernommen…",
-
   "route_builder.title": "Route aufbauen",
   "route_builder.back_to_form": "Zurück zum Formular",
   "route_builder.selected_stops": "Ausgewählte Stops",
@@ -193,7 +178,6 @@
   "route_builder.confirming_regions": "Regionen werden bestätigt…",
   "route_builder.confirm_regions_error": "Region-Bestätigung fehlgeschlagen:",
   "route_builder.enter_location": "Bitte eine Ortschaft für den Zwischenstopp eingeben.",
-
   "accommodation.title": "Unterkunft wählen",
   "accommodation.subtitle": "Wählen Sie für jeden Stop eine Unterkunft.",
   "accommodation.redo_route": "Route neu wählen",
@@ -220,7 +204,6 @@
   "accommodation.planning_starting": "Planung wird gestartet…",
   "accommodation.started": "gestartet",
   "accommodation.planning_error": "Fehler beim Starten der Planung:",
-
   "progress.header": "Reiseplan wird erstellt…",
   "progress.agent_status": "Agenten werden gestartet…",
   "progress.duration_hint": "Dieser Vorgang dauert typischerweise 30–90 Sekunden.",
@@ -252,7 +235,6 @@
   "progress.unknown_error": "Unbekannter Fehler",
   "progress.analysis_label": "Reise-Analyse",
   "progress.analysis_complete": "Analyse abgeschlossen",
-
   "guide.title": "Ihr Reiseplan",
   "guide.replan_title": "Reiseführer, Aktivitäten, Restaurants und stündliche Tagespläne mit KI neu generieren — Route und Unterkünfte bleiben erhalten",
   "guide.replan_btn": "Neu berechnen",
@@ -273,7 +255,6 @@
   "guide.unknown_error": "Unbekannter Fehler",
   "guide.error_retry": "Fehler — nochmals versuchen",
   "guide.open_google_maps": "Google Maps öffnen",
-
   "guide.google_search": "Google Suche",
   "guide.maps": "Maps",
   "guide.accommodation_section": "Unterkunft",
@@ -283,7 +264,6 @@
   "guide.booking_search": "Bei Booking.com suchen",
   "guide.hotel_website": "Hotelwebseite",
   "guide.alternative_options": "Weitere Optionen ({count})",
-
   "guide.month_1": "Januar",
   "guide.month_2": "Februar",
   "guide.month_3": "März",
@@ -296,7 +276,6 @@
   "guide.month_10": "Oktober",
   "guide.month_11": "November",
   "guide.month_12": "Dezember",
-
   "travels.star_aria": "{stars} Stern",
   "travels.stars_aria": "{stars} Sterne",
   "travels.rating_failed": "Bewertung fehlgeschlagen:",
@@ -316,7 +295,6 @@
   "travels.recalculating": "Reiseführer und Tagespläne werden neu berechnet…",
   "travels.drawer_title": "Meine Reisen",
   "travels.drawer_close_aria": "Schliessen",
-
   "settings.route_architect_role": "Routenplanung",
   "settings.stop_options_role": "Stopp-Vorschläge",
   "settings.region_planner_role": "Regionen-Planung",
@@ -353,7 +331,6 @@
   "settings.nominatim_timeout_label": "Nominatim Timeout",
   "settings.osrm_timeout_label": "OSRM Timeout",
   "settings.wikipedia_timeout_label": "Wikipedia Timeout",
-
   "admin.title": "Benutzerverwaltung",
   "admin.subtitle": "Konten, Kontingente und Zugriffsrechte verwalten",
   "admin.refresh_aria": "Aktualisieren",
@@ -379,8 +356,7 @@
   "admin.password_label": "Passwort",
   "admin.password_placeholder": "Min. 8 Zeichen",
   "admin.create_btn": "Benutzer erstellen",
-  "admin.create_success": "Benutzer „{username}" erfolgreich erstellt.",
-
+  "admin.create_success": "Benutzer '{username}' erfolgreich erstellt.",
   "feedback.fab_title": "Feedback senden",
   "feedback.modal_title": "Feedback senden",
   "feedback.modal_description": "Hilf uns, DetourAI zu verbessern! Beschreibe dein Anliegen oder deinen Vorschlag.",
@@ -396,23 +372,20 @@
   "feedback.screenshot_failed": "Screenshot fehlgeschlagen.",
   "feedback.cancel": "Abbrechen",
   "feedback.submit": "Absenden",
-
   "lightbox.close_aria": "Lightbox schliessen",
   "lightbox.prev_aria": "Vorheriges Bild",
   "lightbox.next_aria": "Nächstes Bild",
-
   "debug.toggle_btn": "Debug",
   "debug.header": "Debug Log",
-
   "quick_submit.hint": "Alle Einstellungen konfiguriert?",
   "quick_submit.btn": "Reise jetzt planen",
-
   "error.maps_api_key": "GOOGLE_MAPS_API_KEY nicht konfiguriert — Karte wird nicht geladen",
   "error.maps_sdk_load": "Google Maps SDK konnte nicht geladen werden — API-Key prüfen",
-
   "router.accommodation_title": "Unterkünfte — DetourAI",
   "router.progress_title": "Planung läuft… — DetourAI",
   "router.shared_link_invalid": "Dieser Link ist nicht mehr gueltig oder wurde deaktiviert.",
-
-  "photos": "Fotos"
+  "photos": "Fotos",
+  "route_builder.rejected_near_origin": "{place} — zu nahe am Startpunkt, wird uebersprungen",
+  "route_builder.rejected_near_target": "{place} — zu nahe am Ziel, wird uebersprungen",
+  "route_builder.retry_with_hint": "Nur {count} brauchbare Option(en) — suche weiter..."
 }

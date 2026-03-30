@@ -51,6 +51,7 @@ function closeRouteSSE() {
 
 function _onRouteBuildDebugLog(data) {
   const msg = data.message || '';
+  const key = data.message_key || '';
   if (msg.startsWith('Neue Reise:')) {
     progressOverlay.addLine('trip_init', 'Reisedaten werden analysiert…');
     progressOverlay.completeLine('trip_init', '');
@@ -58,20 +59,18 @@ function _onRouteBuildDebugLog(data) {
     const m = msg.match(/Route-Optionen:\s*(.+?)\s*\(/);
     const label = m ? m[1] : 'Route';
     progressOverlay.addLine('route_options', `Suche Zwischenstopps von ${label}…`);
-  } else if (msg.includes('Verworfen (zu nahe am Startpunkt')) {
-    // Extract place name — format: "  Verworfen (zu nahe am Startpunkt X: N km < M km): PLACE"
-    const place = msg.match(/:\s*([^)]+)\s*$/)?.[1]?.trim() || '';
-    progressOverlay.addLine('rejected_' + place, `${place} — zu nahe am Startpunkt, wird übersprungen`);
+  } else if (key === 'progress.rejected_near_origin') {
+    const place = (data.data && data.data.place) || '';
+    progressOverlay.addLine('rejected_' + place, t('route_builder.rejected_near_origin', {place}));
     progressOverlay.completeLine('rejected_' + place, '');
-  } else if (msg.includes('Verworfen (zu nahe am Ziel')) {
-    const place = msg.match(/:\s*([^)]+)\s*$/)?.[1]?.trim() || '';
-    progressOverlay.addLine('rejected_z_' + place, `${place} — zu nahe am Ziel, wird übersprungen`);
+  } else if (key === 'progress.rejected_near_target') {
+    const place = (data.data && data.data.place) || '';
+    progressOverlay.addLine('rejected_z_' + place, t('route_builder.rejected_near_target', {place}));
     progressOverlay.completeLine('rejected_z_' + place, '');
-  } else if (msg.match(/Nur \d+ gültige Option/)) {
-    const n = msg.match(/Nur (\d+)/)?.[1] || '0';
+  } else if (key === 'progress.retry_with_hint') {
+    const n = (data.data && data.data.count) || 0;
     progressOverlay.completeLine('route_options', '');
-    progressOverlay.addLine('route_options_retry',
-      `Nur ${n} brauchbare Option${n === '1' ? '' : 'en'} — suche weiter…`);
+    progressOverlay.addLine('route_options_retry', t('route_builder.retry_with_hint', {count: n}));
   }
 }
 
