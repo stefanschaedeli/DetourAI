@@ -62,3 +62,5 @@ backend/data/
 # Claude Code skill cache (reinstallable)
 .agents/
 skills-lock.json
+Github issue responder/
+backend/travels.db
