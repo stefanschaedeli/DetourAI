@@ -127,6 +127,16 @@ body {
   min-height: 100dvh;
 }
 
+/* Hindi (Devanagari) font and spacing adjustments */
+html[lang="hi"] body,
+html[lang="hi"] input,
+html[lang="hi"] select,
+html[lang="hi"] textarea,
+html[lang="hi"] button {
+  font-family: 'Noto Sans Devanagari', var(--font-primary);
+  line-height: 1.8;
+}
+
 /* ============================================================ Background Slideshow */
 /* Slideshow sits at z:1; pastel wash at z:2; all real UI at z:3+
    (header is z:100 so there's plenty of headroom) */

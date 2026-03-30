@@ -99,6 +99,11 @@ MIGRATIONS: List[Tuple[int, str, Union[str, Callable]]] = [
         "fix_arrival_day_chaining",
         _fix_arrival_day_chaining,
     ),
+    (
+        8,
+        "travels_add_language",
+        lambda conn: _add_column_if_missing(conn, "travels", "language", "TEXT NOT NULL DEFAULT 'de'"),
+    ),
 ]
 
 

@@ -38,6 +38,7 @@ def _init_db() -> None:
                 total_output_tokens INTEGER NOT NULL DEFAULT 0,
                 total_tokens        INTEGER NOT NULL DEFAULT 0,
                 share_token         TEXT,
+                language            TEXT NOT NULL DEFAULT 'de',
                 UNIQUE(job_id)
             )
         """)
@@ -62,13 +63,26 @@ def _init_db() -> None:
             conn.execute("ALTER TABLE travels ADD COLUMN share_token TEXT")
         except Exception:
             pass
+        try:
+            conn.execute("ALTER TABLE travels ADD COLUMN language TEXT NOT NULL DEFAULT 'de'")
+        except Exception:
+            pass
+
+
+def _days_label(days: int, lang: str) -> str:
+    if lang == "en":
+        return f"{days} day{'s' if days != 1 else ''}"
+    elif lang == "hi":
+        return f"{days} दिन"
+    return f"{days} Tage"
 
 
 def _build_title(plan: dict) -> str:
     stops = plan.get("stops", [])
     dest  = stops[-1]["region"] if stops else "?"
     days  = len(plan.get("day_plans", []))
-    return f"{plan.get('start_location', '?')} → {dest} ({days} Tage)"
+    lang  = plan.get("language", "de")
+    return f"{plan.get('start_location', '?')} → {dest} ({_days_label(days, lang)})"
 
 
 def _sync_save(plan: dict, user_id: int, token_counts: Optional[dict] = None) -> Optional[int]:
@@ -77,13 +91,14 @@ def _sync_save(plan: dict, user_id: int, token_counts: Optional[dict] = None) ->
     cost  = plan.get("cost_estimate", {})
     has_guide = int(any(s.get("travel_guide") for s in stops))
     tc = token_counts or {}
+    lang = plan.get("language", "de")
     with _get_conn() as conn:
         cur = conn.execute(
             """INSERT OR IGNORE INTO travels
                (job_id,title,created_at,start_location,destination,
                 total_days,num_stops,total_cost_chf,plan_json,has_travel_guide,user_id,
-                total_input_tokens,total_output_tokens,total_tokens)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                total_input_tokens,total_output_tokens,total_tokens,language)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (plan.get("job_id", ""), _build_title(plan),
              datetime.utcnow().isoformat(),
              plan.get("start_location", ""),
@@ -92,7 +107,8 @@ def _sync_save(plan: dict, user_id: int, token_counts: Optional[dict] = None) ->
              cost.get("total_chf", 0.0), json.dumps(plan), has_guide, user_id,
              tc.get("total_input_tokens", 0),
              tc.get("total_output_tokens", 0),
-             tc.get("total_tokens", 0)),
+             tc.get("total_tokens", 0),
+             lang),
         )
         return cur.lastrowid if cur.rowcount else None
 

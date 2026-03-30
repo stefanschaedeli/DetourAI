@@ -87,7 +87,7 @@ def test_partial_run_resumes():
         conn = sqlite3.connect(path)
         cur = conn.execute("SELECT version FROM schema_migrations ORDER BY version")
         applied = [row[0] for row in cur.fetchall()]
-        assert applied == [1, 2, 3, 4, 5, 6, 7]
+        assert applied == [1, 2, 3, 4, 5, 6, 7, 8]
         conn.close()
     finally:
         os.unlink(path)

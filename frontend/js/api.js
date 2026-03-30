@@ -8,12 +8,13 @@ function _authHeader() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/** Core fetch wrapper with Bearer injection and 401 → silent-refresh retry. */
+/** Core fetch wrapper with Bearer injection, Accept-Language, and 401 → silent-refresh retry. */
 async function _fetchWithAuth(url, opts = {}) {
   const makeOpts = () => ({
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      'Accept-Language': (typeof getLocale === 'function') ? getLocale() : 'de',
       ..._authHeader(),
       ...(opts.headers || {}),
     },

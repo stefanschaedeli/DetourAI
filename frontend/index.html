@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
@@ -78,8 +78,16 @@
           <option value="debug">Debug</option>
         </select>
       </div>
+      <div class="settings-item">
+        <label for="ui-language" data-i18n="header.language_label">Sprache</label>
+        <select id="ui-language" onchange="setLocale(this.value)">
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+          <option value="hi">हिंदी</option>
+        </select>
+      </div>
       <div class="settings-divider"></div>
-      <button class="settings-full-btn" onclick="toggleSettings(); openSettingsPage();">
+      <button class="settings-full-btn" onclick="toggleSettings(); openSettingsPage();" data-i18n="header.open_all_settings">
         Alle Einstellungen öffnen
       </button>
     </div>
@@ -766,6 +774,7 @@
 
 <!-- ======================================================== JS modules -->
 <script src="/js/loading.js"></script>
+<script src="/js/i18n.js"></script>
 <script src="/js/sse-overlay.js"></script>
 <script src="/js/maps.js"></script>
 <script src="/js/state.js"></script>
@@ -988,6 +997,10 @@
   function _initAppOnce() {
     if (_appInitialized) return;
     _appInitialized = true;
+    initI18n();
+    // Sync UI language selector with current locale
+    const langSel = document.getElementById('ui-language');
+    if (langSel) langSel.value = getLocale();
     initSidebar();
     initForm();
     Router.init();

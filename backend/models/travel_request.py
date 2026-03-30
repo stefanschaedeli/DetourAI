@@ -61,6 +61,9 @@ class TravelRequest(BaseModel):
     # Logging
     log_verbosity: str = Field(default="normal", pattern="^(minimal|normal|verbose|debug)$")
 
+    # Language — determines agent response language for this travel
+    language: str = Field(default="de", pattern="^(de|en|hi)$")
+
     # --- Derived properties (replace removed explicit fields) ---
 
     @property
