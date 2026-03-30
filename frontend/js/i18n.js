@@ -100,10 +100,20 @@
     setLocale(lang);
   }
 
+  /**
+   * Map the current i18n locale to a BCP 47 locale tag suitable for
+   * Intl / toLocaleString() / toLocaleDateString() calls.
+   */
+  function getFormattingLocale() {
+    const map = { de: 'de-CH', en: 'en-GB', hi: 'hi-IN' };
+    return map[_locale] || 'de-CH';
+  }
+
   // Expose globally
   window.t = t;
   window.getLocale = getLocale;
   window.setLocale = setLocale;
+  window.getFormattingLocale = getFormattingLocale;
   window.applyStaticTranslations = applyStaticTranslations;
   window.initI18n = initI18n;
   window.SUPPORTED_LANGS = SUPPORTED_LANGS;
