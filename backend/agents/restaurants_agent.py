@@ -9,10 +9,20 @@ from agents._client import get_client, get_model, get_max_tokens
 
 AGENT_KEY = "restaurants"
 
-SYSTEM_PROMPT = (
-    "Du bist ein Restaurantberater für Reisende. "
-    "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
-)
+SYSTEM_PROMPTS = {
+    "de": (
+        "Du bist ein Restaurantberater für Reisende. "
+        "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
+    ),
+    "en": (
+        "You are a restaurant advisor for travelers. "
+        "Reply ONLY with a valid JSON object. No markdown, no explanations, only JSON."
+    ),
+    "hi": (
+        "आप यात्रियों के लिए एक रेस्तरां सलाहकार हैं। "
+        "केवल एक वैध JSON ऑब्जेक्ट के साथ उत्तर दें। कोई मार्कडाउन नहीं, कोई व्याख्या नहीं, केवल JSON।"
+    ),
+}
 
 
 class RestaurantsAgent:
@@ -25,6 +35,8 @@ class RestaurantsAgent:
 
     async def run_stop(self, stop: dict) -> dict:
         req = self.request
+        lang = getattr(req, 'language', 'de')
+        system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
         stop_id = stop.get("id", 1)
         region = stop.get("region", "")
         country = stop.get("country", "")
@@ -33,6 +45,55 @@ class RestaurantsAgent:
         total_days = req.total_days if req.total_days > 0 else 1
         budget_per_meal = round(req.budget_chf * 0.15 / persons / total_days, 2)
         children_count = len(req.children)
+
+        _L = {
+            "de": {
+                "reviews": "Bewertungen", "price_level": "Preisniveau",
+                "real_restaurants": "Echte Restaurants in der Nähe (Google Places Daten):",
+                "choose_real": "Wähle aus diesen echten Restaurants und ergänze mit deinem Wissen.",
+                "real_search": "Echte Suchergebnisse für Restaurants in der Region:",
+                "prefer_real": "Bevorzuge diese echten Orte in deiner Empfehlung.",
+                "recommend": "Empfehle Restaurants in",
+                "travelers": "Reisende", "adults": "Erwachsene", "children": "Kinder",
+                "styles": "Reisestile", "styles_default": "allgemein",
+                "search_radius": "Suchradius", "max_rest": "Max. Restaurants",
+                "budget_meal": "Budget pro Mahlzeit/Person",
+                "important": "WICHTIG: Alle Restaurants müssen innerhalb des Suchradius von {r} km vom Übernachtungsort in {region} liegen. Keine Ausnahmen.",
+                "return_json": "Gib exakt dieses JSON zurück:",
+                "desc_label": "Reisebeschreibung", "pref_label": "Bevorzugte Aktivitäten", "mandatory_label": "Pflichtaktivitäten",
+            },
+            "en": {
+                "reviews": "reviews", "price_level": "Price level",
+                "real_restaurants": "Real restaurants nearby (Google Places data):",
+                "choose_real": "Choose from these real restaurants and supplement with your knowledge.",
+                "real_search": "Real search results for restaurants in the region:",
+                "prefer_real": "Prefer these real places in your recommendation.",
+                "recommend": "Recommend restaurants in",
+                "travelers": "Travelers", "adults": "adults", "children": "children",
+                "styles": "Travel styles", "styles_default": "general",
+                "search_radius": "Search radius", "max_rest": "Max. restaurants",
+                "budget_meal": "Budget per meal/person",
+                "important": "IMPORTANT: All restaurants must be within the search radius of {r} km from the accommodation in {region}. No exceptions.",
+                "return_json": "Return exactly this JSON:",
+                "desc_label": "Travel description", "pref_label": "Preferred activities", "mandatory_label": "Mandatory activities",
+            },
+            "hi": {
+                "reviews": "समीक्षाएं", "price_level": "मूल्य स्तर",
+                "real_restaurants": "पास के वास्तविक रेस्तरां (Google Places डेटा):",
+                "choose_real": "इन वास्तविक रेस्तरां में से चुनें और अपने ज्ञान से पूरक करें।",
+                "real_search": "क्षेत्र में रेस्तरां के लिए वास्तविक खोज परिणाम:",
+                "prefer_real": "अपनी सिफारिश में इन वास्तविक स्थानों को प्राथमिकता दें।",
+                "recommend": "में रेस्तरां की सिफारिश करें",
+                "travelers": "यात्रीगण", "adults": "वयस्क", "children": "बच्चे",
+                "styles": "यात्रा शैलियां", "styles_default": "सामान्य",
+                "search_radius": "खोज दायरा", "max_rest": "अधिकतम रेस्तरां",
+                "budget_meal": "प्रति भोजन/व्यक्ति बजट",
+                "important": "महत्वपूर्ण: सभी रेस्तरां {region} में आवास से {r} km के खोज दायरे के भीतर होने चाहिए। कोई अपवाद नहीं।",
+                "return_json": "बिल्कुल यह JSON लौटाएं:",
+                "desc_label": "यात्रा विवरण", "pref_label": "पसंदीदा गतिविधियां", "mandatory_label": "अनिवार्य गतिविधियां",
+            },
+        }
+        RL = _L.get(lang, _L["de"])
 
         # Pre-fetch: echte Restaurantdaten
         lat = stop.get("lat")
@@ -44,41 +105,47 @@ class RestaurantsAgent:
             if gp_results:
                 lines = []
                 for r in gp_results[:8]:
-                    price = "€" * r.get("price_level", 2) if r.get("price_level") else "?"
-                    lines.append(f"- {r['name']} | ★{r.get('rating','?')} ({r.get('user_ratings_total',0)} Bewertungen) | {r.get('address','')} | Preisniveau: {price}")
-                real_data_block = "\n\nEchte Restaurants in der Nähe (Google Places Daten):\n" + "\n".join(lines) + "\nWähle aus diesen echten Restaurants und ergänze mit deinem Wissen.\n"
+                    price = "\u20ac" * r.get("price_level", 2) if r.get("price_level") else "?"
+                    lines.append(f"- {r['name']} | \u2605{r.get('rating','?')} ({r.get('user_ratings_total',0)} {RL['reviews']}) | {r.get('address','')} | {RL['price_level']}: {price}")
+                real_data_block = f"\n\n{RL['real_restaurants']}\n" + "\n".join(lines) + f"\n{RL['choose_real']}\n"
 
         if not real_data_block:
             brave_results = await search_places(f"restaurants {region} {country}", count=5)
             if brave_results:
-                lines = [f"- {r['name']} ({r.get('rating','?')}★) — {r.get('address','')}" for r in brave_results if r.get("name")]
+                lines = [f"- {r['name']} ({r.get('rating','?')}\u2605) \u2014 {r.get('address','')}" for r in brave_results if r.get("name")]
                 if lines:
-                    real_data_block = "\n\nEchte Suchergebnisse für Restaurants in der Region:\n" + "\n".join(lines) + "\nBevorzuge diese echten Orte in deiner Empfehlung.\n"
+                    real_data_block = f"\n\n{RL['real_search']}\n" + "\n".join(lines) + f"\n{RL['prefer_real']}\n"
 
         # Optionale Wunsch-Kontextblöcke (CTX-02, CTX-03)
-        desc_line = f"\nReisebeschreibung: {req.travel_description}" if req.travel_description else ""
-        pref_line = f"\nBevorzugte Aktivitäten: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
-        mandatory_line = f"\nPflichtaktivitäten: {', '.join(a.name for a in req.mandatory_activities)}" if req.mandatory_activities else ""
+        desc_line = f"\n{RL['desc_label']}: {req.travel_description}" if req.travel_description else ""
+        pref_line = f"\n{RL['pref_label']}: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
+        mandatory_line = f"\n{RL['mandatory_label']}: {', '.join(a.name for a in req.mandatory_activities)}" if req.mandatory_activities else ""
 
-        prompt = f"""Empfehle Restaurants in {region}, {country}:
+        children_str = f", {children_count} {RL['children']}" if children_count else ""
+        if lang == "hi":
+            rec_line = f"{region}, {country} {RL['recommend']}:"
+        else:
+            rec_line = f"{RL['recommend']} {region}, {country}:"
 
-Reisende: {req.adults} Erwachsene{f', {children_count} Kinder' if children_count else ''}
-Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
-Suchradius: {req.activities_radius_km} km
-Max. Restaurants: {req.max_restaurants_per_stop}
-Budget pro Mahlzeit/Person: ca. CHF {budget_per_meal:.0f}{mandatory_line}{pref_line}{desc_line}
+        prompt = f"""{rec_line}
 
-WICHTIG: Alle Restaurants müssen innerhalb des Suchradius von {req.activities_radius_km} km vom Übernachtungsort in {region} liegen. Keine Ausnahmen.
+{RL['travelers']}: {req.adults} {RL['adults']}{children_str}
+{RL['styles']}: {', '.join(req.travel_styles) if req.travel_styles else RL['styles_default']}
+{RL['search_radius']}: {req.activities_radius_km} km
+{RL['max_rest']}: {req.max_restaurants_per_stop}
+{RL['budget_meal']}: ca. CHF {budget_per_meal:.0f}{mandatory_line}{pref_line}{desc_line}
 
-Gib exakt dieses JSON zurück:
+{RL['important'].format(r=req.activities_radius_km, region=region)}
+
+{RL['return_json']}
 {{
   "stop_id": {stop_id},
   "region": "{region}",
   "restaurants": [
     {{
       "name": "...",
-      "cuisine": "Französisch",
-      "price_range": "€€",
+      "cuisine": "French",
+      "price_range": "\u20ac\u20ac",
       "family_friendly": true,
       "notes": "..."
     }}
@@ -95,7 +162,7 @@ Gib exakt dieses JSON zurück:
             return self.client.messages.create(
                 model=self.model,
                 max_tokens=get_max_tokens(AGENT_KEY, 2048),
-                system=SYSTEM_PROMPT,
+                system=system_prompt,
                 messages=[{"role": "user", "content": prompt}],
             )
 

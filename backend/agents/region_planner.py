@@ -10,25 +10,61 @@ from agents._client import get_client, get_model, get_max_tokens
 
 AGENT_KEY = "region_planner"
 
-SYSTEM_PROMPT = (
-    "Du bist ein Reiserouten-Stratege. Plane eine Rundreise durch Regionen basierend auf der "
-    "Beschreibung des Reisenden. Ordne Regionen in einer logistisch sinnvollen Reihenfolge "
-    "(minimale Rückwege, geografische Effizienz). Jede Region soll ein Gebiet repräsentieren, "
-    "in dem der Reisende konkrete Stopps machen kann.\n"
-    "WICHTIG zur Reihenfolge: Die Regionen müssen eine geographisch logische Route bilden — "
-    "KEINE Zickzack-Muster! Die Route soll vom Startort aus in eine Richtung verlaufen und "
-    "nicht unnötig hin- und herspringen. Bei Rundreisen: im Uhrzeigersinn oder gegen den "
-    "Uhrzeigersinn, aber niemals kreuz und quer.\n"
-    "Für jede Region liefere:\n"
-    "- name: Name der Region\n"
-    "- lat/lon: Zentrale Koordinaten der Region\n"
-    "- reason: Warum diese Region zur Reise passt (1 Satz)\n"
-    "- teaser: Kurzer, einladender Satz der die Region beschreibt und Lust auf den Besuch macht\n"
-    "- highlights: 3-5 konkrete Sehenswürdigkeiten, Aktivitäten oder Besonderheiten der Region\n\n"
-    "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
-)
+SYSTEM_PROMPTS = {
+    "de": (
+        "Du bist ein Reiserouten-Stratege. Plane eine Rundreise durch Regionen basierend auf der "
+        "Beschreibung des Reisenden. Ordne Regionen in einer logistisch sinnvollen Reihenfolge "
+        "(minimale Rückwege, geografische Effizienz). Jede Region soll ein Gebiet repräsentieren, "
+        "in dem der Reisende konkrete Stopps machen kann.\n"
+        "WICHTIG zur Reihenfolge: Die Regionen müssen eine geographisch logische Route bilden — "
+        "KEINE Zickzack-Muster! Die Route soll vom Startort aus in eine Richtung verlaufen und "
+        "nicht unnötig hin- und herspringen. Bei Rundreisen: im Uhrzeigersinn oder gegen den "
+        "Uhrzeigersinn, aber niemals kreuz und quer.\n"
+        "Für jede Region liefere:\n"
+        "- name: Name der Region\n"
+        "- lat/lon: Zentrale Koordinaten der Region\n"
+        "- reason: Warum diese Region zur Reise passt (1 Satz)\n"
+        "- teaser: Kurzer, einladender Satz der die Region beschreibt und Lust auf den Besuch macht\n"
+        "- highlights: 3-5 konkrete Sehenswürdigkeiten, Aktivitäten oder Besonderheiten der Region\n\n"
+        "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
+    ),
+    "en": (
+        "You are a travel route strategist. Plan a round trip through regions based on the "
+        "traveler's description. Arrange regions in a logistically sensible order "
+        "(minimal backtracking, geographic efficiency). Each region should represent an area "
+        "where the traveler can make specific stops.\n"
+        "IMPORTANT regarding order: The regions must form a geographically logical route — "
+        "NO zigzag patterns! The route should proceed from the starting point in one direction "
+        "and not jump back and forth unnecessarily. For round trips: clockwise or counter-clockwise, "
+        "but never crisscross.\n"
+        "For each region provide:\n"
+        "- name: Name of the region\n"
+        "- lat/lon: Central coordinates of the region\n"
+        "- reason: Why this region fits the trip (1 sentence)\n"
+        "- teaser: Short, inviting sentence describing the region and making you want to visit\n"
+        "- highlights: 3-5 specific sights, activities, or special features of the region\n\n"
+        "Reply ONLY with a valid JSON object. No markdown, no explanations, only JSON."
+    ),
+    "hi": (
+        "आप एक यात्रा मार्ग रणनीतिकार हैं। यात्री के विवरण के आधार पर क्षेत्रों के माध्यम से "
+        "एक दौरे की योजना बनाएं। क्षेत्रों को तार्किक क्रम में व्यवस्थित करें "
+        "(न्यूनतम वापसी, भौगोलिक दक्षता)। प्रत्येक क्षेत्र एक ऐसा क्षेत्र होना चाहिए "
+        "जहां यात्री विशिष्ट स्टॉप बना सकें।\n"
+        "महत्वपूर्ण: क्षेत्रों को भौगोलिक रूप से तार्किक मार्ग बनाना चाहिए — "
+        "कोई ज़िगज़ैग पैटर्न नहीं! मार्ग प्रारंभ स्थान से एक दिशा में आगे बढ़ना चाहिए। "
+        "गोलाकार यात्राओं के लिए: दक्षिणावर्त या वामावर्त, लेकिन कभी भी आड़ा-तिरछा नहीं।\n"
+        "प्रत्येक क्षेत्र के लिए प्रदान करें:\n"
+        "- name: क्षेत्र का नाम\n"
+        "- lat/lon: क्षेत्र के केंद्रीय निर्देशांक\n"
+        "- reason: यह क्षेत्र यात्रा के लिए क्यों उपयुक्त है (1 वाक्य)\n"
+        "- teaser: क्षेत्र का वर्णन करने वाला छोटा, आमंत्रित वाक्य\n"
+        "- highlights: क्षेत्र के 3-5 विशिष्ट दर्शनीय स्थल, गतिविधियां या विशेषताएं\n\n"
+        "केवल एक वैध JSON ऑब्जेक्ट के साथ उत्तर दें। कोई मार्कडाउन नहीं, कोई व्याख्या नहीं, केवल JSON।"
+    ),
+}
 
-REGION_SCHEMA = """{
+_REGION_SCHEMAS = {
+    "de": """{
   "regions": [
     {
       "name": "Regionsname",
@@ -40,7 +76,36 @@ REGION_SCHEMA = """{
     }
   ],
   "summary": "Zusammenfassung der Rundreise"
-}"""
+}""",
+    "en": """{
+  "regions": [
+    {
+      "name": "Region name",
+      "lat": 0.0,
+      "lon": 0.0,
+      "reason": "Why this region fits the trip",
+      "teaser": "One sentence describing the region and making you want to visit",
+      "highlights": ["Sight 1", "Activity 2", "Special feature 3"]
+    }
+  ],
+  "summary": "Summary of the round trip"
+}""",
+    "hi": """{
+  "regions": [
+    {
+      "name": "क्षेत्र का नाम",
+      "lat": 0.0,
+      "lon": 0.0,
+      "reason": "यह क्षेत्र यात्रा के लिए क्यों उपयुक्त है",
+      "teaser": "क्षेत्र का वर्णन करने वाला एक वाक्य",
+      "highlights": ["दर्शनीय स्थल 1", "गतिविधि 2", "विशेषता 3"]
+    }
+  ],
+  "summary": "दौरे का सारांश"
+}""",
+}
+# Keep backward compat
+REGION_SCHEMA = _REGION_SCHEMAS["de"]
 
 
 def _reorder_regions(
@@ -123,29 +188,56 @@ class RegionPlannerAgent:
         self.client = get_client()
         self.model = get_model("claude-opus-4-5", AGENT_KEY)
 
+    def _get_lang(self) -> str:
+        return getattr(self.request, 'language', 'de')
+
     def _leg_context(self, leg_index: int) -> str:
         req = self.request
+        lang = self._get_lang()
         leg = req.legs[leg_index]
-        styles = ", ".join(req.travel_styles) if req.travel_styles else "keine Angabe"
+
+        _L = {
+            "de": {"start": "Startort", "end": "Endort", "days": "Verfügbare Tage",
+                   "max_drive": "Max. Fahrzeit/Tag", "styles": "Reisestile",
+                   "no_style": "keine Angabe", "travelers": "Reisende",
+                   "adults": "Erwachsene", "children": "Kinder",
+                   "desc": "Reisebeschreibung", "pref": "Bevorzugte Aktivitäten",
+                   "mandatory": "Pflichtaktivitäten"},
+            "en": {"start": "Start location", "end": "End location", "days": "Available days",
+                   "max_drive": "Max. drive time/day", "styles": "Travel styles",
+                   "no_style": "not specified", "travelers": "Travelers",
+                   "adults": "adults", "children": "children",
+                   "desc": "Travel description", "pref": "Preferred activities",
+                   "mandatory": "Mandatory activities"},
+            "hi": {"start": "प्रारंभ स्थान", "end": "अंतिम स्थान", "days": "उपलब्ध दिन",
+                   "max_drive": "अधिकतम ड्राइव समय/दिन", "styles": "यात्रा शैलियां",
+                   "no_style": "निर्दिष्ट नहीं", "travelers": "यात्रीगण",
+                   "adults": "वयस्क", "children": "बच्चे",
+                   "desc": "यात्रा विवरण", "pref": "पसंदीदा गतिविधियां",
+                   "mandatory": "अनिवार्य गतिविधियां"},
+        }
+        L = _L.get(lang, _L["de"])
+
+        styles = ", ".join(req.travel_styles) if req.travel_styles else L["no_style"]
         lines = []
         if leg.start_location:
-            lines.append(f"Startort: {leg.start_location}")
+            lines.append(f"{L['start']}: {leg.start_location}")
         if leg.end_location:
-            lines.append(f"Endort: {leg.end_location}")
-        lines.append(f"Verfügbare Tage: {leg.total_days}")
-        lines.append(f"Max. Fahrzeit/Tag: {req.max_drive_hours_per_day}h")
-        lines.append(f"Reisestile: {styles}")
-        travellers = f"Reisende: {req.adults} Erwachsene"
+            lines.append(f"{L['end']}: {leg.end_location}")
+        lines.append(f"{L['days']}: {leg.total_days}")
+        lines.append(f"{L['max_drive']}: {req.max_drive_hours_per_day}h")
+        lines.append(f"{L['styles']}: {styles}")
+        travellers = f"{L['travelers']}: {req.adults} {L['adults']}"
         if req.children:
-            travellers += f", Kinder: {len(req.children)}"
+            travellers += f", {L['children']}: {len(req.children)}"
         lines.append(travellers)
         if req.travel_description:
-            lines.append(f"Reisebeschreibung: {req.travel_description}")
+            lines.append(f"{L['desc']}: {req.travel_description}")
         if req.preferred_activities:
-            lines.append(f"Bevorzugte Aktivitäten: {', '.join(req.preferred_activities)}")
+            lines.append(f"{L['pref']}: {', '.join(req.preferred_activities)}")
         if req.mandatory_activities:
             acts = [f"{a.name}" + (f" ({a.location})" if a.location else "") for a in req.mandatory_activities]
-            lines.append(f"Pflichtaktivitäten: {', '.join(acts)}")
+            lines.append(f"{L['mandatory']}: {', '.join(acts)}")
         return "\n".join(lines)
 
     async def _extract_json(self, response) -> dict:
@@ -216,21 +308,53 @@ class RegionPlannerAgent:
         return plan
 
     async def plan(self, description: str, leg_index: int) -> RegionPlan:
+        lang = self._get_lang()
+        system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
+        region_schema = _REGION_SCHEMAS.get(lang, _REGION_SCHEMAS["de"])
         context = self._leg_context(leg_index)
         leg = self.request.legs[leg_index]
         end_loc = leg.end_location or leg.start_location
 
+        _L = {
+            "de": {
+                "desc_header": "Beschreibung des Reisenden:",
+                "create": "Erstelle einen Regionen-Plan: eine geordnete Liste von Regionen, die der Reisende auf einer Rundreise besuchen soll.",
+                "each_region": "Jede Region = ein Gebiet mit mehreren möglichen Stopps",
+                "order": "Logistisch sinnvolle Reihenfolge (minimale Rückwege)",
+                "count": "Anzahl Regionen passend zur verfügbaren Zeit",
+                "important": "WICHTIG: Die Route startet bei {s} und endet bei {e}. Ordne die Regionen geographisch logisch von dort aus — keine Zickzack-Muster!",
+                "format": "Antwortformat:",
+            },
+            "en": {
+                "desc_header": "Traveler's description:",
+                "create": "Create a region plan: an ordered list of regions the traveler should visit on a round trip.",
+                "each_region": "Each region = an area with multiple possible stops",
+                "order": "Logistically sensible order (minimal backtracking)",
+                "count": "Number of regions appropriate for the available time",
+                "important": "IMPORTANT: The route starts at {s} and ends at {e}. Arrange the regions geographically logically from there — no zigzag patterns!",
+                "format": "Response format:",
+            },
+            "hi": {
+                "desc_header": "यात्री का विवरण:",
+                "create": "एक क्षेत्र योजना बनाएं: क्षेत्रों की एक क्रमबद्ध सूची जिन्हें यात्री को दौरे पर जाना चाहिए।",
+                "each_region": "प्रत्येक क्षेत्र = कई संभावित स्टॉप वाला एक क्षेत्र",
+                "order": "तार्किक रूप से समझदार क्रम (न्यूनतम वापसी)",
+                "count": "उपलब्ध समय के अनुसार क्षेत्रों की संख्या",
+                "important": "महत्वपूर्ण: मार्ग {s} से शुरू होता है और {e} पर समाप्त होता है। क्षेत्रों को वहां से भौगोलिक रूप से तार्किक रूप से व्यवस्थित करें — कोई ज़िगज़ैग पैटर्न नहीं!",
+                "format": "उत्तर प्रारूप:",
+            },
+        }
+        L = _L.get(lang, _L["de"])
+
         prompt = (
             f"{context}\n\n"
-            f"Beschreibung des Reisenden:\n{description}\n\n"
-            f"Erstelle einen Regionen-Plan: eine geordnete Liste von Regionen, "
-            f"die der Reisende auf einer Rundreise besuchen soll.\n"
-            f"- Jede Region = ein Gebiet mit mehreren möglichen Stopps\n"
-            f"- Logistisch sinnvolle Reihenfolge (minimale Rückwege)\n"
-            f"- Anzahl Regionen passend zur verfügbaren Zeit\n"
-            f"- WICHTIG: Die Route startet bei {leg.start_location} und endet bei {end_loc}. "
-            f"Ordne die Regionen geographisch logisch von dort aus — keine Zickzack-Muster!\n\n"
-            f"Antwortformat:\n{REGION_SCHEMA}"
+            f"{L['desc_header']}\n{description}\n\n"
+            f"{L['create']}\n"
+            f"- {L['each_region']}\n"
+            f"- {L['order']}\n"
+            f"- {L['count']}\n"
+            f"- {L['important'].format(s=leg.start_location, e=end_loc)}\n\n"
+            f"{L['format']}\n{region_schema}"
         )
 
         await debug_logger.log(
@@ -242,7 +366,7 @@ class RegionPlannerAgent:
             return self.client.messages.create(
                 model=self.model,
                 max_tokens=get_max_tokens(AGENT_KEY, 4096),
-                system=SYSTEM_PROMPT,
+                system=system_prompt,
                 messages=[{"role": "user", "content": prompt}],
             )
 
@@ -254,19 +378,43 @@ class RegionPlannerAgent:
         self, index: int, instruction: str,
         current_plan: RegionPlan, leg_index: int,
     ) -> RegionPlan:
+        lang = self._get_lang()
+        system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
+        region_schema = _REGION_SCHEMAS.get(lang, _REGION_SCHEMAS["de"])
         context = self._leg_context(leg_index)
         regions_str = "\n".join(
             f"{i+1}. {r.name} — {r.reason}" for i, r in enumerate(current_plan.regions)
         )
 
+        _L = {
+            "de": {
+                "current": "Aktueller Regionen-Plan:",
+                "wants_replace": "Der Reisende möchte Region {n} ({name}) ersetzen:",
+                "create_updated": "Erstelle den aktualisierten Plan. Ersetze NUR Region {n}, behalte alle anderen Regionen bei. Passe die Reihenfolge an falls nötig.",
+                "format": "Antwortformat:",
+            },
+            "en": {
+                "current": "Current region plan:",
+                "wants_replace": "The traveler wants to replace region {n} ({name}):",
+                "create_updated": "Create the updated plan. Replace ONLY region {n}, keep all other regions. Adjust the order if necessary.",
+                "format": "Response format:",
+            },
+            "hi": {
+                "current": "वर्तमान क्षेत्र योजना:",
+                "wants_replace": "यात्री क्षेत्र {n} ({name}) को बदलना चाहता है:",
+                "create_updated": "अद्यतन योजना बनाएं। केवल क्षेत्र {n} को बदलें, अन्य सभी क्षेत्रों को रखें। आवश्यकतानुसार क्रम समायोजित करें।",
+                "format": "उत्तर प्रारूप:",
+            },
+        }
+        L = _L.get(lang, _L["de"])
+
         prompt = (
             f"{context}\n\n"
-            f"Aktueller Regionen-Plan:\n{regions_str}\n\n"
-            f"Der Reisende möchte Region {index+1} ({current_plan.regions[index].name}) ersetzen:\n"
+            f"{L['current']}\n{regions_str}\n\n"
+            f"{L['wants_replace'].format(n=index+1, name=current_plan.regions[index].name)}\n"
             f'"{instruction}"\n\n'
-            f"Erstelle den aktualisierten Plan. Ersetze NUR Region {index+1}, "
-            f"behalte alle anderen Regionen bei. Passe die Reihenfolge an falls nötig.\n\n"
-            f"Antwortformat:\n{REGION_SCHEMA}"
+            f"{L['create_updated'].format(n=index+1)}\n\n"
+            f"{L['format']}\n{region_schema}"
         )
 
         await debug_logger.log(
@@ -279,7 +427,7 @@ class RegionPlannerAgent:
             return self.client.messages.create(
                 model=self.model,
                 max_tokens=get_max_tokens(AGENT_KEY, 4096),
-                system=SYSTEM_PROMPT,
+                system=system_prompt,
                 messages=[{"role": "user", "content": prompt}],
             )
 
@@ -291,19 +439,46 @@ class RegionPlannerAgent:
         self, instruction: str,
         current_plan: RegionPlan, leg_index: int,
     ) -> RegionPlan:
+        lang = self._get_lang()
+        system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
+        region_schema = _REGION_SCHEMAS.get(lang, _REGION_SCHEMAS["de"])
         context = self._leg_context(leg_index)
         regions_str = "\n".join(
             f"{i+1}. {r.name} — {r.reason}" for i, r in enumerate(current_plan.regions)
         )
 
+        _L = {
+            "de": {
+                "previous": "Bisheriger Regionen-Plan:",
+                "summary": "Zusammenfassung",
+                "correction": "Korrektur des Reisenden:",
+                "create_new": "Erstelle einen komplett neuen Regionen-Plan unter Berücksichtigung der Korrektur. Der bisherige Plan dient als Kontext.",
+                "format": "Antwortformat:",
+            },
+            "en": {
+                "previous": "Previous region plan:",
+                "summary": "Summary",
+                "correction": "Traveler's correction:",
+                "create_new": "Create a completely new region plan taking the correction into account. The previous plan serves as context.",
+                "format": "Response format:",
+            },
+            "hi": {
+                "previous": "पिछली क्षेत्र योजना:",
+                "summary": "सारांश",
+                "correction": "यात्री का सुधार:",
+                "create_new": "सुधार को ध्यान में रखते हुए एक पूरी तरह से नई क्षेत्र योजना बनाएं। पिछली योजना संदर्भ के रूप में कार्य करती है।",
+                "format": "उत्तर प्रारूप:",
+            },
+        }
+        L = _L.get(lang, _L["de"])
+
         prompt = (
             f"{context}\n\n"
-            f"Bisheriger Regionen-Plan:\n{regions_str}\n"
-            f"Zusammenfassung: {current_plan.summary}\n\n"
-            f"Korrektur des Reisenden:\n\"{instruction}\"\n\n"
-            f"Erstelle einen komplett neuen Regionen-Plan unter Berücksichtigung "
-            f"der Korrektur. Der bisherige Plan dient als Kontext.\n\n"
-            f"Antwortformat:\n{REGION_SCHEMA}"
+            f"{L['previous']}\n{regions_str}\n"
+            f"{L['summary']}: {current_plan.summary}\n\n"
+            f"{L['correction']}\n\"{instruction}\"\n\n"
+            f"{L['create_new']}\n\n"
+            f"{L['format']}\n{region_schema}"
         )
 
         await debug_logger.log(
@@ -316,7 +491,7 @@ class RegionPlannerAgent:
             return self.client.messages.create(
                 model=self.model,
                 max_tokens=get_max_tokens(AGENT_KEY, 4096),
-                system=SYSTEM_PROMPT,
+                system=system_prompt,
                 messages=[{"role": "user", "content": prompt}],
             )
 

@@ -12,10 +12,20 @@ from utils.settings_store import get_setting
 
 AGENT_KEY = "day_planner"
 
-SYSTEM_PROMPT = (
-    "Du bist ein Reiseplaner. Erstelle einen detaillierten Tagesplan. "
-    "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
-)
+SYSTEM_PROMPTS = {
+    "de": (
+        "Du bist ein Reiseplaner. Erstelle einen detaillierten Tagesplan. "
+        "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
+    ),
+    "en": (
+        "You are a travel planner. Create a detailed daily plan. "
+        "Reply ONLY with a valid JSON object. No markdown, no explanations, only JSON."
+    ),
+    "hi": (
+        "आप एक यात्रा योजनाकार हैं। एक विस्तृत दैनिक योजना बनाएं। "
+        "केवल एक वैध JSON ऑब्जेक्ट के साथ उत्तर दें। कोई मार्कडाउन नहीं, कोई व्याख्या नहीं, केवल JSON।"
+    ),
+}
 
 
 class DayPlannerAgent:
@@ -252,16 +262,99 @@ class DayPlannerAgent:
 
     async def _plan_single_day(self, day_ctx: dict) -> dict:
         """Plan one day with a stündlicher Zeitstrahl via one Claude call."""
+        req = self.request
+        lang = getattr(req, 'language', 'de')
+        system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
+
         day_num = day_ctx["day"]
         date_str = day_ctx["date"]
         region = day_ctx.get("region", "")
         drive_hours = day_ctx.get("drive_hours", 0)
         activities = day_ctx.get("activities", [])
         restaurants = day_ctx.get("restaurants", [])
-        prev_region = day_ctx.get("prev_region", self.request.start_location)
+        prev_region = day_ctx.get("prev_region", req.start_location)
 
         acts_str = ", ".join(f"{a['name']} ({a.get('duration_hours', 2)}h)" for a in activities[:4])
         rests_str = ", ".join(f"{r['name']} ({r.get('cuisine', '')})" for r in restaurants[:3])
+
+        _L = {
+            "de": {
+                "weather_on": "Wetter am", "precipitation": "Niederschlag",
+                "weather_adapt": "Passe den Tagesplan ans Wetter an (bei Regen: Indoor-Aktivitäten bevorzugen).",
+                "ferry": "FAEHRE: Dieser Tag beinhaltet eine Faehrueberfahrt von {h} Stunden. Verbleibende Fahrzeit nach der Faehre: {r}h. Plane die Faehre als eigenen time_block mit activity_type 'ferry' ein.",
+                "desc_label": "Reisebeschreibung", "pref_label": "Bevorzugte Aktivitäten", "mandatory_label": "Pflichtaktivitäten",
+                "important": 'WICHTIG: Verwende in den time_blocks die exakten Namen der unten genannten Aktivitäten und Restaurants als "title" und "location".',
+                "create_plan": "Erstelle einen stündlichen Tagesplan für Tag",
+                "region": "Region", "departure": "Abfahrt von", "drive_time": "Fahrtzeit",
+                "activities": "Aktivitäten", "restaurants": "Restaurants",
+                "none_specific": "keine spezifischen",
+                "travelers": "Reisende", "adults": "Erwachsene", "children": "Kinder",
+                "start_at": "Starte um 08:00 Uhr. Erstelle einen realistischen Zeitplan.",
+                "return_json": "Gib exakt dieses JSON zurück:",
+                "title_short": "Kurzer Tages-Titel",
+                "desc_day": "2-3 Sätze Beschreibung des Tages",
+                "departure_to": "Abfahrt nach",
+                "road": "Autoroute / Hauptstrasse",
+                "drive_from": "Fahrt von {prev} nach {region}",
+                "lunch": "Mittagessen",
+                "local_cuisine": "Lokale Küche geniessen",
+                "adapt": "Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive, activity, meal, break, check_in.",
+                "other_days": "Andere Tage in {region} decken ab:",
+                "plan_only": "Plane NUR die dir zugewiesenen Aktivitäten/Restaurants. Keine Überschneidungen.",
+                "day_of": "Dies ist Tag {d} von {t} in {region}.",
+            },
+            "en": {
+                "weather_on": "Weather on", "precipitation": "Precipitation",
+                "weather_adapt": "Adapt the daily plan to the weather (in case of rain: prefer indoor activities).",
+                "ferry": "FERRY: This day includes a ferry crossing of {h} hours. Remaining drive time after the ferry: {r}h. Plan the ferry as its own time_block with activity_type 'ferry'.",
+                "desc_label": "Travel description", "pref_label": "Preferred activities", "mandatory_label": "Mandatory activities",
+                "important": 'IMPORTANT: Use the exact names of the activities and restaurants listed below as "title" and "location" in time_blocks.',
+                "create_plan": "Create an hourly daily plan for day",
+                "region": "Region", "departure": "Departure from", "drive_time": "Drive time",
+                "activities": "Activities", "restaurants": "Restaurants",
+                "none_specific": "none specific",
+                "travelers": "Travelers", "adults": "adults", "children": "children",
+                "start_at": "Start at 08:00. Create a realistic schedule.",
+                "return_json": "Return exactly this JSON:",
+                "title_short": "Short day title",
+                "desc_day": "2-3 sentence description of the day",
+                "departure_to": "Departure to",
+                "road": "Highway / Main road",
+                "drive_from": "Drive from {prev} to {region}",
+                "lunch": "Lunch",
+                "local_cuisine": "Enjoy local cuisine",
+                "adapt": "Adapt the time_blocks realistically to the day. activity_type can be: drive, activity, meal, break, check_in.",
+                "other_days": "Other days in {region} cover:",
+                "plan_only": "Plan ONLY the activities/restaurants assigned to you. No overlaps.",
+                "day_of": "This is day {d} of {t} in {region}.",
+            },
+            "hi": {
+                "weather_on": "मौसम", "precipitation": "वर्षा",
+                "weather_adapt": "मौसम के अनुसार दैनिक योजना अनुकूलित करें (बारिश में: इनडोर गतिविधियों को प्राथमिकता दें)।",
+                "ferry": "नौका: इस दिन {h} घंटे की नौका क्रॉसिंग शामिल है। नौका के बाद शेष ड्राइव समय: {r}h।",
+                "desc_label": "यात्रा विवरण", "pref_label": "पसंदीदा गतिविधियां", "mandatory_label": "अनिवार्य गतिविधियां",
+                "important": 'महत्वपूर्ण: time_blocks में "title" और "location" के रूप में नीचे सूचीबद्ध गतिविधियों और रेस्तरां के सटीक नामों का उपयोग करें।',
+                "create_plan": "दिन के लिए प्रति घंटा दैनिक योजना बनाएं",
+                "region": "क्षेत्र", "departure": "से प्रस्थान", "drive_time": "ड्राइव समय",
+                "activities": "गतिविधियां", "restaurants": "रेस्तरां",
+                "none_specific": "कोई विशिष्ट नहीं",
+                "travelers": "यात्रीगण", "adults": "वयस्क", "children": "बच्चे",
+                "start_at": "08:00 बजे शुरू करें। एक यथार्थवादी समय सारिणी बनाएं।",
+                "return_json": "बिल्कुल यह JSON लौटाएं:",
+                "title_short": "छोटा दैनिक शीर्षक",
+                "desc_day": "दिन का 2-3 वाक्य विवरण",
+                "departure_to": "की ओर प्रस्थान",
+                "road": "राजमार्ग / मुख्य सड़क",
+                "drive_from": "{prev} से {region} तक ड्राइव",
+                "lunch": "दोपहर का भोजन",
+                "local_cuisine": "स्थानीय व्यंजनों का आनंद लें",
+                "adapt": "time_blocks को दिन के अनुसार यथार्थवादी रूप से अनुकूलित करें। activity_type हो सकता है: drive, activity, meal, break, check_in।",
+                "other_days": "{region} में अन्य दिन कवर करते हैं:",
+                "plan_only": "केवल आपको सौंपी गई गतिविधियां/रेस्तरां की योजना बनाएं। कोई ओवरलैप नहीं।",
+                "day_of": "यह {region} में {t} में से दिन {d} है।",
+            },
+        }
+        DL = _L.get(lang, _L["de"])
 
         # Wetter für diesen Tag
         weather_block = ""
@@ -270,10 +363,10 @@ class DayPlannerAgent:
             for w in weather_forecast:
                 if w.get("date") == day_ctx.get("date_iso"):
                     weather_block = (
-                        f"\nWetter am {w['date']}: {w['description']}, "
-                        f"{w['temp_max']}°C / {w['temp_min']}°C, "
-                        f"Niederschlag: {w['precipitation_mm']}mm\n"
-                        f"Passe den Tagesplan ans Wetter an (bei Regen: Indoor-Aktivitäten bevorzugen).\n"
+                        f"\n{DL['weather_on']} {w['date']}: {w['description']}, "
+                        f"{w['temp_max']}\u00b0C / {w['temp_min']}\u00b0C, "
+                        f"{DL['precipitation']}: {w['precipitation_mm']}mm\n"
+                        f"{DL['weather_adapt']}\n"
                     )
                     break
 
@@ -281,48 +374,44 @@ class DayPlannerAgent:
         ferry_info = ""
         if day_ctx.get("is_ferry") or day_ctx.get("ferry_hours"):
             ferry_hours = day_ctx.get("ferry_hours", 0)
-            remaining_drive = max(0, self.request.max_drive_hours_per_day - ferry_hours)
-            ferry_info = (
-                f"\nFAEHRE: Dieser Tag beinhaltet eine Faehrueberfahrt von {ferry_hours:.1f} Stunden. "
-                f"Verbleibende Fahrzeit nach der Faehre: {remaining_drive:.1f}h. "
-                f"Plane die Faehre als eigenen time_block mit activity_type 'ferry' ein.\n"
-            )
+            remaining_drive = max(0, req.max_drive_hours_per_day - ferry_hours)
+            ferry_info = "\n" + DL["ferry"].format(h=f"{ferry_hours:.1f}", r=f"{remaining_drive:.1f}") + "\n"
 
-        # Optionale Wunsch-Kontextblöcke (CTX-02, CTX-03)
-        req = self.request
-        desc_line = f"\nReisebeschreibung: {req.travel_description}" if req.travel_description else ""
-        pref_line = f"\nBevorzugte Aktivitäten: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
-        mandatory_line = f"\nPflichtaktivitäten: {', '.join(f'{a.name}' + (f' ({a.location})' if a.location else '') for a in req.mandatory_activities)}" if req.mandatory_activities else ""
+        desc_line = f"\n{DL['desc_label']}: {req.travel_description}" if req.travel_description else ""
+        pref_line = f"\n{DL['pref_label']}: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
+        mandatory_line = f"\n{DL['mandatory_label']}: {', '.join(f'{a.name}' + (f' ({a.location})' if a.location else '') for a in req.mandatory_activities)}" if req.mandatory_activities else ""
 
-        prompt = f"""WICHTIG: Verwende in den time_blocks die exakten Namen der unten genannten Aktivitäten und Restaurants als "title" und "location".
+        children_str = f", {len(req.children)} {DL['children']}" if req.children else ""
 
-Erstelle einen stündlichen Tagesplan für Tag {day_num} ({date_str}):
+        prompt = f"""{DL['important']}
 
-Region: {region}
-Abfahrt von: {prev_region}
-Fahrtzeit: {drive_hours:.1f}h
-Aktivitäten: {acts_str or 'keine spezifischen'}
-Restaurants: {rests_str or 'keine spezifischen'}
-Reisende: {self.request.adults} Erwachsene{f', {len(self.request.children)} Kinder' if self.request.children else ''}{mandatory_line}{pref_line}{desc_line}
+{DL['create_plan']} {day_num} ({date_str}):
+
+{DL['region']}: {region}
+{DL['departure']}: {prev_region}
+{DL['drive_time']}: {drive_hours:.1f}h
+{DL['activities']}: {acts_str or DL['none_specific']}
+{DL['restaurants']}: {rests_str or DL['none_specific']}
+{DL['travelers']}: {req.adults} {DL['adults']}{children_str}{mandatory_line}{pref_line}{desc_line}
 {weather_block}{ferry_info}
-Starte um 08:00 Uhr. Erstelle einen realistischen Zeitplan.
+{DL['start_at']}
 
-Gib exakt dieses JSON zurück:
+{DL['return_json']}
 {{
   "day": {day_num},
   "date": "{date_str}",
   "type": "mixed",
-  "title": "Kurzer Tages-Titel",
-  "description": "2-3 Sätze Beschreibung des Tages",
+  "title": "{DL['title_short']}",
+  "description": "{DL['desc_day']}",
   "stops_on_route": ["{prev_region}", "{region}"],
   "time_blocks": [
     {{
       "time": "08:00",
       "activity_type": "drive",
-      "title": "Abfahrt nach {region}",
-      "location": "Autoroute / Hauptstrasse",
+      "title": "{DL['departure_to']} {region}",
+      "location": "{DL['road']}",
       "duration_minutes": {int(drive_hours * 60) if drive_hours > 0 else 0},
-      "description": "Fahrt von {prev_region} nach {region}",
+      "description": "{DL['drive_from'].format(prev=prev_region, region=region)}",
       "google_maps_url": null,
       "google_search_url": null,
       "price_chf": null
@@ -330,10 +419,10 @@ Gib exakt dieses JSON zurück:
     {{
       "time": "12:30",
       "activity_type": "meal",
-      "title": "Mittagessen",
+      "title": "{DL['lunch']}",
       "location": "{region}",
       "duration_minutes": 60,
-      "description": "Lokale Küche geniessen",
+      "description": "{DL['local_cuisine']}",
       "google_search_url": "https://www.google.com/search?q=restaurant+{region.replace(' ', '+').lower()}",
       "google_maps_url": null,
       "price_chf": 35.0
@@ -341,21 +430,20 @@ Gib exakt dieses JSON zurück:
   ]
 }}
 
-Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive, activity, meal, break, check_in."""
+{DL['adapt']}"""
 
         # Mehrtägiger Aufenthalt: Kontext zu anderen Tagen
         other_days_hint = day_ctx.get("other_days_hint", "")
         if other_days_hint:
             prompt += (
-                f"\n\nAndere Tage in {region} decken ab: {other_days_hint}\n"
-                f"Plane NUR die dir zugewiesenen Aktivitäten/Restaurants. "
-                f"Keine Überschneidungen."
+                f"\n\n{DL['other_days'].format(region=region)} {other_days_hint}\n"
+                f"{DL['plan_only']}"
             )
 
         day_of_stay = day_ctx.get("day_of_stay")
         total_days_at_stop = day_ctx.get("total_days_at_stop")
         if total_days_at_stop and total_days_at_stop > 1:
-            prompt += f"\nDies ist Tag {day_of_stay} von {total_days_at_stop} in {region}."
+            prompt += "\n" + DL["day_of"].format(d=day_of_stay, t=total_days_at_stop, region=region)
 
         await debug_logger.log(
             LogLevel.API, f"→ Anthropic API call: {self.model} (Tagesplan Tag {day_num}: {region})",
@@ -366,7 +454,7 @@ Passe die time_blocks realistisch an den Tag an. activity_type kann sein: drive,
             return self.client.messages.create(
                 model=self.model,
                 max_tokens=get_max_tokens(AGENT_KEY, 2048),
-                system=SYSTEM_PROMPT,
+                system=system_prompt,
                 messages=[{"role": "user", "content": prompt}],
             )
 

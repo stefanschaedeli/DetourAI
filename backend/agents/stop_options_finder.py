@@ -13,20 +13,52 @@ from utils.ferry_ports import is_island_destination, validate_island_coordinates
 
 AGENT_KEY = "stop_options_finder"
 
-SYSTEM_PROMPT = (
-    "Du bist ein Reiseplaner der Zwischenstopps entlang einer konkreten Fahrroute vorschlägt. "
-    "KRITISCH — Regeln für das Feld 'region': "
-    "Immer eine konkrete Ortschaft (Stadt, Dorf, Kleinstadt) angeben — NIEMALS Regionen, Gebirge, Länder oder Gebiete "
-    "(z.B. NICHT 'Toskana', 'Alpen', 'Provence', 'Schwarzwald', sondern 'Siena', 'Annecy', 'Aix-en-Provence', 'Freiburg im Breisgau'). "
-    "KRITISCH — Geographie: Vorgeschlagene Stopps müssen ZWISCHEN dem aktuellen Standort und dem Ziel liegen, "
-    "nicht hinter dem Ziel oder in eine andere Richtung. Orientiere dich an den Referenzorten entlang der Route. "
-    "KRITISCH — Fahrzeiten: Jede Option muss drive_hours ≤ dem angegebenen Maximum einhalten. "
-    "Wähle nähere Zwischenstopps wenn nötig — lieber einen kürzeren Etappenstopp als das Limit zu überschreiten. "
-    "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON. "
-    "STIL-REGEL: Wenn Reisestile angegeben sind, muessen mindestens 2 der 3 Optionen "
-    "dem Reisestil entsprechen. Die 3. Option darf ein interessanter Wildcard-Vorschlag sein. "
-    "Kennzeichne in jedem Vorschlag: \"matches_travel_style\": true/false. "
-)
+# Backward compat alias for tests
+SYSTEM_PROMPT = None  # set after SYSTEM_PROMPTS definition
+
+SYSTEM_PROMPTS = {
+    "de": (
+        "Du bist ein Reiseplaner der Zwischenstopps entlang einer konkreten Fahrroute vorschlägt. "
+        "KRITISCH — Regeln für das Feld 'region': "
+        "Immer eine konkrete Ortschaft (Stadt, Dorf, Kleinstadt) angeben — NIEMALS Regionen, Gebirge, Länder oder Gebiete "
+        "(z.B. NICHT 'Toskana', 'Alpen', 'Provence', 'Schwarzwald', sondern 'Siena', 'Annecy', 'Aix-en-Provence', 'Freiburg im Breisgau'). "
+        "KRITISCH — Geographie: Vorgeschlagene Stopps müssen ZWISCHEN dem aktuellen Standort und dem Ziel liegen, "
+        "nicht hinter dem Ziel oder in eine andere Richtung. Orientiere dich an den Referenzorten entlang der Route. "
+        "KRITISCH — Fahrzeiten: Jede Option muss drive_hours ≤ dem angegebenen Maximum einhalten. "
+        "Wähle nähere Zwischenstopps wenn nötig — lieber einen kürzeren Etappenstopp als das Limit zu überschreiten. "
+        "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON. "
+        "STIL-REGEL: Wenn Reisestile angegeben sind, muessen mindestens 2 der 3 Optionen "
+        "dem Reisestil entsprechen. Die 3. Option darf ein interessanter Wildcard-Vorschlag sein. "
+        "Kennzeichne in jedem Vorschlag: \"matches_travel_style\": true/false. "
+    ),
+    "en": (
+        "You are a travel planner who suggests intermediate stops along a specific driving route. "
+        "CRITICAL — Rules for the 'region' field: "
+        "Always specify a concrete settlement (city, town, village) — NEVER regions, mountain ranges, countries or areas "
+        "(e.g. NOT 'Tuscany', 'Alps', 'Provence', 'Black Forest', but 'Siena', 'Annecy', 'Aix-en-Provence', 'Freiburg im Breisgau'). "
+        "CRITICAL — Geography: Suggested stops must be BETWEEN the current location and the destination, "
+        "not behind the destination or in another direction. Use the reference cities along the route as guidance. "
+        "CRITICAL — Drive times: Each option must have drive_hours <= the specified maximum. "
+        "Choose closer intermediate stops if needed — better a shorter leg stop than exceeding the limit. "
+        "Reply ONLY with a valid JSON object. No markdown, no explanations, only JSON. "
+        "STYLE RULE: If travel styles are specified, at least 2 of 3 options "
+        "must match the travel style. The 3rd option may be an interesting wildcard suggestion. "
+        "Mark each suggestion: \"matches_travel_style\": true/false. "
+    ),
+    "hi": (
+        "आप एक यात्रा योजनाकार हैं जो एक विशिष्ट ड्राइविंग मार्ग के साथ मध्यवर्ती स्टॉप सुझाते हैं। "
+        "महत्वपूर्ण — 'region' फ़ील्ड के नियम: "
+        "हमेशा एक ठोस बस्ती (शहर, कस्बा, गांव) निर्दिष्ट करें — कभी भी क्षेत्र, पर्वत श्रृंखला, देश या इलाके नहीं। "
+        "महत्वपूर्ण — भूगोल: सुझाए गए स्टॉप वर्तमान स्थान और गंतव्य के बीच होने चाहिए, "
+        "गंतव्य के पीछे या किसी अन्य दिशा में नहीं। "
+        "महत्वपूर्ण — ड्राइव समय: प्रत्येक विकल्प का drive_hours <= निर्दिष्ट अधिकतम होना चाहिए। "
+        "केवल एक वैध JSON ऑब्जेक्ट के साथ उत्तर दें। कोई मार्कडाउन नहीं, कोई व्याख्या नहीं, केवल JSON। "
+        "शैली नियम: यदि यात्रा शैलियां निर्दिष्ट हैं, तो 3 में से कम से कम 2 विकल्प "
+        "यात्रा शैली से मेल खाने चाहिए। तीसरा विकल्प एक दिलचस्प वाइल्डकार्ड सुझाव हो सकता है। "
+        "प्रत्येक सुझाव में चिह्नित करें: \"matches_travel_style\": true/false। "
+    ),
+}
+SYSTEM_PROMPT = SYSTEM_PROMPTS["de"]  # backward compat for tests
 
 
 class StopOptionsFinderAgent:
@@ -50,8 +82,224 @@ class StopOptionsFinderAgent:
         architect_context: dict = None,
     ) -> str:
         req = self.request
+        lang = getattr(req, 'language', 'de')
         geo = route_geometry or {}
         is_rundreise = geo.get("rundreise_mode", False)
+
+        # Prompt label translations
+        _L = {
+            "de": {
+                "previous_stops": "bisherige Stopps", "last": "letzte",
+                "nights": "Nächte", "km_from_prev": "km vom Vorgänger",
+                "exclusion": "KRITISCH — Duplikat-Vermeidung: Schlage KEINEN der folgenden bereits ausgewählten Stopps erneut vor: ",
+                "exclusion_suffix": ". Diese Orte sind bereits Teil der Route.",
+                "complete_hint": "Hinweis: Die Route könnte mit diesem Stop abgeschlossen werden (Ziel: {target}). Mindestens eine Option sollte direkt zum Ziel führen.",
+                "extra_hint": "Sonderwunsch des Nutzers: ",
+                "total_dist": "Gesamtstrecke",
+                "drive_time": "Fahrzeit",
+                "remaining_stops": "Empfohlene Anzahl weiterer Stopps bis",
+                "ideal_dist": "Ideale Distanz dieses Stops vom letzten Stop",
+                "choose_places": "Wähle Orte die ca. {km} km von {prev} entfernt liegen, NICHT direkt am Start und NICHT direkt am Ziel.",
+                "corridor": "ROUTE-KORRIDOR: Die Fahrroute verläuft durch/nahe: {cities}. Suche Stopps in diesem Bereich oder in der unmittelbaren Umgebung dieser Route.",
+                "search_area": "SUCHBEREICH (±30 km entlang der Fahrroute):",
+                "all_in_area": "Alle 3 Optionen MÜSSEN in diesem geographischen Bereich liegen.",
+                "architect_rec": "ARCHITECT-EMPFEHLUNG",
+                "nights_hints": "Die Nächteangaben sind Empfehlungen basierend auf dem Potential der Orte — du kannst davon abweichen.",
+                "for_this_stop": "FÜR DIESEN STOP: Empfehle {n} Nächte (basierend auf Potential der Region {name}).",
+                "direction_ctx": "RICHTUNGSKONTEXT: Vom letzten Stopp ({prev}) zum Ziel ({target}) betraegt die Fahrtrichtung ca. {bearing} Grad. WICHTIG: Schlage NUR Orte vor, die grob in dieser Richtung liegen. Keine Rueckwaertsfahrten oder starke Umwege (> 90 Grad Abweichung).",
+                "rundreise_mode": "RUNDREISE-MODUS AKTIV: Wir haben viel Zeit — suche Orte die einen bewussten Umweg darstellen.",
+                "suggest_3": "Schlage genau 3 verschiedene Optionen vor:",
+                "suggest_3_for": "Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor",
+                "direct": "direkt an der Hauptroute Richtung",
+                "scenic": "landschaftlich schöne Alternative",
+                "cultural": "kulturell interessante Alternative",
+                "near_route": "nahe der Route",
+                "shortest": "kürzeste Route Richtung",
+                "umweg_links": "Umweg links/westlich der Direktroute",
+                "umweg_rechts": "Umweg rechts/östlich der Direktroute",
+                "abenteuer": "überraschende andere Richtung, maximaler Kontrast zur Direktroute",
+                "rules_header": "PFLICHT — alle {n} Regeln einhalten:",
+                "rule_drive": "drive_hours von {prev} zu diesem Stop: ≤ {h}h",
+                "rule_dist": "Distanz: ~{km} km von {prev}",
+                "rule_tolerance": "Toleranz ±30%; NICHT unter {km} km — zu nahe am letzten Stop",
+                "rule_tolerance_rund": "Toleranz ±40% — bewusst größerer Bereich als normal",
+                "rule_origin": "NICHT zu nahe am Reise-Startpunkt {origin}: min {km} km Luftlinie",
+                "rule_target": "NICHT zu nahe am Ziel {target}: min {km} km Luftlinie",
+                "rule_split": "Teile lange Strecken auf — niemals direkt zum Ziel springen wenn noch {n} Etappe(n) geplant sind",
+                "rule_direction": "RICHTUNG: Der Stop muss geographisch ZWISCHEN {prev} und {target} liegen — NICHT hinter dem Ziel und NICHT in die entgegengesetzte Richtung. Nutze die Route-Referenzorte als Orientierung.",
+                "rule_area": "SUCHBEREICH: Wenn ein geographischer Suchbereich (Lat/Lon) angegeben ist, müssen alle Optionen innerhalb dieses Bereichs liegen. Prüfe die lat/lon-Koordinaten deiner Vorschläge gegen den angegebenen Bereich.",
+                "rule_no_target": "Gehe BEWUSST NICHT Richtung {target} — wähle Orte seitlich oder entgegengesetzt",
+                "style_pref": "REISESTIL-PRAEFERENZ: Der Nutzer bevorzugt \"{styles}\". Mindestens 2 von 3 Optionen muessen diesem Stil entsprechen. Die 3. Option darf ein ueberraschender Geheimtipp sein.",
+                "desc_label": "Reisebeschreibung",
+                "pref_label": "Bevorzugte Aktivitäten",
+                "mandatory_label": "Pflichtaktivitäten",
+                "segment": "Segment", "of": "von", "direction": "Richtung",
+                "trip_start": "Start der Gesamtreise",
+                "last_stop": "Letzter Stop (Abfahrtspunkt)",
+                "segment_dest": "Endziel dieses Segments",
+                "current_stop": "Aktueller Stop",
+                "remaining_days": "Verbleibende Tage im Segment",
+                "max_drive": "Maximale Fahrzeit pro Etappe",
+                "styles": "Reisestile", "styles_default": "allgemein",
+                "travelers": "Reisende", "adults": "Erwachsene", "children": "Kinder", "age": "Alter",
+                "nights_range": "Nächte",
+                "population": "Einwohnerzahl als lesbarer String",
+                "inhabitants": "Einwohner",
+                "altitude": "Meereshöhe in Metern",
+                "language_field": "Hauptsprache der Region",
+                "climate": "Klimahinweis passend zur Reisezeit",
+                "must_see": "Top 2-3 Sehenswürdigkeiten passend zu den Reisestilen",
+                "family_friendly": "Kinder reisen mit",
+                "teaser_hint": "WICHTIG — 3-4 Sätze (~100-150 Wörter). Erkläre WARUM dieser Stopp perfekt zur Reise passt.",
+                "teaser_ref": "Beziehe dich konkret auf die Reisestile ({styles}), die Reisenden ({travelers}) und was diesen Ort besonders macht. Keine generischen Floskeln — überzeugend und spezifisch begründen.",
+                "tags_hint": "3-4 kurze Schlagworte die den Charakter und die Staerken des Stopps beschreiben",
+                "tags_examples": "z.B. \"Strand\", \"Kultur\", \"Wandern\", \"Kueste\", \"Insel\", \"Natur\", \"Berge\", \"Altstadt\", \"Weinregion\", \"Familienfreundlich\"",
+                "return_json": "Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PFLICHT – keine null):",
+                "fill_fields": "Befülle folgende Felder kontextabhängig:",
+                "travel_date": "unbekannt",
+            },
+            "en": {
+                "previous_stops": "Previous stops", "last": "last",
+                "nights": "nights", "km_from_prev": "km from previous",
+                "exclusion": "CRITICAL — Duplicate prevention: Do NOT suggest any of the following already selected stops again: ",
+                "exclusion_suffix": ". These places are already part of the route.",
+                "complete_hint": "Note: The route could be completed with this stop (destination: {target}). At least one option should lead directly to the destination.",
+                "extra_hint": "Special request from user: ",
+                "total_dist": "Total distance",
+                "drive_time": "drive time",
+                "remaining_stops": "Recommended number of further stops until",
+                "ideal_dist": "Ideal distance of this stop from the last stop",
+                "choose_places": "Choose places approximately {km} km from {prev}, NOT right at the start and NOT right at the destination.",
+                "corridor": "ROUTE CORRIDOR: The driving route passes through/near: {cities}. Search for stops in this area or in the immediate vicinity of this route.",
+                "search_area": "SEARCH AREA (±30 km along the driving route):",
+                "all_in_area": "All 3 options MUST be within this geographic area.",
+                "architect_rec": "ARCHITECT RECOMMENDATION",
+                "nights_hints": "Night recommendations are based on the potential of the places — you can deviate.",
+                "for_this_stop": "FOR THIS STOP: Recommend {n} nights (based on the potential of region {name}).",
+                "direction_ctx": "DIRECTION CONTEXT: From the last stop ({prev}) to the destination ({target}) the travel direction is approx. {bearing} degrees. IMPORTANT: Only suggest places that are roughly in this direction. No backtracking or major detours (> 90 degree deviation).",
+                "rundreise_mode": "ROUND TRIP MODE ACTIVE: We have plenty of time — search for places that represent a deliberate detour.",
+                "suggest_3": "Suggest exactly 3 different options:",
+                "suggest_3_for": "Suggest exactly 3 different options for the next intermediate stop",
+                "direct": "directly on the main route towards",
+                "scenic": "scenic alternative",
+                "cultural": "culturally interesting alternative",
+                "near_route": "near the route",
+                "shortest": "shortest route towards",
+                "umweg_links": "Detour left/west of the direct route",
+                "umweg_rechts": "Detour right/east of the direct route",
+                "abenteuer": "surprising different direction, maximum contrast to direct route",
+                "rules_header": "MANDATORY — follow all {n} rules:",
+                "rule_drive": "drive_hours from {prev} to this stop: <= {h}h",
+                "rule_dist": "Distance: ~{km} km from {prev}",
+                "rule_tolerance": "Tolerance ±30%; NOT under {km} km — too close to last stop",
+                "rule_tolerance_rund": "Tolerance ±40% — deliberately larger range than normal",
+                "rule_origin": "NOT too close to trip start {origin}: min {km} km as the crow flies",
+                "rule_target": "NOT too close to destination {target}: min {km} km as the crow flies",
+                "rule_split": "Split long distances — never jump directly to destination when {n} leg(s) are still planned",
+                "rule_direction": "DIRECTION: The stop must be geographically BETWEEN {prev} and {target} — NOT behind the destination and NOT in the opposite direction. Use the route reference cities as guidance.",
+                "rule_area": "SEARCH AREA: If a geographic search area (Lat/Lon) is specified, all options must be within this area. Check the lat/lon coordinates of your suggestions against the specified area.",
+                "rule_no_target": "Do NOT go towards {target} — choose places to the side or in the opposite direction",
+                "style_pref": "TRAVEL STYLE PREFERENCE: The user prefers \"{styles}\". At least 2 of 3 options must match this style. The 3rd option may be a surprising hidden gem.",
+                "desc_label": "Travel description",
+                "pref_label": "Preferred activities",
+                "mandatory_label": "Mandatory activities",
+                "segment": "Segment", "of": "of", "direction": "towards",
+                "trip_start": "Start of entire trip",
+                "last_stop": "Last stop (departure point)",
+                "segment_dest": "Final destination of this segment",
+                "current_stop": "Current stop",
+                "remaining_days": "Remaining days in segment",
+                "max_drive": "Maximum drive time per leg",
+                "styles": "Travel styles", "styles_default": "general",
+                "travelers": "Travelers", "adults": "adults", "children": "children", "age": "age",
+                "nights_range": "Nights",
+                "population": "Population as readable string",
+                "inhabitants": "inhabitants",
+                "altitude": "Altitude in meters",
+                "language_field": "Main language of the region",
+                "climate": "Climate note for the travel period",
+                "must_see": "Top 2-3 sights matching the travel styles",
+                "family_friendly": "Children are traveling along",
+                "teaser_hint": "IMPORTANT — 3-4 sentences (~100-150 words). Explain WHY this stop is perfect for the trip.",
+                "teaser_ref": "Refer specifically to travel styles ({styles}), travelers ({travelers}) and what makes this place special. No generic phrases — convincing and specific reasoning.",
+                "tags_hint": "3-4 short keywords describing the character and strengths of the stop",
+                "tags_examples": "e.g. \"Beach\", \"Culture\", \"Hiking\", \"Coast\", \"Island\", \"Nature\", \"Mountains\", \"Old Town\", \"Wine Region\", \"Family-Friendly\"",
+                "return_json": "Return exactly this JSON. lat/lon = WGS84 coordinates of the city center (REQUIRED — no null):",
+                "fill_fields": "Fill in the following fields contextually:",
+                "travel_date": "unknown",
+            },
+            "hi": {
+                "previous_stops": "पिछले स्टॉप", "last": "अंतिम",
+                "nights": "रातें", "km_from_prev": "पिछले से km",
+                "exclusion": "महत्वपूर्ण — डुप्लिकेट रोकथाम: निम्नलिखित पहले से चयनित स्टॉप में से कोई भी फिर से सुझाव न दें: ",
+                "exclusion_suffix": "। ये स्थान पहले से मार्ग का हिस्सा हैं।",
+                "complete_hint": "नोट: इस स्टॉप के साथ मार्ग पूरा हो सकता है (गंतव्य: {target})। कम से कम एक विकल्प सीधे गंतव्य की ओर ले जाना चाहिए।",
+                "extra_hint": "उपयोगकर्ता का विशेष अनुरोध: ",
+                "total_dist": "कुल दूरी",
+                "drive_time": "ड्राइव समय",
+                "remaining_stops": "तक शेष स्टॉप की अनुशंसित संख्या",
+                "ideal_dist": "अंतिम स्टॉप से इस स्टॉप की आदर्श दूरी",
+                "choose_places": "{prev} से लगभग {km} km दूर स्थान चुनें, शुरुआत के पास नहीं और गंतव्य के पास नहीं।",
+                "corridor": "मार्ग गलियारा: ड्राइविंग मार्ग {cities} से होकर गुजरता है। इस क्षेत्र में स्टॉप खोजें।",
+                "search_area": "खोज क्षेत्र (ड्राइविंग मार्ग के साथ ±30 km):",
+                "all_in_area": "सभी 3 विकल्प इस भौगोलिक क्षेत्र में होने चाहिए।",
+                "architect_rec": "आर्किटेक्ट अनुशंसा",
+                "nights_hints": "रातों के सुझाव स्थानों की क्षमता पर आधारित हैं — आप विचलित हो सकते हैं।",
+                "for_this_stop": "इस स्टॉप के लिए: {n} रातों की अनुशंसा ({name} क्षेत्र की क्षमता के आधार पर)।",
+                "direction_ctx": "दिशा संदर्भ: अंतिम स्टॉप ({prev}) से गंतव्य ({target}) तक यात्रा दिशा लगभग {bearing} डिग्री है। केवल इस दिशा में स्थान सुझाएं।",
+                "rundreise_mode": "राउंड ट्रिप मोड सक्रिय: हमारे पास काफी समय है — जानबूझकर चक्कर लगाने वाले स्थान खोजें।",
+                "suggest_3": "बिल्कुल 3 अलग-अलग विकल्प सुझाएं:",
+                "suggest_3_for": "अगले मध्यवर्ती स्टॉप के लिए बिल्कुल 3 अलग-अलग विकल्प सुझाएं",
+                "direct": "मुख्य मार्ग पर सीधे दिशा में",
+                "scenic": "प्राकृतिक सुंदर विकल्प",
+                "cultural": "सांस्कृतिक रूप से दिलचस्प विकल्प",
+                "near_route": "मार्ग के पास",
+                "shortest": "सबसे छोटा मार्ग दिशा में",
+                "umweg_links": "सीधे मार्ग के बाएं/पश्चिम में चक्कर",
+                "umweg_rechts": "सीधे मार्ग के दाएं/पूर्व में चक्कर",
+                "abenteuer": "आश्चर्यजनक अलग दिशा, सीधे मार्ग से अधिकतम विपरीत",
+                "rules_header": "अनिवार्य — सभी {n} नियमों का पालन करें:",
+                "rule_drive": "{prev} से इस स्टॉप तक drive_hours: <= {h}h",
+                "rule_dist": "दूरी: ~{km} km {prev} से",
+                "rule_tolerance": "सहनशीलता ±30%; {km} km से कम नहीं — अंतिम स्टॉप के बहुत करीब",
+                "rule_tolerance_rund": "सहनशीलता ±40% — सामान्य से जानबूझकर बड़ा क्षेत्र",
+                "rule_origin": "यात्रा प्रारंभ {origin} के बहुत करीब नहीं: न्यूनतम {km} km",
+                "rule_target": "गंतव्य {target} के बहुत करीब नहीं: न्यूनतम {km} km",
+                "rule_split": "लंबी दूरियों को विभाजित करें — जब {n} चरण अभी भी योजनाबद्ध हैं तो सीधे गंतव्य पर न जाएं",
+                "rule_direction": "दिशा: स्टॉप भौगोलिक रूप से {prev} और {target} के बीच होना चाहिए।",
+                "rule_area": "खोज क्षेत्र: यदि भौगोलिक खोज क्षेत्र निर्दिष्ट है, तो सभी विकल्प इस क्षेत्र में होने चाहिए।",
+                "rule_no_target": "{target} की ओर न जाएं — बगल या विपरीत दिशा में स्थान चुनें",
+                "style_pref": "यात्रा शैली वरीयता: उपयोगकर्ता \"{styles}\" पसंद करता है। 3 में से कम से कम 2 विकल्प इस शैली से मेल खाने चाहिए।",
+                "desc_label": "यात्रा विवरण",
+                "pref_label": "पसंदीदा गतिविधियां",
+                "mandatory_label": "अनिवार्य गतिविधियां",
+                "segment": "खंड", "of": "का", "direction": "दिशा",
+                "trip_start": "संपूर्ण यात्रा की शुरुआत",
+                "last_stop": "अंतिम स्टॉप (प्रस्थान बिंदु)",
+                "segment_dest": "इस खंड का अंतिम गंतव्य",
+                "current_stop": "वर्तमान स्टॉप",
+                "remaining_days": "खंड में शेष दिन",
+                "max_drive": "प्रति चरण अधिकतम ड्राइव समय",
+                "styles": "यात्रा शैलियां", "styles_default": "सामान्य",
+                "travelers": "यात्रीगण", "adults": "वयस्क", "children": "बच्चे", "age": "आयु",
+                "nights_range": "रातें",
+                "population": "जनसंख्या",
+                "inhabitants": "निवासी",
+                "altitude": "ऊंचाई मीटर में",
+                "language_field": "क्षेत्र की मुख्य भाषा",
+                "climate": "यात्रा अवधि के लिए जलवायु नोट",
+                "must_see": "यात्रा शैलियों से मेल खाने वाले शीर्ष 2-3 दर्शनीय स्थल",
+                "family_friendly": "बच्चे साथ यात्रा कर रहे हैं",
+                "teaser_hint": "महत्वपूर्ण — 3-4 वाक्य। बताएं कि यह स्टॉप यात्रा के लिए क्यों सही है।",
+                "teaser_ref": "यात्रा शैलियों ({styles}), यात्रियों ({travelers}) और इस स्थान को विशेष बनाने वाली बातों का विशेष रूप से उल्लेख करें।",
+                "tags_hint": "स्टॉप के चरित्र और ताकत का वर्णन करने वाले 3-4 छोटे कीवर्ड",
+                "tags_examples": "जैसे \"समुद्र तट\", \"संस्कृति\", \"लंबी पैदल यात्रा\", \"तट\", \"द्वीप\", \"प्रकृति\", \"पहाड़\", \"पुराना शहर\"",
+                "return_json": "बिल्कुल यह JSON लौटाएं। lat/lon = शहर के केंद्र के WGS84 निर्देशांक (अनिवार्य — कोई null नहीं):",
+                "fill_fields": "निम्नलिखित फ़ील्ड संदर्भानुसार भरें:",
+                "travel_date": "अज्ञात",
+            },
+        }
+        L = _L.get(lang, _L["de"])
 
         prev_stop = selected_stops[-1]["region"] if selected_stops else req.start_location
 
@@ -62,74 +310,64 @@ class StopOptionsFinderAgent:
         history_prefix = ""
         if len(selected_stops) > MAX_HISTORY_FULL:
             capped_stops = selected_stops[-TAIL_COUNT:]
-            history_prefix = f"{len(selected_stops)} bisherige Stopps, letzte {TAIL_COUNT}: "
+            history_prefix = f"{len(selected_stops)} {L['previous_stops']}, {L['last']} {TAIL_COUNT}: "
 
         stops_str = ""
         if selected_stops:
             parts = [
-                f"Stop {s['id']}: {s['region']} ({s.get('country','?')}, {s.get('nights',1)} Nächte, {s.get('drive_km','?')} km vom Vorgänger)"
+                f"Stop {s['id']}: {s['region']} ({s.get('country','?')}, {s.get('nights',1)} {L['nights']}, {s.get('drive_km','?')} {L['km_from_prev']})"
                 for s in capped_stops
             ]
-            stops_str = f"Bisherige Stopps: {history_prefix}" + ", ".join(parts) + "\n"
+            # Capitalize label at start of line
+            label_cap = L['previous_stops'][0].upper() + L['previous_stops'][1:]
+            stops_str = f"{label_cap}: {history_prefix}" + ", ".join(parts) + "\n"
 
         exclusion_rule = ""
         if selected_stops:
             excluded_names = ", ".join(s["region"] for s in selected_stops)
-            exclusion_rule = (
-                "KRITISCH — Duplikat-Vermeidung: Schlage KEINEN der folgenden bereits "
-                "ausgewählten Stopps erneut vor: "
-                + excluded_names
-                + ". Diese Orte sind bereits Teil der Route.\n"
-            )
+            exclusion_rule = L["exclusion"] + excluded_names + L["exclusion_suffix"] + "\n"
 
         complete_hint = ""
         if route_could_be_complete:
-            complete_hint = (
-                f"\nHinweis: Die Route könnte mit diesem Stop abgeschlossen werden "
-                f"(Ziel: {segment_target}). Mindestens eine Option sollte direkt zum Ziel führen.\n"
-            )
+            complete_hint = "\n" + L["complete_hint"].format(target=segment_target) + "\n"
 
         has_children = bool(req.children)
         family_field = '"family_friendly": true,' if has_children else ""
 
         extra_hint = ""
         if extra_instructions:
-            extra_hint = f"\nSonderwunsch des Nutzers: {extra_instructions}\n"
+            extra_hint = f"\n{L['extra_hint']}{extra_instructions}\n"
 
         # Build geometry context block
         geo_lines = []
         if geo.get("segment_total_km"):
             geo_lines.append(
-                f"Gesamtstrecke {prev_stop} → {segment_target}: ~{geo['segment_total_km']:.0f} km / ~{geo.get('segment_total_hours', 0):.1f}h Fahrzeit"
+                f"{L['total_dist']} {prev_stop} → {segment_target}: ~{geo['segment_total_km']:.0f} km / ~{geo.get('segment_total_hours', 0):.1f}h {L['drive_time']}"
             )
         if geo.get("stops_remaining") is not None:
-            geo_lines.append(f"Empfohlene Anzahl weiterer Stopps bis {segment_target}: {geo['stops_remaining']}")
+            geo_lines.append(f"{L['remaining_stops']} {segment_target}: {geo['stops_remaining']}")
         if geo.get("ideal_km_from_prev"):
             geo_lines.append(
-                f"Ideale Distanz dieses Stops vom letzten Stop: ~{geo['ideal_km_from_prev']:.0f} km / ~{geo.get('ideal_hours_from_prev', 0):.1f}h"
-                f" (gleichmässig verteilt zwischen Start und Ziel — Stop soll ZWISCHEN den beiden liegen)"
+                f"{L['ideal_dist']}: ~{geo['ideal_km_from_prev']:.0f} km / ~{geo.get('ideal_hours_from_prev', 0):.1f}h"
             )
             if not is_rundreise:
+                ideal_km_str = f"{geo['ideal_km_from_prev']:.0f}"
                 geo_lines.append(
-                    f"→ Wähle Orte die ca. {geo['ideal_km_from_prev']:.0f} km von {prev_stop} entfernt liegen, "
-                    f"NICHT direkt am Start und NICHT direkt am Ziel."
+                    f"→ {L['choose_places'].format(km=ideal_km_str, prev=prev_stop)}"
                 )
 
         # Corridor reference cities for transit mode
         ref_cities = geo.get("corridor_reference_cities", [])
         if ref_cities and not is_rundreise:
-            geo_lines.append(
-                f"ROUTE-KORRIDOR: Die Fahrroute verläuft durch/nahe: {', '.join(ref_cities)}. "
-                f"Suche Stopps in diesem Bereich oder in der unmittelbaren Umgebung dieser Route."
-            )
+            geo_lines.append(L["corridor"].format(cities=", ".join(ref_cities)))
 
         # Bounding box as hard limit
         box = geo.get("corridor_box")
         if box and not is_rundreise:
             geo_lines.append(
-                f"SUCHBEREICH (±30 km entlang der Fahrroute): "
+                f"{L['search_area']} "
                 f"Lat {box['min_lat']:.2f}–{box['max_lat']:.2f}, Lon {box['min_lon']:.2f}–{box['max_lon']:.2f}. "
-                f"Alle 3 Optionen MÜSSEN in diesem geographischen Bereich liegen."
+                f"{L['all_in_area']}"
             )
 
         geo_block = "\n".join(geo_lines) + "\n" if geo_lines else ""
@@ -146,8 +384,8 @@ class StopOptionsFinderAgent:
                     region_lines.append(f"{r['name']} ({nights_hint}{drive_hint})")
                 summary = " → ".join(region_lines)
                 architect_block = (
-                    f"\nARCHITECT-EMPFEHLUNG: {summary}\n"
-                    f"Die Nächteangaben sind Empfehlungen basierend auf dem Potential der Orte — du kannst davon abweichen.\n"
+                    f"\n{L['architect_rec']}: {summary}\n"
+                    f"{L['nights_hints']}\n"
                 )
                 # D-07: Per-stop nights suggestion based on position in region list
                 estimated_total = architect_context.get("estimated_total_stops", len(regions))
@@ -158,10 +396,7 @@ class StopOptionsFinderAgent:
                     )
                     current_region = regions[region_idx]
                     rec_nights = current_region.get("recommended_nights", 2)
-                    architect_block += (
-                        f"FÜR DIESEN STOP: Empfehle {rec_nights} Nächte "
-                        f"(basierend auf Potential der Region {current_region['name']}).\n"
-                    )
+                    architect_block += L["for_this_stop"].format(n=rec_nights, name=current_region['name']) + "\n"
 
         # Bearing context for backtracking prevention (D-10)
         prev_coords = geo.get("_from_coords")
@@ -173,85 +408,77 @@ class StopOptionsFinderAgent:
             target_lat, target_lon = target_coords if target_coords else (None, None)
             if prev_lat and target_lat:
                 route_bearing = bearing_degrees((prev_lat, prev_lon), (target_lat, target_lon))
-                bearing_block = (
-                    f"\nRICHTUNGSKONTEXT: Vom letzten Stopp ({prev_stop}) zum Ziel ({segment_target}) "
-                    f"betraegt die Fahrtrichtung ca. {route_bearing:.0f} Grad. "
-                    f"WICHTIG: Schlage NUR Orte vor, die grob in dieser Richtung liegen. "
-                    f"Keine Rueckwaertsfahrten oder starke Umwege (> 90 Grad Abweichung).\n"
-                )
+                bearing_block = "\n" + L["direction_ctx"].format(
+                    prev=prev_stop, target=segment_target, bearing=f"{route_bearing:.0f}"
+                ) + "\n"
 
         # Option-type block
         if is_rundreise:
             option_block = (
-                f"RUNDREISE-MODUS AKTIV: Wir haben viel Zeit — suche Orte die einen bewussten Umweg "
-                f"darstellen, d.h. NICHT auf der direkten Strecke nach {segment_target} liegen, "
-                f"sondern interessante Regionen seitlich oder in anderer Richtung erkunden.\n"
-                f"Schlage genau 3 verschiedene Optionen vor:\n"
-                f'- option_type "umweg_links": Umweg links/westlich der Direktroute\n'
-                f'- option_type "umweg_rechts": Umweg rechts/östlich der Direktroute\n'
-                f'- option_type "abenteuer": überraschende andere Richtung, maximaler Kontrast zur Direktroute\n'
+                f"{L['rundreise_mode']}\n"
+                f"{L['suggest_3']}\n"
+                f'- option_type "umweg_links": {L["umweg_links"]}\n'
+                f'- option_type "umweg_rechts": {L["umweg_rechts"]}\n'
+                f'- option_type "abenteuer": {L["abenteuer"]}\n'
             )
         else:
             ref_cities = geo.get("corridor_reference_cities", [])
             if ref_cities:
                 ref_str = ", ".join(ref_cities)
                 option_block = (
-                    f"Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor "
-                    f"(im Bereich der Route durch {ref_str}):\n"
-                    f'- option_type "direct": direkt an der Hauptroute Richtung {segment_target}\n'
-                    f'- option_type "scenic": landschaftlich schöne Alternative nahe der Route\n'
-                    f'- option_type "cultural": kulturell interessante Alternative nahe der Route\n'
+                    f"{L['suggest_3_for']} ({ref_str}):\n"
+                    f'- option_type "direct": {L["direct"]} {segment_target}\n'
+                    f'- option_type "scenic": {L["scenic"]} {L["near_route"]}\n'
+                    f'- option_type "cultural": {L["cultural"]} {L["near_route"]}\n'
                 )
             else:
                 option_block = (
-                    f"Schlage genau 3 verschiedene Optionen für den nächsten Zwischenstopp vor:\n"
-                    f'- option_type "direct": kürzeste Route Richtung {segment_target}\n'
-                    f'- option_type "scenic": landschaftlich schöne Alternative\n'
-                    f'- option_type "cultural": kulturell interessante Alternative\n'
+                    f"{L['suggest_3_for']}:\n"
+                    f'- option_type "direct": {L["shortest"]} {segment_target}\n'
+                    f'- option_type "scenic": {L["scenic"]}\n'
+                    f'- option_type "cultural": {L["cultural"]}\n'
                 )
 
         # Rules block
+        ideal_km = geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80)
+        ideal_km_str = f"{ideal_km:.0f}"
+        half_km_str = f"{ideal_km * 0.5:.0f}"
+        origin_loc = geo.get('origin_location', req.start_location)
+        min_origin_km = f"{geo.get('min_km_from_origin', 0):.0f}"
+        min_target_km = f"{geo.get('min_km_from_target', 0):.0f}"
+
         if is_rundreise:
             rules_block = (
-                f"PFLICHT — alle 4 Regeln einhalten:\n"
-                f"1. drive_hours von {prev_stop} zu diesem Stop: ≤ {req.max_drive_hours_per_day}h\n"
-                f"2. Distanz: ~{geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80):.0f} km von {prev_stop}\n"
-                f"   (Toleranz ±40% — bewusst größerer Bereich als normal)\n"
-                f"3. NICHT zu nahe am Reise-Startpunkt {geo.get('origin_location', req.start_location)}: "
-                f"min {geo.get('min_km_from_origin', 0):.0f} km Luftlinie\n"
-                f"4. Gehe BEWUSST NICHT Richtung {segment_target} — wähle Orte seitlich oder entgegengesetzt\n"
+                f"{L['rules_header'].format(n=4)}\n"
+                f"1. {L['rule_drive'].format(prev=prev_stop, h=req.max_drive_hours_per_day)}\n"
+                f"2. {L['rule_dist'].format(km=ideal_km_str, prev=prev_stop)}\n"
+                f"   ({L['rule_tolerance_rund']})\n"
+                f"3. {L['rule_origin'].format(origin=origin_loc, km=min_origin_km)}\n"
+                f"4. {L['rule_no_target'].format(target=segment_target)}\n"
             )
         else:
             rules_block = (
-                f"PFLICHT — alle 7 Regeln einhalten:\n"
-                f"1. drive_hours von {prev_stop} zu diesem Stop: ≤ {req.max_drive_hours_per_day}h\n"
-                f"2. Distanz: ~{geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80):.0f} km von {prev_stop}\n"
-                f"   (Toleranz ±30%; NICHT unter {geo.get('ideal_km_from_prev', req.max_drive_hours_per_day * 80) * 0.5:.0f} km — zu nahe am letzten Stop)\n"
-                f"3. NICHT zu nahe am Reise-Startpunkt {geo.get('origin_location', req.start_location)}: min {geo.get('min_km_from_origin', 0):.0f} km Luftlinie\n"
-                f"4. NICHT zu nahe am Ziel {segment_target}: min {geo.get('min_km_from_target', 0):.0f} km Luftlinie\n"
-                f"5. Teile lange Strecken auf — niemals direkt zum Ziel springen wenn noch {geo.get('stops_remaining', 1)} Etappe(n) geplant sind\n"
-                f"6. RICHTUNG: Der Stop muss geographisch ZWISCHEN {prev_stop} und {segment_target} liegen — "
-                f"NICHT hinter dem Ziel und NICHT in die entgegengesetzte Richtung. "
-                f"Nutze die Route-Referenzorte als Orientierung.\n"
-                f"7. SUCHBEREICH: Wenn ein geographischer Suchbereich (Lat/Lon) angegeben ist, "
-                f"müssen alle Optionen innerhalb dieses Bereichs liegen. "
-                f"Prüfe die lat/lon-Koordinaten deiner Vorschläge gegen den angegebenen Bereich.\n"
+                f"{L['rules_header'].format(n=7)}\n"
+                f"1. {L['rule_drive'].format(prev=prev_stop, h=req.max_drive_hours_per_day)}\n"
+                f"2. {L['rule_dist'].format(km=ideal_km_str, prev=prev_stop)}\n"
+                f"   ({L['rule_tolerance'].format(km=half_km_str)})\n"
+                f"3. {L['rule_origin'].format(origin=origin_loc, km=min_origin_km)}\n"
+                f"4. {L['rule_target'].format(target=segment_target, km=min_target_km)}\n"
+                f"5. {L['rule_split'].format(n=geo.get('stops_remaining', 1))}\n"
+                f"6. {L['rule_direction'].format(prev=prev_stop, target=segment_target)}\n"
+                f"7. {L['rule_area']}\n"
             )
 
         # Travel style emphasis (D-05)
         style_emphasis = ""
         if req.travel_styles:
             styles_str = ", ".join(req.travel_styles)
-            style_emphasis = (
-                f"\nREISESTIL-PRAEFERENZ: Der Nutzer bevorzugt \"{styles_str}\". "
-                f"Mindestens 2 von 3 Optionen muessen diesem Stil entsprechen. "
-                f"Die 3. Option darf ein ueberraschender Geheimtipp sein.\n"
-            )
+            style_emphasis = "\n" + L["style_pref"].format(styles=styles_str) + "\n"
 
         # Optionale Wunsch-Kontextblöcke (CTX-02, CTX-03)
-        desc_line = f"\nReisebeschreibung: {req.travel_description}" if req.travel_description else ""
-        pref_line = f"\nBevorzugte Aktivitäten: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
-        mandatory_line = f"\nPflichtaktivitäten: {', '.join(f'{a.name}' + (f' ({a.location})' if a.location else '') for a in req.mandatory_activities)}" if req.mandatory_activities else ""
+        desc_line = f"\n{L['desc_label']}: {req.travel_description}" if req.travel_description else ""
+        pref_line = f"\n{L['pref_label']}: {', '.join(req.preferred_activities)}" if req.preferred_activities else ""
+        mandatory_line = f"\n{L['mandatory_label']}: {', '.join(f'{a.name}' + (f' ({a.location})' if a.location else '') for a in req.mandatory_activities)}" if req.mandatory_activities else ""
 
         # JSON example option_types
         if is_rundreise:
@@ -263,36 +490,39 @@ class StopOptionsFinderAgent:
             ex2_type = "scenic"
             ex3_type = "cultural"
 
-        return f"""Segment {segment_index + 1} von {segment_count} Richtung: {segment_target}
+        travelers_str = f"{req.adults} {L['adults']}"
+        if req.children:
+            travelers_str += f", {len(req.children)} {L['children']} ({L['age']}: {', '.join(str(c) for c in req.children)})"
+        styles_display = ', '.join(req.travel_styles) if req.travel_styles else L['styles_default']
 
-Start der Gesamtreise: {req.start_location}
-Letzter Stop (Abfahrtspunkt): {prev_stop}
-Endziel dieses Segments: {segment_target}
-Aktueller Stop #{stop_number}
+        return f"""{L['segment']} {segment_index + 1} {L['of']} {segment_count} {L['direction']}: {segment_target}
+
+{L['trip_start']}: {req.start_location}
+{L['last_stop']}: {prev_stop}
+{L['segment_dest']}: {segment_target}
+{L['current_stop']} #{stop_number}
 {stops_str}{exclusion_rule}
-{geo_block}{architect_block}{bearing_block}Verbleibende Tage im Segment: {days_remaining}
-Maximale Fahrzeit pro Etappe: {req.max_drive_hours_per_day}h
-Reisestile: {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
-Reisende: {req.adults} Erwachsene{', ' + str(len(req.children)) + ' Kinder (Alter: ' + ', '.join(str(c) for c in req.children) + ')' if req.children else ''}
+{geo_block}{architect_block}{bearing_block}{L['remaining_days']}: {days_remaining}
+{L['max_drive']}: {req.max_drive_hours_per_day}h
+{L['styles']}: {styles_display}
+{L['travelers']}: {travelers_str}
 {complete_hint}{extra_hint}
 {option_block}{style_emphasis}{mandatory_line}{pref_line}{desc_line}
-{rules_block}Nächte: {req.min_nights_per_stop}–{req.max_nights_per_stop}.
+{rules_block}{L['nights_range']}: {req.min_nights_per_stop}–{req.max_nights_per_stop}.
 
-Befülle folgende Felder kontextabhängig:
-- population: Einwohnerzahl als lesbarer String (z.B. "45'000 Einwohner"), falls bekannt
-- altitude_m: Meereshöhe in Metern, besonders relevant für Bergregionen
-- language: Hauptsprache der Region
-- climate_note: Klimahinweis passend zur Reisezeit ({getattr(req, 'start_date', 'unbekannt')})
-- must_see: Top 2-3 Sehenswürdigkeiten passend zu den Reisestilen {', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}
-{('- family_friendly: true/false (Kinder reisen mit)' if has_children else '')}
-- teaser: WICHTIG — 3-4 Sätze (~100-150 Wörter). Erkläre WARUM dieser Stopp perfekt zur Reise passt.
-  Beziehe dich konkret auf die Reisestile ({', '.join(req.travel_styles) if req.travel_styles else 'allgemein'}),
-  die Reisenden ({req.adults} Erwachsene{', Kinder' if req.children else ''}) und was diesen Ort besonders macht.
-  Keine generischen Floskeln — überzeugend und spezifisch begründen.
-- tags: 3-4 kurze deutsche Schlagworte die den Charakter und die Staerken des Stopps beschreiben
-  (z.B. "Strand", "Kultur", "Wandern", "Kueste", "Insel", "Natur", "Berge", "Altstadt", "Weinregion", "Familienfreundlich")
+{L['fill_fields']}:
+- population: {L['population']} (z.B. "45'000 {L['inhabitants']}"), falls bekannt
+- altitude_m: {L['altitude']}
+- language: {L['language_field']}
+- climate_note: {L['climate']} ({getattr(req, 'start_date', L['travel_date'])})
+- must_see: {L['must_see']} {styles_display}
+{(f'- family_friendly: true/false ({L["family_friendly"]})' if has_children else '')}
+- teaser: {L['teaser_hint']}
+  {L['teaser_ref'].format(styles=styles_display, travelers=travelers_str)}
+- tags: {L['tags_hint']}
+  ({L['tags_examples']})
 
-Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PFLICHT – keine null):
+{L['return_json']}
 {{
   "options": [
     {{"id": 1, "option_type": "{ex1_type}", "region": "...", "country": "FR", "lat": 45.7640, "lon": 4.8357, "drive_hours": 3.5, "drive_km": 280, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."], "matches_travel_style": true, "tags": ["Kultur", "Altstadt", "Kulinarik"]{', ' + family_field[:-1] if family_field else ''}}},
@@ -329,6 +559,9 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
             architect_context=architect_context,
         )
 
+        lang = getattr(self.request, 'language', 'de')
+        system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
+
         await debug_logger.log(LogLevel.API, f"→ Anthropic API call: {self.model}", job_id=self.job_id, agent="StopOptionsFinder")
         await debug_logger.log_prompt("StopOptionsFinder", self.model, prompt, job_id=self.job_id)
 
@@ -336,7 +569,7 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
             return self.client.messages.create(
                 model=self.model,
                 max_tokens=get_max_tokens(AGENT_KEY, 4096),
-                system=SYSTEM_PROMPT,
+                system=system_prompt,
                 messages=[{"role": "user", "content": prompt}],
             )
 
@@ -408,6 +641,9 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
             architect_context=architect_context,
         )
 
+        lang = getattr(self.request, 'language', 'de')
+        system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
+
         await debug_logger.log(LogLevel.API, f"→ Anthropic API stream: {self.model}", job_id=self.job_id, agent="StopOptionsFinder")
 
         accumulated = ""
@@ -450,7 +686,7 @@ Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PF
             with self.client.messages.stream(
                 model=self.model,
                 max_tokens=get_max_tokens(AGENT_KEY, 4096),
-                system=SYSTEM_PROMPT,
+                system=system_prompt,
                 messages=[{"role": "user", "content": prompt}],
             ) as stream:
                 for text_chunk in stream.text_stream:
