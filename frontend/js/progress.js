@@ -18,13 +18,13 @@ function connectSSE(jobId) {
     job_error:              onJobError,
     debug_log:              onProgressDebugLog,
     style_mismatch_warning: function(data) {
-      showToast('Stilwarnung: ' + (data.warning || 'Stopp passt nicht zum Reisestil'), 'warning');
+      showToast(t('progress.style_warning') + ' ' + (data.warning || ''), 'warning');
     },
     ferry_detected: function(data) {
       var crossings = data.crossings || [];
-      var msg = 'Fähre erkannt';
+      var msg = t('progress.ferry_detected');
       if (crossings.length > 0 && crossings[0].from && crossings[0].to) {
-        msg += ': Überfahrt von ' + crossings[0].from + ' nach ' + crossings[0].to;
+        msg += ': ' + t('progress.ferry_crossing', {from: crossings[0].from, to: crossings[0].to});
       }
       showToast(msg, 'info');
     },
@@ -39,26 +39,26 @@ function onProgressDebugLog(data) {
   // Overlay-Zeilen aus bekannten Log-Nachrichten
   const msg = data.message || '';
   if (msg.includes('Orchestrator startet')) {
-    progressOverlay.addLine('orchestrator', 'Planung wird gestartet…');
+    progressOverlay.addLine('orchestrator', t('progress.orchestrator_starting'));
     progressOverlay.completeLine('orchestrator', '');
   } else if (msg.includes('RouteArchitect startet')) {
-    progressOverlay.addLine('route_arch', 'Analysiere die Gesamtroute…');
+    progressOverlay.addLine('route_arch', t('progress.route_analysis'));
   } else if (msg.match(/Forschungsphase:\s*(\d+)/)) {
     const n = msg.match(/Forschungsphase:\s*(\d+)/)[1];
-    progressOverlay.addLine('research_phase', `Recherchiere Aktivitäten und Restaurants für ${n} Orte…`);
+    progressOverlay.addLine('research_phase', t('progress.research_activities', {count: n}));
     progressOverlay.completeLine('research_phase', '');
   } else if (msg.match(/Reiseführer-Recherche für (\d+)/)) {
     const n = msg.match(/Reiseführer-Recherche für (\d+)/)[1];
-    progressOverlay.addLine('guide_phase', `Schreibe Reiseführer für ${n} Orte…`);
+    progressOverlay.addLine('guide_phase', t('progress.guide_writing', {count: n}));
   } else if (msg.includes('Tagesplaner startet')) {
-    progressOverlay.completeLine('guide_phase', 'Reiseführer fertig');
-    progressOverlay.addLine('day_planner', 'Erstelle den Tagesplan…');
+    progressOverlay.completeLine('guide_phase', t('progress.guide_complete'));
+    progressOverlay.addLine('day_planner', t('progress.day_planner_starting'));
   } else if (msg.includes('Reise-Analyse wird erstellt')) {
-    progressOverlay.completeLine('day_planner', 'Tagesplan fertig');
-    progressOverlay.addLine('trip_analysis', 'Reise-Analyse wird erstellt…');
+    progressOverlay.completeLine('day_planner', t('progress.day_plan_complete'));
+    progressOverlay.addLine('trip_analysis', t('progress.trip_analysis_starting'));
     _addAnalysisTimelineRow();
   } else if (msg.includes('Reise-Analyse fehlgeschlagen')) {
-    progressOverlay.completeLine('trip_analysis', 'übersprungen');
+    progressOverlay.completeLine('trip_analysis', t('progress.analysis_skipped'));
     _completeAnalysisTimelineRow();
   }
 }
@@ -66,15 +66,15 @@ function onProgressDebugLog(data) {
 function onStopResearchStarted(data) {
   const region = data.region || '';
   if (data.section === 'activities') {
-    progressOverlay.addLine('act_' + data.stop_id, `Aktivitäten für ${region}…`);
+    progressOverlay.addLine('act_' + data.stop_id, t('progress.activities_for_region', {region}));
   } else if (data.section === 'restaurants') {
-    progressOverlay.addLine('rest_' + data.stop_id, `Restaurants für ${region}…`);
+    progressOverlay.addLine('rest_' + data.stop_id, t('progress.restaurants_for_region', {region}));
   }
 }
 
 function onRouteReady(data) {
   const stops = data.stops || [];
-  progressOverlay.completeLine('route_arch', 'Route festgelegt');
+  progressOverlay.completeLine('route_arch', t('progress.route_confirmed'));
   buildStopsTimeline(stops);
   if (typeof updateSidebar === 'function') updateSidebar();
 }
@@ -107,7 +107,7 @@ function onActivitiesLoaded(data) {
   const stopId = data.stop_id;
   const region = data.region || '';
   const activities = data.activities || [];
-  progressOverlay.completeLine('act_' + stopId, `${activities.length} Aktivitäten`);
+  progressOverlay.completeLine('act_' + stopId, t('progress.activities_count', {count: activities.length}));
 
   if (stopProgress[stopId]) stopProgress[stopId].activities = true;
 
@@ -119,7 +119,7 @@ function onActivitiesLoaded(data) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
-        <span>${activities.length} Aktivitäten geladen</span>
+        <span>${t('progress.activities_loaded', {count: activities.length})}</span>
       </div>
     `;
     status.innerHTML = actHtml + (stopProgress[stopId]?.restaurants
@@ -131,7 +131,7 @@ function onActivitiesLoaded(data) {
 function onRestaurantsLoaded(data) {
   const stopId = data.stop_id;
   const restaurants = data.restaurants || [];
-  progressOverlay.completeLine('rest_' + stopId, `${restaurants.length} Restaurants`);
+  progressOverlay.completeLine('rest_' + stopId, t('progress.restaurants_count', {count: restaurants.length}));
 
   if (stopProgress[stopId]) stopProgress[stopId].restaurants = true;
 
@@ -142,7 +142,7 @@ function onRestaurantsLoaded(data) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
-        <span>${restaurants.length} Restaurants geladen</span>
+        <span>${t('progress.restaurants_loaded', {count: restaurants.length})}</span>
       </div>
     `;
     // Remove shimmer
@@ -162,14 +162,14 @@ function onStopDone(data) {
 function onAgentStart(data) {
   const el = document.getElementById('progress-agent-status');
   if (el) {
-    el.textContent = data.message || 'Agent startet…';
+    el.textContent = data.message || t('progress.agent_starting');
   }
 }
 
 function onAgentDone(data) {
   const el = document.getElementById('progress-agent-status');
   if (el) {
-    el.textContent = data.message || 'Agent fertig.';
+    el.textContent = data.message || t('progress.agent_done');
   }
 }
 
@@ -177,10 +177,10 @@ async function onJobComplete(data) {
   if (progressSSE) { progressSSE.close(); progressSSE = null; }
 
   // Complete any still-open overlay lines before closing
-  progressOverlay.completeLine('trip_analysis', 'Analyse fertig');
-  progressOverlay.completeLine('day_planner', 'Tagesplan fertig');
-  progressOverlay.completeLine('guide_phase', 'Reiseführer fertig');
-  progressOverlay.completeLine('route_arch', 'Route festgelegt');
+  progressOverlay.completeLine('trip_analysis', t('progress.analysis_complete'));
+  progressOverlay.completeLine('day_planner', t('progress.day_plan_complete'));
+  progressOverlay.completeLine('guide_phase', t('progress.guide_complete'));
+  progressOverlay.completeLine('route_arch', t('progress.route_confirmed'));
   _completeAnalysisTimelineRow();
   progressOverlay.close();
 
@@ -193,7 +193,7 @@ async function onJobComplete(data) {
   markAllStopsDone();
 
   // Persist to DB and navigate to the saved travel URL
-  showLoading('Reiseführer wird aufbereitet…');
+  showLoading(t('progress.guide_preparing'));
   try {
     const saved = await apiSaveTravel(data);
     if (saved && saved.id) {
@@ -222,7 +222,7 @@ function onJobError(data) {
   const el = document.getElementById('progress-error');
   if (el) {
     el.style.display = 'block';
-    el.textContent = 'Fehler: ' + (data.error || 'Unbekannter Fehler');
+    el.textContent = t('progress.error_prefix') + ' ' + (data.error || t('progress.unknown_error'));
   }
 }
 
@@ -237,7 +237,7 @@ function _addAnalysisTimelineRow() {
     <div class="timeline-stop" id="timeline-analysis">
       <div class="timeline-dot"></div>
       <div class="timeline-content">
-        <h4>Reise-Analyse</h4>
+        <h4>${t('progress.analysis_label')}</h4>
         <div class="timeline-status" id="timeline-status-analysis">
           <div class="shimmer-line short"></div>
         </div>
@@ -256,7 +256,7 @@ function _completeAnalysisTimelineRow() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
-        <span>Analyse abgeschlossen</span>
+        <span>${t('progress.analysis_complete')}</span>
       </div>
     `;
   }
@@ -284,7 +284,7 @@ function toggleDebugLog() {
 }
 
 function cancelPlanning() {
-  if (!confirm('Planung abbrechen und zum Formular zurückkehren?')) return;
+  if (!confirm(t('progress.confirm_cancel'))) return;
   // Close any open SSE connection
   if (S._sseSource) { S._sseSource.close(); S._sseSource = null; }
   Router.navigate('/');

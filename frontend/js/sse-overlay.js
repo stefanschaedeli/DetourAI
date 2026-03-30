@@ -18,7 +18,7 @@ const progressOverlay = (() => {
     _ensureRefs();
     _lines.clear();
     if (_linesEl)  _linesEl.innerHTML = '';
-    if (_phaseEl)  _phaseEl.textContent = phase || 'Bitte warten…';
+    if (_phaseEl)  _phaseEl.textContent = phase || t('loading.default');
     if (_overlayEl) _overlayEl.style.display = 'flex';
   }
 

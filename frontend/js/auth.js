@@ -65,7 +65,7 @@ async function authLogin(username, password) {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || 'Anmeldung fehlgeschlagen');
+    throw new Error(data.detail || t('login.error'));
   }
   const data = await res.json();
   authSetToken(data.access_token);

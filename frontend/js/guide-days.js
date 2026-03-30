@@ -36,8 +36,8 @@ function renderDayTimeBlocks(dayPlan) {
               ${tb.description ? `<p class="time-block-desc">${esc(tb.description)}</p>` : ''}
               ${tb.price_chf ? `<span class="time-block-price">CHF ${tb.price_chf}</span>` : ''}
               <div class="time-block-links">
-                ${tb.google_search_url ? `<a href="${safeUrl(tb.google_search_url)}" target="_blank" class="tb-link">Google Suche</a>` : ''}
-                ${(tb.place_id || tb.google_maps_url) ? `<a href="${safeUrl(tb.place_id ? `https://www.google.com/maps/place/?q=place_id:${tb.place_id}` : tb.google_maps_url)}" target="_blank" class="tb-link maps-link">Maps</a>` : ''}
+                ${tb.google_search_url ? `<a href="${safeUrl(tb.google_search_url)}" target="_blank" class="tb-link">${t('guide.google_search')}</a>` : ''}
+                ${(tb.place_id || tb.google_maps_url) ? `<a href="${safeUrl(tb.place_id ? `https://www.google.com/maps/place/?q=place_id:${tb.place_id}` : tb.google_maps_url)}" target="_blank" class="tb-link maps-link">${t('guide.maps')}</a>` : ''}
               </div>
             </div>
           </div>
@@ -58,24 +58,24 @@ function _renderAccommodationHtml(stop) {
   const altOpts = allOpts.filter(o => o.name !== acc.name);
   return `
   <div class="stop-accommodation">
-    <h4>Unterkunft</h4>
+    <h4>${t('guide.accommodation_section')}</h4>
     ${buildHeroPhotoLoading('sm')}
     <div class="acc-summary">
       <strong>${esc(acc.name)}</strong>
-      <span class="acc-selected-badge">Gewählt</span>
-      ${acc.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
+      <span class="acc-selected-badge">${t('guide.accommodation_selected')}</span>
+      ${acc.is_geheimtipp ? `<span class="geheimtipp-badge">${t('guide.geheimtipp_badge')}</span>` : ''}
       <span class="acc-type-tag">${esc(acc.type || '')}</span>
       <span class="acc-price-tag">ca. CHF ${(acc.total_price_chf || 0).toLocaleString('de-CH')}</span>
     </div>
     ${acc.description ? `<div class="acc-guide-description">${esc(acc.description)}</div>` : ''}
     <div class="acc-guide-links">
-      ${acc.booking_url ? `<a href="${safeUrl(acc.booking_url)}" target="_blank" class="acc-booking-link">Bei Booking.com anschauen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
-      ${acc.booking_search_url ? `<a href="${safeUrl(acc.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">Bei Booking.com suchen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
-      ${acc.hotel_website_url ? `<a href="${safeUrl(acc.hotel_website_url)}" target="_blank" class="acc-website-link">Hotelwebseite <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+      ${acc.booking_url ? `<a href="${safeUrl(acc.booking_url)}" target="_blank" class="acc-booking-link">${t('guide.booking_view')} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+      ${acc.booking_search_url ? `<a href="${safeUrl(acc.booking_search_url)}" target="_blank" class="acc-booking-link acc-booking-search">${t('guide.booking_search')} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
+      ${acc.hotel_website_url ? `<a href="${safeUrl(acc.hotel_website_url)}" target="_blank" class="acc-website-link">${t('guide.hotel_website')} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>` : ''}
     </div>
     ${altOpts.length ? `
     <details class="acc-alt-options">
-      <summary>Weitere Optionen (${altOpts.length})</summary>
+      <summary>${t('guide.alternative_options', {count: altOpts.length})}</summary>
       <div class="acc-alt-list">
         ${altOpts.map(o => `
           <div class="acc-alt-item">
@@ -83,7 +83,7 @@ function _renderAccommodationHtml(stop) {
             <div class="acc-alt-summary">
               <strong>${esc(o.name)}</strong>
               <div class="acc-alt-badges">
-                ${o.is_geheimtipp ? `<span class="geheimtipp-badge">Geheimtipp</span>` : ''}
+                ${o.is_geheimtipp ? `<span class="geheimtipp-badge">${t('guide.geheimtipp_badge')}</span>` : ''}
                 <span class="acc-type-tag">${esc(o.type || '')}</span>
                 <span class="acc-price-tag">ca. CHF ${(o.total_price_chf || 0).toLocaleString('de-CH')}</span>
               </div>
@@ -651,8 +651,7 @@ function renderCalendar(plan) {
   const _pinIcon = _ic('<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>');
   const typeLabel = { drive: 'Fahrt', checkin: 'Ankunft', activity: 'Erlebnis', rest: 'Entspannen', mixed: 'Gemischt' };
   const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-  const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-                      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+  const monthNames = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => t('guide.month_' + m));
 
   // Parse date string (DD.MM.YYYY or YYYY-MM-DD) into Date object
   function parseDate(str) {

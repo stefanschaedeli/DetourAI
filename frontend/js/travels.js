@@ -5,7 +5,7 @@ const _STAR_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="
 function _renderStars(travelId, currentRating) {
   const stars = [1,2,3,4,5].map(n => {
     const filled = n <= currentRating;
-    return `<span class="travel-star${filled ? ' active' : ''}" data-id="${travelId}" data-val="${n}" role="button" aria-label="${n} Stern${n !== 1 ? 'e' : ''}" tabindex="0">${_STAR_SVG}</span>`;
+    return `<span class="travel-star${filled ? ' active' : ''}" data-id="${travelId}" data-val="${n}" role="button" aria-label="${n !== 1 ? t('travels.stars_aria', {stars: n}) : t('travels.star_aria', {stars: n})}" tabindex="0">${_STAR_SVG}</span>`;
   }).join('');
   return `<span class="travel-stars" data-id="${travelId}">${stars}</span>`;
 }
@@ -25,7 +25,7 @@ async function _handleStarClick(starEl) {
   try {
     await apiUpdateTravel(id, { rating: newRating });
   } catch (err) {
-    console.error('Bewertung fehlgeschlagen:', err.message);
+    console.error(t('travels.rating_failed'), err.message);
     loadTravelsList();
   }
 }
@@ -90,11 +90,11 @@ function closeTravelsDrawer() {
 
 async function loadTravelsList() {
   const container = document.getElementById('travels-list');
-  container.innerHTML = '<div class="travels-loading">Wird geladen…</div>';
+  container.innerHTML = '<div class="travels-loading">' + esc(t('travels.loading')) + '</div>';
   try {
     const { travels } = await apiGetTravels();
     if (!travels.length) {
-      container.innerHTML = '<div class="travels-empty">Noch keine Reisen gespeichert.</div>';
+      container.innerHTML = '<div class="travels-empty">' + esc(t('travels.no_travels')) + '</div>';
       return;
     }
     container.innerHTML = travels.map(t => {
@@ -102,7 +102,7 @@ async function loadTravelsList() {
         { day: '2-digit', month: '2-digit', year: 'numeric' });
       const cost = typeof t.total_cost_chf === 'number'
         ? `CHF ${t.total_cost_chf.toLocaleString('de-CH')}` : '–';
-      const hasGuide = t.has_travel_guide ? '<span class="travel-card-badge">Reiseführer</span>' : '';
+      const hasGuide = t.has_travel_guide ? '<span class="travel-card-badge">' + esc(window.t('travels.guide_badge')) + '</span>' : '';
       const displayName = t.custom_name || t.title;
       const starsHtml = _renderStars(t.id, t.rating || 0);
       return `
@@ -118,18 +118,18 @@ async function loadTravelsList() {
           </div>
           <div class="travel-card-actions">
             <button class="btn btn-sm btn-primary" onclick="openSavedTravel(${t.id})">Öffnen</button>
-            <button class="btn btn-sm btn-secondary" onclick="replanSavedTravel(${t.id},this)" title="Reiseführer + stündliche Tagespläne neu generieren">Neu berechnen</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteSavedTravel(${t.id},this)">Löschen</button>
+            <button class="btn btn-sm btn-secondary" onclick="replanSavedTravel(${t.id},this)" title="${esc(window.t('travels.replan_title'))}">${esc(window.t('travels.replan_btn'))}</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteSavedTravel(${t.id},this)">${esc(window.t('travels.delete_btn'))}</button>
           </div>
         </div>`;
     }).join('');
   } catch (err) {
-    container.innerHTML = `<div class="travels-error">Fehler: ${esc(err.message)}</div>`;
+    container.innerHTML = `<div class="travels-error">${esc(t('travels.error_prefix'))} ${esc(err.message)}</div>`;
   }
 }
 
 async function openSavedTravel(id) {
-  showLoading('Reiseplan wird geladen…');
+  showLoading(t('travels.loading_trip'));
   try {
     const plan = await apiGetTravel(id);
     plan._saved_travel_id = id;   // track DB id for replan
@@ -142,14 +142,14 @@ async function openSavedTravel(id) {
     showSection('travel-guide');
     Router.navigate(Router.travelPath(id, title));
   } catch (err) {
-    alert('Fehler beim Laden: ' + err.message);
+    alert(t('travels.load_error') + ' ' + err.message);
   } finally {
     hideLoading();
   }
 }
 
 async function deleteSavedTravel(id, btn) {
-  if (!confirm('Diese Reise wirklich löschen?')) return;
+  if (!confirm(t('travels.confirm_delete'))) return;
   btn.disabled = true;
   try {
     await apiDeleteTravel(id);
@@ -166,7 +166,7 @@ async function deleteSavedTravel(id, btn) {
       }, 200);
     }
   } catch (err) {
-    alert('Fehler beim Löschen: ' + err.message);
+    alert(t('travels.delete_error') + ' ' + err.message);
     btn.disabled = false;
   }
 }
@@ -175,12 +175,12 @@ async function replanSavedTravel(id, btn) {
   // Inline confirmation — avoids browser popup blocking
   if (btn.dataset.confirmPending !== '1') {
     btn.dataset.confirmPending = '1';
-    btn.textContent = 'Bestätigen?';
+    btn.textContent = t('travels.confirm_action');
     btn.classList.add('btn-warning');
     setTimeout(() => {
       if (btn.dataset.confirmPending === '1') {
         btn.dataset.confirmPending = '';
-        btn.textContent = 'Neu berechnen';
+        btn.textContent = t('travels.replan_btn');
         btn.classList.remove('btn-warning');
       }
     }, 3000);
@@ -190,7 +190,7 @@ async function replanSavedTravel(id, btn) {
   // Confirmed — proceed
   btn.dataset.confirmPending = '';
   btn.disabled = true;
-  btn.textContent = 'Wird gestartet…';
+  btn.textContent = t('travels.starting');
   btn.classList.remove('btn-warning');
 
   try {
@@ -202,20 +202,20 @@ async function replanSavedTravel(id, btn) {
     document.getElementById('progress-error').style.display = 'none';
     const statusEl = document.getElementById('progress-agent-status');
     const timelineEl = document.getElementById('progress-timeline');
-    if (statusEl)  statusEl.textContent = 'Reiseführer und Tagespläne werden neu berechnet…';
+    if (statusEl)  statusEl.textContent = t('travels.recalculating');
     if (timelineEl) timelineEl.innerHTML = '<div class="shimmer-line"></div><div class="shimmer-line short"></div>';
     S.jobId = job_id;
 
     _startReplanSSE(job_id, id);
   } catch (err) {
     btn.disabled = false;
-    btn.textContent = 'Neu berechnen';
+    btn.textContent = t('travels.replan_btn');
     // Show error inline in the card instead of alert
     const card = btn.closest('.travel-card');
     if (card) {
       const errDiv = document.createElement('div');
       errDiv.className = 'travel-card-error';
-      errDiv.textContent = 'Fehler: ' + err.message;
+      errDiv.textContent = t('travels.error_prefix') + ' ' + err.message;
       card.appendChild(errDiv);
       setTimeout(() => errDiv.remove(), 5000);
     }
@@ -238,7 +238,7 @@ function _startReplanSSE(jobId, sourceTravelId) {
     job_error: (data) => {
       source.close();
       const errEl = document.getElementById('progress-error');
-      if (errEl) { errEl.textContent = 'Fehler: ' + (data.error || 'Unbekannter Fehler'); errEl.style.display = ''; }
+      if (errEl) { errEl.textContent = t('travels.error_prefix') + ' ' + (data.error || t('progress.unknown_error')); errEl.style.display = ''; }
     },
     debug_log: (data) => {
       if (statusEl && data.message) statusEl.textContent = data.message;

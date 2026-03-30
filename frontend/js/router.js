@@ -19,12 +19,12 @@ const Router = (() => {
   ];
 
   const _titles = {
-    form:           'DetourAI — Reiseplaner',
-    routeBuilder:   'Routenplanung — DetourAI',
-    accommodation:  'Unterkünfte — DetourAI',
-    progress:       'Planung läuft… — DetourAI',
-    travels:        'Meine Reisen — DetourAI',
-    settings:       'Einstellungen — DetourAI',
+    get form()          { return t('app.title'); },
+    get routeBuilder()  { return t('route_builder.title') + ' — DetourAI'; },
+    get accommodation() { return t('router.accommodation_title'); },
+    get progress()      { return t('router.progress_title'); },
+    get travels()       { return t('header.my_travels') + ' — DetourAI'; },
+    get settings()      { return t('settings.page_title') + ' — DetourAI'; },
   };
 
   // Internal flag to prevent re-entrant dispatch (including across async handlers)
@@ -152,14 +152,14 @@ const Router = (() => {
 
     async _travel(m) {
       const id = parseInt(m[1], 10);
-      document.title = 'Reise wird geladen… — DetourAI';
+      document.title = t('travels.loading_trip');
 
       // Shared view detection
       const shareToken = new URLSearchParams(location.search).get('share');
       if (shareToken) {
         S.sharedMode = true;
         S.shareToken = shareToken;
-        showLoading('Reiseplan wird geladen…');
+        showLoading(t('travels.loading_trip'));
         try {
           const plan = await apiGetShared(shareToken);
           plan._saved_travel_id = id;
@@ -180,7 +180,7 @@ const Router = (() => {
             const h = document.createElement('h2');
             h.textContent = 'Link ungueltig';
             const p = document.createElement('p');
-            p.textContent = 'Dieser Link ist nicht mehr gueltig oder wurde deaktiviert.';
+            p.textContent = t('router.shared_link_invalid');
             card.appendChild(h);
             card.appendChild(p);
             wrapper.appendChild(card);
@@ -244,7 +244,7 @@ const Router = (() => {
 
       // Ensure travel is loaded first
       if (!S.result || S.result._saved_travel_id !== id) {
-        showLoading('Reiseplan wird geladen…');
+        showLoading(t('travels.loading_trip'));
         try {
           const plan = S.sharedMode ? await apiGetShared(S.shareToken) : await apiGetTravel(id);
           plan._saved_travel_id = id;
@@ -281,7 +281,7 @@ const Router = (() => {
 
       // Ensure travel is loaded first
       if (!S.result || S.result._saved_travel_id !== id) {
-        showLoading('Reiseplan wird geladen…');
+        showLoading(t('travels.loading_trip'));
         try {
           const plan = S.sharedMode ? await apiGetShared(S.shareToken) : await apiGetTravel(id);
           plan._saved_travel_id = id;
@@ -315,7 +315,7 @@ const Router = (() => {
 
       // Ensure travel is loaded first
       if (!S.result || S.result._saved_travel_id !== id) {
-        showLoading('Reiseplan wird geladen…');
+        showLoading(t('travels.loading_trip'));
         try {
           const plan = S.sharedMode ? await apiGetShared(S.shareToken) : await apiGetTravel(id);
           plan._saved_travel_id = id;

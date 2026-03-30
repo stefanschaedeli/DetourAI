@@ -56,7 +56,7 @@ function buildAllStopPanels(stops) {
         <div class="acc-stop-header">
           <span class="acc-stop-num">${stop.id}</span>
           <h3>${flag} ${esc(stop.region)}</h3>
-          <span class="acc-nights">${stop.nights} Nacht${stop.nights !== 1 ? 'e' : ''}</span>
+          <span class="acc-nights">${stop.nights !== 1 ? t('accommodation.night_plural', {nights: stop.nights}) : t('accommodation.night_singular', {nights: stop.nights})}</span>
         </div>
         <div class="acc-options-grid" id="acc-options-${stop.id}">
           <div class="shimmer-card"></div>
@@ -66,9 +66,9 @@ function buildAllStopPanels(stops) {
         </div>
         <div class="acc-resarch-row" id="acc-resarch-row-${stop.id}">
           <input class="acc-resarch-input" id="acc-resarch-input-${stop.id}"
-                 placeholder="z.B. ruhiger am See, mit Sauna…" />
+                 placeholder="${t('accommodation.research_placeholder')}" />
           <button class="btn btn-secondary acc-resarch-btn"
-                  onclick="researchAccommodation(${stop.id})">Neu suchen</button>
+                  onclick="researchAccommodation(${stop.id})">${t('accommodation.research_btn')}</button>
         </div>
       </div>
     `;
@@ -81,7 +81,7 @@ function onAccommodationLoading(data) {
   if (grid) {
     grid.innerHTML = '<div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div>';
   }
-  progressOverlay.addLine('acc_' + stopId, `Suche Unterkunftsoptionen für ${esc(data.region || '')}…`);
+  progressOverlay.addLine('acc_' + stopId, t('accommodation.searching_options', {region: data.region || ''}));
 }
 
 function renderAccCards(stopId, options, mustHaves) {
@@ -100,7 +100,7 @@ function renderAccCards(stopId, options, mustHaves) {
     const isGeheimtipp = opt.is_geheimtipp === true;
     const cardClass = isGeheimtipp ? 'acc-option-card acc-geheimtipp-card' : 'acc-option-card';
     const geheimtippBadge = isGeheimtipp
-      ? `<span class="geheimtipp-badge">Geheimtipp</span>`
+      ? `<span class="geheimtipp-badge">${t('accommodation.geheimtipp_badge')}</span>`
       : '';
     const descHtml = opt.description
       ? `<div class="acc-description">${highlightMustHaves(opt.description, opt.matched_must_haves || [])}</div>`
@@ -111,13 +111,13 @@ function renderAccCards(stopId, options, mustHaves) {
 
     // Booking links
     const bookingDeepLink = (!isGeheimtipp && opt.booking_url)
-      ? `<a class="acc-booking-link" href="${safeUrl(opt.booking_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Bei Booking.com anschauen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>`
+      ? `<a class="acc-booking-link" href="${safeUrl(opt.booking_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${t('accommodation.booking_view')} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>`
       : '';
     const bookingSearchLink = (isGeheimtipp && opt.booking_search_url)
-      ? `<a class="acc-booking-link acc-booking-search" href="${safeUrl(opt.booking_search_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Bei Booking.com suchen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>`
+      ? `<a class="acc-booking-link acc-booking-search" href="${safeUrl(opt.booking_search_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${t('accommodation.booking_search')} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>`
       : '';
     const websiteLink = opt.hotel_website_url
-      ? `<a class="acc-website-link" href="${safeUrl(opt.hotel_website_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Hotelwebseite <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>`
+      ? `<a class="acc-website-link" href="${safeUrl(opt.hotel_website_url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${t('accommodation.hotel_website')} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-left:3px"><polyline points="9 6 15 12 9 18"/></svg></a>`
       : '';
 
     return `
@@ -131,9 +131,9 @@ function renderAccCards(stopId, options, mustHaves) {
           ${stars ? `<div class="acc-stars">${stars}</div>` : ''}
           <div class="acc-price">
             <strong>ca. CHF ${(opt.price_per_night_chf || 0).toLocaleString('de-CH')}</strong>
-            <span>/Nacht</span>
+            <span>${t('accommodation.per_night')}</span>
           </div>
-          <div class="acc-total">Total: ca. CHF ${(opt.total_price_chf || 0).toLocaleString('de-CH')}</div>
+          <div class="acc-total">${t('accommodation.total_label')} ${(opt.total_price_chf || 0).toLocaleString('de-CH')}</div>
           <p class="acc-teaser">${esc(opt.teaser)}</p>
           ${descHtml}
           <div class="acc-features">${features}</div>
@@ -170,7 +170,7 @@ function onAccommodationLoaded(data) {
   });
 
   const count = options.length;
-  progressOverlay.completeLine('acc_' + stopId, `${count} Optionen gefunden`);
+  progressOverlay.completeLine('acc_' + stopId, t('accommodation.options_found', {count}));
 }
 
 function onAccommodationsAllLoaded(data) {
@@ -228,15 +228,15 @@ function renderBudgetState(bs) {
   if (!el || !bs) return;
   el.innerHTML = `
     <div class="budget-info-row">
-      <span>Unterkunftsbudget (45%)</span>
+      <span>${t('accommodation.budget_label', {pct: 45})}</span>
       <strong>CHF ${(bs.accommodation_budget_chf || 0).toLocaleString('de-CH')}</strong>
     </div>
     <div class="budget-info-row">
-      <span>Ausgegeben</span>
+      <span>${t('accommodation.spent_label')}</span>
       <strong id="acc-budget-spent">CHF 0</strong>
     </div>
     <div class="budget-info-row">
-      <span>Gesamtbudget</span>
+      <span>${t('accommodation.total_budget_label')}</span>
       <strong>CHF ${(bs.total_budget_chf || 0).toLocaleString('de-CH')}</strong>
     </div>
   `;
@@ -282,14 +282,14 @@ async function researchAccommodation(stopId) {
     }
   } catch (err) {
     if (grid) {
-      grid.innerHTML = `<div class="acc-error">Fehler bei der Suche: ${esc(err.message)}</div>`;
+      grid.innerHTML = `<div class="acc-error">${esc(t('accommodation.search_error'))} ${esc(err.message)}</div>`;
     }
   }
 }
 
 async function startPlanningWithAllSelections() {
   const btn = document.getElementById('start-planning-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Starte Planung…'; }
+  if (btn) { btn.disabled = true; btn.textContent = t('accommodation.starting_planning'); }
 
   // Close accommodation SSE
   if (accSSE) { accSSE.close(); accSSE = null; }
@@ -302,27 +302,27 @@ async function startPlanningWithAllSelections() {
     }
 
     // Show progress overlay immediately — no loading screen
-    progressOverlay.open('Reiseplan wird erstellt…');
+    progressOverlay.open(t('api.creating_travel_plan'));
     showSection('progress');
     Router.navigate('/progress/' + S.jobId);
 
     // Step 1: confirm accommodations (quiet — no loading overlay)
-    progressOverlay.addLine('confirm_acc', 'Unterkünfte werden bestätigt…');
+    progressOverlay.addLine('confirm_acc', t('accommodation.confirming'));
     await apiConfirmAccommodationsQuiet(S.jobId, selections);
-    progressOverlay.completeLine('confirm_acc', 'bestätigt');
+    progressOverlay.completeLine('confirm_acc', t('accommodation.confirmed'));
 
     // Step 2: start planning (quiet — no loading overlay)
-    progressOverlay.addLine('start_plan', 'Planung wird gestartet…');
+    progressOverlay.addLine('start_plan', t('accommodation.planning_starting'));
     await apiStartPlanningQuiet(S.jobId);
-    progressOverlay.completeLine('start_plan', 'gestartet');
+    progressOverlay.completeLine('start_plan', t('accommodation.started'));
 
     // Step 3: connect SSE for remaining progress
     connectSSE(S.jobId);
 
   } catch (err) {
     progressOverlay.close();
-    alert('Fehler beim Starten der Planung: ' + err.message);
-    if (btn) { btn.disabled = false; btn.textContent = 'Planung starten'; }
+    alert(t('accommodation.planning_error') + ' ' + err.message);
+    if (btn) { btn.disabled = false; btn.textContent = t('accommodation.start_planning'); }
   }
 }
 

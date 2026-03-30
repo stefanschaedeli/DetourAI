@@ -59,7 +59,7 @@ function showTravelGuide(plan) {
     if (content && !content.querySelector('.shared-footer')) {
       const footer = document.createElement('div');
       footer.className = 'shared-footer';
-      footer.textContent = 'Erstellt mit DetourAI';
+      footer.textContent = t('guide.created_with');
       content.appendChild(footer);
     }
   }
@@ -288,7 +288,7 @@ function _renderBreadcrumb(level, plan, dayNum, stopId) {
   // First segment: always "Übersicht"
   var seg1 = document.createElement('span');
   seg1.className = 'guide-breadcrumb__segment';
-  seg1.textContent = 'Übersicht';
+  seg1.textContent = t('guide.breadcrumb_overview');
   seg1.dataset.navLevel = 'overview';
   seg1.setAttribute('role', 'link');
   seg1.setAttribute('tabindex', '0');
@@ -303,7 +303,7 @@ function _renderBreadcrumb(level, plan, dayNum, stopId) {
     var dp = (plan.day_plans || []).find(function(d) { return d.day === Number(dayNum); });
     var activeSeg = document.createElement('span');
     activeSeg.className = 'guide-breadcrumb__segment guide-breadcrumb__segment--active';
-    activeSeg.textContent = 'Tag ' + dayNum + (dp && dp.title ? ': ' + dp.title : '');
+    activeSeg.textContent = t('guide.breadcrumb_day', {day: dayNum, title: dp && dp.title ? ': ' + dp.title : ''});
     bar.appendChild(activeSeg);
   }
 
@@ -319,7 +319,7 @@ function _renderBreadcrumb(level, plan, dayNum, stopId) {
 
     var daySeg = document.createElement('span');
     daySeg.className = 'guide-breadcrumb__segment';
-    daySeg.textContent = 'Tag ' + belongsDayNum;
+    daySeg.textContent = t('guide.breadcrumb_day', {day: belongsDayNum, title: ''});
     daySeg.dataset.navLevel = 'day';
     daySeg.dataset.dayNum = String(belongsDayNum);
     daySeg.setAttribute('role', 'link');
@@ -513,7 +513,7 @@ async function replanCurrentTravel() {
   if (!savedId) {
     if (btn) {
       const orig = btn.textContent;
-      btn.textContent = 'Zuerst in Meine Reisen speichern';
+      btn.textContent = t('guide.save_first');
       setTimeout(() => { btn.textContent = orig; }, 3000);
     }
     return;
@@ -522,12 +522,12 @@ async function replanCurrentTravel() {
   // Inline two-click confirmation
   if (btn && btn.dataset.confirmPending !== '1') {
     btn.dataset.confirmPending = '1';
-    btn.textContent = 'Bestaetigen?';
+    btn.textContent = t('travels.confirm_action');
     btn.classList.add('btn-warning');
     setTimeout(() => {
       if (btn && btn.dataset.confirmPending === '1') {
         btn.dataset.confirmPending = '';
-        btn.textContent = 'Neu berechnen';
+        btn.textContent = t('guide.replan_btn');
         btn.classList.remove('btn-warning');
       }
     }, 3000);
@@ -537,7 +537,7 @@ async function replanCurrentTravel() {
   if (btn) {
     btn.dataset.confirmPending = '';
     btn.disabled = true;
-    btn.textContent = 'Wird gestartet\u2026';
+    btn.textContent = t('guide.starting');
     btn.classList.remove('btn-warning');
   }
 
@@ -548,7 +548,7 @@ async function replanCurrentTravel() {
     Router.navigate('/progress/' + job_id);
     document.getElementById('progress-error').style.display = 'none';
     const statusEl = document.getElementById('progress-agent-status');
-    if (statusEl) statusEl.textContent = 'Reisefuehrer und Tagesplaene werden neu berechnet\u2026';
+    if (statusEl) statusEl.textContent = t('guide.recalculating');
 
     const source = openSSE(job_id, {
       job_complete: (data) => {
@@ -561,7 +561,7 @@ async function replanCurrentTravel() {
       job_error: (data) => {
         source.close();
         const errEl = document.getElementById('progress-error');
-        if (errEl) { errEl.textContent = 'Fehler: ' + (data.error || 'Unbekannter Fehler'); errEl.style.display = ''; }
+        if (errEl) { errEl.textContent = t('guide.error_prefix') + ' ' + (data.error || t('guide.unknown_error')); errEl.style.display = ''; }
         showSection('progress');
       },
       debug_log: (data) => {
@@ -572,8 +572,8 @@ async function replanCurrentTravel() {
   } catch (err) {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Fehler \u2014 nochmals versuchen';
-      setTimeout(() => { if (btn) btn.textContent = 'Neu berechnen'; }, 4000);
+      btn.textContent = t('guide.error_retry');
+      setTimeout(() => { if (btn) btn.textContent = t('guide.replan_btn'); }, 4000);
     }
     console.error('Replan-Fehler:', err);
   }

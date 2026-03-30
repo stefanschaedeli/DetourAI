@@ -2,7 +2,7 @@
 
 (function () {
   let _pendingCount = 0;
-  let _currentLabel = 'Bitte warten…';
+  let _currentLabel = t('loading.default');
   let _overlay = null;
   let _labelEl = null;
   let _counterEl = null;
@@ -29,7 +29,7 @@
       if (_counterEl) {
         if (_pendingCount > 1) {
           _counterEl.style.display = 'block';
-          _counterEl.textContent = `${_pendingCount} Anfragen laufen…`;
+          _counterEl.textContent = t('loading.pending_requests', {count: _pendingCount});
         } else {
           _counterEl.style.display = 'none';
         }
@@ -51,7 +51,7 @@
   }
 
   window.showLoading = function (message) {
-    _currentLabel = message || 'Bitte warten…';
+    _currentLabel = message || t('loading.default');
     _pendingCount++;
     _render();
   };
@@ -72,7 +72,7 @@
   };
 
   window.updateLoadingLabel = function (message) {
-    _currentLabel = message || 'Bitte warten…';
+    _currentLabel = message || t('loading.default');
     if (_labelEl) _labelEl.textContent = _currentLabel;
   };
 })();

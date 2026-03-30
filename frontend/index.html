@@ -29,15 +29,15 @@
 
 <!-- ======================================================== Header -->
 <header class="app-header">
-  <div class="app-logo" onclick="Router.navigate('/')" style="cursor:pointer" title="Zur Startseite">DetourAI</div>
-  <div class="app-subtitle">KI-gestützter Reiseplaner</div>
-  <button class="btn-my-travels" onclick="openTravelsDrawer()">Meine Reisen</button>
-  <button class="btn-clear-data" onclick="clearAppData()" title="Daten löschen und neu starten">Neu starten</button>
+  <div class="app-logo" onclick="Router.navigate('/')" style="cursor:pointer" title="Zur Startseite" data-i18n="header.home_link_title" data-i18n-attr="title">DetourAI</div>
+  <div class="app-subtitle" data-i18n="header.subtitle">KI-gestützter Reiseplaner</div>
+  <button class="btn-my-travels" onclick="openTravelsDrawer()" data-i18n="header.my_travels">Meine Reisen</button>
+  <button class="btn-clear-data" onclick="clearAppData()" title="Daten löschen und neu starten" data-i18n="header.reset_data">Neu starten</button>
   <span id="header-username" style="display:none" class="header-username"></span>
   <button id="btn-admin" onclick="showSection('admin-section'); loadAdminUsers();" style="display:none" class="btn-secondary">Admin</button>
-  <button id="btn-logout" onclick="handleLogout()" style="display:none" class="btn-secondary">Abmelden</button>
+  <button id="btn-logout" onclick="handleLogout()" style="display:none" class="btn-secondary" data-i18n="header.logout">Abmelden</button>
   <button class="btn-icon sidebar-mobile-toggle" id="sidebar-mobile-toggle"
-          onclick="toggleSidebar()" aria-label="Reisefortschritt anzeigen" style="display:none">
+          onclick="toggleSidebar()" aria-label="Reisefortschritt anzeigen" data-i18n="sidebar.mobile_toggle_aria" data-i18n-attr="aria-label" style="display:none">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
       <line x1="3" y1="6" x2="21" y2="6"/>
       <line x1="3" y1="12" x2="17" y2="12"/>
@@ -45,16 +45,16 @@
     </svg>
   </button>
   <div class="header-settings">
-    <button class="btn-icon settings-btn" onclick="toggleSettings()" title="Einstellungen" aria-label="Einstellungen" aria-expanded="false" aria-controls="settings-menu">
+    <button class="btn-icon settings-btn" onclick="toggleSettings()" title="Einstellungen" aria-label="Einstellungen" data-i18n="header.settings_title" data-i18n-attr="title" aria-expanded="false" aria-controls="settings-menu">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
         <circle cx="12" cy="12" r="3"/>
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
       </svg>
     </button>
     <div class="settings-menu" id="settings-menu" style="display:none" aria-hidden="true">
-      <div class="settings-menu-title">Einstellungen</div>
+      <div class="settings-menu-title" data-i18n="header.settings_menu_title">Einstellungen</div>
       <div class="settings-item">
-        <label for="max-activities">Max. Aktivitäten pro Stop</label>
+        <label for="max-activities" data-i18n="header.max_activities_label">Max. Aktivitäten pro Stop</label>
         <select id="max-activities">
           <option value="3">3</option>
           <option value="5" selected>5</option>
@@ -62,7 +62,7 @@
         </select>
       </div>
       <div class="settings-item">
-        <label for="max-restaurants">Max. Restaurants pro Stop</label>
+        <label for="max-restaurants" data-i18n="header.max_restaurants_label">Max. Restaurants pro Stop</label>
         <select id="max-restaurants">
           <option value="2">2</option>
           <option value="3" selected>3</option>
@@ -70,12 +70,12 @@
         </select>
       </div>
       <div class="settings-item">
-        <label for="log-verbosity">Log-Detailgrad</label>
+        <label for="log-verbosity" data-i18n="header.log_verbosity_label">Log-Detailgrad</label>
         <select id="log-verbosity">
-          <option value="minimal">Minimal</option>
-          <option value="normal" selected>Normal</option>
-          <option value="verbose">Ausführlich</option>
-          <option value="debug">Debug</option>
+          <option value="minimal" data-i18n="header.log_minimal">Minimal</option>
+          <option value="normal" selected data-i18n="header.log_normal">Normal</option>
+          <option value="verbose" data-i18n="header.log_verbose">Ausführlich</option>
+          <option value="debug" data-i18n="header.log_debug">Debug</option>
         </select>
       </div>
       <div class="settings-item">
@@ -95,11 +95,11 @@
 </header>
 
 <div class="app-layout">
-  <aside id="trip-sidebar" class="trip-sidebar" aria-label="Reisefortschritt" hidden>
+  <aside id="trip-sidebar" class="trip-sidebar" aria-label="Reisefortschritt" data-i18n="sidebar.aria_label" data-i18n-attr="aria-label" hidden>
     <div class="sidebar-header">
-      <span class="sidebar-title">Reise</span>
+      <span class="sidebar-title" data-i18n="sidebar.title">Reise</span>
       <button class="sidebar-collapse-btn" id="sidebar-collapse-btn"
-              onclick="toggleSidebar()" aria-label="Sidebar ein-/ausblenden" aria-expanded="true">
+              onclick="toggleSidebar()" aria-label="Sidebar ein-/ausblenden" data-i18n="sidebar.collapse_aria" data-i18n-attr="aria-label" aria-expanded="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <polyline points="15 18 9 12 15 6"/>
         </svg>
@@ -123,16 +123,16 @@
         </div>
       </div>
       <h1 class="login-title">DetourAI</h1>
-      <p class="login-subtitle">KI-gestützter Reiseplaner</p>
+      <p class="login-subtitle" data-i18n="login.subtitle">KI-gestützter Reiseplaner</p>
 
       <div id="login-form-body">
         <form id="login-form" onsubmit="handleLogin(event)" novalidate>
           <div class="login-field">
-            <label for="login-username">Benutzername</label>
+            <label for="login-username" data-i18n="login.username_label">Benutzername</label>
             <input type="text" id="login-username" autocomplete="username" required />
           </div>
           <div class="login-field">
-            <label for="login-password">Passwort</label>
+            <label for="login-password" data-i18n="login.password_label">Passwort</label>
             <input type="password" id="login-password" autocomplete="current-password" required />
           </div>
           <div id="login-error" class="login-error" role="alert" aria-live="polite" style="display:none">
@@ -140,7 +140,7 @@
             <span id="login-error-text"></span>
           </div>
           <button type="submit" class="login-submit-btn" id="login-submit">
-            <span id="login-btn-label">Anmelden</span>
+            <span id="login-btn-label" data-i18n="login.submit">Anmelden</span>
           </button>
         </form>
       </div>
@@ -152,8 +152,8 @@
               <path d="M5 13l4 4L19 7"/>
             </svg>
           </div>
-          <p class="login-success-text" id="login-success-greeting">Willkommen!</p>
-          <p class="login-success-sub">Wird geladen…</p>
+          <p class="login-success-text" id="login-success-greeting" data-i18n="login.success">Willkommen!</p>
+          <p class="login-success-sub" data-i18n="login.loading">Wird geladen…</p>
         </div>
       </div>
     </div>
@@ -166,51 +166,51 @@
     <div class="step-indicators">
       <div class="step-indicator">
         <div class="step active" id="step-1">1</div>
-        <div class="step-label">Route</div>
+        <div class="step-label" data-i18n="form.step.route">Route</div>
       </div>
       <div class="step-connector"></div>
       <div class="step-indicator">
         <div class="step" id="step-2">2</div>
-        <div class="step-label">Reisende</div>
+        <div class="step-label" data-i18n="form.step.travelers">Reisende</div>
       </div>
       <div class="step-connector"></div>
       <div class="step-indicator">
         <div class="step" id="step-3">3</div>
-        <div class="step-label">Aktivitäten</div>
+        <div class="step-label" data-i18n="form.step.activities">Aktivitäten</div>
       </div>
       <div class="step-connector"></div>
       <div class="step-indicator">
         <div class="step" id="step-4">4</div>
-        <div class="step-label">Unterkunft</div>
+        <div class="step-label" data-i18n="form.step.accommodation">Unterkunft</div>
       </div>
       <div class="step-connector"></div>
       <div class="step-indicator">
         <div class="step" id="step-5">5</div>
-        <div class="step-label">Budget</div>
+        <div class="step-label" data-i18n="form.step.budget">Budget</div>
       </div>
       <div class="step-connector"></div>
       <div class="step-indicator">
         <div class="step" id="step-6">6</div>
-        <div class="step-label">Zusammenfassung</div>
+        <div class="step-label" data-i18n="form.step.summary">Zusammenfassung</div>
       </div>
     </div>
 
     <!-- ---- Step 1: Route ---- -->
     <div class="form-step active" id="form-step-1">
-      <h2 class="form-section-title">Reise planen</h2>
+      <h2 class="form-section-title" data-i18n="form.plan_trip">Reise planen</h2>
 
       <!-- Legs builder (segments) -->
       <div class="form-group" id="legs-section">
-        <label class="form-label">Reisesegmente</label>
-        <p class="form-hint" id="legs-hint">Jedes Segment definiert einen Abschnitt deiner Reise mit Start, Ziel und Daten.</p>
+        <label class="form-label" data-i18n="form.legs_label">Reisesegmente</label>
+        <p class="form-hint" id="legs-hint" data-i18n="form.legs_hint">Jedes Segment definiert einen Abschnitt deiner Reise mit Start, Ziel und Daten.</p>
         <div id="legs-container"></div>
-        <button type="button" class="btn btn-outline" id="add-leg-btn" onclick="addLeg()">
+        <button type="button" class="btn btn-outline" id="add-leg-btn" onclick="addLeg()" data-i18n="form.add_leg">
           + Segment hinzufügen
         </button>
       </div>
 
       <div class="form-group">
-        <label>Max. Fahrzeit pro Tag: <strong id="max-drive-hours-display">4.5</strong>h</label>
+        <label data-i18n="form.max_drive_label">Max. Fahrzeit pro Tag: <strong id="max-drive-hours-display">4.5</strong>h</label>
         <div class="slider-row">
           <input type="range" id="max-drive-hours" min="1" max="10" value="4.5" step="0.5">
         </div>
@@ -222,121 +222,123 @@
               aria-controls="advanced-section"
               onclick="toggleAdvanced()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
-        Erweiterte Einstellungen
+        <span data-i18n="form.advanced_toggle">Erweiterte Einstellungen</span>
       </button>
       <div class="advanced-section" id="advanced-section">
         <div class="form-group">
-          <label>Mindestabstand vom Startpunkt: <strong id="proximity-origin-display">10</strong>% der Streckenlänge</label>
+          <label data-i18n="form.proximity_origin_label">Mindestabstand vom Startpunkt: <strong id="proximity-origin-display">10</strong>% der Streckenlänge</label>
           <div class="slider-row">
             <input type="range" id="proximity-origin" min="0" max="30" value="10" step="1">
           </div>
-          <div class="form-hint">Orte näher als dieser Anteil der Gesamtstrecke am Startpunkt werden ausgeschlossen. 0 = kein Filter.</div>
+          <div class="form-hint" data-i18n="form.proximity_origin_hint">Orte näher als dieser Anteil der Gesamtstrecke am Startpunkt werden ausgeschlossen. 0 = kein Filter.</div>
         </div>
         <div class="form-group">
-          <label>Mindestabstand vom Ziel: <strong id="proximity-target-display">15</strong>% der Streckenlänge</label>
+          <label data-i18n="form.proximity_target_label">Mindestabstand vom Ziel: <strong id="proximity-target-display">15</strong>% der Streckenlänge</label>
           <div class="slider-row">
             <input type="range" id="proximity-target" min="0" max="30" value="15" step="1">
           </div>
-          <div class="form-hint">Orte zu nahe am Ziel werden ausgeschlossen. 0 = kein Filter.</div>
+          <div class="form-hint" data-i18n="form.proximity_target_hint">Orte zu nahe am Ziel werden ausgeschlossen. 0 = kein Filter.</div>
         </div>
       </div>
 
       <div class="form-nav">
         <div></div>
-        <button class="btn btn-primary" onclick="nextStep()">Weiter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg></button>
+        <button class="btn btn-primary" onclick="nextStep()" data-i18n="form.next">Weiter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg></button>
       </div>
     </div>
 
     <!-- ---- Step 2: Travellers ---- -->
     <div class="form-step" id="form-step-2">
-      <h2 class="form-section-title">Wer reist mit?</h2>
+      <h2 class="form-section-title" data-i18n="form.step2_title">Wer reist mit?</h2>
 
       <div class="form-group">
-        <label>Erwachsene</label>
+        <label data-i18n="form.adults_label">Erwachsene</label>
         <div class="adults-counter">
-          <button onclick="changeAdults(-1)" aria-label="Erwachsene reduzieren">−</button>
+          <button onclick="changeAdults(-1)" aria-label="Erwachsene reduzieren" data-i18n="form.decrease_adults_aria" data-i18n-attr="aria-label">−</button>
           <span class="adults-count" id="adults-count">2</span>
-          <button onclick="changeAdults(1)" aria-label="Erwachsene erhöhen">+</button>
+          <button onclick="changeAdults(1)" aria-label="Erwachsene erhöhen" data-i18n="form.increase_adults_aria" data-i18n-attr="aria-label">+</button>
         </div>
       </div>
 
       <div class="form-group">
-        <label>Kinder (Alter)</label>
+        <label data-i18n="form.children_label">Kinder (Alter)</label>
         <div id="children-list"></div>
-        <button class="btn btn-secondary" onclick="addChild()" style="margin-top:8px">+ Kind hinzufügen</button>
+        <button class="btn btn-secondary" onclick="addChild()" style="margin-top:8px" data-i18n="form.add_child">+ Kind hinzufügen</button>
       </div>
 
       <div class="form-group">
-        <label>Reisestil (Mehrfachauswahl)</label>
+        <label data-i18n="form.travel_style_label">Reisestil (Mehrfachauswahl)</label>
         <div class="style-grid" id="travel-style-grid"></div>
       </div>
 
       <div class="form-group">
-        <label for="travel-description">Beschreibung Ihrer Wunschreise (optional)</label>
-        <textarea id="travel-description" rows="3" placeholder="Beschreibe deine Traumreise... z.B. Romantischer Roadtrip durch die Provence mit Weinproben und kleinen Doerfern"></textarea>
+        <label for="travel-description" data-i18n="form.travel_description_label">Beschreibung Ihrer Wunschreise (optional)</label>
+        <textarea id="travel-description" rows="3" placeholder="Beschreibe deine Traumreise... z.B. Romantischer Roadtrip durch die Provence mit Weinproben und kleinen Doerfern" data-i18n="form.travel_description_placeholder" data-i18n-attr="placeholder"></textarea>
       </div>
 
       <div class="form-group">
-        <label>Bevorzugte Aktivitäten (optional)</label>
+        <label data-i18n="form.preferred_activities_label">Bevorzugte Aktivitäten (optional)</label>
         <div class="tag-input-row">
           <input type="text" id="preferred-tag-input"
             placeholder="z.B. Weinproben, Wandern, Museumsbesuche"
+            data-i18n="form.preferred_activities_placeholder" data-i18n-attr="placeholder"
             onkeydown="if(event.key==='Enter'){addPreferredTagFromInput();event.preventDefault()}">
-          <button class="btn btn-secondary" onclick="addPreferredTagFromInput()">Hinzufügen</button>
+          <button class="btn btn-secondary" onclick="addPreferredTagFromInput()" data-i18n="form.add_tag">Hinzufügen</button>
         </div>
         <div class="tags-container" id="preferred-tags"></div>
       </div>
 
       <div class="form-nav">
-        <button class="btn btn-secondary" onclick="prevStep()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück</button>
-        <button class="btn btn-primary" onclick="nextStep()">Weiter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg></button>
+        <button class="btn btn-secondary" onclick="prevStep()" data-i18n="form.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück</button>
+        <button class="btn btn-primary" onclick="nextStep()" data-i18n="form.next">Weiter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg></button>
       </div>
     </div>
 
     <!-- ---- Step 3: Activities ---- -->
     <div class="form-step" id="form-step-3">
-      <h2 class="form-section-title">Aktivitäten & Erlebnisse</h2>
+      <h2 class="form-section-title" data-i18n="form.step3_title">Aktivitäten & Erlebnisse</h2>
 
       <div class="form-group">
-        <label>Pflichtaktivitäten</label>
+        <label data-i18n="form.mandatory_activities_label">Pflichtaktivitäten</label>
         <div class="tag-input-row">
           <input type="text" id="mandatory-tag-input" placeholder="z.B. Eiffelturm besuchen"
+            data-i18n="form.mandatory_activities_placeholder" data-i18n-attr="placeholder"
             onkeydown="if(event.key==='Enter'){addTagFromInput();event.preventDefault()}">
-          <button class="btn btn-secondary" onclick="addTagFromInput()">Hinzufügen</button>
+          <button class="btn btn-secondary" onclick="addTagFromInput()" data-i18n="form.add_tag">Hinzufügen</button>
         </div>
         <div class="tags-container" id="mandatory-tags"></div>
       </div>
 
       <div class="form-group">
-        <label>Max. Distanz zu Übernachtungsort: <strong id="activities-radius-display">30</strong> km</label>
+        <label data-i18n="form.activities_radius_label">Max. Distanz zu Übernachtungsort: <strong id="activities-radius-display">30</strong> km</label>
         <div class="slider-row">
           <input type="range" id="activities-radius" min="10" max="100" value="30" step="5">
         </div>
       </div>
 
       <div class="form-nav">
-        <button class="btn btn-secondary" onclick="prevStep()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück</button>
-        <button class="btn btn-primary" onclick="nextStep()">Weiter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg></button>
+        <button class="btn btn-secondary" onclick="prevStep()" data-i18n="form.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück</button>
+        <button class="btn btn-primary" onclick="nextStep()" data-i18n="form.next">Weiter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg></button>
       </div>
     </div>
 
     <!-- ---- Step 4: Accommodation ---- -->
     <div class="form-step" id="form-step-4">
-      <h2 class="form-section-title">Unterkunft</h2>
+      <h2 class="form-section-title" data-i18n="form.step4_title">Unterkunft</h2>
 
       <div class="form-group">
-        <label>Was für Unterkünfte möchtest du? (bis zu 3 Wünsche)</label>
+        <label data-i18n="form.accommodation_prefs_label">Was für Unterkünfte möchtest du? (bis zu 3 Wünsche)</label>
         <label for="acc-pref-0" class="sr-only">Unterkunftswunsch 1</label>
-        <input type="text" id="acc-pref-0" placeholder="z.B. romantisches B&B am See mit Frühstück" oninput="saveFormToCache()">
+        <input type="text" id="acc-pref-0" placeholder="z.B. romantisches B&B am See mit Frühstück" data-i18n="form.accommodation_pref1_placeholder" data-i18n-attr="placeholder" oninput="saveFormToCache()">
         <label for="acc-pref-1" class="sr-only">Unterkunftswunsch 2</label>
-        <input type="text" id="acc-pref-1" placeholder="z.B. zentral gelegenes Boutique-Hotel" oninput="saveFormToCache()" style="margin-top:8px">
+        <input type="text" id="acc-pref-1" placeholder="z.B. zentral gelegenes Boutique-Hotel" data-i18n="form.accommodation_pref2_placeholder" data-i18n-attr="placeholder" oninput="saveFormToCache()" style="margin-top:8px">
         <label for="acc-pref-2" class="sr-only">Unterkunftswunsch 3</label>
-        <input type="text" id="acc-pref-2" placeholder="z.B. Familien-Apartment mit Küche und Parkplatz" oninput="saveFormToCache()" style="margin-top:8px">
-        <p class="form-hint">Eine 4. Option (Geheimtipp) wird automatisch gesucht.</p>
+        <input type="text" id="acc-pref-2" placeholder="z.B. Familien-Apartment mit Küche und Parkplatz" data-i18n="form.accommodation_pref3_placeholder" data-i18n-attr="placeholder" oninput="saveFormToCache()" style="margin-top:8px">
+        <p class="form-hint" data-i18n="form.accommodation_4th_hint">Eine 4. Option (Geheimtipp) wird automatisch gesucht.</p>
       </div>
 
       <div class="form-group">
-        <label>Hotelradius: <strong id="hotel-radius-display">10</strong> km</label>
+        <label data-i18n="form.hotel_radius_label">Hotelradius: <strong id="hotel-radius-display">10</strong> km</label>
         <div class="slider-row">
           <input type="range" id="hotel-radius" min="1" max="50" value="10" step="1">
         </div>
@@ -344,7 +346,7 @@
 
       <div class="form-row">
         <div class="form-group">
-          <label for="min-nights">Min. Nächte pro Stop</label>
+          <label for="min-nights" data-i18n="form.min_nights_label">Min. Nächte pro Stop</label>
           <select id="min-nights">
             <option value="1" selected>1</option>
             <option value="2">2</option>
@@ -352,7 +354,7 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="max-nights">Max. Nächte pro Stop</label>
+          <label for="max-nights" data-i18n="form.max_nights_label">Max. Nächte pro Stop</label>
           <select id="max-nights">
             <option value="2">2</option>
             <option value="3">3</option>
@@ -363,41 +365,41 @@
       </div>
 
       <div class="form-nav">
-        <button class="btn btn-secondary" onclick="prevStep()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück</button>
-        <button class="btn btn-primary" onclick="nextStep()">Weiter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg></button>
+        <button class="btn btn-secondary" onclick="prevStep()" data-i18n="form.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück</button>
+        <button class="btn btn-primary" onclick="nextStep()" data-i18n="form.next">Weiter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg></button>
       </div>
     </div>
 
     <!-- ---- Step 5: Budget ---- -->
     <div class="form-step" id="form-step-5">
-      <h2 class="form-section-title">Budget</h2>
+      <h2 class="form-section-title" data-i18n="form.step5_title">Budget</h2>
 
       <div class="form-group">
-        <label for="budget-chf">Gesamtbudget (CHF)</label>
+        <label for="budget-chf" data-i18n="form.budget_total_label">Gesamtbudget (CHF)</label>
         <input type="number" id="budget-chf" value="3000" min="500" max="50000" step="100">
       </div>
 
       <div class="form-group budget-split-group">
-        <label>Budgetaufteilung</label>
-        <p class="form-hint">Die Prozentsätze müssen zusammen 100% ergeben.</p>
+        <label data-i18n="form.budget_distribution_label">Budgetaufteilung</label>
+        <p class="form-hint" data-i18n="form.budget_distribution_hint">Die Prozentsätze müssen zusammen 100% ergeben.</p>
 
         <div class="budget-slider-row">
           <span class="budget-slider-label">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="vertical-align:-3px;margin-right:4px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Unterkunft
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="vertical-align:-3px;margin-right:4px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span data-i18n="form.budget_accommodation_label">Unterkunft</span>
           </span>
           <input type="range" id="budget-acc-pct" min="10" max="80" value="60" step="5" aria-label="Unterkunft Prozent">
           <strong id="budget-acc-pct-display">60</strong>%
         </div>
         <div class="budget-slider-row">
           <span class="budget-slider-label">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="vertical-align:-3px;margin-right:4px"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>Verpflegung
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="vertical-align:-3px;margin-right:4px"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg><span data-i18n="form.budget_food_label">Verpflegung</span>
           </span>
           <input type="range" id="budget-food-pct" min="5" max="50" value="20" step="5" aria-label="Verpflegung Prozent">
           <strong id="budget-food-pct-display">20</strong>%
         </div>
         <div class="budget-slider-row">
           <span class="budget-slider-label">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="vertical-align:-3px;margin-right:4px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Aktivitäten
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="vertical-align:-3px;margin-right:4px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span data-i18n="form.budget_activities_label">Aktivitäten</span>
           </span>
           <input type="range" id="budget-act-pct" min="5" max="50" value="20" step="5" aria-label="Aktivitäten Prozent">
           <strong id="budget-act-pct-display">20</strong>%
@@ -407,8 +409,8 @@
           Summe: <strong id="budget-pct-sum">100</strong>%
           <svg id="budget-check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" style="vertical-align:-2px;color:var(--success)" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <div class="budget-preview">
-          Verfügbar:
+        <div class="budget-preview" data-i18n-budget-available>
+          <span data-i18n="form.budget_available_label">Verfügbar:</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           CHF <strong id="bp-acc">1'800</strong> ·
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" aria-hidden="true" style="vertical-align:-2px"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
@@ -424,20 +426,20 @@
       </div>
 
       <div class="form-nav">
-        <button class="btn btn-secondary" onclick="prevStep()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück</button>
-        <button class="btn btn-primary" onclick="nextStep()">Weiter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg></button>
+        <button class="btn btn-secondary" onclick="prevStep()" data-i18n="form.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück</button>
+        <button class="btn btn-primary" onclick="nextStep()" data-i18n="form.next">Weiter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg></button>
       </div>
     </div>
 
     <!-- ---- Step 6: Summary ---- -->
     <div class="form-step" id="form-step-6">
-      <h2 class="form-section-title">Zusammenfassung</h2>
+      <h2 class="form-section-title" data-i18n="form.summary_title">Zusammenfassung</h2>
       <div id="summary-content"></div>
 
       <div id="submit-error" class="login-error" style="display:none"></div>
       <div class="form-nav">
-        <button class="btn btn-secondary" onclick="prevStep()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück</button>
-        <button class="btn btn-cta" id="submit-btn" onclick="submitTrip()">Reise planen</button>
+        <button class="btn btn-secondary" onclick="prevStep()" data-i18n="form.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück</button>
+        <button class="btn btn-cta" id="submit-btn" onclick="submitTrip()" data-i18n="form.submit">Reise planen</button>
       </div>
     </div>
 
@@ -447,10 +449,10 @@
   <section class="section" id="route-builder">
     <div class="route-builder-header">
       <div>
-        <h2>Route aufbauen</h2>
+        <h2 data-i18n="route_builder.title">Route aufbauen</h2>
         <p class="route-builder-subtitle" id="route-subtitle"></p>
       </div>
-      <button class="btn btn-secondary" onclick="backToForm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück zum Formular</button>
+      <button class="btn btn-secondary" onclick="backToForm()" data-i18n="route_builder.back_to_form"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg> Zurück zum Formular</button>
     </div>
 
     <div id="route-map"></div>
@@ -458,7 +460,7 @@
     <!-- Built stops panel -->
     <div class="route-panel" id="built-stops-panel" style="display:none">
       <div class="route-panel-header">
-        <h3>Ausgewählte Stops</h3>
+        <h3 data-i18n="route_builder.selected_stops">Ausgewählte Stops</h3>
         <span class="badge" id="built-stops-count"></span>
       </div>
       <div class="route-panel-body" id="built-stops-list"></div>
@@ -467,12 +469,12 @@
     <!-- Options panel -->
     <div class="route-panel" id="options-panel">
       <div class="route-panel-header">
-        <h3>Verfügbare Optionen</h3>
+        <h3 data-i18n="route_builder.available_options">Verfügbare Optionen</h3>
         <span class="badge" id="options-count"></span>
       </div>
       <div class="route-panel-header recompute-bar" id="recompute-bar">
-        <input type="text" id="recompute-input" placeholder="Sonderwunsch, z.B. «lieber Meeresküste» oder «mit Sehenswürdigkeit X»" style="flex:1">
-        <button class="btn btn-secondary btn-sm" onclick="recomputeOptions()">Neu berechnen</button>
+        <input type="text" id="recompute-input" placeholder="Sonderwunsch, z.B. «lieber Meeresküste» oder «mit Sehenswürdigkeit X»" data-i18n="route_builder.recompute_placeholder" data-i18n-attr="placeholder" style="flex:1">
+        <button class="btn btn-secondary btn-sm" onclick="recomputeOptions()" data-i18n="route_builder.recompute">Neu berechnen</button>
       </div>
       <div class="route-panel-body">
         <div class="options-grid" id="route-options-container">
@@ -484,7 +486,7 @@
     </div>
 
     <div class="confirm-route-area">
-      <button class="btn btn-cta" id="confirm-route-btn" style="display:none" onclick="confirmRoute()">
+      <button class="btn btn-cta" id="confirm-route-btn" style="display:none" onclick="confirmRoute()" data-i18n="route_builder.confirm_route">
         Route bestätigen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
       </button>
     </div>
@@ -494,10 +496,10 @@
   <section class="section" id="accommodation">
     <div class="accommodation-header">
       <div>
-        <h2>Unterkunft wählen</h2>
-        <p style="color:var(--text-sub)">Wählen Sie für jeden Stop eine Unterkunft.</p>
+        <h2 data-i18n="accommodation.title">Unterkunft wählen</h2>
+        <p style="color:var(--text-sub)" data-i18n="accommodation.subtitle">Wählen Sie für jeden Stop eine Unterkunft.</p>
       </div>
-      <button class="btn btn-secondary" onclick="redoRoute()">Route neu wählen</button>
+      <button class="btn btn-secondary" onclick="redoRoute()" data-i18n="accommodation.redo_route">Route neu wählen</button>
     </div>
 
     <div class="acc-budget-info" id="acc-budget-info">
@@ -510,7 +512,7 @@
 
     <div class="accommodation-actions">
       <div></div>
-      <button class="btn btn-cta" id="start-planning-btn" disabled onclick="startPlanningWithAllSelections()">
+      <button class="btn btn-cta" id="start-planning-btn" disabled onclick="startPlanningWithAllSelections()" data-i18n="accommodation.start_planning">
         Planung starten <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
       </button>
     </div>
@@ -518,15 +520,15 @@
 
   <!-- ============================================================ Progress -->
   <section class="section" id="progress">
-    <h2 class="progress-header">Reiseplan wird erstellt…</h2>
+    <h2 class="progress-header" data-i18n="progress.header">Reiseplan wird erstellt…</h2>
 
-    <div class="progress-agent-status" id="progress-agent-status">
+    <div class="progress-agent-status" id="progress-agent-status" data-i18n="progress.agent_status">
       Agenten werden gestartet…
     </div>
 
     <div class="progress-wait-hint">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Dieser Vorgang dauert typischerweise 30–90 Sekunden.
+      <span data-i18n="progress.duration_hint">Dieser Vorgang dauert typischerweise 30–90 Sekunden.</span>
     </div>
 
     <div class="progress-timeline" id="progress-timeline">
@@ -537,7 +539,7 @@
     <div class="error-msg" id="progress-error" style="display:none"></div>
 
     <div style="margin-top:24px;text-align:center">
-      <button class="btn btn-secondary" id="progress-cancel-btn" onclick="cancelPlanning()">
+      <button class="btn btn-secondary" id="progress-cancel-btn" onclick="cancelPlanning()" data-i18n="progress.cancel">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         Abbrechen
       </button>
@@ -551,7 +553,7 @@
       <div class="guide-map-panel">
         <div id="guide-map" class="guide-map-container"></div>
         <div class="sidebar-overlay collapsed" id="sidebar-overlay">
-          <button class="sidebar-overlay-toggle" onclick="toggleSidebarOverlay()" aria-label="Route-Uebersicht">
+          <button class="sidebar-overlay-toggle" onclick="toggleSidebarOverlay()" aria-label="Route-Uebersicht" data-i18n="guide.sidebar_overlay_aria" data-i18n-attr="aria-label">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
           </button>
           <div class="sidebar-overlay-content" id="sidebar-overlay-content"></div>
@@ -562,12 +564,13 @@
       <!-- RIGHT: Content panel (scrollable) -->
       <div class="guide-content-panel" id="guide-content-panel">
         <div class="guide-header-row">
-          <h2>Ihr Reiseplan</h2>
+          <h2 data-i18n="guide.title">Ihr Reiseplan</h2>
           <div class="guide-header-actions">
             <div class="share-toggle-container" id="share-toggle-container" style="display:none"></div>
             <button class="btn btn-secondary btn-sm replan-btn" id="replan-current-btn"
                     onclick="replanCurrentTravel()"
                     title="Reiseführer, Aktivitäten, Restaurants und stündliche Tagespläne mit KI neu generieren — Route und Unterkünfte bleiben erhalten"
+                    data-i18n="guide.replan_btn"
                     style="display:none">
               Neu berechnen
             </button>
@@ -577,11 +580,11 @@
         <div id="guide-stats-bar"></div>
 
         <div class="guide-tabs" role="tablist">
-          <button class="guide-tab active" role="tab" aria-selected="true" data-tab="overview" onclick="switchGuideTab('overview')">Übersicht</button>
-          <button class="guide-tab" role="tab" aria-selected="false" data-tab="stops" onclick="switchGuideTab('stops')">Stopps</button>
-          <button class="guide-tab" role="tab" aria-selected="false" data-tab="days" onclick="switchGuideTab('days')">Tage</button>
-          <button class="guide-tab" role="tab" aria-selected="false" data-tab="calendar" onclick="switchGuideTab('calendar')">Kalender</button>
-          <button class="guide-tab" role="tab" aria-selected="false" data-tab="budget" onclick="switchGuideTab('budget')">Budget</button>
+          <button class="guide-tab active" role="tab" aria-selected="true" data-tab="overview" onclick="switchGuideTab('overview')" data-i18n="guide.tab_overview">Übersicht</button>
+          <button class="guide-tab" role="tab" aria-selected="false" data-tab="stops" onclick="switchGuideTab('stops')" data-i18n="guide.tab_stops">Stopps</button>
+          <button class="guide-tab" role="tab" aria-selected="false" data-tab="days" onclick="switchGuideTab('days')" data-i18n="guide.tab_days">Tage</button>
+          <button class="guide-tab" role="tab" aria-selected="false" data-tab="calendar" onclick="switchGuideTab('calendar')" data-i18n="guide.tab_calendar">Kalender</button>
+          <button class="guide-tab" role="tab" aria-selected="false" data-tab="budget" onclick="switchGuideTab('budget')" data-i18n="guide.tab_budget">Budget</button>
         </div>
 
         <div id="guide-breadcrumb" class="guide-breadcrumb" style="display:none"></div>
@@ -591,7 +594,7 @@
         </div>
 
         <div style="margin-top:var(--space-lg)">
-          <button class="btn btn-secondary" onclick="Router.navigate('/')">Neue Reise planen</button>
+          <button class="btn btn-secondary" onclick="Router.navigate('/')" data-i18n="guide.new_trip">Neue Reise planen</button>
         </div>
       </div>
     </div>
@@ -615,11 +618,11 @@
             </svg>
           </div>
           <div>
-            <h1 class="admin-title">Benutzerverwaltung</h1>
-            <p class="admin-subtitle">Konten, Kontingente und Zugriffsrechte verwalten</p>
+            <h1 class="admin-title" data-i18n="admin.title">Benutzerverwaltung</h1>
+            <p class="admin-subtitle" data-i18n="admin.subtitle">Konten, Kontingente und Zugriffsrechte verwalten</p>
           </div>
         </div>
-        <button class="admin-refresh-btn" onclick="loadAdminUsers()" title="Aktualisieren" aria-label="Benutzerliste aktualisieren">
+        <button class="admin-refresh-btn" onclick="loadAdminUsers()" title="Aktualisieren" aria-label="Benutzerliste aktualisieren" data-i18n="admin.refresh_btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
           </svg>
@@ -633,12 +636,12 @@
           <table class="admin-user-table" id="admin-user-table">
             <thead>
               <tr>
-                <th>Benutzer</th>
-                <th>Erstellt</th>
-                <th>Rolle</th>
-                <th>Token-Verbrauch</th>
-                <th>Kontingent</th>
-                <th>Aktionen</th>
+                <th data-i18n="admin.table_user">Benutzer</th>
+                <th data-i18n="admin.table_created">Erstellt</th>
+                <th data-i18n="admin.table_role">Rolle</th>
+                <th data-i18n="admin.table_token_usage">Token-Verbrauch</th>
+                <th data-i18n="admin.table_quota">Kontingent</th>
+                <th data-i18n="admin.table_actions">Aktionen</th>
               </tr>
             </thead>
             <tbody id="admin-user-tbody">
@@ -646,7 +649,7 @@
                 <td colspan="6">
                   <div class="admin-loading-indicator">
                     <span class="admin-spinner"></span>
-                    Lade Benutzer…
+                    <span data-i18n="admin.loading_users">Lade Benutzer…</span>
                   </div>
                 </td>
               </tr>
@@ -663,20 +666,20 @@
               <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
             </svg>
           </div>
-          <h2 class="admin-create-title">Neuen Benutzer erstellen</h2>
+          <h2 class="admin-create-title" data-i18n="admin.create_title">Neuen Benutzer erstellen</h2>
         </div>
         <form id="admin-create-form" onsubmit="handleAdminCreateUser(event)" class="admin-create-form">
           <div class="admin-create-fields">
             <div class="admin-field">
-              <label for="admin-new-username">Benutzername</label>
-              <input type="text" id="admin-new-username" placeholder="z.B. max.muster" required minlength="1" autocomplete="off" />
+              <label for="admin-new-username" data-i18n="admin.username_label">Benutzername</label>
+              <input type="text" id="admin-new-username" placeholder="z.B. max.muster" data-i18n="admin.username_placeholder" data-i18n-attr="placeholder" required minlength="1" autocomplete="off" />
             </div>
             <div class="admin-field">
-              <label for="admin-new-password">Passwort</label>
-              <input type="password" id="admin-new-password" placeholder="Min. 8 Zeichen" required minlength="8" autocomplete="new-password" />
+              <label for="admin-new-password" data-i18n="admin.password_label">Passwort</label>
+              <input type="password" id="admin-new-password" placeholder="Min. 8 Zeichen" data-i18n="admin.password_placeholder" data-i18n-attr="placeholder" required minlength="8" autocomplete="new-password" />
             </div>
           </div>
-          <button type="submit" class="admin-create-btn">
+          <button type="submit" class="admin-create-btn" data-i18n="admin.create_btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
@@ -695,8 +698,8 @@
 
 <!-- ======================================================== Quick-submit bar -->
 <div class="quick-submit-bar" id="quick-submit-bar">
-  <span class="quick-submit-hint">Alle Einstellungen konfiguriert?</span>
-  <button class="btn btn-cta quick-submit-btn" onclick="quickSubmitTrip()">
+  <span class="quick-submit-hint" data-i18n="quick_submit.hint">Alle Einstellungen konfiguriert?</span>
+  <button class="btn btn-cta quick-submit-btn" onclick="quickSubmitTrip()" data-i18n="quick_submit.btn">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
     Reise jetzt planen
   </button>
@@ -710,7 +713,7 @@
     </div>
     <div class="spo-header">
       <span class="spo-logo">DetourAI</span>
-      <span class="spo-phase" id="spo-phase">Bitte warten…</span>
+      <span class="spo-phase" id="spo-phase" data-i18n="loading.default">Bitte warten…</span>
     </div>
     <div class="spo-lines" id="spo-lines"></div>
   </div>
@@ -723,18 +726,18 @@
       <div class="loading-progress-fill loading-progress-indeterminate"></div>
     </div>
     <div class="spinner"></div>
-    <div class="loading-label" id="loading-label">Bitte warten…</div>
+    <div class="loading-label" id="loading-label" data-i18n="loading.default">Bitte warten…</div>
     <div class="loading-counter" id="loading-counter" style="display:none"></div>
   </div>
 </div>
 
 <!-- ======================================================== Lightbox -->
 <div id="lightbox-overlay" class="lightbox-overlay" style="display:none">
-  <button class="lightbox-close" onclick="closeLightbox()" aria-label="Lightbox schliessen">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="Lightbox schliessen" data-i18n="lightbox.close_aria" data-i18n-attr="aria-label">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
   </button>
-  <button class="lightbox-prev" id="lightbox-prev" onclick="lightboxNav(-1)" aria-label="Vorheriges Bild">&#8249;</button>
-  <button class="lightbox-next" id="lightbox-next" onclick="lightboxNav(1)" aria-label="Nächstes Bild">&#8250;</button>
+  <button class="lightbox-prev" id="lightbox-prev" onclick="lightboxNav(-1)" aria-label="Vorheriges Bild" data-i18n="lightbox.prev_aria" data-i18n-attr="aria-label">&#8249;</button>
+  <button class="lightbox-next" id="lightbox-next" onclick="lightboxNav(1)" aria-label="Nächstes Bild" data-i18n="lightbox.next_aria" data-i18n-attr="aria-label">&#8250;</button>
   <img id="lightbox-img" src="" alt="" class="lightbox-img">
   <div id="lightbox-caption" class="lightbox-caption"></div>
   <div id="lightbox-counter" class="lightbox-counter"></div>
@@ -742,10 +745,10 @@
 
 <!-- ======================================================== Travels drawer -->
 <div id="travels-drawer-overlay" class="travels-drawer-overlay">
-  <div id="travels-drawer" class="travels-drawer" role="dialog" aria-label="Meine Reisen">
+  <div id="travels-drawer" class="travels-drawer" role="dialog" aria-label="Meine Reisen" data-i18n="travels.drawer_title" data-i18n-attr="aria-label">
     <div class="travels-drawer-header">
-      <h2>Meine Reisen</h2>
-      <button class="btn-icon" onclick="closeTravelsDrawer()" aria-label="Schliessen">
+      <h2 data-i18n="travels.drawer_title">Meine Reisen</h2>
+      <button class="btn-icon" onclick="closeTravelsDrawer()" aria-label="Schliessen" data-i18n="travels.drawer_close_aria" data-i18n-attr="aria-label">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
@@ -756,10 +759,10 @@
 </div>
 
 <!-- ======================================================== Debug panel -->
-<button class="debug-toggle" onclick="toggleDebugLog()">Debug</button>
+<button class="debug-toggle" onclick="toggleDebugLog()" data-i18n="debug.toggle_btn">Debug</button>
 <div class="debug-panel" id="debug-panel">
   <div class="debug-panel-header">
-    <span>Debug Log</span>
+    <span data-i18n="debug.header">Debug Log</span>
     <button onclick="toggleDebugLog()" style="background:none;border:none;color:#e0e0e0;cursor:pointer">×</button>
   </div>
   <div id="debug-log"></div>

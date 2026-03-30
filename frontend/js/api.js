@@ -29,7 +29,7 @@ async function _fetchWithAuth(url, opts = {}) {
     if (!newToken) {
       // Refresh failed — user must log in again
       if (typeof showLoginRequired === 'function') showLoginRequired();
-      throw new Error('HTTP 401: Sitzung abgelaufen. Bitte erneut anmelden.');
+      throw new Error('HTTP 401: ' + t('api.session_expired'));
     }
     res = await fetch(url, makeOpts());
   }
@@ -39,7 +39,7 @@ async function _fetchWithAuth(url, opts = {}) {
 
 async function _fetch(url, opts = {}, label) {
   S.apiCalls++;
-  showLoading(label || 'Anfrage läuft…');
+  showLoading(label || t('api.default_loading'));
   try {
     const res = await _fetchWithAuth(url, opts);
     if (!res.ok) {
@@ -120,13 +120,13 @@ async function apiSelectStop(jobId, idx) {
 
 async function apiConfirmRoute(jobId) {
   const res = await _fetch(`${API}/confirm-route/${jobId}`, { method: 'POST' },
-    'Route wird bestätigt…');
+    t('api.confirming_route'));
   return res.json();
 }
 
 async function apiStartAccommodations(jobId) {
   const res = await _fetch(`${API}/start-accommodations/${jobId}`, { method: 'POST' },
-    'Unterkunftsuche wird gestartet…');
+    t('api.starting_accommodation_search'));
   return res.json();
 }
 
@@ -134,7 +134,7 @@ async function apiConfirmAccommodations(jobId, selections) {
   const res = await _fetch(`${API}/confirm-accommodations/${jobId}`, {
     method: 'POST',
     body: JSON.stringify({ selections }),
-  }, 'Unterkünfte werden bestätigt…');
+  }, t('api.confirming_accommodations'));
   return res.json();
 }
 
@@ -142,13 +142,13 @@ async function apiSelectAccommodation(jobId, stopId, optionIdx) {
   const res = await _fetch(`${API}/select-accommodation/${jobId}`, {
     method: 'POST',
     body: JSON.stringify({ stop_id: stopId, option_index: optionIdx }),
-  }, 'Unterkunft wird ausgewählt…');
+  }, t('api.selecting_accommodation'));
   return res.json();
 }
 
 async function apiStartPlanning(jobId) {
   const res = await _fetch(`${API}/start-planning/${jobId}`, { method: 'POST' },
-    'Reiseplan wird erstellt…');
+    t('api.creating_travel_plan'));
   return res.json();
 }
 
@@ -165,7 +165,7 @@ async function apiStartPlanningQuiet(jobId) {
 }
 
 async function apiGetResult(jobId) {
-  const res = await _fetch(`${API}/result/${jobId}`, {}, 'Ergebnisse werden geladen…');
+  const res = await _fetch(`${API}/result/${jobId}`, {}, t('api.loading_results'));
   return res.json();
 }
 
@@ -330,14 +330,14 @@ async function apiReplaceStop(travelId, stopId, mode, manualLocation, manualNigh
       manual_nights: manualNights || null,
       hints: hints || null,
     }),
-  }, 'Stopp wird ersetzt…')).json();
+  }, t('api.replacing_stop'))).json();
 }
 
 async function apiRemoveStop(travelId, stopId) {
   return (await _fetch(`${API}/travels/${travelId}/remove-stop`, {
     method: 'POST',
     body: JSON.stringify({ stop_id: stopId }),
-  }, 'Stopp wird entfernt…')).json();
+  }, t('api.removing_stop'))).json();
 }
 
 async function apiAddStop(travelId, insertAfterStopId, location, nights) {
@@ -348,21 +348,21 @@ async function apiAddStop(travelId, insertAfterStopId, location, nights) {
       location: location,
       nights: nights || 1,
     }),
-  }, 'Stopp wird hinzugefügt…')).json();
+  }, t('api.adding_stop'))).json();
 }
 
 async function apiReorderStops(travelId, oldIndex, newIndex) {
   return (await _fetch(`${API}/travels/${travelId}/reorder-stops`, {
     method: 'POST',
     body: JSON.stringify({ old_index: oldIndex, new_index: newIndex }),
-  }, 'Stopps werden neu sortiert…')).json();
+  }, t('api.reordering_stops'))).json();
 }
 
 async function apiReplaceStopSelect(travelId, jobId, optionIndex) {
   return (await _fetch(`${API}/travels/${travelId}/replace-stop-select`, {
     method: 'POST',
     body: JSON.stringify({ job_id: jobId, option_index: optionIndex }),
-  }, 'Option wird übernommen…')).json();
+  }, t('api.adopting_option'))).json();
 }
 
 async function apiUpdateNights(travelId, stopId, nights) {

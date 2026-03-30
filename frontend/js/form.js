@@ -52,7 +52,7 @@ function goToStep(n) {
     if (el.classList.contains('done')) {
       el.setAttribute('role', 'button');
       el.setAttribute('tabindex', '0');
-      el.setAttribute('aria-label', `Zurück zu Schritt ${stepNum}`);
+      el.setAttribute('aria-label', t('form.back_to_step_aria', {step: stepNum}));
       el.onclick = () => goToStep(stepNum);
       el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToStep(stepNum); } };
     } else {
@@ -117,30 +117,30 @@ function validateStep(n) {
       if (leg.mode === "explore") {
         // Explore legs need description, not locations
         if (!leg.explore_description || !leg.explore_description.trim()) {
-          _setFieldError(`explore-text-${i}`, 'Bitte Beschreibung eingeben.');
+          _setFieldError(`explore-text-${i}`, t('form.explore_description_required'));
           if (valid) valid = false;
         }
       } else {
         // Transit legs need locations
         if (!leg.start_location) {
-          _setFieldError(`leg-start-${i}`, 'Bitte Startort eingeben.');
+          _setFieldError(`leg-start-${i}`, t('form.start_location_required'));
           if (valid) valid = false;
         }
         if (!leg.end_location) {
-          _setFieldError(`leg-end-${i}`, 'Bitte Ziel eingeben.');
+          _setFieldError(`leg-end-${i}`, t('form.end_location_required'));
           if (valid) valid = false;
         }
       }
       if (!leg.start_date) {
-        _setFieldError(`leg-sdate-${i}`, 'Startdatum fehlt.');
+        _setFieldError(`leg-sdate-${i}`, t('form.start_date_required'));
         if (valid) valid = false;
       }
       if (!leg.end_date) {
-        _setFieldError(`leg-edate-${i}`, 'Enddatum fehlt.');
+        _setFieldError(`leg-edate-${i}`, t('form.end_date_required'));
         if (valid) valid = false;
       }
       if (leg.start_date && leg.end_date && leg.start_date >= leg.end_date) {
-        _setFieldError(`leg-edate-${i}`, 'Enddatum muss nach dem Startdatum liegen.');
+        _setFieldError(`leg-edate-${i}`, t('form.end_date_after_start'));
         if (valid) valid = false;
       }
     }
@@ -151,7 +151,7 @@ function validateStep(n) {
     const food = parseInt(document.getElementById('budget-food-pct')?.value) || 0;
     const act  = parseInt(document.getElementById('budget-act-pct')?.value)  || 0;
     if (acc + food + act !== 100) {
-      alert('Die Budgetaufteilung muss zusammen 100% ergeben.');
+      alert(t('form.budget_must_equal_100'));
       return false;
     }
   }
@@ -188,7 +188,7 @@ async function quickSubmitTrip() {
     if (l.mode === "explore") return datesOk && l.explore_description && l.explore_description.trim();
     return datesOk && l.start_location && l.end_location;
   });
-  if (!legsReady) { alert('Bitte alle Segmente vollständig ausfüllen.'); return; }
+  if (!legsReady) { alert(t('form.complete_all_segments')); return; }
   await submitTrip();
 }
 
@@ -298,7 +298,7 @@ function updateLegDate(index, field, value) {
   const daysLabel = document.getElementById(`leg-days-${index}`);
   if (daysLabel && leg.start_date && leg.end_date) {
     const days = dateDiffDays(leg.start_date, leg.end_date);
-    daysLabel.textContent = `${days} Tag${days !== 1 ? 'e' : ''}`;
+    daysLabel.textContent = days !== 1 ? t('form.days_label_plural', {days}) : t('form.days_label', {days});
   }
   saveFormToCache();
   updateQuickSubmitBar();
@@ -332,16 +332,16 @@ function renderLegCard(leg, index) {
   const locationRow = leg.mode === "transit" ? `
     <div class="leg-location-row">
       <div class="form-group">
-        <label for="leg-start-${index}">Von</label>
+        <label for="leg-start-${index}">${t('form.leg_from_label')}</label>
         <input type="text" id="leg-start-${index}" class="${startClass}"
-          value="${esc(leg.start_location)}" placeholder="z.B. Liestal, Schweiz"
+          value="${esc(leg.start_location)}" placeholder="${t('form.leg_from_placeholder')}"
           ${startReadonly}
           oninput="updateLegField(${index}, 'start_location', this.value)">
       </div>
       <div class="form-group">
-        <label for="leg-end-${index}">Nach</label>
+        <label for="leg-end-${index}">${t('form.leg_to_label')}</label>
         <input type="text" id="leg-end-${index}"
-          value="${esc(leg.end_location)}" placeholder="z.B. Paris, Frankreich"
+          value="${esc(leg.end_location)}" placeholder="${t('form.leg_to_placeholder')}"
           oninput="updateLegField(${index}, 'end_location', this.value)">
       </div>
     </div>` : '';
@@ -352,13 +352,13 @@ function renderLegCard(leg, index) {
   const dateRow = `
     <div class="leg-date-row">
       <div class="form-group">
-        <label for="leg-sdate-${index}">Startdatum</label>
+        <label for="leg-sdate-${index}">${t('form.leg_start_date_label')}</label>
         <input type="date" id="leg-sdate-${index}" class="${sdateClass}"
           value="${leg.start_date}" ${sdateReadonly}
           oninput="updateLegDate(${index}, 'start_date', this.value)">
       </div>
       <div class="form-group">
-        <label for="leg-edate-${index}">Enddatum</label>
+        <label for="leg-edate-${index}">${t('form.leg_end_date_label')}</label>
         <input type="date" id="leg-edate-${index}"
           value="${leg.end_date}"
           oninput="updateLegDate(${index}, 'end_date', this.value)">
@@ -367,13 +367,13 @@ function renderLegCard(leg, index) {
 
   const transitContent = leg.mode === "transit" ? `
       <div class="leg-via-points">
-          <label class="form-label-sm">Via-Punkte (optional)</label>
+          <label class="form-label-sm">${t('form.via_points_label')}</label>
           <div class="tag-input" id="via-tags-${index}">
               ${(leg.via_points || []).map(vp => `
                   <span class="tag">${esc(vp.location)}
-                      <button onclick="removeViaPoint(${index}, '${esc(vp.location)}')" aria-label="Entfernen">×</button>
+                      <button onclick="removeViaPoint(${index}, '${esc(vp.location)}')" aria-label="${t('form.via_point_remove_aria')}">×</button>
                   </span>`).join("")}
-              <input type="text" placeholder="Via-Punkt hinzufügen…"
+              <input type="text" placeholder="${t('form.via_point_placeholder')}"
                   onkeydown="handleViaInput(event, ${index})"
                   class="tag-input-field">
           </div>
@@ -381,9 +381,9 @@ function renderLegCard(leg, index) {
 
   const exploreContent = leg.mode === "explore" ? `
       <div class="leg-zone">
-          <label class="form-label-sm">Was möchtest du erkunden?</label>
+          <label class="form-label-sm">${t('form.explore_label')}</label>
           <textarea id="explore-text-${index}" class="input-sm"
-              placeholder="z.B. 'Die Französischen Alpen — Bergdörfer, Seen und Alpenpässe' oder 'Toskana mit Fokus auf Weingüter und mittelalterliche Städte'"
+              placeholder="${t('form.explore_placeholder')}"
               rows="3"
               oninput="S.legs[${index}].explore_description = this.value"
           >${esc(leg.explore_description || '')}</textarea>
@@ -393,15 +393,15 @@ function renderLegCard(leg, index) {
   <div class="leg-card" id="leg-card-${index}" style="border-color:${modeColor}">
       <div class="leg-card-header" style="background:${leg.mode === 'explore' ? '#fdf8e8' : '#f5f5f5'}">
           <div class="leg-badge" style="background:${modeColor}">${index + 1}</div>
-          <span class="leg-days-label" id="leg-days-${index}">${days > 0 ? `${days} Tag${days !== 1 ? 'e' : ''}` : ''}</span>
+          <span class="leg-days-label" id="leg-days-${index}">${days > 0 ? (days !== 1 ? t('form.days_label_plural', {days}) : t('form.days_label', {days})) : ''}</span>
           <div class="leg-controls">
               <div class="mode-toggle">
                   <button class="mode-btn ${leg.mode === 'transit' ? 'active' : ''}"
-                      onclick="setLegMode(${index}, 'transit')" style="border-color:${modeColor}">Transit</button>
+                      onclick="setLegMode(${index}, 'transit')" style="border-color:${modeColor}">${t('form.transit_mode')}</button>
                   <button class="mode-btn ${leg.mode === 'explore' ? 'active' : ''}"
-                      onclick="setLegMode(${index}, 'explore')" style="border-color:${modeColor}">Erkunden</button>
+                      onclick="setLegMode(${index}, 'explore')" style="border-color:${modeColor}">${t('form.explore_mode')}</button>
               </div>
-              ${canDelete ? `<button class="leg-delete-btn" onclick="removeLeg(${index})" aria-label="Segment entfernen">×</button>` : ""}
+              ${canDelete ? `<button class="leg-delete-btn" onclick="removeLeg(${index})" aria-label="${t('form.remove_segment_aria')}">×</button>` : ""}
           </div>
       </div>
       <div class="leg-card-body">
@@ -423,7 +423,7 @@ function addLeg() {
   if (prevLeg.start_date && prevLeg.end_date) {
     const totalDays = dateDiffDays(prevLeg.start_date, prevLeg.end_date);
     if (totalDays < 2) {
-      alert('Das Segment hat zu wenige Tage zum Aufteilen. Bitte zuerst das Enddatum anpassen.');
+      alert(t('form.segment_too_short_to_split'));
       return;
     }
     const halfDays = Math.max(1, Math.floor(totalDays / 2));
@@ -519,7 +519,7 @@ function initTravelStyles() {
     <div class="style-card" data-id="${esc(style.id)}" onclick="toggleStyle(this)"
          tabindex="0" role="button" aria-pressed="false">
       <div class="style-icon">${style.icon}</div>
-      <div class="style-label">${esc(style.label)}</div>
+      <div class="style-label">${esc(t('travel_styles.' + style.id))}</div>
     </div>
   `).join('');
 }
@@ -563,8 +563,8 @@ function renderTags() {
     span.textContent = tag;
     const btn = document.createElement('button');
     btn.textContent = '×';
-    btn.title = 'Entfernen';
-    btn.setAttribute('aria-label', `Tag '${tag}' entfernen`);
+    btn.title = t('form.via_point_remove_aria');
+    btn.setAttribute('aria-label', t('form.tag_remove_aria', {tag}));
     btn.addEventListener('click', () => removeTag(i));
     span.appendChild(btn);
     container.appendChild(span);
@@ -599,8 +599,8 @@ function renderPreferredTags() {
     span.textContent = tag;
     const btn = document.createElement('button');
     btn.textContent = '×';
-    btn.title = 'Entfernen';
-    btn.setAttribute('aria-label', `Tag '${tag}' entfernen`);
+    btn.title = t('form.via_point_remove_aria');
+    btn.setAttribute('aria-label', t('form.tag_remove_aria', {tag}));
     btn.addEventListener('click', () => removePreferredTag(i));
     span.appendChild(btn);
     container.appendChild(span);
@@ -632,10 +632,10 @@ function renderChildren() {
   if (!list) return;
   list.innerHTML = S.children.map((child, i) => `
     <div class="child-row">
-      <label>Kind ${i + 1}, Alter:</label>
+      <label>${t('form.child_row_label', {index: i + 1})}</label>
       <input type="number" min="0" max="17" value="${child.age}"
         oninput="S.children[${i}].age = parseInt(this.value) || 0; saveFormToCache()">
-      <button class="btn-icon btn-danger" onclick="removeChild(${i})" aria-label="Kind ${i + 1} entfernen">×</button>
+      <button class="btn-icon btn-danger" onclick="removeChild(${i})" aria-label="${t('form.remove_child_aria', {index: i + 1})}">×</button>
     </div>
   `).join('');
   document.getElementById('adults-count').textContent = S.adults;
@@ -740,7 +740,7 @@ function updateBudgetPreview() {
       errSpan.style.cssText = 'margin-left:6px;font-size:13px;color:var(--danger)';
       checkEl.appendChild(errSpan);
     }
-    errSpan.textContent = valid ? '' : '— muss 100% sein';
+    errSpan.textContent = valid ? '' : t('form.budget_sum_error');
   }
 
   const fmt = v => Math.round(total * v / 100).toLocaleString('de-CH');
@@ -825,27 +825,27 @@ function renderSummary() {
   const firstLeg = S.legs[0] || {};
   const lastLeg = S.legs[S.legs.length - 1] || {};
   const legsDisplay = S.legs.map(l => {
-    if (l.mode === 'explore') return '[Erkunden] ' + esc(l.explore_description || '').substring(0, 50);
+    if (l.mode === 'explore') return t('form.explore_prefix') + ' ' + esc(l.explore_description || '').substring(0, 50);
     return esc(l.start_location) + ' → ' + esc(l.end_location);
   }).join(' | ');
   const startDisplay = firstLeg.mode === 'explore'
-    ? '[Erkunden] ' + esc(firstLeg.explore_description || '').substring(0, 50)
+    ? t('form.explore_prefix') + ' ' + esc(firstLeg.explore_description || '').substring(0, 50)
     : esc(firstLeg.start_location);
   const endDisplay = lastLeg.mode === 'explore'
-    ? '[Erkunden] ' + esc(lastLeg.explore_description || '').substring(0, 50)
+    ? t('form.explore_prefix') + ' ' + esc(lastLeg.explore_description || '').substring(0, 50)
     : esc(lastLeg.end_location);
   el.innerHTML = `
     <div class="summary-grid">
       <div class="summary-item"><span class="summary-label">Start</span><span>${startDisplay}</span></div>
       <div class="summary-item"><span class="summary-label">Ziel</span><span>${endDisplay}</span></div>
       <div class="summary-item"><span class="summary-label">Datum</span><span>${formatDate(firstLeg.start_date)} – ${formatDate(lastLeg.end_date)} (${p.total_days} Tage)</span></div>
-      <div class="summary-item"><span class="summary-label">Reisende</span><span>${p.adults} Erwachsene${p.children.length ? ', ' + p.children.length + ' Kinder' : ''}</span></div>
-      <div class="summary-item"><span class="summary-label">Stile</span><span>${p.travel_styles.map(s => TRAVEL_STYLES.find(t => t.id === s)?.label || s).join(', ') || '–'}</span></div>
-      <div class="summary-item"><span class="summary-label">Budget</span><span>CHF ${(p.budget_chf || 0).toLocaleString('de-CH')} (Unterkunft ${p.budget_accommodation_pct}% / Essen ${p.budget_food_pct}% / Aktivitäten ${p.budget_activities_pct}%)</span></div>
-      <div class="summary-item"><span class="summary-label">Max. Fahrzeit</span><span>${p.max_drive_hours_per_day}h/Tag</span></div>
-      ${p.mandatory_activities.length ? `<div class="summary-item"><span class="summary-label">Pflichtaktivitäten</span><span>${p.mandatory_activities.map(a => esc(a.name)).join(', ')}</span></div>` : ''}
-      ${p.preferred_activities.length ? `<div class="summary-item"><span class="summary-label">Bevorzugte Aktivitäten</span><span>${p.preferred_activities.map(a => esc(a)).join(', ')}</span></div>` : ''}
-      <div class="summary-item"><span class="summary-label">Segmente</span><span>${legsDisplay}</span></div>
+      <div class="summary-item"><span class="summary-label">${t('form.travelers_summary', {adults: p.adults})}${p.children.length ? t('form.children_count_summary', {count: p.children.length}) : ''}</span></div>
+      <div class="summary-item"><span class="summary-label">${t('form.styles_summary_label')}</span><span>${p.travel_styles.map(s => t('travel_styles.' + s)).join(', ') || '–'}</span></div>
+      <div class="summary-item"><span class="summary-label">Budget</span><span>CHF ${(p.budget_chf || 0).toLocaleString('de-CH')} (${t('form.budget_accommodation_label')} ${p.budget_accommodation_pct}% / ${t('form.budget_food_label')} ${p.budget_food_pct}% / ${t('form.budget_activities_label')} ${p.budget_activities_pct}%)</span></div>
+      <div class="summary-item"><span class="summary-label">${t('form.max_drive_summary_label')}</span><span>${p.max_drive_hours_per_day}h/Tag</span></div>
+      ${p.mandatory_activities.length ? `<div class="summary-item"><span class="summary-label">${t('form.mandatory_summary_label')}</span><span>${p.mandatory_activities.map(a => esc(a.name)).join(', ')}</span></div>` : ''}
+      ${p.preferred_activities.length ? `<div class="summary-item"><span class="summary-label">${t('form.preferred_summary_label')}</span><span>${p.preferred_activities.map(a => esc(a)).join(', ')}</span></div>` : ''}
+      <div class="summary-item"><span class="summary-label">${t('form.segments_summary_label')}</span><span>${legsDisplay}</span></div>
     </div>
   `;
 }
@@ -867,7 +867,7 @@ async function submitTrip() {
   const errEl = document.getElementById('submit-error');
   if (errEl) errEl.style.display = 'none';
   btn.disabled = true;
-  btn.innerHTML = '<span class="btn-spinner"></span> Plane Reise…';
+  btn.innerHTML = '<span class="btn-spinner"></span> ' + esc(t('form.planning_trip'));
 
   try {
     const payload = buildPayload();
@@ -898,10 +898,10 @@ async function submitTrip() {
     if (msg.startsWith('HTTP 402:')) {
       _showFormError(msg.replace('HTTP 402: ', ''));
     } else {
-      alert('Fehler beim Starten der Reiseplanung: ' + msg);
+      alert(t('form.trip_planning_error') + ' ' + msg);
     }
     btn.disabled = false;
-    btn.textContent = 'Reise planen';
+    btn.textContent = t('form.plan_trip');
   }
 }
 
@@ -1010,7 +1010,7 @@ function restoreFormFromCache() {
 }
 
 function clearAppData() {
-  if (!confirm('Alle gespeicherten Daten löschen und neu starten? Die Formularfelder bleiben erhalten.')) return;
+  if (!confirm(t('form.confirm_clear_data'))) return;
 
   // Close any open SSE connections
   if (S.sse) { try { S.sse.close(); } catch (e) {} S.sse = null; }

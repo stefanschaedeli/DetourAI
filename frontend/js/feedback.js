@@ -22,7 +22,7 @@ function openFeedbackModal() {
 
   // Category select
   const catSelect = _el('select', { id: 'feedback-category', className: 'form-input' });
-  [['general', 'Allgemein'], ['bug', 'Bug melden'], ['vorschlag', 'Vorschlag']].forEach(([val, txt]) => {
+  [['general', t('feedback.category_general')], ['bug', t('feedback.category_bug')], ['vorschlag', t('feedback.category_suggestion')]].forEach(([val, txt]) => {
     const opt = _el('option', { value: val, textContent: txt });
     catSelect.appendChild(opt);
   });
@@ -32,14 +32,14 @@ function openFeedbackModal() {
     id: 'feedback-text',
     className: 'form-input',
     rows: '5',
-    placeholder: 'Was m\u00f6chtest du uns mitteilen? (mind. 10 Zeichen)',
+    placeholder: t('feedback.textarea_placeholder'),
   });
 
   // Screenshot button
   const screenshotBtn = _el('button', {
     type: 'button',
     className: 'btn btn-secondary feedback-screenshot-btn',
-    textContent: ' Screenshot aufnehmen',
+    textContent: ' ' + t('feedback.screenshot_btn'),
     onclick: () => _captureFeedbackScreenshot(),
   });
   const camIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -64,26 +64,26 @@ function openFeedbackModal() {
   // Action buttons
   const cancelBtn = _el('button', {
     className: 'btn btn-secondary',
-    textContent: 'Abbrechen',
+    textContent: t('feedback.cancel'),
     onclick: () => closeFeedbackModal(),
   });
   const submitBtn = _el('button', {
     className: 'btn btn-primary',
     id: 'feedback-submit-btn',
-    textContent: 'Absenden',
+    textContent: t('feedback.submit'),
     onclick: () => _submitFeedback(),
   });
 
   // Assemble modal content
   const content = _el('div', { className: 'modal-content feedback-modal-content' }, [
-    _el('h3', { textContent: 'Feedback senden' }),
-    _el('p', { textContent: 'Hilf uns, DetourAI zu verbessern! Beschreibe dein Anliegen oder deinen Vorschlag.' }),
+    _el('h3', { textContent: t('feedback.modal_title') }),
+    _el('p', { textContent: t('feedback.modal_description') }),
     _el('div', { className: 'form-group' }, [
-      _el('label', { textContent: 'Kategorie' }),
+      _el('label', { textContent: t('feedback.category_label') }),
       catSelect,
     ]),
     _el('div', { className: 'form-group' }, [
-      _el('label', { textContent: 'Dein Feedback' }),
+      _el('label', { textContent: t('feedback.feedback_label') }),
       textarea,
     ]),
     _el('div', { className: 'form-group' }, [
@@ -110,7 +110,7 @@ function closeFeedbackModal() {
 
 async function _captureFeedbackScreenshot() {
   if (typeof html2canvas === 'undefined') {
-    showToast('Screenshot-Bibliothek nicht geladen.', 'warning');
+    showToast(t('feedback.screenshot_lib_error'), 'warning');
     return;
   }
 
@@ -131,7 +131,7 @@ async function _captureFeedbackScreenshot() {
     _renderScreenshotPreview();
   } catch (err) {
     if (modal) modal.style.display = '';
-    showToast('Screenshot fehlgeschlagen.', 'warning');
+    showToast(t('feedback.screenshot_failed'), 'warning');
     console.error('Screenshot capture error:', err);
   }
 }
@@ -146,11 +146,11 @@ function _renderScreenshotPreview() {
 
   const img = _el('img', {
     src: 'data:image/png;base64,' + _feedbackScreenshot,
-    alt: 'Screenshot-Vorschau',
+    alt: t('feedback.screenshot_preview_alt'),
   });
   const removeLink = _el('span', {
     className: 'feedback-screenshot-remove',
-    textContent: 'Entfernen',
+    textContent: t('form.via_point_remove_aria'),
     onclick: () => _removeFeedbackScreenshot(),
   });
   const row = _el('div', { className: 'feedback-preview-row' }, [img, removeLink]);
@@ -167,14 +167,14 @@ async function _submitFeedback() {
   const category = document.getElementById('feedback-category')?.value || 'general';
 
   if (text.length < 10) {
-    showToast('Bitte mindestens 10 Zeichen eingeben.', 'warning');
+    showToast(t('feedback.textarea_placeholder'), 'warning');
     return;
   }
 
   const btn = document.getElementById('feedback-submit-btn');
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Wird gesendet\u2026';
+    btn.textContent = t('feedback.submit') + '\u2026';
   }
 
   try {
@@ -193,7 +193,7 @@ async function _submitFeedback() {
   } catch (err) {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Absenden';
+      btn.textContent = t('feedback.submit');
     }
     const msg = err.message || 'Unbekannter Fehler';
     showToast('Feedback konnte nicht gesendet werden: ' + msg, 'warning');

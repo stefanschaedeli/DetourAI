@@ -121,7 +121,7 @@ function _onStyleMismatchWarning(data) {
   const textEl = document.createElement('div');
   textEl.className = 'plausibility-text';
   const strong = document.createElement('strong');
-  strong.textContent = 'Hinweis zum Reisestil';
+  strong.textContent = t('progress.style_warning');
   textEl.appendChild(strong);
   const p = document.createElement('p');
   p.textContent = warning;
@@ -150,15 +150,15 @@ function _onStyleMismatchWarning(data) {
     panel.appendChild(banner);
   }
 
-  showToast('Stilwarnung: ' + (data.warning || 'Stopp passt nicht zum Reisestil'), 'warning');
+  showToast(t('progress.style_warning') + ' ' + (data.warning || ''), 'warning');
 }
 
 function _onFerryDetected(data) {
   const crossings = data.crossings || [];
   const group = data.island_group || '';
-  let msg = 'Fähre erkannt';
+  let msg = t('route_builder.ferry_detected');
   if (crossings.length > 0 && crossings[0].from && crossings[0].to) {
-    msg += ': Überfahrt von ' + crossings[0].from + ' nach ' + crossings[0].to;
+    msg += ': ' + t('route_builder.ferry_crossing', {from: crossings[0].from, to: crossings[0].to});
   } else if (group) {
     msg += ': ' + group;
   }
@@ -331,7 +331,7 @@ function _updateRouteStatus(meta) {
   const totalLegs = meta.total_legs || 1;
   const legIdx = meta.leg_index || 0;
   const legMode = meta.leg_mode || 'transit';
-  const modeLabel = legMode === 'explore' ? 'Erkunden' : 'Transit';
+  const modeLabel = legMode === 'explore' ? t('form.explore_mode') : t('form.transit_mode');
   const legInfo = totalLegs > 1
     ? `Etappe ${legIdx + 1}/${totalLegs} (${modeLabel})`
     : '';
@@ -428,7 +428,7 @@ function renderOptions(options, meta) {
     const banner = document.createElement('div');
     banner.className = 'all-over-limit-banner';
     banner.innerHTML = `
-      <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alle vorgeschlagenen Etappen überschreiten die maximale Fahrzeit von ${routeMeta.max_drive_hours || ''}h.</p>
+      <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${esc(t('route_builder.max_drive_exceeded', {max_hours: routeMeta.max_drive_hours || ''}))}</p>
       <button class="btn btn-secondary" onclick="openRouteAdjustModal()">Route anpassen…</button>
     `;
     container.prepend(banner);
@@ -479,7 +479,7 @@ function _buildExtraFields(opt) {
 function _initMap(anchors, options) {
   if (typeof GoogleMaps === 'undefined' || !window.google) {
     if (typeof S !== 'undefined') {
-      S.logs.push({ level: 'WARNING', agent: 'GoogleMaps', message: 'Karte nicht geladen — Google Maps API nicht verfügbar' });
+      S.logs.push({ level: 'WARNING', agent: 'GoogleMaps', message: t('route_builder.map_not_loaded') });
       if (typeof updateDebugLog === 'function') updateDebugLog();
     }
     return;
@@ -659,7 +659,7 @@ async function selectOption(idx) {
 
   // Open SSE + show skeletons before HTTP call — options stream in progressively
   if (S.jobId) {
-    progressOverlay.open('Nächsten Stopp suchen…');
+    progressOverlay.open(t('route_builder.finding_next_stop'));
     openRouteSSE(S.jobId);
   }
   _showSkeletonCards();
@@ -750,7 +750,7 @@ async function skipStop() {
     S.loadingOptions = true;
     _clearMap();
     if (S.jobId) {
-      progressOverlay.open('Region wird übersprungen…');
+      progressOverlay.open(t('route_builder.skipping_region'));
       openRouteSSE(S.jobId);
     }
     _showSkeletonCards();
@@ -842,7 +842,7 @@ async function skipStop() {
 
 async function confirmRoute() {
   const btn = document.getElementById('confirm-route-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Bestätige…'; }
+  if (btn) { btn.disabled = true; btn.textContent = t('route_builder.confirming'); }
   S.confirmingRoute = true;
 
   try {
@@ -854,7 +854,7 @@ async function confirmRoute() {
     showSection('accommodation');
     Router.navigate('/accommodation/' + S.jobId);
     startAccommodationPhase(data);
-    progressOverlay.open('Unterkunftsoptionen werden gesucht…');
+    progressOverlay.open(t('accommodation.searching_options', {region: ''}));
 
     // Wait for the EventSource connection to be established before triggering
     // the prefetch task — otherwise early SSE events may be lost.
@@ -864,8 +864,8 @@ async function confirmRoute() {
     await apiStartAccommodations(S.jobId);
 
   } catch (err) {
-    alert('Fehler beim Bestätigen der Route: ' + err.message);
-    if (btn) { btn.disabled = false; btn.textContent = 'Route bestätigen'; }
+    alert(t('route_builder.confirm_error') + ' ' + err.message);
+    if (btn) { btn.disabled = false; btn.textContent = t('route_builder.confirm_route'); }
     S.confirmingRoute = false;
   }
 }
@@ -960,7 +960,7 @@ function _showNoStopsFoundUI(corridor) {
   container.insertAdjacentHTML('beforeend', `
     <div class="recompute-bar" style="margin-top:12px">
       <input type="text" id="guidance-text"
-        placeholder="z.B. 'In der Nähe von Annecy' oder 'Am Genfer See'" style="flex:1">
+        placeholder="${t('route_builder.search_placeholder')}" style="flex:1">
       <button class="btn btn-primary btn-sm" onclick="_submitGuidance()">Nochmal suchen</button>
       <button class="btn btn-secondary btn-sm" onclick="skipStop()">Direkt zum Ziel</button>
     </div>
@@ -989,7 +989,7 @@ async function _submitGuidance() {
   const input = document.getElementById('guidance-text');
   if (!input || !input.value.trim()) return;
   const guidance = input.value.trim();
-  progressOverlay.open('Suche mit deiner Angabe…');
+  progressOverlay.open(t('route_builder.searching'));
   openRouteSSE(S.jobId);
   try {
     const data = await _fetchQuiet(`${API}/recompute-options/${S.jobId}`, {
@@ -1085,7 +1085,7 @@ function showRegionPlanUI(regions, summary, legId) {
       <div id="recompute-form" style="display:none;margin-top:12px">
         <div class="recompute-bar">
           <input type="text" id="recompute-text"
-            placeholder="Was soll geändert werden?" style="flex:1">
+            placeholder="${t('route_builder.modify_placeholder')}" style="flex:1">
           <button class="btn btn-sm btn-primary" onclick="_doRecompute()">Neu berechnen</button>
         </div>
       </div>
@@ -1271,7 +1271,7 @@ async function _doRecompute() {
 }
 
 async function _confirmRegions() {
-  progressOverlay.open('Regionen werden bestätigt…');
+  progressOverlay.open(t('route_builder.confirming_regions'));
   openRouteSSE(S.jobId);
   try {
     const data = await confirmRegions(S.jobId, window._currentRegions);
@@ -1300,8 +1300,7 @@ function openRouteAdjustModal() {
       <button class="modal-close" onclick="closeRouteAdjustModal()">×</button>
       <h3 class="modal-title">Route anpassen</h3>
       <p class="modal-desc">
-        Alle vorgeschlagenen Etappen überschreiten die maximale Fahrzeit von <strong>${maxH}h</strong>.
-        Wählen Sie eine Lösung:
+        ${esc(t('route_builder.max_drive_exceeded', {max_hours: maxH}))}
       </p>
 
       <div class="modal-option" id="modal-opt-days">
@@ -1373,7 +1372,7 @@ async function applyRouteAdjust() {
   const viaLoc = (document.getElementById('modal-via-input')?.value || '').trim();
 
   if (action === 'add_via_point' && !viaLoc) {
-    alert('Bitte eine Ortschaft für den Zwischenstopp eingeben.');
+    alert(t('route_builder.enter_location'));
     return;
   }
 

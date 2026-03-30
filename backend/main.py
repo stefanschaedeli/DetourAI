@@ -28,6 +28,7 @@ from models.stop_option import StopSelectRequest
 from models.accommodation_option import AccommodationSelectRequest, BudgetState, AccommodationResearchRequest
 from models.trip_leg import ReplaceRegionRequest, RecomputeRegionsRequest, GeocodeRegionRequest, ConfirmRegionsBody
 from utils.auth import get_current_user, get_current_user_sse, CurrentUser, verify_jwt_secret, hash_password
+from utils.i18n import get_request_language, SUPPORTED_LANGUAGES
 from utils.auth_db import admin_exists, create_user, assign_orphan_trips, get_user_by_username
 from utils.migrations import run_migrations
 from routers.auth import router as auth_router
@@ -172,8 +173,18 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_CORS_ORIGINS,
     allow_methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "Accept-Language"],
 )
+
+
+@app.middleware("http")
+async def language_middleware(request: Request, call_next):
+    """Extract Accept-Language and store on request.state for all endpoints."""
+    accept_lang = request.headers.get("Accept-Language", "de")
+    request.state.lang = get_request_language(accept_lang)
+    response = await call_next(request)
+    return response
+
 
 app.include_router(auth_router)
 app.include_router(admin_router)

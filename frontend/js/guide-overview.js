@@ -43,7 +43,7 @@ function renderOverview(plan) {
         stops.length + ' Stops · ' + dayPlans.length + ' Tage' +
         (typeof cost.total_chf === 'number' ? ' · CHF ' + cost.total_chf.toLocaleString('de-CH') : '') +
       '</p>' +
-      (mapUrl ? '<a href="' + safeUrl(mapUrl) + '" target="_blank" class="btn btn-secondary" style="margin-top:var(--space-sm)">Google Maps öffnen</a>' : '') +
+      (mapUrl ? '<a href="' + safeUrl(mapUrl) + '" target="_blank" class="btn btn-secondary" style="margin-top:var(--space-sm)">' + t('guide.open_google_maps') + '</a>' : '') +
     '</div>' +
     (dayCardsHtml ? '<div class="day-cards-grid">' + dayCardsHtml + '</div>' : '') +
     '<div class="overview-collapsible">' +

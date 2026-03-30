@@ -3,15 +3,15 @@
 /* ── Settings Page ── */
 
 const AGENT_META = {
-  'route_architect':            { label: 'Route Architect',            role: 'Routenplanung' },
-  'stop_options_finder':        { label: 'Stop Options Finder',        role: 'Stopp-Vorschläge' },
-  'region_planner':             { label: 'Region Planner',             role: 'Regionen-Planung' },
-  'accommodation_researcher':   { label: 'Accommodation Researcher',   role: 'Unterkünfte' },
-  'activities':                 { label: 'Activities Agent',           role: 'Aktivitäten' },
-  'restaurants':                { label: 'Restaurants Agent',          role: 'Restaurants' },
-  'day_planner':                { label: 'Day Planner',                role: 'Tagesplanung' },
-  'travel_guide':               { label: 'Travel Guide',               role: 'Reiseführer' },
-  'trip_analysis':              { label: 'Trip Analysis',               role: 'Reise-Analyse' },
+  'route_architect':            { label: 'Route Architect',            get role() { return t('settings.route_architect_role'); } },
+  'stop_options_finder':        { label: 'Stop Options Finder',        get role() { return t('settings.stop_options_role'); } },
+  'region_planner':             { label: 'Region Planner',             get role() { return t('settings.region_planner_role'); } },
+  'accommodation_researcher':   { label: 'Accommodation Researcher',   get role() { return t('settings.accommodation_role'); } },
+  'activities':                 { label: 'Activities Agent',           get role() { return t('settings.activities_role'); } },
+  'restaurants':                { label: 'Restaurants Agent',          get role() { return t('settings.restaurants_role'); } },
+  'day_planner':                { label: 'Day Planner',                get role() { return t('settings.day_planner_role'); } },
+  'travel_guide':               { label: 'Travel Guide',               get role() { return t('settings.travel_guide_role'); } },
+  'trip_analysis':              { label: 'Trip Analysis',               get role() { return t('settings.trip_analysis_role'); } },
 };
 
 const MODEL_OPTIONS = [
@@ -67,14 +67,14 @@ function renderSettingsPage() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
-          Zurück
+          ${t('settings.back_btn')}
         </button>
-        <h2>Einstellungen</h2>
+        <h2>${t('settings.page_title')}</h2>
       </div>
 
       ${_renderAccountSection()}
-      ${_renderCategory('KI-Agenten', 'agent', _renderAgentCards(settings, defaults))}
-      ${_renderCategory('Budget-Standardwerte', 'budget', _renderBudgetSection(settings, defaults))}
+      ${_renderCategory(t('settings.ai_agents_section'), 'agent', _renderAgentCards(settings, defaults))}
+      ${_renderCategory(t('form.budget_distribution_label'), 'budget', _renderBudgetSection(settings, defaults))}
       ${_renderCategory('API & Performance', 'api', _renderApiSection(settings, defaults))}
       ${_renderCategory('System', 'system', _renderSystemSection(settings, defaults, api_keys))}
     </div>
@@ -88,7 +88,7 @@ function _renderAccountSection() {
   return `
     <div class="settings-category" id="cat-account">
       <div class="settings-category-header" onclick="toggleSettingsCategory('account')">
-        <h3>Konto</h3>
+        <h3>${t('settings.account_section')}</h3>
         <div class="settings-category-actions">
           <svg class="settings-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
             <path d="M6 9l6 6 6-6"/>
@@ -97,18 +97,18 @@ function _renderAccountSection() {
       </div>
       <div class="settings-category-body open">
         <div class="settings-card">
-          <h3>Passwort ändern</h3>
+          <h3>${t('settings.change_password_title')}</h3>
           <div class="settings-field">
-            <label>Aktuelles Passwort</label>
-            <input type="password" id="current-password" placeholder="Aktuelles Passwort" autocomplete="current-password">
+            <label>${t('settings.current_password_label')}</label>
+            <input type="password" id="current-password" placeholder="${t('settings.current_password_label')}" autocomplete="current-password">
           </div>
           <div class="settings-field">
-            <input type="password" id="new-password" placeholder="Neues Passwort (mind. 8 Zeichen)" autocomplete="new-password">
+            <input type="password" id="new-password" placeholder="${t('settings.new_password_placeholder')}" autocomplete="new-password">
           </div>
           <div class="settings-field">
-            <input type="password" id="confirm-password" placeholder="Neues Passwort bestätigen" autocomplete="new-password">
+            <input type="password" id="confirm-password" placeholder="${t('settings.confirm_password_placeholder')}" autocomplete="new-password">
           </div>
-          <button id="change-password-btn" class="btn-primary">Passwort ändern</button>
+          <button id="change-password-btn" class="btn-primary">${t('settings.change_password_btn')}</button>
           <p id="password-change-msg" class="settings-msg" style="display:none"></p>
         </div>
       </div>
@@ -124,7 +124,7 @@ function _bindAccountSection() {
     const msg = document.getElementById('password-change-msg');
 
     if (newPw !== confirm) {
-      msg.textContent = 'Passwörter stimmen nicht überein.';
+      msg.textContent = t('settings.password_mismatch');
       msg.className = 'settings-msg error';
       msg.style.display = '';
       return;
@@ -136,7 +136,7 @@ function _bindAccountSection() {
 
     try {
       await apiChangePassword(current, newPw);
-      msg.textContent = 'Passwort erfolgreich geändert.';
+      msg.textContent = t('settings.password_changed');
       msg.className = 'settings-msg success';
       ['current-password', 'new-password', 'confirm-password'].forEach(id => {
         document.getElementById(id).value = '';
@@ -144,12 +144,12 @@ function _bindAccountSection() {
     } catch (err) {
       // Extract detail from HTTP error message (format: "HTTP 400: <detail>")
       const detail = err.message.replace(/^HTTP \d+:\s*/, '');
-      msg.textContent = detail || 'Fehler beim Ändern des Passworts.';
+      msg.textContent = detail || t('settings.password_change_error');
       msg.className = 'settings-msg error';
     } finally {
       msg.style.display = '';
       btn.disabled = false;
-      btn.textContent = 'Passwort ändern';
+      btn.textContent = t('settings.change_password_btn');
     }
   });
 }
@@ -160,7 +160,7 @@ function _renderCategory(title, section, content) {
       <div class="settings-category-header" onclick="toggleSettingsCategory('${section}')">
         <h3>${esc(title)}</h3>
         <div class="settings-category-actions">
-          <button class="settings-reset-btn" onclick="event.stopPropagation(); resetSettingsSection('${section}')" title="Auf Standard zurücksetzen">
+          <button class="settings-reset-btn" onclick="event.stopPropagation(); resetSettingsSection('${section}')" title="${t('settings.reset_to_defaults_title')}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <path d="M1 4v6h6M23 20v-6h-6"/>
               <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
@@ -206,13 +206,13 @@ function _renderAgentCards(settings, defaults) {
         </div>
         <div class="settings-agent-body">
           <div class="settings-row">
-            <label>Modell</label>
+            <label>${t('settings.model_label')}</label>
             <select onchange="saveSetting('${modelKey}', this.value)">
               ${MODEL_OPTIONS.map(m => `<option value="${m.value}" ${m.value === currentModel ? 'selected' : ''}>${esc(m.label)}</option>`).join('')}
             </select>
           </div>
           <div class="settings-row">
-            <label>Max Tokens</label>
+            <label>${t('settings.max_tokens_label')}</label>
             <div class="settings-slider-group">
               <input type="range" min="512" max="8192" step="256" value="${currentTokens}"
                 oninput="this.nextElementSibling.textContent = this.value; debounceSave('${tokensKey}', Number(this.value))">
@@ -231,22 +231,22 @@ function toggleAgentCard(header) {
 
 function _renderBudgetSection(settings, defaults) {
   return `
-    ${_row('Unterkunftsanteil', _slider('budget.accommodation_pct', settings, 5, 80, 1, '%'))}
-    ${_row('Fallback Unterkunft', _numberInput('budget.fallback_accommodation_chf', settings, 10, 500, 'CHF/Nacht'))}
-    ${_row('Fallback Aktivitäten', _numberInput('budget.fallback_activities_chf', settings, 10, 300, 'CHF/Stop'))}
-    ${_row('Fallback Verpflegung', _numberInput('budget.fallback_food_chf', settings, 10, 200, 'CHF/Nacht'))}
-    ${_row('Treibstoff', _numberInput('budget.fuel_chf_per_hour', settings, 5, 50, 'CHF/Stunde'))}
-    ${_row('Unterkunft-Multiplikator Min', _numberInput('budget.acc_multiplier_min', settings, 0.5, 2.0, '', 0.05))}
-    ${_row('Unterkunft-Multiplikator Max', _numberInput('budget.acc_multiplier_max', settings, 0.5, 2.0, '', 0.05))}
+    ${_row(t('settings.accommodation_pct_label'), _slider('budget.accommodation_pct', settings, 5, 80, 1, '%'))}
+    ${_row(t('settings.fallback_accommodation_label'), _numberInput('budget.fallback_accommodation_chf', settings, 10, 500, 'CHF/Nacht'))}
+    ${_row(t('settings.fallback_activities_label'), _numberInput('budget.fallback_activities_chf', settings, 10, 300, 'CHF/Stop'))}
+    ${_row(t('settings.fallback_food_label'), _numberInput('budget.fallback_food_chf', settings, 10, 200, 'CHF/Nacht'))}
+    ${_row(t('settings.fuel_label'), _numberInput('budget.fuel_chf_per_hour', settings, 5, 50, 'CHF/Stunde'))}
+    ${_row(t('settings.accommodation_mult_min_label'), _numberInput('budget.acc_multiplier_min', settings, 0.5, 2.0, '', 0.05))}
+    ${_row(t('settings.accommodation_mult_max_label'), _numberInput('budget.acc_multiplier_max', settings, 0.5, 2.0, '', 0.05))}
   `;
 }
 
 function _renderApiSection(settings, defaults) {
   return `
-    ${_row('Nominatim Verzögerung', _numberInput('api.nominatim_delay_ms', settings, 100, 2000, 'ms'))}
-    ${_row('Nominatim Timeout', _numberInput('api.nominatim_timeout_s', settings, 1, 30, 's'))}
-    ${_row('OSRM Timeout', _numberInput('api.osrm_timeout_s', settings, 1, 30, 's'))}
-    ${_row('Wikipedia Timeout', _numberInput('api.wikipedia_timeout_s', settings, 1, 30, 's'))}
+    ${_row(t('settings.nominatim_delay_label'), _numberInput('api.nominatim_delay_ms', settings, 100, 2000, 'ms'))}
+    ${_row(t('settings.nominatim_timeout_label'), _numberInput('api.nominatim_timeout_s', settings, 1, 30, 's'))}
+    ${_row(t('settings.osrm_timeout_label'), _numberInput('api.osrm_timeout_s', settings, 1, 30, 's'))}
+    ${_row(t('settings.wikipedia_timeout_label'), _numberInput('api.wikipedia_timeout_s', settings, 1, 30, 's'))}
     ${_warningRow('Max Wiederholungen', _numberInput('api.retry_max_attempts', settings, 1, 10, ''))}
     ${_row('Parallele Unterkunftssuche', _numberInput('api.accommodation_parallelism', settings, 1, 5, ''))}
   `;
