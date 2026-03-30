@@ -21,7 +21,7 @@ SYSTEM_PROMPTS = {
         "nicht unnötig hin- und herspringen. Bei Rundreisen: im Uhrzeigersinn oder gegen den "
         "Uhrzeigersinn, aber niemals kreuz und quer.\n"
         "Für jede Region liefere:\n"
-        "- name: Name der Region\n"
+        "- name: Name der Region, immer mit Land (z.B. 'Peloponnes, Griechenland')\n"
         "- lat/lon: Zentrale Koordinaten der Region\n"
         "- reason: Warum diese Region zur Reise passt (1 Satz)\n"
         "- teaser: Kurzer, einladender Satz der die Region beschreibt und Lust auf den Besuch macht\n"
@@ -38,7 +38,7 @@ SYSTEM_PROMPTS = {
         "and not jump back and forth unnecessarily. For round trips: clockwise or counter-clockwise, "
         "but never crisscross.\n"
         "For each region provide:\n"
-        "- name: Name of the region\n"
+        "- name: Name of the region, always including the country (e.g. 'Peloponnese, Greece')\n"
         "- lat/lon: Central coordinates of the region\n"
         "- reason: Why this region fits the trip (1 sentence)\n"
         "- teaser: Short, inviting sentence describing the region and making you want to visit\n"
@@ -54,7 +54,7 @@ SYSTEM_PROMPTS = {
         "कोई ज़िगज़ैग पैटर्न नहीं! मार्ग प्रारंभ स्थान से एक दिशा में आगे बढ़ना चाहिए। "
         "गोलाकार यात्राओं के लिए: दक्षिणावर्त या वामावर्त, लेकिन कभी भी आड़ा-तिरछा नहीं।\n"
         "प्रत्येक क्षेत्र के लिए प्रदान करें:\n"
-        "- name: क्षेत्र का नाम\n"
+        "- name: क्षेत्र का नाम, हमेशा देश के नाम के साथ (जैसे 'पेलोपोनिस, ग्रीस')\n"
         "- lat/lon: क्षेत्र के केंद्रीय निर्देशांक\n"
         "- reason: यह क्षेत्र यात्रा के लिए क्यों उपयुक्त है (1 वाक्य)\n"
         "- teaser: क्षेत्र का वर्णन करने वाला छोटा, आमंत्रित वाक्य\n"
@@ -67,7 +67,7 @@ _REGION_SCHEMAS = {
     "de": """{
   "regions": [
     {
-      "name": "Regionsname",
+      "name": "Peloponnes, Griechenland",
       "lat": 0.0,
       "lon": 0.0,
       "reason": "Warum diese Region zur Reise passt",
@@ -80,7 +80,7 @@ _REGION_SCHEMAS = {
     "en": """{
   "regions": [
     {
-      "name": "Region name",
+      "name": "Peloponnese, Greece",
       "lat": 0.0,
       "lon": 0.0,
       "reason": "Why this region fits the trip",
@@ -93,7 +93,7 @@ _REGION_SCHEMAS = {
     "hi": """{
   "regions": [
     {
-      "name": "क्षेत्र का नाम",
+      "name": "पेलोपोनिस, ग्रीस",
       "lat": 0.0,
       "lon": 0.0,
       "reason": "यह क्षेत्र यात्रा के लिए क्यों उपयुक्त है",

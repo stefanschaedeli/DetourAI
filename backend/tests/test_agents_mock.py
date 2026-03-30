@@ -460,16 +460,16 @@ def _make_req_with_explore_leg():
 
 PLAN_JSON = """{
   "regions": [
-    {"name": "Tessin", "lat": 46.2, "lon": 8.95, "reason": "Mediterranes Flair"},
-    {"name": "Graubünden", "lat": 46.8, "lon": 9.8, "reason": "Alpenlandschaft"}
+    {"name": "Tessin, Schweiz", "lat": 46.2, "lon": 8.95, "reason": "Mediterranes Flair"},
+    {"name": "Graubünden, Schweiz", "lat": 46.8, "lon": 9.8, "reason": "Alpenlandschaft"}
   ],
   "summary": "Rundreise durch die Schweizer Alpen"
 }"""
 
 REPLACE_JSON = """{
   "regions": [
-    {"name": "Wallis", "lat": 46.3, "lon": 7.6, "reason": "Matterhorn-Region"},
-    {"name": "Graubünden", "lat": 46.8, "lon": 9.8, "reason": "Alpenlandschaft"}
+    {"name": "Wallis, Schweiz", "lat": 46.3, "lon": 7.6, "reason": "Matterhorn-Region"},
+    {"name": "Graubünden, Schweiz", "lat": 46.8, "lon": 9.8, "reason": "Alpenlandschaft"}
   ],
   "summary": "Angepasste Rundreise mit Wallis statt Tessin"
 }"""
@@ -513,8 +513,8 @@ class TestRegionPlannerAgent:
 
         current_plan = RegionPlan(
             regions=[
-                RegionPlanItem(name="Tessin", lat=46.2, lon=8.95, reason="Mediterranes Flair"),
-                RegionPlanItem(name="Graubünden", lat=46.8, lon=9.8, reason="Alpenlandschaft"),
+                RegionPlanItem(name="Tessin, Schweiz", lat=46.2, lon=8.95, reason="Mediterranes Flair"),
+                RegionPlanItem(name="Graubünden, Schweiz", lat=46.8, lon=9.8, reason="Alpenlandschaft"),
             ],
             summary="Original"
         )
@@ -525,7 +525,7 @@ class TestRegionPlannerAgent:
             leg_index=0,
         ))
         assert isinstance(result, RegionPlan)
-        assert result.regions[0].name == "Wallis"
+        assert result.regions[0].name == "Wallis, Schweiz"
 
     @patch("agents.region_planner.geocode_google", new_callable=AsyncMock, return_value=(47.37, 8.54, "ch1"))
     @patch("agents.region_planner.get_client")
@@ -605,10 +605,10 @@ class TestReorderRegions:
         assert result[-1].name == "Lausanne"
 
     def test_single_region_unchanged(self):
-        regions = [self._r("Tessin", 46.2, 8.95)]
+        regions = [self._r("Tessin, Schweiz", 46.2, 8.95)]
         result = _reorder_regions(regions, (47.37, 8.54), None, circular=True)
         assert len(result) == 1
-        assert result[0].name == "Tessin"
+        assert result[0].name == "Tessin, Schweiz"
 
     def test_two_regions_unchanged(self):
         regions = [
