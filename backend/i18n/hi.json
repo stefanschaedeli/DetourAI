@@ -23,6 +23,7 @@
   "error.not_loading_accommodations": "जॉब loading_accommodations स्थिति में नहीं है",
   "error.not_all_legs_complete": "सभी चरण पूर्ण नहीं — मार्ग की अभी पुष्टि नहीं हो सकती",
   "error.no_region_plan": "कोई क्षेत्र योजना उपलब्ध नहीं है",
+  "error.start_location_required": "खोज मोड के लिए प्रारंभिक स्थान आवश्यक है",
   "error.invalid_region_index": "अमान्य क्षेत्र अनुक्रमणिका",
   "error.architect_pre_plan_failed": "आर्किटेक्ट प्री-प्लान विफल ({error}) — StopOptionsFinder बिना संदर्भ के चल रहा है",
   "error.duplicate_discarded": "त्यागा गया (डुप्लीकेट पहले से चयनित: {region})",

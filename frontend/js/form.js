@@ -115,7 +115,11 @@ function validateStep(n) {
     for (let i = 0; i < S.legs.length; i++) {
       const leg = S.legs[i];
       if (leg.mode === "explore") {
-        // Explore legs need description, not locations
+        // Explore legs need a start location (departure point) and description
+        if (!leg.start_location || !leg.start_location.trim()) {
+          _setFieldError(`leg-start-${i}`, t('form.start_location_required'));
+          if (valid) valid = false;
+        }
         if (!leg.explore_description || !leg.explore_description.trim()) {
           _setFieldError(`explore-text-${i}`, t('form.explore_description_required'));
           if (valid) valid = false;
@@ -174,7 +178,7 @@ function updateQuickSubmitBar() {
   // Check if all legs have valid data
   const legsReady = S.legs.length > 0 && S.legs.every(l => {
     const datesOk = l.start_date && l.end_date && l.start_date < l.end_date;
-    if (l.mode === "explore") return datesOk && l.explore_description && l.explore_description.trim();
+    if (l.mode === "explore") return datesOk && l.start_location && l.explore_description && l.explore_description.trim();
     return datesOk && l.start_location && l.end_location;
   });
   const ready = formActive && legsReady && !onSummaryStep;
@@ -185,7 +189,7 @@ async function quickSubmitTrip() {
   // Validate legs
   const legsReady = S.legs.length > 0 && S.legs.every(l => {
     const datesOk = l.start_date && l.end_date && l.start_date < l.end_date;
-    if (l.mode === "explore") return datesOk && l.explore_description && l.explore_description.trim();
+    if (l.mode === "explore") return datesOk && l.start_location && l.explore_description && l.explore_description.trim();
     return datesOk && l.start_location && l.end_location;
   });
   if (!legsReady) { alert(t('form.complete_all_segments')); return; }
@@ -312,10 +316,11 @@ function renderLegs() {
   // Attach autocomplete if Google Maps is ready (transit legs only)
   const gmReady = typeof google !== 'undefined' && google.maps && google.maps.places;
   S.legs.forEach((leg, i) => {
-    if (gmReady && leg.mode === "transit") {
-      // First leg: both fields editable; others: only end is editable
+    if (gmReady) {
+      // Start field: first leg only (others are chained/readonly), all modes
       if (i === 0) _attachLegAutocomplete(i, 'start');
-      _attachLegAutocomplete(i, 'end');
+      // End field: transit only
+      if (leg.mode === "transit") _attachLegAutocomplete(i, 'end');
     }
   });
 }
@@ -326,10 +331,10 @@ function renderLegCard(leg, index) {
   const days = leg.start_date && leg.end_date ? dateDiffDays(leg.start_date, leg.end_date) : 0;
   const canDelete = S.legs.length > 1;
 
-  // Location row — only shown for transit legs
+  // Location row — start location shown for all modes, end location only for transit
   const startReadonly = !isFirst ? 'readonly tabindex="-1"' : '';
   const startClass = !isFirst ? 'leg-input-chained' : '';
-  const locationRow = leg.mode === "transit" ? `
+  const locationRow = `
     <div class="leg-location-row">
       <div class="form-group">
         <label for="leg-start-${index}">${t('form.leg_from_label')}</label>
@@ -338,13 +343,14 @@ function renderLegCard(leg, index) {
           ${startReadonly}
           oninput="updateLegField(${index}, 'start_location', this.value)">
       </div>
+      ${leg.mode === "transit" ? `
       <div class="form-group">
         <label for="leg-end-${index}">${t('form.leg_to_label')}</label>
         <input type="text" id="leg-end-${index}"
           value="${esc(leg.end_location)}" placeholder="${t('form.leg_to_placeholder')}"
           oninput="updateLegField(${index}, 'end_location', this.value)">
-      </div>
-    </div>` : '';
+      </div>` : ''}
+    </div>`;
 
   // Date row
   const sdateReadonly = !isFirst ? 'readonly tabindex="-1"' : '';
@@ -474,8 +480,7 @@ function removeLeg(index) {
 function setLegMode(index, mode) {
   S.legs[index].mode = mode;
   if (mode === "explore") {
-    // Clear transit-specific fields
-    S.legs[index].start_location = '';
+    // Clear transit-specific fields (keep start_location — needed as departure point)
     S.legs[index].end_location = '';
     S.legs[index].via_points = [];
     if (!S.legs[index].explore_description) {
@@ -776,7 +781,7 @@ function buildPayload() {
   const cleanLegs = S.legs.map(leg => {
     const { _pending_zone_label, ...clean } = leg;
     if (clean.mode === "explore") {
-      clean.start_location = '';
+      // Keep start_location — explore legs need a departure point
       clean.end_location = '';
       clean.via_points = [];
     } else {

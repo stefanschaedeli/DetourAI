@@ -3069,7 +3069,12 @@ async def confirm_regions(job_id: str, body: ConfirmRegionsBody = None, current_
     ]
     leg_data["mode"] = "transit"
     if not leg_data.get("start_location"):
-        leg_data["start_location"] = request.start_location
+        # Fallback: use raw start_location from first leg (avoids "[Erkunden]..." placeholder)
+        first_leg_start = req_data["legs"][0].get("start_location", "").strip()
+        if first_leg_start and not first_leg_start.startswith("[Erkunden]"):
+            leg_data["start_location"] = first_leg_start
+        else:
+            raise HTTPException(status_code=400, detail=i18n_t("error.start_location_required", _job_lang(job)))
     if not leg_data.get("end_location"):
         leg_data["end_location"] = region_plan.regions[-1].name
     job["request"] = req_data

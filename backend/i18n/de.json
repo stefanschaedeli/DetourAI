@@ -23,6 +23,7 @@
   "error.not_loading_accommodations": "Job nicht im Status loading_accommodations",
   "error.not_all_legs_complete": "Nicht alle Etappen abgeschlossen — Route kann noch nicht bestätigt werden",
   "error.no_region_plan": "Kein Regionen-Plan vorhanden",
+  "error.start_location_required": "Startort ist für den Erkunden-Modus erforderlich",
   "error.invalid_region_index": "Ungültiger Region-Index",
   "error.architect_pre_plan_failed": "Architect Pre-Plan fehlgeschlagen ({error}) — StopOptionsFinder läuft ohne Kontext",
   "error.duplicate_discarded": "Verworfen (Duplikat bereits ausgewählt: {region})",

@@ -70,6 +70,8 @@ class TravelRequest(BaseModel):
     def start_location(self) -> str:
         leg = self.legs[0]
         if leg.mode == "explore":
+            if leg.start_location and leg.start_location.strip():
+                return leg.start_location.strip()
             return f"[Erkunden] {(leg.explore_description or '')[:50]}"
         return leg.start_location.strip()
 

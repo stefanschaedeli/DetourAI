@@ -23,6 +23,7 @@
   "error.not_loading_accommodations": "Job not in loading_accommodations status",
   "error.not_all_legs_complete": "Not all legs complete — route cannot be confirmed yet",
   "error.no_region_plan": "No region plan available",
+  "error.start_location_required": "Start location is required for explore mode",
   "error.invalid_region_index": "Invalid region index",
   "error.architect_pre_plan_failed": "Architect pre-plan failed ({error}) — StopOptionsFinder running without context",
   "error.duplicate_discarded": "Discarded (duplicate already selected: {region})",
