@@ -1,3 +1,5 @@
+"""Pydantic models for trip legs, explore zones, region plans, and related route structures."""
+
 from __future__ import annotations
 from typing import Literal, Optional
 from pydantic import BaseModel, Field, model_validator
