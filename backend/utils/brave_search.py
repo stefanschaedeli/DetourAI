@@ -1,3 +1,4 @@
+"""Brave Search integration — local business search and web search fallback."""
 import os
 import aiohttp
 from typing import Optional
@@ -6,7 +7,12 @@ from utils.http_session import get_session
 
 
 async def search_local(query: str, count: int = 5) -> list[dict]:
-    """Brave Local Search — strukturierte Business-Daten. Gibt [] zurück wenn kein API-Key."""
+    """Query the Brave Local Search API for structured business data.
+
+    Returns a list of dicts with name, address, rating, rating_count, phone,
+    and price_range fields. Returns an empty list if BRAVE_API_KEY is not set
+    or the request fails.
+    """
     api_key = os.getenv("BRAVE_API_KEY")
     if not api_key:
         return []
@@ -41,7 +47,11 @@ async def search_local(query: str, count: int = 5) -> list[dict]:
 
 
 async def search_web(query: str, count: int = 5) -> list[dict]:
-    """Brave Web Search — Fallback wenn Local keine Ergebnisse liefert."""
+    """Query the Brave Web Search API — used as fallback when local search yields no results.
+
+    Returns a list of dicts with name, url, and description fields.
+    Returns an empty list if BRAVE_API_KEY is not set or the request fails.
+    """
     api_key = os.getenv("BRAVE_API_KEY")
     if not api_key:
         return []
@@ -73,7 +83,10 @@ async def search_web(query: str, count: int = 5) -> list[dict]:
 
 
 async def search_places(query: str, count: int = 5) -> list[dict]:
-    """Local Search zuerst, Fallback auf Web Search. Gibt [] bei Fehler/kein Key."""
+    """Search for places using local search first, falling back to web search.
+
+    Returns an empty list on error or when BRAVE_API_KEY is not configured.
+    """
     results = await search_local(query, count)
     if results:
         return results
