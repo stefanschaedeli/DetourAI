@@ -1,14 +1,22 @@
 'use strict';
 
-/**
- * GoogleMaps guide — persistent guide map state, markers, ferry lines, pan/fit.
- * Requires maps-core.js and maps-routes.js to load first.
- * Uses window._mapsGuideMarkers and window._mapsGuidePolyline (declared in maps-core.js).
- */
+// Maps Guide — persistent guide map state: stop markers, ferry lines, pan/fit/dim.
+// Reads: GoogleMaps (maps-core.js), GoogleMaps.renderDrivingRoute (maps-routes.js),
+//        window._mapsGuideMarkers, window._mapsGuidePolyline (maps-core.js).
+// Provides: getGuideMap, clearGuideMarkers, setGuideMarkers, highlightGuideMarker,
+//           panToStop, fitAllStops, fitDayStops, dimNonFocusedMarkers, restoreAllMarkers,
+//           enableClickToAdd.
+
 Object.assign(GoogleMaps, (() => {
 
+  // ---------------------------------------------------------------------------
+  // Marker management
+  // ---------------------------------------------------------------------------
+
+  /** Return the current guide map instance. */
   function getGuideMap() { return GoogleMaps.guideMap; }
 
+  /** Remove all guide markers and the route polyline from the map. */
   function clearGuideMarkers() {
     window._mapsGuideMarkers.forEach(m => {
       if (m && typeof m.setMap   === 'function') m.setMap(null);
@@ -21,6 +29,7 @@ Object.assign(GoogleMaps, (() => {
     }
   }
 
+  /** Place numbered stop markers and a driving route polyline for the full plan. */
   function setGuideMarkers(plan, onMarkerClick) {
     clearGuideMarkers();
     const map = GoogleMaps.guideMap;
@@ -76,6 +85,11 @@ Object.assign(GoogleMaps, (() => {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Viewport helpers
+  // ---------------------------------------------------------------------------
+
+  /** Visually select the marker for stopId and deselect all others. */
   function highlightGuideMarker(stopId) {
     window._mapsGuideMarkers.forEach(m => {
       if (!m || !m._div) return;
@@ -88,12 +102,14 @@ Object.assign(GoogleMaps, (() => {
     });
   }
 
+  /** Pan the guide map to center on the stop with the given id. */
   function panToStop(stopId, stops) {
     const map  = GoogleMaps.guideMap;
     const stop = (stops || []).find(s => String(s.id) === stopId);
     if (map && stop && stop.lat && stop.lng) map.panTo({ lat: stop.lat, lng: stop.lng });
   }
 
+  /** Fit the guide map to show all stops in the plan including the start location. */
   function fitAllStops(plan) {
     const map = GoogleMaps.guideMap;
     if (!map) return;
@@ -104,6 +120,7 @@ Object.assign(GoogleMaps, (() => {
     if (hasBounds) map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
   }
 
+  /** Fit the guide map to show only the stops for a single day (max zoom 13). */
   function fitDayStops(stops) {
     const map = GoogleMaps.guideMap;
     if (!map || !stops.length) return;
@@ -113,6 +130,11 @@ Object.assign(GoogleMaps, (() => {
     google.maps.event.addListenerOnce(map, 'idle', function () { if (map.getZoom() > 13) map.setZoom(13); });
   }
 
+  // ---------------------------------------------------------------------------
+  // Marker opacity helpers
+  // ---------------------------------------------------------------------------
+
+  /** Dim all markers not in focusedStopIds to 35% opacity. */
   function dimNonFocusedMarkers(focusedStopIds) {
     window._mapsGuideMarkers.forEach(function (m) {
       if (!m || !m._div) return;
@@ -121,6 +143,7 @@ Object.assign(GoogleMaps, (() => {
     });
   }
 
+  /** Restore all markers to full opacity. */
   function restoreAllMarkers() {
     window._mapsGuideMarkers.forEach(function (m) {
       if (!m || !m._div) return;
@@ -129,6 +152,11 @@ Object.assign(GoogleMaps, (() => {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Interaction
+  // ---------------------------------------------------------------------------
+
+  /** Register a click listener on the map that suppresses place popups and calls onMapClick. */
   function enableClickToAdd(map, onMapClick) {
     google.maps.event.addListener(map, 'click', function (event) {
       if (event.placeId) event.stop();
