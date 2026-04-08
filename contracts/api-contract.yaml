@@ -1,0 +1,2116 @@
+openapi: 3.1.0
+info:
+  title: DetourAI API
+  version: 1.0.0
+paths:
+  /api/auth/login:
+    post:
+      tags:
+      - auth
+      summary: Login
+      operationId: login_api_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/auth/refresh:
+    post:
+      tags:
+      - auth
+      summary: Refresh
+      operationId: refresh_api_auth_refresh_post
+      parameters:
+      - name: detour_ai_refresh
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Detour Ai Refresh
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/auth/logout:
+    post:
+      tags:
+      - auth
+      summary: Logout
+      operationId: logout_api_auth_logout_post
+      parameters:
+      - name: detour_ai_refresh
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Detour Ai Refresh
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Logout Api Auth Logout Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/auth/me:
+    get:
+      tags:
+      - auth
+      summary: Me
+      operationId: me_api_auth_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/auth/change-password:
+    post:
+      tags:
+      - auth
+      summary: Change Password
+      operationId: change_password_api_auth_change_password_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Change Password Api Auth Change Password Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/admin/users:
+    get:
+      tags:
+      - admin
+      summary: List All Users
+      operationId: list_all_users_api_admin_users_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response List All Users Api Admin Users Get
+      security:
+      - OAuth2PasswordBearer: []
+    post:
+      tags:
+      - admin
+      summary: Create New User
+      operationId: create_new_user_api_admin_users_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Create New User Api Admin Users Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/admin/users/{user_id}:
+    delete:
+      tags:
+      - admin
+      summary: Delete Existing User
+      operationId: delete_existing_user_api_admin_users__user_id__delete
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/users/{user_id}/quota:
+    patch:
+      tags:
+      - admin
+      summary: Set User Quota
+      operationId: set_user_quota_api_admin_users__user_id__quota_patch
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetQuotaRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Set User Quota Api Admin Users  User Id  Quota Patch
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/users/{user_id}/password:
+    patch:
+      tags:
+      - admin
+      summary: Reset User Password
+      operationId: reset_user_password_api_admin_users__user_id__password_patch
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reset User Password Api Admin Users  User Id  Password
+                  Patch
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/feedback:
+    post:
+      tags:
+      - feedback
+      summary: Submit Feedback
+      operationId: submit_feedback_api_feedback_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Submit Feedback Api Feedback Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/init-job:
+    post:
+      summary: Init Job
+      operationId: init_job_api_init_job_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TravelRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/plan-trip:
+    post:
+      summary: Plan Trip
+      operationId: plan_trip_api_plan_trip_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Job Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TravelRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/select-stop/{job_id}:
+    post:
+      summary: Select Stop
+      operationId: select_stop_api_select_stop__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StopSelectRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/recompute-options/{job_id}:
+    post:
+      summary: Recompute Options
+      operationId: recompute_options_api_recompute_options__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecomputeRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/patch-job/{job_id}:
+    post:
+      summary: Patch Job
+      operationId: patch_job_api_patch_job__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchJobRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/confirm-route/{job_id}:
+    post:
+      summary: Confirm Route
+      operationId: confirm_route_api_confirm_route__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/start-accommodations/{job_id}:
+    post:
+      summary: Start Accommodations
+      operationId: start_accommodations_api_start_accommodations__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/confirm-accommodations/{job_id}:
+    post:
+      summary: Confirm Accommodations
+      operationId: confirm_accommodations_api_confirm_accommodations__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              title: Body
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/select-accommodation/{job_id}:
+    post:
+      summary: Select Accommodation
+      operationId: select_accommodation_api_select_accommodation__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccommodationSelectRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/research-accommodation/{job_id}:
+    post:
+      summary: Research Accommodation
+      description: Re-research accommodations for a single stop with optional extra
+        instructions.
+      operationId: research_accommodation_api_research_accommodation__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccommodationResearchRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/start-planning/{job_id}:
+    post:
+      summary: Start Planning
+      operationId: start_planning_api_start_planning__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/progress/{job_id}:
+    get:
+      summary: Progress
+      operationId: progress_api_progress__job_id__get
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      - name: token
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/result/{job_id}:
+    get:
+      summary: Get Result
+      operationId: get_result_api_result__job_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/settings:
+    get:
+      summary: Api Get Settings
+      operationId: api_get_settings_api_settings_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+      security:
+      - OAuth2PasswordBearer: []
+    put:
+      summary: Api Update Settings
+      operationId: api_update_settings_api_settings_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/settings/reset:
+    post:
+      summary: Api Reset Settings
+      operationId: api_reset_settings_api_settings_reset_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsResetRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/maps-config:
+    get:
+      summary: Get Maps Config
+      operationId: get_maps_config_api_maps_config_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /.well-known/appspecific/com.chrome.devtools.json:
+    get:
+      summary: Chrome Devtools
+      operationId: chrome_devtools__well_known_appspecific_com_chrome_devtools_json_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /health:
+    get:
+      summary: Health
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/travels:
+    get:
+      summary: Api List Travels
+      operationId: api_list_travels_api_travels_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+      security:
+      - OAuth2PasswordBearer: []
+    post:
+      summary: Api Save Travel
+      operationId: api_save_travel_api_travels_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveTravelRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/travels/{travel_id}:
+    patch:
+      summary: Api Update Travel
+      operationId: api_update_travel_api_travels__travel_id__patch
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTravelRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      summary: Api Get Travel
+      operationId: api_get_travel_api_travels__travel_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      summary: Api Delete Travel
+      operationId: api_delete_travel_api_travels__travel_id__delete
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/travels/{travel_id}/replan:
+    post:
+      summary: Api Replan Travel
+      operationId: api_replan_travel_api_travels__travel_id__replan_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/travels/{travel_id}/replace-stop:
+    post:
+      summary: Api Replace Stop
+      operationId: api_replace_stop_api_travels__travel_id__replace_stop_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceStopRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/travels/{travel_id}/replace-stop-select:
+    post:
+      summary: Api Replace Stop Select
+      operationId: api_replace_stop_select_api_travels__travel_id__replace_stop_select_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceStopSelectRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/travels/{travel_id}/remove-stop:
+    post:
+      summary: Api Remove Stop
+      operationId: api_remove_stop_api_travels__travel_id__remove_stop_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveStopRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/travels/{travel_id}/add-stop:
+    post:
+      summary: Api Add Stop
+      operationId: api_add_stop_api_travels__travel_id__add_stop_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddStopRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/travels/{travel_id}/reorder-stops:
+    post:
+      summary: Api Reorder Stops
+      operationId: api_reorder_stops_api_travels__travel_id__reorder_stops_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderStopsRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/travels/{travel_id}/update-nights:
+    post:
+      summary: Api Update Nights
+      operationId: api_update_nights_api_travels__travel_id__update_nights_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNightsRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/travels/{travel_id}/share:
+    post:
+      summary: Api Share Travel
+      operationId: api_share_travel_api_travels__travel_id__share_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      summary: Api Unshare Travel
+      operationId: api_unshare_travel_api_travels__travel_id__share_delete
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: travel_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Travel Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/shared/{token}:
+    get:
+      summary: Api Get Shared Travel
+      operationId: api_get_shared_travel_api_shared__token__get
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/skip-to-leg-end/{job_id}:
+    post:
+      summary: Skip To Leg End
+      description: Skip remaining stops in current leg — add end_location as stop
+        and advance to next leg.
+      operationId: skip_to_leg_end_api_skip_to_leg_end__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/skip-segment/{job_id}:
+    post:
+      summary: Skip Segment
+      description: Skip current explore region — create one stop with region name
+        and advance to next region.
+      operationId: skip_segment_api_skip_segment__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/replace-region/{job_id}:
+    post:
+      summary: Replace Region
+      operationId: replace_region_api_replace_region__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceRegionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/recompute-regions/{job_id}:
+    post:
+      summary: Recompute Regions
+      operationId: recompute_regions_api_recompute_regions__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecomputeRegionsRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/geocode-region/{job_id}:
+    post:
+      summary: Geocode Region Endpoint
+      operationId: geocode_region_endpoint_api_geocode_region__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeocodeRegionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/confirm-regions/{job_id}:
+    post:
+      summary: Confirm Regions
+      operationId: confirm_regions_api_confirm_regions__job_id__post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmRegionsBody'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/log:
+    post:
+      summary: Frontend Log
+      operationId: frontend_log_api_log_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FrontendLogEntry'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /:
+    get:
+      summary: Serve Index
+      operationId: serve_index__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /{path}:
+    get:
+      summary: Spa Fallback
+      operationId: spa_fallback__path__get
+      parameters:
+      - name: path
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Path
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    AccommodationResearchRequest:
+      properties:
+        stop_id:
+          type: string
+          title: Stop Id
+        extra_instructions:
+          type: string
+          title: Extra Instructions
+          default: ''
+      type: object
+      required:
+      - stop_id
+      title: AccommodationResearchRequest
+    AccommodationSelectRequest:
+      properties:
+        stop_id:
+          type: integer
+          title: Stop Id
+        option_index:
+          type: integer
+          title: Option Index
+      type: object
+      required:
+      - stop_id
+      - option_index
+      title: AccommodationSelectRequest
+    AddStopRequest:
+      properties:
+        location:
+          type: string
+          title: Location
+        insert_after_stop_id:
+          type: integer
+          title: Insert After Stop Id
+        nights:
+          type: integer
+          title: Nights
+          default: 1
+      type: object
+      required:
+      - location
+      - insert_after_stop_id
+      title: AddStopRequest
+    ChangePasswordRequest:
+      properties:
+        current_password:
+          type: string
+          title: Current Password
+        new_password:
+          type: string
+          title: New Password
+      type: object
+      required:
+      - current_password
+      - new_password
+      title: ChangePasswordRequest
+    Child:
+      properties:
+        age:
+          type: integer
+          title: Age
+      type: object
+      required:
+      - age
+      title: Child
+    ConfirmRegionsBody:
+      properties:
+        regions:
+          anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+          - type: 'null'
+          title: Regions
+      type: object
+      title: ConfirmRegionsBody
+    CreateUserRequest:
+      properties:
+        username:
+          type: string
+          title: Username
+        password:
+          type: string
+          title: Password
+        is_admin:
+          type: boolean
+          title: Is Admin
+          default: false
+      type: object
+      required:
+      - username
+      - password
+      title: CreateUserRequest
+    FeedbackRequest:
+      properties:
+        text:
+          type: string
+          maxLength: 5000
+          minLength: 10
+          title: Text
+        screenshot:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Screenshot
+        category:
+          type: string
+          pattern: ^(bug|vorschlag|general)$
+          title: Category
+          default: general
+      type: object
+      required:
+      - text
+      title: FeedbackRequest
+    FrontendLogEntry:
+      properties:
+        level:
+          type: string
+          pattern: ^(error|warning|info)$
+          title: Level
+        message:
+          type: string
+          maxLength: 5000
+          title: Message
+        source:
+          type: string
+          maxLength: 200
+          title: Source
+          default: ''
+        stack:
+          type: string
+          maxLength: 10000
+          title: Stack
+          default: ''
+      type: object
+      required:
+      - level
+      - message
+      title: FrontendLogEntry
+    GeocodeRegionRequest:
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          title: Name
+      type: object
+      required:
+      - name
+      title: GeocodeRegionRequest
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    LoginRequest:
+      properties:
+        username:
+          type: string
+          title: Username
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - username
+      - password
+      title: LoginRequest
+    MandatoryActivity:
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          title: Name
+        location:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Location
+      type: object
+      required:
+      - name
+      title: MandatoryActivity
+    PasswordResetRequest:
+      properties:
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - password
+      title: PasswordResetRequest
+    PatchJobRequest:
+      properties:
+        action:
+          type: string
+          title: Action
+        extra_days:
+          type: integer
+          title: Extra Days
+          default: 2
+        via_point_location:
+          type: string
+          title: Via Point Location
+          default: ''
+      type: object
+      required:
+      - action
+      title: PatchJobRequest
+    RecomputeRegionsRequest:
+      properties:
+        instruction:
+          type: string
+          maxLength: 1000
+          title: Instruction
+      type: object
+      required:
+      - instruction
+      title: RecomputeRegionsRequest
+    RecomputeRequest:
+      properties:
+        extra_instructions:
+          type: string
+          title: Extra Instructions
+          default: ''
+      type: object
+      title: RecomputeRequest
+    RemoveStopRequest:
+      properties:
+        stop_id:
+          type: integer
+          title: Stop Id
+      type: object
+      required:
+      - stop_id
+      title: RemoveStopRequest
+    ReorderStopsRequest:
+      properties:
+        old_index:
+          type: integer
+          title: Old Index
+        new_index:
+          type: integer
+          title: New Index
+      type: object
+      required:
+      - old_index
+      - new_index
+      title: ReorderStopsRequest
+    ReplaceRegionRequest:
+      properties:
+        index:
+          type: integer
+          minimum: 0.0
+          title: Index
+        instruction:
+          type: string
+          maxLength: 1000
+          title: Instruction
+      type: object
+      required:
+      - index
+      - instruction
+      title: ReplaceRegionRequest
+    ReplaceStopRequest:
+      properties:
+        stop_id:
+          type: integer
+          title: Stop Id
+        mode:
+          type: string
+          title: Mode
+        manual_location:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Manual Location
+        manual_nights:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Manual Nights
+        hints:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Hints
+      type: object
+      required:
+      - stop_id
+      - mode
+      title: ReplaceStopRequest
+    ReplaceStopSelectRequest:
+      properties:
+        job_id:
+          type: string
+          title: Job Id
+        option_index:
+          type: integer
+          title: Option Index
+      type: object
+      required:
+      - job_id
+      - option_index
+      title: ReplaceStopSelectRequest
+    SaveTravelRequest:
+      properties:
+        plan:
+          additionalProperties: true
+          type: object
+          title: Plan
+      type: object
+      required:
+      - plan
+      title: SaveTravelRequest
+    SetQuotaRequest:
+      properties:
+        token_quota:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Token Quota
+      type: object
+      title: SetQuotaRequest
+    SettingsResetRequest:
+      properties:
+        section:
+          type: string
+          pattern: ^(agent|budget|api|geo|system|all)$
+          title: Section
+      type: object
+      required:
+      - section
+      title: SettingsResetRequest
+    SettingsUpdateRequest:
+      properties:
+        settings:
+          additionalProperties: true
+          type: object
+          title: Settings
+      type: object
+      required:
+      - settings
+      title: SettingsUpdateRequest
+    StopSelectRequest:
+      properties:
+        option_index:
+          type: integer
+          title: Option Index
+      type: object
+      required:
+      - option_index
+      title: StopSelectRequest
+    TokenResponse:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        token_type:
+          type: string
+          title: Token Type
+          default: bearer
+      type: object
+      required:
+      - access_token
+      title: TokenResponse
+    TravelRequest:
+      properties:
+        legs:
+          items:
+            $ref: '#/components/schemas/TripLeg'
+          type: array
+          maxItems: 20
+          minItems: 1
+          title: Legs
+        adults:
+          type: integer
+          maximum: 20.0
+          minimum: 1.0
+          title: Adults
+          default: 2
+        children:
+          items:
+            $ref: '#/components/schemas/Child'
+          type: array
+          maxItems: 10
+          title: Children
+          default: []
+        travel_styles:
+          items:
+            type: string
+          type: array
+          maxItems: 14
+          title: Travel Styles
+          default: []
+        travel_description:
+          type: string
+          maxLength: 2000
+          title: Travel Description
+          default: ''
+        mandatory_activities:
+          items:
+            $ref: '#/components/schemas/MandatoryActivity'
+          type: array
+          maxItems: 20
+          title: Mandatory Activities
+          default: []
+        preferred_activities:
+          items:
+            type: string
+          type: array
+          maxItems: 20
+          title: Preferred Activities
+          default: []
+        max_activities_per_stop:
+          type: integer
+          maximum: 20.0
+          minimum: 1.0
+          title: Max Activities Per Stop
+          default: 5
+        max_restaurants_per_stop:
+          type: integer
+          maximum: 10.0
+          minimum: 1.0
+          title: Max Restaurants Per Stop
+          default: 3
+        activities_radius_km:
+          type: integer
+          maximum: 200.0
+          minimum: 1.0
+          title: Activities Radius Km
+          default: 30
+        max_drive_hours_per_day:
+          type: number
+          maximum: 16.0
+          minimum: 0.5
+          title: Max Drive Hours Per Day
+          default: 4.5
+        min_nights_per_stop:
+          type: integer
+          maximum: 14.0
+          minimum: 1.0
+          title: Min Nights Per Stop
+          default: 1
+        max_nights_per_stop:
+          type: integer
+          maximum: 30.0
+          minimum: 1.0
+          title: Max Nights Per Stop
+          default: 5
+        proximity_origin_pct:
+          type: integer
+          maximum: 30.0
+          minimum: 0.0
+          title: Proximity Origin Pct
+          default: 10
+        proximity_target_pct:
+          type: integer
+          maximum: 30.0
+          minimum: 0.0
+          title: Proximity Target Pct
+          default: 15
+        accommodation_preferences:
+          items:
+            type: string
+          type: array
+          maxItems: 3
+          title: Accommodation Preferences
+          default: []
+        hotel_radius_km:
+          type: integer
+          maximum: 100.0
+          minimum: 1.0
+          title: Hotel Radius Km
+          default: 10
+        budget_chf:
+          type: number
+          maximum: 500000.0
+          minimum: 100.0
+          title: Budget Chf
+          default: 3000.0
+        budget_buffer_percent:
+          type: number
+          maximum: 50.0
+          minimum: 0.0
+          title: Budget Buffer Percent
+          default: 10.0
+        budget_accommodation_pct:
+          type: integer
+          maximum: 100.0
+          minimum: 0.0
+          title: Budget Accommodation Pct
+          default: 60
+        budget_food_pct:
+          type: integer
+          maximum: 100.0
+          minimum: 0.0
+          title: Budget Food Pct
+          default: 20
+        budget_activities_pct:
+          type: integer
+          maximum: 100.0
+          minimum: 0.0
+          title: Budget Activities Pct
+          default: 20
+        log_verbosity:
+          type: string
+          pattern: ^(minimal|normal|verbose|debug)$
+          title: Log Verbosity
+          default: normal
+        language:
+          type: string
+          pattern: ^(de|en|hi)$
+          title: Language
+          default: de
+      type: object
+      required:
+      - legs
+      title: TravelRequest
+    TripLeg:
+      properties:
+        leg_id:
+          type: string
+          pattern: ^leg-\d+$
+          title: Leg Id
+        start_location:
+          type: string
+          maxLength: 200
+          title: Start Location
+          default: ''
+        end_location:
+          type: string
+          maxLength: 200
+          title: End Location
+          default: ''
+        start_date:
+          type: string
+          format: date
+          title: Start Date
+        end_date:
+          type: string
+          format: date
+          title: End Date
+        mode:
+          type: string
+          enum:
+          - transit
+          - explore
+          title: Mode
+        via_points:
+          items:
+            $ref: '#/components/schemas/ViaPoint'
+          type: array
+          title: Via Points
+          default: []
+        zone_bbox:
+          anyOf:
+          - $ref: '#/components/schemas/ZoneBBox'
+          - type: 'null'
+        zone_guidance:
+          items:
+            type: string
+          type: array
+          title: Zone Guidance
+          default: []
+        explore_description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Explore Description
+      type: object
+      required:
+      - leg_id
+      - start_date
+      - end_date
+      - mode
+      title: TripLeg
+    UpdateNightsRequest:
+      properties:
+        stop_id:
+          type: integer
+          title: Stop Id
+        nights:
+          type: integer
+          title: Nights
+      type: object
+      required:
+      - stop_id
+      - nights
+      title: UpdateNightsRequest
+    UpdateTravelRequest:
+      properties:
+        custom_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Custom Name
+        rating:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Rating
+      type: object
+      title: UpdateTravelRequest
+    UserResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        username:
+          type: string
+          title: Username
+        is_admin:
+          type: boolean
+          title: Is Admin
+      type: object
+      required:
+      - id
+      - username
+      - is_admin
+      title: UserResponse
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    ViaPoint:
+      properties:
+        location:
+          type: string
+          maxLength: 200
+          title: Location
+        fixed_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Fixed Date
+        notes:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Notes
+      type: object
+      required:
+      - location
+      title: ViaPoint
+    ZoneBBox:
+      properties:
+        north:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: North
+        south:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: South
+        east:
+          type: number
+          maximum: 180.0
+          minimum: -180.0
+          title: East
+        west:
+          type: number
+          maximum: 180.0
+          minimum: -180.0
+          title: West
+        zone_label:
+          type: string
+          maxLength: 100
+          title: Zone Label
+      type: object
+      required:
+      - north
+      - south
+      - east
+      - west
+      - zone_label
+      title: ZoneBBox
+  securitySchemes:
+    OAuth2PasswordBearer:
+      type: oauth2
+      flows:
+        password:
+          scopes: {}
+          tokenUrl: /api/auth/login
