@@ -241,6 +241,7 @@ html[lang="hi"] button {
 }
 .app-logo { font-size: 22px; font-weight: 800; color: var(--accent-dark); letter-spacing: -0.02em; }
 .app-subtitle { color: var(--text-sub); font-size: 14px; }
+.app-version { font-size: 11px; color: var(--text-sub); opacity: 0.45; letter-spacing: 0.03em; margin-left: -4px; }
 .btn-my-travels {
   margin-left: auto;
   padding: 6px 14px; font-size: 13px; font-weight: 500;
