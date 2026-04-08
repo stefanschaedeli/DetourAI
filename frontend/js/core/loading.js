@@ -1,6 +1,13 @@
 'use strict';
 
+// Loading — reference-counted loading overlay with label, counter, and progress bar.
+// Reads: t (i18n.js).
+// Provides: showLoading, hideLoading, resetLoading, setLoadingProgress, updateLoadingLabel.
+
 (function () {
+  // ---------------------------------------------------------------------------
+  // State — reference count, label, DOM refs, and progress value
+  // ---------------------------------------------------------------------------
   let _pendingCount = 0;
   let _currentLabel = t('loading.default');
   let _overlay = null;
@@ -50,27 +57,36 @@
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Public API — show/hide/reset overlay and control progress bar
+  // ---------------------------------------------------------------------------
+
+  /** Show the loading overlay with an optional message; stacks with concurrent callers. */
   window.showLoading = function (message) {
     _currentLabel = message || t('loading.default');
     _pendingCount++;
     _render();
   };
 
+  /** Decrement the pending counter; hides overlay when count reaches zero. */
   window.hideLoading = function () {
     _pendingCount = Math.max(0, _pendingCount - 1);
     _render();
   };
 
+  /** Force-reset the pending counter to zero and hide the overlay immediately. */
   window.resetLoading = function () {
     _pendingCount = 0;
     _render();
   };
 
+  /** Set a determinate progress bar value (0–100); pass null for indeterminate animation. */
   window.setLoadingProgress = function (value) {
     _progress = value;
     _render();
   };
 
+  /** Update the overlay label text without changing the pending count. */
   window.updateLoadingLabel = function (message) {
     _currentLabel = message || t('loading.default');
     if (_labelEl) _labelEl.textContent = _currentLabel;
