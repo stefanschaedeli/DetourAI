@@ -1,5 +1,14 @@
 'use strict';
 
+// Form — 5-step trip planning wizard; collects legs, preferences, and budget.
+// Reads: S (state.js), Router (router.js), GoogleMaps (maps-core.js), t (i18n.js), esc (core).
+// Provides: initForm, goToStep, buildPayload, submitTrip, clearAppData, updateQuickSubmitBar.
+
+// ---------------------------------------------------------------------------
+// Initialisation
+// ---------------------------------------------------------------------------
+
+/** Bootstraps the form: styles, sliders, autosave, and leg rendering. */
 function initForm() {
   initTravelStyles();
   initSliders();
@@ -25,6 +34,7 @@ function initForm() {
 // Step navigation
 // ---------------------------------------------------------------------------
 
+/** Navigates to the given step number, updating indicators and the URL. */
 function goToStep(n) {
   S.step = n;
   document.querySelectorAll('.form-step').forEach((el, i) => {
@@ -170,6 +180,7 @@ function validateStep(n) {
 // Quick-submit sticky bar
 // ---------------------------------------------------------------------------
 
+/** Shows or hides the sticky quick-submit bar based on form readiness. */
 function updateQuickSubmitBar() {
   const bar = document.getElementById('quick-submit-bar');
   if (!bar) return;
@@ -767,6 +778,7 @@ function updateBudgetPreview() {
 // Build payload
 // ---------------------------------------------------------------------------
 
+/** Assembles the full TravelRequest payload from current form state and DOM values. */
 function buildPayload() {
   const firstLeg = S.legs[0] || {};
   const lastLeg = S.legs[S.legs.length - 1] || {};
@@ -868,6 +880,7 @@ function _showFormError(msg) {
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
+/** Validates, submits the trip payload, and transitions to route-builder with SSE streaming. */
 async function submitTrip() {
   const btn = document.getElementById('submit-btn');
   const errEl = document.getElementById('submit-error');
@@ -1015,6 +1028,7 @@ function restoreFormFromCache() {
   updateBudgetPreview();
 }
 
+/** Resets all app state and localStorage, then returns to form step 1. */
 function clearAppData() {
   if (!confirm(t('form.confirm_clear_data'))) return;
 
