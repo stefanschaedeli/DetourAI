@@ -1,3 +1,4 @@
+"""Maps helper utilities — Google geocoding, directions, polyline decoding, and route geometry."""
 import os
 import asyncio
 import math
@@ -131,14 +132,16 @@ async def google_directions_simple(origin: str, destination: str) -> tuple[float
 async def google_directions_with_ferry(
     origin: str, destination: str, waypoints: list[str] = None
 ) -> tuple[float, float, str, bool]:
-    """Wie google_directions() aber gibt (hours, km, polyline, is_ferry) zurueck.
-    Wenn Google keine Route liefert, wird die Insel-Lookup-Tabelle geprueft
-    und eine Faehrschaetzung erstellt (D-01, D-07)."""
+    """Like google_directions() but also returns a ferry flag: (hours, km, polyline, is_ferry).
+
+    When Google returns no route, the island lookup table is checked and a ferry estimate
+    is created using the haversine distance (decision rules D-01, D-07, D-08).
+    """
     hours, km, polyline = await google_directions(origin, destination, waypoints)
     if hours > 0 and km > 0:
         return (hours, km, polyline, False)
 
-    # Google hat keine Route gefunden -- pruefen ob Wasserueberquerung
+    # Google found no route — check whether a water crossing is involved
     origin_geo = await geocode_google(origin)
     dest_geo = await geocode_google(destination)
     if not origin_geo or not dest_geo:
@@ -148,7 +151,7 @@ async def google_directions_with_ferry(
     dest_coords = (dest_geo[0], dest_geo[1])
     straight_km = haversine_km(origin_coords, dest_coords)
 
-    # Wenn ein Endpunkt in einer Inselgruppe liegt, Faehre annehmen (D-07, D-08)
+    # If either endpoint is in an island group, assume a ferry crossing (D-07, D-08)
     if is_island_destination(dest_coords) or is_island_destination(origin_coords):
         est = ferry_estimate(straight_km)
         return (est["hours"], est["km"], "", True)
