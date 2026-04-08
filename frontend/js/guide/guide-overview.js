@@ -5,6 +5,7 @@
 //           _highlightReqKeywords, _extractReqKeywords, _renderReqTags
 'use strict';
 
+/** Renders the full overview tab HTML: header, day-card grid, and collapsible details. */
 function renderOverview(plan) {
   const stops = plan.stops || [];
   const cost  = plan.cost_estimate || {};
@@ -91,6 +92,7 @@ function _initOverviewInteractions(plan) {
 }
 
 // Highlight requirement keywords (from plan.request) in an already-escaped string
+/** Wraps matching keywords in an already-escaped string with highlight spans. */
 function _highlightReqKeywords(escapedText, keywords) {
   let t = escapedText;
   keywords.forEach(kw => {
@@ -103,6 +105,7 @@ function _highlightReqKeywords(escapedText, keywords) {
 }
 
 // Build a flat list of keywords from plan.request that the user explicitly set
+/** Extracts highlight keywords from the TravelRequest (styles, activities, tags). */
 function _extractReqKeywords(req) {
   if (!req) return [];
   const kws = [];
@@ -119,6 +122,7 @@ function _extractReqKeywords(req) {
 }
 
 // Render inline requirement tags from the original request
+/** Returns HTML for the request-summary tag pills shown in the trip analysis section. */
 function _renderReqTags(req) {
   if (!req) return '';
   const tags = [];
@@ -160,6 +164,7 @@ function _renderReqTags(req) {
   return `<div class="req-tags">${tags.map(t => `<span class="req-tag ${t.cls}">${esc(t.label)}</span>`).join('')}</div>`;
 }
 
+/** Renders the trip analysis block with match score, requirement tags, and prose. */
 function renderTripAnalysis(analysis, req) {
   if (!analysis) return '';
 
@@ -239,11 +244,13 @@ function renderTripAnalysis(analysis, req) {
   `;
 }
 
+/** Converts double-newline-separated plain text into escaped paragraph HTML. */
 function renderProse(text) {
   if (!text) return '';
   return text.split(/\n\n+/).map(p => `<p>${esc(p.trim())}</p>`).join('');
 }
 
+/** Renders the region travel-guide sections (history, food, tips, etc.) as collapsible cards. */
 function renderTravelGuide(guide) {
   if (!guide) return '';
   const sections = [
@@ -267,6 +274,7 @@ function renderTravelGuide(guide) {
   `;
 }
 
+/** Renders the "further activities" recommendation list for the overview tab. */
 function renderFurtherActivities(activities) {
   if (!activities || !activities.length) return '';
   return `
@@ -293,6 +301,7 @@ function renderFurtherActivities(activities) {
   `;
 }
 
+/** Renders the budget breakdown tab/section with per-stop cost rows and totals. */
 function renderBudget(plan) {
   const cost = plan.cost_estimate || {};
   const total = typeof cost.total_chf === 'number' ? cost.total_chf : 0;
@@ -342,6 +351,7 @@ function renderBudget(plan) {
   `;
 }
 
+/** Lazy-loads city images into stop overview cards using IntersectionObserver. */
 function _lazyLoadOverviewImages(plan) {
   const stops = plan.stops || [];
   stops.forEach(stop => {
