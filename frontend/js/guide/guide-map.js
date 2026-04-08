@@ -14,10 +14,12 @@ let _lastPannedStopId = null;
 let _scrollDebounce = null;
 let _cardObserver = null;
 
+/** Scrolls the stops list to the card matching the given stop ID. */
 function _scrollToGuideStop(stopId) {
   navigateToStop(stopId);
 }
 
+/** Initialises the persistent guide map with numbered stop markers and a driving route polyline. */
 function _initGuideMap(plan) {
   if (typeof GoogleMaps === 'undefined' || !window.google) {
     if (typeof S !== 'undefined') {
@@ -97,6 +99,7 @@ function _initGuideMap(plan) {
 // ---------------------------------------------------------------------------
 
 /** Initialize the persistent guide map once. Reuses existing map on subsequent calls. */
+/** Waits for the Google Maps API to be ready, then calls _initGuideMap. */
 function _setupGuideMap(plan) {
   if (typeof GoogleMaps === 'undefined' || !window.google) return;
   const map = GoogleMaps.initPersistentGuideMap('guide-map', { center: { lat: 47, lng: 8 }, zoom: 6 });
@@ -133,6 +136,7 @@ function _setupGuideMap(plan) {
  * @param {string} [drillLevel] - 'overview' | 'day' | 'stop' (inferred from state if not passed)
  * @param {Object} [drillContext] - { dayNum, stopId }
  */
+/** Updates map visibility and marker highlighting based on the active tab and drill-down level. */
 function _updateMapForTab(plan, tab, drillLevel, drillContext) {
   if (typeof GoogleMaps === 'undefined' || !_guideMapInitialized) return;
 
@@ -165,6 +169,7 @@ function _updateMapForTab(plan, tab, drillLevel, drillContext) {
 }
 
 /** Handle marker click: highlight marker and scroll to card. */
+/** Handles a map marker click: highlights the marker and scrolls the stop card into view. */
 function _onMarkerClick(stopId) {
   if (typeof GoogleMaps !== 'undefined') GoogleMaps.highlightGuideMarker(stopId);
   if (activeTab === 'stops') {
@@ -179,6 +184,7 @@ function _onMarkerClick(stopId) {
 }
 
 /** Scroll content panel to a stop card and highlight it. */
+/** Scrolls the stop card list to the given stop and applies a temporary highlight class. */
 function _scrollToAndHighlightCard(stopId) {
   const sel = '[data-stop-id="' + stopId + '"]';
   const card = document.querySelector('.stop-card-row' + sel)
@@ -191,6 +197,7 @@ function _scrollToAndHighlightCard(stopId) {
 }
 
 /** Set up IntersectionObserver on stop cards for auto-pan (D-09). */
+/** Attaches an IntersectionObserver to sync map marker highlights with scrolled stop cards. */
 function _initScrollSync() {
   if (_cardObserver) _cardObserver.disconnect();
   if (typeof GoogleMaps === 'undefined') return;
@@ -219,6 +226,7 @@ function _initScrollSync() {
  * Lazily load images for an entity (stop, activity, restaurant, accommodation)
  * via Google Places and fill the hero-photo skeleton container.
  */
+/** Fetches Google Places photos and injects them into the hero image placeholder of a card. */
 async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context, sizeClass) {
   const placeholder = containerEl?.querySelector('.hero-photo-loading');
   if (!containerEl || typeof GoogleMaps === 'undefined') {
@@ -267,6 +275,7 @@ async function _lazyLoadEntityImages(containerEl, placeName, lat, lng, context, 
 // Stop Overview Maps
 // ---------------------------------------------------------------------------
 
+/** Returns an emoji icon character matching the activity name, or a default pin emoji. */
 function _getActivityIcon(name) {
   const n = (name || '').toLowerCase();
   if (/museum|galerie|gallery/.test(n)) return '🏛';
