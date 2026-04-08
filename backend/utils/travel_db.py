@@ -1,3 +1,4 @@
+"""SQLite persistence for saved travels — CRUD operations and share token management."""
 import asyncio
 import json
 import os
@@ -170,6 +171,11 @@ def _sync_update_plan_json(travel_id: int, user_id: int, plan: dict) -> bool:
 
 
 def _sync_update(travel_id: int, user_id: int, custom_name: Optional[str], rating: Optional[int]) -> bool:
+    """Update custom_name and/or rating for a travel owned by user_id.
+
+    Only provided (non-None) fields are written. Rating is clamped to [0, 5].
+    Returns True if the row was found and updated, False otherwise.
+    """
     fields: list = []
     values: list = []
     if custom_name is not None:
@@ -189,8 +195,16 @@ def _sync_update(travel_id: int, user_id: int, custom_name: Optional[str], ratin
     return cur.rowcount > 0
 
 
-# Async wrappers
+# ---------------------------------------------------------------------------
+# Async wrappers — run sync SQLite helpers in a thread pool
+# ---------------------------------------------------------------------------
+
 async def save_travel(plan: dict, user_id: int, token_counts: Optional[dict] = None) -> Optional[int]:
+    """Persist a completed travel plan to SQLite. Duplicate job_ids are silently ignored.
+
+    Returns the new row ID on success, or None if the job_id already exists.
+    token_counts is an optional dict with total_input_tokens, total_output_tokens, total_tokens.
+    """
     return await asyncio.to_thread(_sync_save, plan, user_id, token_counts)
 
 
@@ -218,10 +232,20 @@ async def delete_travel(travel_id: int, user_id: int) -> bool:
 
 
 async def update_travel(travel_id: int, user_id: int, custom_name: Optional[str] = None, rating: Optional[int] = None) -> bool:
+    """Update metadata (custom_name and/or rating) for a travel owned by user_id.
+
+    Only non-None arguments are written to the database.
+    Returns True if the row was found and updated.
+    """
     return await asyncio.to_thread(_sync_update, travel_id, user_id, custom_name, rating)
 
 
 async def update_plan_json(travel_id: int, user_id: int, plan: dict) -> bool:
+    """Replace the stored plan_json and refresh all derived columns for a travel.
+
+    Updates title, num_stops, total_cost_chf, has_travel_guide, total_days, and destination
+    from the given plan dict. Returns True if the row was found and updated.
+    """
     return await asyncio.to_thread(_sync_update_plan_json, travel_id, user_id, plan)
 
 
@@ -254,6 +278,11 @@ def _sync_get_by_share_token(token: str) -> Optional[dict]:
 
 
 async def set_share_token(travel_id: int, user_id: int, token: Optional[str]) -> bool:
+    """Set or clear the share_token for a travel owned by user_id.
+
+    Pass a token string to enable public sharing, or None to revoke access.
+    Returns True if the row was found and updated.
+    """
     return await asyncio.to_thread(_sync_set_share_token, travel_id, user_id, token)
 
 
