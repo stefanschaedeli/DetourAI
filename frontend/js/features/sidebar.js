@@ -1,7 +1,6 @@
-/**
- * sidebar.js — Trip Progress Sidebar
- * IIFE module for displaying trip planning progress as a node-based sidebar.
- */
+// Sidebar — trip progress sidebar IIFE; node-based visualization updated via SSE event subscriptions.
+// Reads: S (state.js), Router (router.js), GoogleMaps (maps-core.js), esc (core).
+// Provides: initSidebar, updateSidebar, toggleSidebar.
 
 const Sidebar = (() => {
   // Module-level state
@@ -10,7 +9,9 @@ const Sidebar = (() => {
   let _overlay = null;
   let _renderedIds = new Set();
 
-  // ─── Phase Detection ───────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Phase detection
+  // ---------------------------------------------------------------------------
 
   function _detectPhase() {
     if (!S.legs || S.legs.length === 0) return 'hidden';
@@ -24,7 +25,9 @@ const Sidebar = (() => {
     return 'form';
   }
 
-  // ─── Node Building ─────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Node building
+  // ---------------------------------------------------------------------------
 
   function _buildNodes(phase) {
     if (phase === 'hidden') return [];
@@ -131,7 +134,9 @@ const Sidebar = (() => {
     return [startNode, endNode];
   }
 
-  // ─── Helpers ───────────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
 
   function _initials(name) {
     if (!name) return '?';
@@ -159,7 +164,9 @@ const Sidebar = (() => {
     return pills.join('');
   }
 
-  // ─── DOM Creation ──────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // DOM creation
+  // ---------------------------------------------------------------------------
 
   function _createNodeEl(node) {
     const el = document.createElement('div');
@@ -217,7 +224,9 @@ const Sidebar = (() => {
     if (nameEl) nameEl.textContent = node.name;
   }
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   function _render(container) {
     const newIds = new Set(_nodes.map((n) => n.id));
@@ -250,7 +259,9 @@ const Sidebar = (() => {
     }
   }
 
-  // ─── Lazy Image Loading ────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Lazy image loading
+  // ---------------------------------------------------------------------------
 
   async function _lazyLoadImages(nodes) {
     for (const node of nodes) {
@@ -296,7 +307,9 @@ const Sidebar = (() => {
     }
   }
 
-  // ─── Public: initSidebar ───────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // Public API
+  // ---------------------------------------------------------------------------
 
   function initSidebar() {
     const sidebar = document.getElementById('trip-sidebar');
@@ -311,7 +324,6 @@ const Sidebar = (() => {
     }
   }
 
-  // ─── Public: toggleSidebar ─────────────────────────────────────────────────
 
   function toggleSidebar() {
     const sidebar = document.getElementById('trip-sidebar');
@@ -334,7 +346,6 @@ const Sidebar = (() => {
     }
   }
 
-  // ─── Public: updateSidebar ─────────────────────────────────────────────────
 
   function updateSidebar() {
     const phase = _detectPhase();
@@ -362,18 +373,24 @@ const Sidebar = (() => {
     if (appLayout) appLayout.dataset.sidebarVisible = 'true';
   }
 
-  // ─── Expose public API ─────────────────────────────────────────────────────
 
   return { initSidebar, updateSidebar, toggleSidebar };
 })();
 
-// ─── Top-level wrappers ───────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Top-level wrappers (called from HTML / other modules)
+// ---------------------------------------------------------------------------
 
+/** Initialises the sidebar IIFE and creates the mobile overlay element. */
 function initSidebar()   { Sidebar.initSidebar(); }
+/** Recomputes the phase, rebuilds nodes, and re-renders the sidebar track. */
 function updateSidebar() { Sidebar.updateSidebar(); }
+/** Collapses/expands the sidebar on desktop; opens/closes the drawer on mobile. */
 function toggleSidebar() { Sidebar.toggleSidebar(); }
 
-// ─── Sidebar Overlay for Map Panel (D-03) ─────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Sidebar overlay for map panel
+// ---------------------------------------------------------------------------
 
 function toggleSidebarOverlay() {
   const overlay = document.getElementById('sidebar-overlay');
