@@ -1,3 +1,4 @@
+"""Singleton DebugLogger — structured logging to console, file, and SSE subscriber queues."""
 import asyncio
 import json
 import logging
@@ -9,6 +10,7 @@ from pathlib import Path
 
 
 class LogLevel(str, Enum):
+    """Log level values used across all backend components and agent calls."""
     DEBUG   = "DEBUG"
     INFO    = "INFO"
     SUCCESS = "SUCCESS"
@@ -20,6 +22,7 @@ class LogLevel(str, Enum):
 
 
 class VerbosityLevel(str, Enum):
+    """Controls which LogLevels are written to file for a given job."""
     MINIMAL   = "minimal"
     NORMAL    = "normal"
     VERBOSE   = "verbose"
@@ -79,6 +82,12 @@ def _get_redis():
 
 
 class DebugLogger:
+    """Singleton logger that writes to console, rotating log files, and SSE subscriber queues.
+
+    Events are delivered to in-process asyncio queues when a Celery worker and the FastAPI
+    process share memory (local dev). In production, events are pushed to Redis lists
+    (sse:{job_id}) so the SSE endpoint can drain them across process boundaries.
+    """
     def __init__(self):
         self._subscribers: dict[str, list[asyncio.Queue]] = {}
         self._redis = None      # lazily initialised
@@ -225,6 +234,12 @@ class DebugLogger:
     async def log(self, level: LogLevel, message: str, *,
                   job_id: str = None, agent: str = None, data: dict = None,
                   message_key: str = None):
+        """Log a message to console, file, and the job's SSE subscriber queue.
+
+        Writes a colour-coded terminal line, a rotating file entry (filtered by verbosity),
+        and pushes a debug_log SSE event to in-process queues or Redis when job_id is given.
+        message_key is an optional i18n key forwarded to the frontend for translation.
+        """
         # Terminal output (ANSI colors)
         color = {
             LogLevel.DEBUG:   "\033[94m",
@@ -260,6 +275,10 @@ class DebugLogger:
 
     async def log_prompt(self, agent: str, model: str, prompt: str, *,
                          job_id: str = None):
+        """Log the full prompt text sent to a Claude model — only written at DEBUG_ALL verbosity.
+
+        Prints a formatted block to the terminal and writes to the agent's log file.
+        """
         sep = "─" * 60
         print(f"\033[90m[{datetime.now().strftime('%H:%M:%S')}][PROMPT] [{agent}] → {model}\n{sep}\n{prompt}\n{sep}\033[0m")
 
@@ -272,6 +291,11 @@ class DebugLogger:
 
     async def push_event(self, job_id: str, event_type: str,
                          agent_id, data, percent: int = 0):
+        """Push a structured SSE event to the job's subscriber queue or Redis.
+
+        Used by agents to broadcast progress events (e.g. agent_progress, job_complete).
+        Falls back to Redis when no in-process subscribers are registered for job_id.
+        """
         event = {
             "type": event_type,
             "agent_id": agent_id,
