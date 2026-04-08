@@ -92,12 +92,3 @@ git push && git push --tags
 - `backend/agents/CLAUDE.md` — agent models, orchestration pipeline, Celery tasks, prompts
 - `infra/CLAUDE.md` — Docker Compose, Nginx, environment variables, deployment
 
----
-
-## Architecture & Conventions
-
-See `.planning/codebase/ARCHITECTURE.md` for system architecture.
-See `.planning/codebase/CONVENTIONS.md` for naming and code patterns.
-See `.planning/codebase/STACK.md` for technology stack details.
-See `.planning/codebase/INTEGRATIONS.md` for external API integrations.
-
