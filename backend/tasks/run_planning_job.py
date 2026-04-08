@@ -1,3 +1,5 @@
+"""Celery task that runs the full TravelPlannerOrchestrator pipeline and persists the result."""
+
 import asyncio
 import json
 import os
