@@ -1,12 +1,13 @@
 'use strict';
 
-/**
- * Lightweight i18n module for DetourAI.
- * Provides t(key, params) for translations, setLocale()/getLocale() for language switching.
- * Loaded before all other app modules so t() is available globally.
- */
+// i18n — lightweight translation module; loaded first so t() is available everywhere.
+// Reads: nothing (foundation module, no dependencies).
+// Provides: t, getLocale, setLocale, getFormattingLocale, applyStaticTranslations, initI18n, SUPPORTED_LANGS.
 
 (function () {
+  // ---------------------------------------------------------------------------
+  // State — current locale and loaded translation strings
+  // ---------------------------------------------------------------------------
   const SUPPORTED_LANGS = ['de', 'en', 'hi'];
   const DEFAULT_LANG = 'de';
   const STORAGE_KEY = 'tp_v1_lang';
@@ -109,6 +110,9 @@
     return map[_locale] || 'de-CH';
   }
 
+  // ---------------------------------------------------------------------------
+  // Bootstrap — expose symbols globally and initialise on load
+  // ---------------------------------------------------------------------------
   // Expose globally
   window.t = t;
   window.getLocale = getLocale;
