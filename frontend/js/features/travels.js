@@ -1,5 +1,13 @@
 'use strict';
 
+// Travels — saved travels list: CRUD, star ratings, rename, and travel card rendering.
+// Reads: S (state.js), Router (router.js), t (i18n.js), esc (core).
+// Provides: loadTravelsList, openTravelsDrawer, closeTravelsDrawer, openSavedTravel, deleteSavedTravel, replanSavedTravel.
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
 const _STAR_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
 
 function _renderStars(travelId, currentRating) {
@@ -68,6 +76,11 @@ function _startRename(titleEl) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Drawer control
+// ---------------------------------------------------------------------------
+
+/** Opens the saved-travels drawer and loads the list. */
 function openTravelsDrawer() {
   document.getElementById('travels-drawer-overlay').classList.add('open');
   document.getElementById('travels-drawer').classList.add('open');
@@ -78,6 +91,7 @@ function openTravelsDrawer() {
   loadTravelsList();
 }
 
+/** Closes the saved-travels drawer and navigates back if on /travels. */
 function closeTravelsDrawer() {
   document.getElementById('travels-drawer-overlay').classList.remove('open');
   document.getElementById('travels-drawer').classList.remove('open');
@@ -88,6 +102,11 @@ function closeTravelsDrawer() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// List rendering
+// ---------------------------------------------------------------------------
+
+/** Fetches and renders all saved travels as cards in the drawer. */
 async function loadTravelsList() {
   const container = document.getElementById('travels-list');
   container.innerHTML = '<div class="travels-loading">' + esc(t('travels.loading')) + '</div>';
@@ -128,6 +147,11 @@ async function loadTravelsList() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// CRUD actions
+// ---------------------------------------------------------------------------
+
+/** Loads a saved travel by ID and opens the travel guide view. */
 async function openSavedTravel(id) {
   showLoading(t('travels.loading_trip'));
   try {
@@ -148,6 +172,7 @@ async function openSavedTravel(id) {
   }
 }
 
+/** Deletes a saved travel after confirmation and removes its card from the list. */
 async function deleteSavedTravel(id, btn) {
   if (!confirm(t('travels.confirm_delete'))) return;
   btn.disabled = true;
@@ -171,6 +196,7 @@ async function deleteSavedTravel(id, btn) {
   }
 }
 
+/** Triggers a replan of a saved travel with inline two-step confirmation, then streams the result via SSE. */
 async function replanSavedTravel(id, btn) {
   // Inline confirmation — avoids browser popup blocking
   if (btn.dataset.confirmPending !== '1') {
