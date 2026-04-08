@@ -1,3 +1,5 @@
+"""Celery task that removes a stop from a saved travel plan and reconnects the surrounding route segments."""
+
 import asyncio
 import json
 import os
