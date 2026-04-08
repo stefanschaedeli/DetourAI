@@ -1,7 +1,7 @@
 # backend/agents/CLAUDE.md
 
 This worker owns `backend/agents/`, `backend/orchestrator.py`, and `backend/tasks/`.
-Do NOT modify `backend/main.py`, `backend/models/`, `backend/utils/`, or `frontend/`.
+Do NOT modify `backend/main.py`, `backend/models/`, `backend/utils/` (exception: `debug_logger.py` for component registration only), or `frontend/`.
 Reads (not modifies): `backend/models/` for Pydantic type contracts.
 
 ## Agent Model Assignments
@@ -100,12 +100,6 @@ def run_planning_job_task(job_id: str) -> None:
 
 Events pushed to Redis list `sse:{job_id}` for the SSE endpoint to drain.
 Without Redis: events go to `asyncio.Queue` via `debug_logger._local_push()`.
-
-## Budget Rules
-
-- 45% accommodation · 15% food · ~CHF 80/stop activities · CHF 12/h fuel
-- All prices in CHF regardless of locale
-- Budget state tracked in `BudgetState` model through accommodation selection
 
 ## Agent Output Rules
 
