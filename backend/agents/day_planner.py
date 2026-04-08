@@ -1,3 +1,5 @@
+"""Agent that builds a detailed hourly day-by-day travel plan, enriched with Google Directions, weather data, and cost estimates."""
+
 import asyncio
 from datetime import date, timedelta
 from models.travel_request import TravelRequest
@@ -29,6 +31,8 @@ SYSTEM_PROMPTS = {
 
 
 class DayPlannerAgent:
+    """Agent that produces an hourly day plan for every trip day, combining stop/accommodation/activity data with real drive times and weather."""
+
     def __init__(self, request: TravelRequest, job_id: str, token_accumulator: list = None):
         self.request = request
         self.job_id = job_id
@@ -130,7 +134,7 @@ class DayPlannerAgent:
         return enriched
 
     async def _enrich_with_weather(self, stops: list) -> list:
-        """Wetter-Vorhersagen für alle Stopps laden."""
+        """Fetch weather forecasts for each stop and attach them to the stop dict."""
         req = self.request
         start_date = req.start_date
         if isinstance(start_date, str):
@@ -187,10 +191,10 @@ class DayPlannerAgent:
         }
 
     def _distribute_per_stop(self, day_contexts: list) -> None:
-        """Verteile Aktivitäten/Restaurants auf Tage am gleichen Stopp (Round-Robin).
+        """Distribute activities and restaurants across multiple days at the same stop via round-robin.
 
-        Mutiert day_contexts in-place: reduziert activities/restaurants pro Tag
-        und fügt other_days_hint, day_of_stay, total_days_at_stop hinzu.
+        Mutates day_contexts in-place: assigns per-day activity/restaurant subsets and adds
+        other_days_hint, day_of_stay, and total_days_at_stop fields for prompt context.
         """
         # Gruppiere nach Region
         from collections import defaultdict
@@ -261,7 +265,7 @@ class DayPlannerAgent:
                 day_contexts[i]["other_days_hint"] = " | ".join(other_parts)
 
     async def _plan_single_day(self, day_ctx: dict) -> dict:
-        """Plan one day with a stündlicher Zeitstrahl via one Claude call."""
+        """Plan one day's hourly schedule via a single Claude call, incorporating weather, ferry, and multi-day-stop context."""
         req = self.request
         lang = getattr(req, 'language', 'de')
         system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
@@ -480,6 +484,7 @@ class DayPlannerAgent:
             }
 
     async def run(self, route, accommodations: list, activities: list) -> dict:
+        """Orchestrate the full day-planning pipeline: merge stops, enrich with Google/weather, distribute activities, plan each day in parallel."""
         req = self.request
 
         await debug_logger.log(LogLevel.AGENT, "DayPlanner startet", job_id=self.job_id, agent="DayPlanner")
