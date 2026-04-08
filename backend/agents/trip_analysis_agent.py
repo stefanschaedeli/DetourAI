@@ -1,3 +1,5 @@
+"""Agent that critically evaluates a completed travel plan against the user's original requirements and produces a scored analysis."""
+
 from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
@@ -23,6 +25,8 @@ SYSTEM_PROMPTS = {
 
 
 class TripAnalysisAgent:
+    """Agent that scores a finished travel plan (1–10) and returns strengths, weaknesses, and improvement suggestions."""
+
     def __init__(self, request: TravelRequest, job_id: str, token_accumulator: list = None):
         self.request = request
         self.job_id = job_id
@@ -31,6 +35,7 @@ class TripAnalysisAgent:
         self.model = get_model("claude-opus-4-5", AGENT_KEY)
 
     async def run(self, plan: dict, request: TravelRequest) -> dict:
+        """Analyse the travel plan against the request requirements and return a structured quality report."""
         req = request
         lang = getattr(req, 'language', 'de')
         system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
