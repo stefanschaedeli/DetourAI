@@ -1,3 +1,5 @@
+"""Pydantic models for the incoming travel planning request, including legs, travellers, budget, and preferences."""
+
 from typing import List, Optional
 from pydantic import BaseModel, field_validator, model_validator, Field
 from datetime import date
