@@ -90,9 +90,10 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260408-nk7 | Phase 1: Agentic worker architecture — restructure CLAUDE.md hierarchy and create worker-specific CLAUDE.md files | 2026-04-08 | 4755f10 | [260408-nk7-phase-1-agentic-worker-architecture-rest](./quick/260408-nk7-phase-1-agentic-worker-architecture-rest/) |
+| 260408-nwc | Phase 2: API contract layer — offline OpenAPI dump (48 endpoints) + SSE event reference + generate-types.sh update | 2026-04-08 | 7c3a1f3 | [260408-nwc-phase-2-api-contract-layer-create-contra](./quick/260408-nwc-phase-2-api-contract-layer-create-contra/) |
 
 ## Session Continuity
 
 Last session: 2026-04-08
-Stopped at: Completed quick task 260408-nk7: Phase 1 agentic worker CLAUDE.md hierarchy
-Resume file: .planning/quick/260408-nk7-phase-1-agentic-worker-architecture-rest/260408-nk7-SUMMARY.md
+Stopped at: Completed quick task 260408-nwc: Phase 2 API contract layer
+Resume file: .planning/quick/260408-nwc-phase-2-api-contract-layer-create-contra/260408-nwc-SUMMARY.md
