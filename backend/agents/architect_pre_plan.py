@@ -1,3 +1,5 @@
+"""Pre-planning agent that generates a region overview before full route architecture."""
+
 from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
@@ -41,6 +43,8 @@ SYSTEM_PROMPTS = {
 
 
 class ArchitectPrePlanAgent:
+    """Agent that produces a compact region overview (ordered regions with nights and drive times) before route planning."""
+
     def __init__(self, request: TravelRequest, job_id: str):
         self.request = request
         self.job_id = job_id
@@ -48,6 +52,7 @@ class ArchitectPrePlanAgent:
         self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
 
     def _build_prompt(self) -> str:
+        """Build a localized prompt instructing Claude to produce a region plan JSON for the first trip leg."""
         req = self.request
         lang = getattr(req, 'language', 'de')
         leg = req.legs[0]  # Pre-plan is for the first transit leg
@@ -152,6 +157,7 @@ class ArchitectPrePlanAgent:
 4. {L['rule4']}"""
 
     async def run(self) -> dict:
+        """Call Claude with the region-plan prompt and return the parsed JSON response."""
         prompt = self._build_prompt()
         lang = getattr(self.request, 'language', 'de')
         system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
