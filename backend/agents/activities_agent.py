@@ -1,3 +1,5 @@
+"""Agent that researches and recommends activities for each trip stop, enriched with Google Places data and weather forecasts."""
+
 import asyncio
 import difflib
 from collections import defaultdict
@@ -184,7 +186,7 @@ _LABELS = {
 
 
 def _describe_travelers(req: TravelRequest, lang: str = None) -> str:
-    """Beschreibt die Reisegruppe mit Altersgruppen der Kinder."""
+    """Return a localized string describing the travel group, including children's age groups."""
     if lang is None:
         lang = getattr(req, 'language', 'de')
     lbl = _LABELS.get(lang, _LABELS["de"])
@@ -227,7 +229,7 @@ _STYLE_GUIDANCE_HEADER = {
 
 
 def _build_style_guidance(req: TravelRequest, lang: str = None) -> str:
-    """Baut kontextabhängige Aktivitätshinweise basierend auf Reisestil und Altersgruppen."""
+    """Build context-aware activity guidance text based on travel styles and children's age groups."""
     if lang is None:
         lang = getattr(req, 'language', 'de')
     age_groups = _AGE_GROUPS.get(lang, _AGE_GROUPS["de"])
@@ -263,6 +265,8 @@ def _build_style_guidance(req: TravelRequest, lang: str = None) -> str:
 
 
 class ActivitiesAgent:
+    """Agent that generates activity recommendations for a single trip stop, enriched with Google Places, weather, and image data."""
+
     def __init__(self, request: TravelRequest, job_id: str, token_accumulator: list = None):
         self.request = request
         self.job_id = job_id
@@ -271,6 +275,7 @@ class ActivitiesAgent:
         self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
 
     async def run_stop(self, stop: dict) -> dict:
+        """Research and return activity recommendations for one stop, merging Claude output with real Places data and images."""
         req = self.request
         lang = getattr(req, 'language', 'de')
         system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
