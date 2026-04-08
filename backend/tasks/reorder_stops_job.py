@@ -1,3 +1,5 @@
+"""Celery task that reorders two stops in a route and recalculates all drive segments and day plans."""
+
 import asyncio
 import json
 import os
