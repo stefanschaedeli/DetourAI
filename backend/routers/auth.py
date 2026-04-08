@@ -1,8 +1,8 @@
+"""Auth router — login, token refresh, logout, and password change endpoints.
+
+Cookie name: detour_ai_refresh (httpOnly, SameSite=strict, path=/api/auth)
+"""
 from typing import Optional
-"""
-Auth endpoints: login, refresh, logout, me.
-Cookie name: detour_ai_refresh
-"""
 import os
 import uuid
 import asyncio
