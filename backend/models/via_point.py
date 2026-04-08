@@ -1,3 +1,5 @@
+"""Pydantic model for an intermediate waypoint in a trip route."""
+
 from typing import Optional
 from pydantic import BaseModel, Field
 from datetime import date
