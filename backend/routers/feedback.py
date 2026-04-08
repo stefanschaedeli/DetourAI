@@ -1,6 +1,4 @@
-# ---------------------------------------------------------------------------
-#  Feedback → GitHub Issues  (backend/routers/feedback.py)
-# ---------------------------------------------------------------------------
+"""Feedback router — submit user feedback as GitHub Issues with optional screenshot upload."""
 from __future__ import annotations
 
 import base64
@@ -68,6 +66,12 @@ async def submit_feedback(
     body: FeedbackRequest,
     user: CurrentUser = Depends(get_current_user),
 ) -> dict:
+    """Create a GitHub Issue from user feedback, optionally attaching a screenshot.
+
+    Enforces a per-user cooldown of 5 minutes between submissions.
+    Requires GITHUB_TOKEN and GITHUB_REPO environment variables to be set.
+    Returns {"ok": True, "issue_url": "..."} on success.
+    """
     if not GITHUB_TOKEN or not GITHUB_REPO:
         raise HTTPException(503, detail="Feedback-System nicht konfiguriert.")
 
