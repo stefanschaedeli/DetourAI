@@ -26,12 +26,8 @@ class TravelPlannerOrchestrator:
         self._token_accumulator: list = []
 
     def _get_store(self):
-        try:
-            from main import redis_client
-            return redis_client
-        except Exception:
-            import redis as redis_lib
-            return redis_lib.from_url(REDIS_URL, decode_responses=True)
+        from services.redis_store import redis_client
+        return redis_client
 
     def _load_job(self) -> dict:
         store = self._get_store()

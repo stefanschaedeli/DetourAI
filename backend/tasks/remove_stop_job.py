@@ -11,12 +11,8 @@ from tasks import celery_app
 
 def _get_store():
     """Return the active job store (real Redis or in-memory fallback)."""
-    try:
-        from main import redis_client
-        return redis_client
-    except Exception:
-        import redis as redis_lib
-        return redis_lib.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
+    from services.redis_store import redis_client
+    return redis_client
 
 
 async def _remove_stop_job(job_id: str) -> None:

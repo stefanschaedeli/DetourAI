@@ -11,13 +11,9 @@ EDIT_LOCK_TTL = 300  # 5 minutes
 
 
 def _get_redis():
-    """Return Redis client (from main.py) or create a new connection."""
-    try:
-        from main import redis_client
-        return redis_client
-    except Exception:
-        import redis as redis_lib
-        return redis_lib.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
+    """Return Redis client (from services.redis_store)."""
+    from services.redis_store import redis_client
+    return redis_client
 
 
 def acquire_edit_lock(travel_id: int) -> bool:
