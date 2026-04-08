@@ -1,11 +1,16 @@
 'use strict';
 
-/**
- * GoogleMaps routes — driving route rendering via Google Routes API.
- * Requires maps-core.js to load first.
- */
+// Maps Routes — driving route rendering via Google Routes API with straight-line fallback.
+// Reads: GoogleMaps (maps-core.js).
+// Provides: renderDrivingRoute.
+
 Object.assign(GoogleMaps, (() => {
 
+  // ---------------------------------------------------------------------------
+  // Public API
+  // ---------------------------------------------------------------------------
+
+  /** Render a driving route polyline on the map; batches automatically when waypoints > 27. */
   async function renderDrivingRoute(map, waypoints, opts) {
     if (!waypoints || waypoints.length < 2) return { setMap() {} };
     const polyOpts = {
@@ -18,6 +23,10 @@ Object.assign(GoogleMaps, (() => {
       ? _renderBatchedRoute(map, waypoints, polyOpts)
       : _renderSingleRoute(map, waypoints, polyOpts);
   }
+
+  // ---------------------------------------------------------------------------
+  // Internal rendering helpers
+  // ---------------------------------------------------------------------------
 
   async function _renderSingleRoute(map, waypoints, polyOpts) {
     const origin        = waypoints[0];
