@@ -1,3 +1,5 @@
+"""Celery task that pre-fetches accommodation options for all selected stops in parallel."""
+
 import asyncio
 import json
 import os
