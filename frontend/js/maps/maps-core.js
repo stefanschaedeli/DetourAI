@@ -1,12 +1,14 @@
 'use strict';
 
-/**
- * GoogleMaps core — map init, markers, autocomplete, coordinate resolution.
- * Loaded first of the four maps-*.js files.
- * Shared state for other maps files declared on window here.
- */
+// Maps Core — map init, markers, autocomplete, coordinate resolution.
+// Reads: S (state.js), updateDebugLog (progress.js).
+// Provides: initRouteMap, initGuideMap, initPersistentGuideMap, initStopOverviewMap,
+//           createDivMarker, createPlaceMarker, attachAutocomplete, resolveEntityCoordinates.
+
 const GoogleMaps = (() => {
+  // ---------------------------------------------------------------------------
   // Shared state — other maps-*.js files access these via window.*
+  // ---------------------------------------------------------------------------
   window._mapsImageCache    = new Map();   // used by maps-images.js
   window._mapsCoordCache    = new Map();   // used here in resolveEntityCoordinates
   window._mapsGuideMarkers  = [];          // used by maps-guide.js
@@ -15,6 +17,10 @@ const GoogleMaps = (() => {
   let _routeMap = null;
   let _guideMap = null;
   let _apiKey   = '';
+
+  // ---------------------------------------------------------------------------
+  // Internal helpers
+  // ---------------------------------------------------------------------------
 
   function _log(level, message) {
     if (typeof S !== 'undefined' && Array.isArray(S.logs)) {
@@ -32,6 +38,11 @@ const GoogleMaps = (() => {
   function _setApiKey(key) { _apiKey = key; }
   function _getApiKey()    { return _apiKey; }
 
+  // ---------------------------------------------------------------------------
+  // Map initialisation
+  // ---------------------------------------------------------------------------
+
+  /** Initialise (or return existing) the route-planning map in the given element. */
   function initRouteMap(elId, opts) {
     const el = document.getElementById(elId);
     if (!el) { _log('WARNING', 'initRouteMap: Element #' + elId + ' nicht gefunden'); return null; }
@@ -46,6 +57,7 @@ const GoogleMaps = (() => {
     return _routeMap;
   }
 
+  /** Initialise a fresh guide map each time (no singleton guard). */
   function initGuideMap(elId, opts) {
     const el = document.getElementById(elId);
     if (!el) { _log('WARNING', 'initGuideMap: Element #' + elId + ' nicht gefunden'); return null; }
@@ -59,6 +71,7 @@ const GoogleMaps = (() => {
     return _guideMap;
   }
 
+  /** Initialise or reuse a persistent guide map that survives tab switches. */
   function initPersistentGuideMap(elId, opts) {
     const el = document.getElementById(elId);
     if (!el) { _log('WARNING', 'initPersistentGuideMap: Element #' + elId + ' nicht gefunden'); return null; }
@@ -74,6 +87,7 @@ const GoogleMaps = (() => {
     return _guideMap;
   }
 
+  /** Create a one-off map for a single stop overview card (not cached). */
   function initStopOverviewMap(elId, opts) {
     const el = document.getElementById(elId);
     if (!el) { _log('WARNING', 'initStopOverviewMap: Element #' + elId + ' nicht gefunden'); return null; }
@@ -87,6 +101,11 @@ const GoogleMaps = (() => {
     } catch (e) { _log('ERROR', 'initStopOverviewMap fehlgeschlagen: ' + e.message); return null; }
   }
 
+  // ---------------------------------------------------------------------------
+  // Markers
+  // ---------------------------------------------------------------------------
+
+  /** Create a custom HTML overlay marker at the given position. */
   function createDivMarker(map, pos, html, onClick) {
     const latLng  = new google.maps.LatLng(pos.lat, pos.lng);
     const overlay = new google.maps.OverlayView();
@@ -112,10 +131,16 @@ const GoogleMaps = (() => {
     return overlay;
   }
 
+  /** Create a place-linked marker (delegates to createDivMarker; placeId reserved for future use). */
   function createPlaceMarker(map, placeId, pos, html, onClick) {
     return createDivMarker(map, pos, html, onClick);
   }
 
+  // ---------------------------------------------------------------------------
+  // Autocomplete
+  // ---------------------------------------------------------------------------
+
+  /** Attach a Google Places autocomplete element to an existing text input. */
   function attachAutocomplete(inputId, opts) {
     const inputEl = document.getElementById(inputId);
     if (!inputEl) { _log('WARNING', 'attachAutocomplete: #' + inputId + ' nicht gefunden'); return null; }
@@ -155,6 +180,11 @@ const GoogleMaps = (() => {
     };
   }
 
+  // ---------------------------------------------------------------------------
+  // Coordinate resolution
+  // ---------------------------------------------------------------------------
+
+  /** Resolve lat/lng for a list of entities using cache, placeId lookup, or text search. */
   async function resolveEntityCoordinates(entities) {
     const results       = new Map();
     const toFetchById   = [];
