@@ -1,3 +1,4 @@
+"""Currency conversion utilities — ECB exchange rates to CHF with 24h caching."""
 import time
 import aiohttp
 import xml.etree.ElementTree as ET
@@ -7,9 +8,9 @@ from utils.http_session import get_session
 
 # Cache: {currency: (rate_to_chf, timestamp)}
 _rate_cache: dict[str, tuple[float, float]] = {}
-_CACHE_TTL = 86400  # 24h
+_CACHE_TTL = 86400  # 24h in seconds
 
-# Fallback-Kurse (ca. Stand 2025)
+# Fallback rates (approximate as of 2025) used when ECB feed is unavailable
 _FALLBACK_RATES: dict[str, float] = {
     "CHF": 1.0,
     "EUR": 0.96,   # 1 EUR ≈ 0.96 CHF
@@ -28,7 +29,7 @@ _FALLBACK_RATES: dict[str, float] = {
     "TRY": 0.027,
 }
 
-# Land → Währung
+# Country name (German and English) → ISO 4217 currency code
 _COUNTRY_CURRENCY: dict[str, str] = {
     "Schweiz": "CHF", "Switzerland": "CHF",
     "Frankreich": "EUR", "France": "EUR",
@@ -67,7 +68,10 @@ _COUNTRY_CURRENCY: dict[str, str] = {
 
 
 async def _fetch_ecb_rates() -> dict[str, float]:
-    """ECB-Wechselkurse laden (EUR-basiert). Kostenlos, kein API-Key."""
+    """Fetch EUR-based exchange rates from the ECB daily XML feed (free, no API key required).
+
+    Returns a dict mapping currency code to EUR-relative rate, or an empty dict on failure.
+    """
     try:
         session = await get_session()
         async with session.get(
@@ -91,7 +95,11 @@ async def _fetch_ecb_rates() -> dict[str, float]:
 
 
 async def get_chf_rate(currency: str = "EUR") -> float:
-    """Wechselkurs: 1 {currency} = X CHF. 24h gecacht."""
+    """Return the exchange rate: 1 {currency} = X CHF. Rates are cached for 24 hours.
+
+    Fetches from ECB on cache miss and converts all rates to CHF-based values.
+    Falls back to _FALLBACK_RATES if the ECB feed is unavailable.
+    """
     if currency == "CHF":
         return 1.0
 
@@ -103,7 +111,7 @@ async def get_chf_rate(currency: str = "EUR") -> float:
     if ecb_rates and "CHF" in ecb_rates:
         chf_per_eur = ecb_rates["CHF"]
         now = time.time()
-        # Konvertiere alle ECB-Kurse zu CHF-basiert und cache sie
+        # Convert all ECB EUR-based rates to CHF-based rates and cache them
         for curr, eur_rate in ecb_rates.items():
             if curr != "CHF":
                 rate_to_chf = chf_per_eur / eur_rate
@@ -118,11 +126,11 @@ async def get_chf_rate(currency: str = "EUR") -> float:
 
 
 async def convert_to_chf(amount: float, from_currency: str) -> float:
-    """Betrag in CHF umrechnen."""
+    """Convert an amount from the given currency to CHF, rounded to 2 decimal places."""
     rate = await get_chf_rate(from_currency)
     return round(amount * rate, 2)
 
 
 def detect_currency(country: str) -> str:
-    """Land → Währungscode. Fallback: EUR."""
+    """Return the ISO 4217 currency code for a country name (German or English). Defaults to EUR."""
     return _COUNTRY_CURRENCY.get(country, "EUR")
