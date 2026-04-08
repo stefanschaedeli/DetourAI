@@ -1,17 +1,13 @@
 'use strict';
 
-/**
- * SSEClient — owns EventSource lifecycle and SSE wire protocol.
- *
- * SSEClient.open(jobId)  — opens EventSource, dispatches window CustomEvents
- * SSEClient.close()      — closes active connection
- *
- * Each SSE event X fires:
- *   window.dispatchEvent(new CustomEvent('sse:X', { detail: parsedData }))
- * On error:
- *   window.dispatchEvent(new CustomEvent('sse:error'))
- */
+// SSE Client — EventSource lifecycle and SSE wire protocol.
+// Reads: authGetToken (auth.js).
+// Provides: SSEClient.open, SSEClient.close.
+
 const SSEClient = (() => {
+  // ---------------------------------------------------------------------------
+  // Known SSE event types
+  // ---------------------------------------------------------------------------
   const EVENTS = [
     'debug_log', 'route_ready', 'stop_done', 'agent_start', 'agent_done',
     'job_complete', 'job_error', 'accommodation_loading', 'accommodation_loaded',
@@ -28,6 +24,11 @@ const SSEClient = (() => {
 
   let _source = null;
 
+  // ---------------------------------------------------------------------------
+  // Connection management
+  // ---------------------------------------------------------------------------
+
+  /** Open an EventSource for jobId, injecting the auth token as a query param. */
   function open(jobId) {
     close();
     const token = (typeof authGetToken === 'function') ? authGetToken() : null;
@@ -43,6 +44,7 @@ const SSEClient = (() => {
     _source.onerror = () => { window.dispatchEvent(new CustomEvent('sse:error')); };
   }
 
+  /** Close the active EventSource connection if one is open. */
   function close() {
     if (_source) { _source.close(); _source = null; }
   }
