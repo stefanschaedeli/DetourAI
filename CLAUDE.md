@@ -24,26 +24,9 @@ python3 -m uvicorn main:app --reload --port 8000
 ### Frontend (static)
 Open `frontend/index.html` directly, or let Nginx serve it via Docker.
 
-### Docker (full stack)
-```bash
-docker compose up --build          # start everything
-docker compose up -d               # background
-docker compose down                # stop
-docker compose logs -f backend     # follow backend logs
-```
-
 ### Type Generation (OpenAPI → TypeScript)
 ```bash
 cd scripts && ./generate-types.sh  # emits frontend/js/types.d.ts
-```
-
-### Tests
-```bash
-cd backend && python3 -m pytest tests/ -v
-cd backend && python3 -m pytest tests/test_models.py        # Pydantic validation only
-cd backend && python3 -m pytest tests/test_endpoints.py     # API routes
-cd backend && python3 -m pytest tests/test_agents_mock.py   # agents with mocked Anthropic
-cd backend && python3 -m pytest tests/test_travel_db.py     # travel persistence DB
 ```
 
 ### Dependencies
@@ -56,7 +39,6 @@ cd backend && pip3 install -r requirements.txt
 ## Critical Rules
 
 - **Never commit `.env`** — use `.env.example` as template
-- **Agents always return valid JSON** — no markdown wrappers, no explanations
 - **All user-facing text in German** — error messages, log entries, UI labels
 - **Prices always in CHF**
 - **TEST_MODE=true** → all agents use `claude-haiku-4-5` (cheap dev mode)
