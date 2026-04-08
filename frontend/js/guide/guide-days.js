@@ -6,6 +6,7 @@
 //           _renderRestaurantsHtml, _renderDayExamplesHtml, renderCalendar, _initCalendarClicks
 'use strict';
 
+/** Renders the time-block timeline for a day plan (morning/afternoon/evening segments). */
 function renderDayTimeBlocks(dayPlan) {
   const blocks = dayPlan.time_blocks || [];
   if (!blocks.length) return '';
@@ -51,6 +52,7 @@ function renderDayTimeBlocks(dayPlan) {
 // Extracted stop-section HTML helpers
 // ---------------------------------------------------------------------------
 
+/** Returns the HTML snippet for the accommodation card within a day detail view. */
 function _renderAccommodationHtml(stop) {
   const acc = stop.accommodation || {};
   if (!acc.name) return '';
@@ -102,6 +104,7 @@ function _renderAccommodationHtml(stop) {
   `;
 }
 
+/** Returns the HTML snippet for the activities list within a day detail view. */
 function _renderActivitiesHtml(stop) {
   const acts = stop.top_activities || [];
   if (!acts.length) return '';
@@ -131,6 +134,7 @@ function _renderActivitiesHtml(stop) {
   `;
 }
 
+/** Returns the HTML snippet for the restaurants list within a day detail view. */
 function _renderRestaurantsHtml(stop) {
   const rests = stop.restaurants || [];
   if (!rests.length) return '';
@@ -157,6 +161,7 @@ function _renderRestaurantsHtml(stop) {
   `;
 }
 
+/** Returns the HTML snippet for the day-plan examples section in a stop detail view. */
 function _renderDayExamplesHtml(stop, dayPlans) {
   const arrivalDay = stop.arrival_day || 1;
   const stopDays = dayPlans.filter(d =>
@@ -198,6 +203,7 @@ function _renderDayExamplesHtml(stop, dayPlans) {
 // Day Plan helpers
 // ---------------------------------------------------------------------------
 
+/** Returns the array of stops whose arrival_day matches the given day number. */
 function _findStopsForDay(plan, dayNum) {
   const stops = plan.stops || [];
   return stops.filter(s => {
@@ -206,6 +212,7 @@ function _findStopsForDay(plan, dayNum) {
   });
 }
 
+/** Renders the days-tab overview: expandable day rows with inline time-block preview. */
 function renderDaysOverview(plan) {
   const dayPlans = plan.day_plans || [];
   if (!dayPlans.length) return '<p class="day-timeline-empty">Keine Tagesplaene vorhanden.</p>';
@@ -261,6 +268,7 @@ function renderDaysOverview(plan) {
   return '<div class="day-timeline" role="list">' + items + '</div>';
 }
 
+/** Toggles the inline expand/collapse of a day row in the days overview. */
 function _toggleDayExpand(dayNum) {
   const detail = document.getElementById('day-detail-' + dayNum);
   if (!detail) return;
@@ -286,6 +294,7 @@ function _toggleDayExpand(dayNum) {
   }
 }
 
+/** Renders the full day detail view with stops, time blocks, map, and navigation. */
 function renderDayDetail(plan, dayNum) {
   const dayPlans = plan.day_plans || [];
   const stops = plan.stops || [];
@@ -390,6 +399,7 @@ function renderDayDetail(plan, dayNum) {
 // Day navigation helpers
 // ---------------------------------------------------------------------------
 
+/** Drills down to a day detail view with crossfade transition and URL update. */
 function navigateToDay(dayNum) {
   _activeDayNum = Number(dayNum);
   _activeStopId = null;
@@ -414,10 +424,12 @@ function navigateToDay(dayNum) {
   }
 }
 
+/** Returns to the days overview list with crossfade transition and URL update. */
 function navigateToDaysOverview() {
   _navigateToOverview();
 }
 
+/** Activates day detail view directly (called by router, no URL update). */
 function activateDayDetail(dayNum) {
   _activeDayNum = Number(dayNum);
   _activeStopId = null;
@@ -440,6 +452,7 @@ function activateDayDetail(dayNum) {
 // Day Detail Map
 // ---------------------------------------------------------------------------
 
+/** Initialises the Google Map in a day detail panel with stop and activity markers. */
 async function _initDayDetailMap(plan, dayNum) {
   if (!window.google || !google.maps) return;
 
@@ -636,6 +649,7 @@ async function _initDayDetailMap(plan, dayNum) {
 }
 
 
+/** Renders the calendar tab as a monthly grid with day-plan entries colour-coded by stop. */
 function renderCalendar(plan) {
   const stops = plan.stops || [];
   const dayPlans = plan.day_plans || [];
@@ -814,6 +828,7 @@ function renderCalendar(plan) {
   `;
 }
 
+/** Attaches click handlers to calendar day cells to navigate to the corresponding day detail. */
 function _initCalendarClicks(plan) {
   document.querySelectorAll('.calendar-day--trip[data-day-num]').forEach(cell => {
     const dayNum = cell.dataset.dayNum;
