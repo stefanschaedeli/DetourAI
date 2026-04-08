@@ -1,3 +1,5 @@
+"""Celery task that replaces a route stop with a new location, re-running directions, research, and day planning."""
+
 import asyncio
 import json
 import os
