@@ -1,5 +1,13 @@
 'use strict';
 
+// Route Builder — interactive stop selection; renders option cards and map from SSE-streamed route data.
+// Reads: S (state.js), Router (router.js), GoogleMaps (maps-core.js), progressOverlay (progress.js), t (i18n.js).
+// Provides: openRouteSSE, closeRouteSSE, startRouteBuilding, renderOptions, selectOption, confirmRoute, showRegionPlanUI, updateRegionPlanUI, openRouteAdjustModal.
+
+// ---------------------------------------------------------------------------
+// Module state
+// ---------------------------------------------------------------------------
+
 let routeMeta = {};
 let _rbMarkers = [];
 let _rbPolylines = [];
@@ -10,6 +18,11 @@ let _routeSSE = null;
 let _streamingOptions = [];    // options collected from SSE before HTTP response
 let _streamingMeta = null;     // map_anchors from first route_option_ready event
 
+// ---------------------------------------------------------------------------
+// SSE connection
+// ---------------------------------------------------------------------------
+
+/** Opens the SSE stream for the route-building phase, subscribing to option and progress events. */
 function openRouteSSE(jobId) {
   if (_routeSSE) { _routeSSE.close(); _routeSSE = null; }
   _streamingOptions = [];
@@ -45,6 +58,7 @@ function _showSkeletonCards() {
   `).join('');
 }
 
+/** Closes the active route SSE connection if open. */
 function closeRouteSSE() {
   if (_routeSSE) { _routeSSE.close(); _routeSSE = null; }
 }
@@ -267,6 +281,11 @@ function appendOptionCard(opt, i) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Route building orchestration
+// ---------------------------------------------------------------------------
+
+/** Initialises the route-builder UI from the HTTP response, merging any already-streamed SSE options. */
 function startRouteBuilding(data) {
   progressOverlay.close();  // immer schliessen — idempotent
   S.selectedStops = [];
@@ -369,6 +388,7 @@ function _renderSkipCard(target, skipBonus) {
   `;
 }
 
+/** Renders the full set of stop option cards and updates the map and status header. */
 function renderOptions(options, meta) {
   routeMeta = meta || routeMeta;
   S.currentOptions = options;
@@ -647,6 +667,7 @@ function renderBuiltStops() {
   }).join('');
 }
 
+/** Handles user selection of a stop option: confirms it with the backend and loads the next options. */
 async function selectOption(idx) {
   if (S.loadingOptions) return;
   S.loadingOptions = true;
@@ -839,6 +860,7 @@ async function skipStop() {
   }
 }
 
+/** Confirms the built route, then transitions to the accommodation phase with SSE streaming. */
 async function confirmRoute() {
   const btn = document.getElementById('confirm-route-btn');
   if (btn) { btn.disabled = true; btn.textContent = t('route_builder.confirming'); }
@@ -1042,6 +1064,7 @@ function _buildRegionCardHtml(r, i) {
     </div>`;
 }
 
+/** Renders the explore-mode region plan panel with draggable region cards and a map. */
 function showRegionPlanUI(regions, summary, legId) {
   progressOverlay.close();
   closeRouteSSE();
@@ -1154,6 +1177,7 @@ function _initRegionMap(regions) {
   _regionPlanMap.fitBounds(bounds, 50);
 }
 
+/** Updates the region plan panel cards and map after a drag, replace, or recompute. */
 function updateRegionPlanUI(regions, summary) {
   window._currentRegions = regions;
   // Re-render the cards list
@@ -1286,6 +1310,7 @@ async function _confirmRegions() {
 // Route-adjust modal (shown when all options exceed drive limit)
 // ---------------------------------------------------------------------------
 
+/** Opens the route-adjust modal when all options exceed the max drive-hours limit. */
 function openRouteAdjustModal() {
   const existing = document.getElementById('route-adjust-modal');
   if (existing) existing.remove();
