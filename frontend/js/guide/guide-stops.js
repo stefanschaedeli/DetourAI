@@ -8,6 +8,7 @@
 
 let _initializedStopMaps = new Set();
 
+/** Returns the HTML string for a single stop card row with flag, drive info, and nights. */
 function renderStopCard(stop, i, totalStops) {
   var flag = FLAGS[stop.country] || '';
   var driveInfo = '';
@@ -75,6 +76,7 @@ function renderStopCard(stop, i, totalStops) {
 // Stops Overview (card list)
 // ---------------------------------------------------------------------------
 
+/** Renders the stops-tab overview: all stop cards with drop zones for drag-and-drop editing. */
 function renderStopsOverview(plan) {
   var stops = plan.stops || [];
   var html = '';
@@ -104,6 +106,7 @@ function renderStopsOverview(plan) {
 // Card Click → Map Sync
 // ---------------------------------------------------------------------------
 
+/** Highlights the clicked stop card row and scrolls it into view. */
 function _onCardClick(stopId) {
   // Highlight the clicked card, remove highlight from others
   document.querySelectorAll('.stop-card-row').forEach(function (card) {
@@ -121,6 +124,7 @@ function _onCardClick(stopId) {
 // Lazy-load card images
 // ---------------------------------------------------------------------------
 
+/** Lazy-loads hero images for all stop cards in the stops overview using IntersectionObserver. */
 function _lazyLoadCardImages(plan) {
   var stops = plan.stops || [];
   document.querySelectorAll('.stop-card-row').forEach(function (card) {
@@ -169,6 +173,7 @@ async function _lazyLoadEntityImagesForCard(containerEl, placeName, lat, lng, pl
 // Stop Detail (full page with sidebar + prev/next)
 // ---------------------------------------------------------------------------
 
+/** Renders the full stop detail view with activities, restaurants, accommodation, and map. */
 function renderStopDetail(plan, stopId) {
   const stops = plan.stops || [];
   const dayPlans = plan.day_plans || [];
@@ -254,6 +259,7 @@ function renderStopDetail(plan, stopId) {
 // Stop navigation helpers
 // ---------------------------------------------------------------------------
 
+/** Drills down to a stop detail view with crossfade transition and URL update. */
 function navigateToStop(stopId) {
   _activeStopId = Number(stopId);
   var plan = S.result;
@@ -287,6 +293,7 @@ function navigateToStop(stopId) {
   }
 }
 
+/** Returns to the stops overview list with crossfade transition and URL update. */
 function navigateToStopsOverview() {
   _activeStopId = null;
   if (_activeDayNum != null) {
@@ -296,6 +303,7 @@ function navigateToStopsOverview() {
   }
 }
 
+/** Activates stop detail view directly (called by router, no URL update). */
 function activateStopDetail(stopId) {
   _activeStopId = Number(stopId);
   var plan = S.result;
@@ -323,6 +331,7 @@ function activateStopDetail(stopId) {
 }
 
 
+/** Returns an SVG HTML string for a map pin icon of the given entity type. */
 function _buildStopMapPin(type, entity) {
   if (type === 'hotel') return '<div class="stop-map-pin pin-hotel">🏨</div>';
   if (type === 'activity') return `<div class="stop-map-pin pin-activity">${_getActivityIcon(entity.name)}</div>`;
@@ -330,6 +339,7 @@ function _buildStopMapPin(type, entity) {
   return '<div class="stop-map-pin pin-activity">📍</div>';
 }
 
+/** Returns the HTML string for a map info-window popup for an activity or restaurant. */
 function _buildStopMapPopup(type, entity) {
   if (type === 'hotel') {
     const ratingStr = entity.rating ? `${entity.rating}★` : '';
@@ -377,6 +387,7 @@ function _scrollToAndHighlight(selector, stopId) {
   el.addEventListener('animationend', () => el.classList.remove('highlight-flash'), { once: true });
 }
 
+/** Initialises the Google Map in a stop detail panel with activity and restaurant pins. */
 async function _initStopMap(stop) {
   if (!window.google || !google.maps) return;
   if (_initializedStopMaps.has(stop.id)) return;
@@ -513,6 +524,7 @@ async function _initStopMap(stop) {
   }
 }
 
+/** Lazy-loads all images (hero, activities, restaurants) in an open stop detail view. */
 function _lazyLoadSingleStopImages(plan, stop) {
   const stopEl = document.getElementById(`guide-stop-${stop.id}`);
   if (!stopEl) return;
