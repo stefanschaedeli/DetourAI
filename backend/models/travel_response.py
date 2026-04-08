@@ -1,3 +1,5 @@
+"""Pydantic models for the complete travel plan response, including stops, day plans, and cost estimates."""
+
 from typing import List, Optional
 from pydantic import BaseModel
 
