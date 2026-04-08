@@ -1,3 +1,4 @@
+"""Redis job store — get/save job state with in-memory fallback for local development."""
 import json
 import os
 import re
@@ -32,6 +33,7 @@ class _InMemoryStore:
 
 
 def _make_redis_client():
+    """Connect to Redis and return the client, or fall back to _InMemoryStore on failure."""
     try:
         client = redis_lib.from_url(REDIS_URL, decode_responses=True)
         client.ping()
@@ -54,6 +56,10 @@ def _job_lang(job: dict) -> str:
 
 
 def get_job(job_id: str) -> dict:
+    """Fetch and deserialise a job from Redis by job_id.
+
+    Raises HTTP 404 if job_id is not a valid 32-char hex string or the key does not exist.
+    """
     if not _JOB_ID_RE.match(job_id):
         raise HTTPException(status_code=404, detail=i18n_t("error.job_not_found", "de"))
     raw = redis_client.get(f"job:{job_id}")
@@ -63,4 +69,5 @@ def get_job(job_id: str) -> dict:
 
 
 def save_job(job_id: str, job: dict):
+    """Serialise and store a job dict in Redis with a 24-hour TTL."""
     redis_client.setex(f"job:{job_id}", 86400, json.dumps(job))
