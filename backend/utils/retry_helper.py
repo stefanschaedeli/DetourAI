@@ -1,3 +1,4 @@
+"""Retry helper — wraps blocking Anthropic SDK calls with exponential backoff."""
 import asyncio
 import random
 import time
@@ -8,7 +9,13 @@ from utils.settings_store import get_setting
 
 async def call_with_retry(fn, *, job_id: str = None, agent_name: str = None,
                           max_attempts: int = None, token_accumulator: list = None):
-    """Wraps a blocking Anthropic SDK call with exponential backoff on 429/529."""
+    """Run a blocking Anthropic SDK call in a thread with exponential backoff on 429/529.
+
+    Retries on RateLimitError and InternalServerError (overload) up to max_attempts times,
+    with delay = 2^(attempt-1) + jitter. Logs timing and token usage on success.
+    If token_accumulator is provided, appends {input, output} dicts for cost tracking.
+    Raises RuntimeError on API spending limit errors, re-raises all other exceptions.
+    """
     if max_attempts is None:
         max_attempts = get_setting("api.retry_max_attempts")
     for attempt in range(1, max_attempts + 1):
