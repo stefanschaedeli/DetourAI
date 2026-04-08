@@ -1,3 +1,5 @@
+"""Celery task that inserts a new stop into a saved travel plan, runs full research, and refreshes day plans."""
+
 import asyncio
 import json
 import os
