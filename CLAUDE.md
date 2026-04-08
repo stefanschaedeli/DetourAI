@@ -69,7 +69,12 @@ git push && git push --tags
 
 ## Worker Files
 
-- `frontend/CLAUDE.md` — JS, HTML, CSS, i18n, SSE event names, state conventions
+- `frontend/CLAUDE.md` — ownership, HTML/CSS/i18n assets, security, design system
+- `frontend/js/core/CLAUDE.md` — foundation: state, auth, router, API client, i18n
+- `frontend/js/maps/CLAUDE.md` — Google Maps: init, images, routes, guide map
+- `frontend/js/communication/CLAUDE.md` — SSE protocol, progress overlay, debug log
+- `frontend/js/guide/CLAUDE.md` — travel guide viewer: tabs, editing, lazy loading
+- `frontend/js/features/CLAUDE.md` — planning pipeline + standalone pages
 - `backend/CLAUDE.md` — FastAPI, models, utils, auth, testing, local debugging
 - `backend/agents/CLAUDE.md` — agent models, orchestration pipeline, Celery tasks, prompts
 - `infra/CLAUDE.md` — Docker Compose, Nginx, environment variables, deployment

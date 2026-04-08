@@ -776,33 +776,41 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <!-- ======================================================== JS modules -->
-<script src="/js/i18n.js"></script>
-<script src="/js/loading.js"></script>
-<script src="/js/sse-overlay.js"></script>
-<script src="/js/maps-core.js"></script>
-<script src="/js/maps-images.js"></script>
-<script src="/js/maps-routes.js"></script>
-<script src="/js/maps-guide.js"></script>
-<script src="/js/state.js"></script>
-<script src="/js/auth.js"></script>
-<script src="/js/router.js"></script>
-<script src="/js/api.js"></script>
-<script src="/js/sse-client.js"></script>
-<script src="/js/form.js"></script>
-<script src="/js/route-builder.js"></script>
-<script src="/js/accommodation.js"></script>
-<script src="/js/progress.js"></script>
-<script src="/js/guide-core.js"></script>
-<script src="/js/guide-overview.js"></script>
-<script src="/js/guide-stops.js"></script>
-<script src="/js/guide-days.js"></script>
-<script src="/js/guide-map.js"></script>
-<script src="/js/guide-edit.js"></script>
-<script src="/js/guide-share.js"></script>
-<script src="/js/travels.js"></script>
-<script src="/js/settings.js"></script>
-<script src="/js/sidebar.js"></script>
-<script src="/js/feedback.js"></script>
+<!-- core — foundation, must load first -->
+<script src="/js/core/i18n.js"></script>
+<script src="/js/core/loading.js"></script>
+<!-- maps — GoogleMaps namespace before state -->
+<script src="/js/maps/maps-core.js"></script>
+<script src="/js/maps/maps-images.js"></script>
+<script src="/js/maps/maps-routes.js"></script>
+<script src="/js/maps/maps-guide.js"></script>
+<!-- core continued -->
+<script src="/js/core/state.js"></script>
+<script src="/js/core/auth.js"></script>
+<script src="/js/core/router.js"></script>
+<script src="/js/core/api.js"></script>
+<!-- communication — SSE protocol + progress overlay -->
+<script src="/js/communication/sse-client.js"></script>
+<script src="/js/communication/sse-overlay.js"></script>
+<!-- features — planning pipeline -->
+<script src="/js/features/form.js"></script>
+<script src="/js/features/route-builder.js"></script>
+<script src="/js/features/accommodation.js"></script>
+<!-- communication continued -->
+<script src="/js/communication/progress.js"></script>
+<!-- guide viewer -->
+<script src="/js/guide/guide-core.js"></script>
+<script src="/js/guide/guide-overview.js"></script>
+<script src="/js/guide/guide-stops.js"></script>
+<script src="/js/guide/guide-days.js"></script>
+<script src="/js/guide/guide-map.js"></script>
+<script src="/js/guide/guide-edit.js"></script>
+<script src="/js/guide/guide-share.js"></script>
+<!-- features continued -->
+<script src="/js/features/travels.js"></script>
+<script src="/js/features/settings.js"></script>
+<script src="/js/features/sidebar.js"></script>
+<script src="/js/features/feedback.js"></script>
 
 <script>
   // ── Auth helpers ──────────────────────────────────────────────────────────────
