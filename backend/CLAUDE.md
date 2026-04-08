@@ -1,7 +1,7 @@
 # backend/CLAUDE.md
 
 This worker owns `backend/main.py`, `backend/routers/`, `backend/models/`,
-`backend/utils/`, and `backend/tests/`.
+`backend/utils/`, `backend/services/`, and `backend/tests/`.
 Do NOT modify `backend/agents/`, `frontend/`, or `infra/`.
 Reads (not modifies): `backend/agents/` (to understand contracts).
 
@@ -15,6 +15,8 @@ backend/
 │   ├── run_planning_job.py
 │   ├── prefetch_accommodations.py
 │   └── replace_stop_job.py
+├── services/                        # Shared services (redis_store, etc.)
+│   └── redis_store.py               # Redis client singleton, get_job, save_job
 ├── agents/                          # AI agents — see backend/agents/CLAUDE.md
 ├── models/
 │   ├── travel_request.py            # TravelRequest Pydantic model
@@ -106,20 +108,6 @@ debug_logger.log_prompt(agent_name, model, prompt, job_id=job_id)
 | `DEBUG` / `PROMPT` | Debug-only detail |
 
 Log files: `backend/logs/agents/<name>.log`, `orchestrator/orchestrator.log`, `api/api.log`
-
-## Environment Variables
-
-```bash
-ANTHROPIC_API_KEY=sk-ant-...     # required
-GOOGLE_MAPS_API_KEY=...          # required — Geocoding, Directions, Places APIs
-JWT_SECRET=...                   # required — JWT signing key
-TEST_MODE=true                   # true=haiku, false=opus/sonnet
-REDIS_URL=redis://localhost:6379 # job state store
-LOGS_DIR=/app/logs               # file logging dir (default: backend/logs/)
-COOKIE_SECURE=true               # set true for HTTPS
-ADMIN_USERNAME=...               # bootstrapped on startup
-ADMIN_PASSWORD=...               # bootstrapped on startup
-```
 
 ## Testing
 
