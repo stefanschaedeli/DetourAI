@@ -1,19 +1,26 @@
 'use strict';
 
+// Auth — in-memory JWT token storage, silent refresh, login/logout, session restore.
+// Reads: S (state.js), t (i18n.js), showLoginScreen (features layer).
+// Provides: authGetToken, authSetToken, authClearToken, authSilentRefresh, authLogin, authLogout, authRestoreSession, showLoginRequired.
+
 // ---------------------------------------------------------------------------
 // In-memory token store — never persisted to localStorage/sessionStorage
 // ---------------------------------------------------------------------------
 let _accessToken = null;          // JWT, lives 15 min
 let _refreshPromise = null;       // single in-flight refresh promise (serialises concurrent 401s)
 
+/** Return the current in-memory access token, or null if not authenticated. */
 function authGetToken() {
   return _accessToken;
 }
 
+/** Store a new JWT access token in memory. */
 function authSetToken(token) {
   _accessToken = token;
 }
 
+/** Clear the in-memory access token (e.g. on logout or session expiry). */
 function authClearToken() {
   _accessToken = null;
 }
@@ -22,6 +29,7 @@ function authClearToken() {
 // Silent refresh — serialised so concurrent 401s only fire one request
 // ---------------------------------------------------------------------------
 
+/** Use the HTTP-only refresh cookie to obtain a new access token; concurrent calls share one request. */
 async function authSilentRefresh() {
   if (_refreshPromise) return _refreshPromise;
 
@@ -56,6 +64,7 @@ async function authSilentRefresh() {
 // Login / Logout helpers (called from UI layer)
 // ---------------------------------------------------------------------------
 
+/** Authenticate with username/password; stores token and populates S.currentUser. */
 async function authLogin(username, password) {
   const res = await fetch('/api/auth/login', {
     method: 'POST',
@@ -81,6 +90,7 @@ async function authLogin(username, password) {
   return S.currentUser;
 }
 
+/** Call logout endpoint (best-effort), then clear token and current user. */
 async function authLogout() {
   try {
     await fetch('/api/auth/logout', {
@@ -100,6 +110,7 @@ async function authLogout() {
 // Restore session on page load (try silent refresh with existing cookie)
 // ---------------------------------------------------------------------------
 
+/** Restore session on page load via silent refresh; returns user object or null. */
 async function authRestoreSession() {
   const token = await authSilentRefresh();
   if (!token) return null;
@@ -120,6 +131,7 @@ async function authRestoreSession() {
 // ---------------------------------------------------------------------------
 // Show login screen (called by api.js when session expires mid-flight)
 // ---------------------------------------------------------------------------
+/** Redirect to login screen when a session expires mid-flight. */
 function showLoginRequired() {
   if (typeof showLoginScreen === 'function') showLoginScreen();
 }
