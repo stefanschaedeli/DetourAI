@@ -1,5 +1,12 @@
 'use strict';
 
+// Progress — stop timeline, debug log panel, and SSE event handlers for the planning phase.
+// Reads: S (state.js), Router (router.js), progressOverlay (sse-overlay.js),
+//        openSSE (api.js), t (i18n.js), esc (core), showTravelGuide (guide-core.js),
+//        showSection, showLoading, hideLoading, showToast (ui helpers),
+//        apiSaveTravel (api.js), lsSet (state.js), updateSidebar (sidebar.js).
+// Provides: updateDebugLog, toggleDebugLog, buildStopsTimeline, cancelPlanning, connectSSE.
+
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
@@ -11,6 +18,7 @@ let stopProgress = {};  // stop_id => {activities: bool, restaurants: bool}
 // UI: Debug log panel
 // ---------------------------------------------------------------------------
 
+/** Re-render the last 50 log entries in the debug log panel. */
 function updateDebugLog() {
   if (!S.debugOpen) return;
   const log = document.getElementById('debug-log');
@@ -24,6 +32,7 @@ function updateDebugLog() {
   log.scrollTop = log.scrollHeight;
 }
 
+/** Toggle the debug panel open/closed and refresh its content when opening. */
 function toggleDebugLog() {
   S.debugOpen = !S.debugOpen;
   const panel = document.getElementById('debug-panel');
@@ -35,6 +44,7 @@ function toggleDebugLog() {
 // UI: Stops timeline
 // ---------------------------------------------------------------------------
 
+/** Render the stops timeline in the progress view and reset per-stop research tracking. */
 function buildStopsTimeline(stops) {
   const timeline = document.getElementById('progress-timeline');
   if (!timeline) return;
@@ -82,6 +92,7 @@ function _completeAnalysisTimelineRow() {
   }
 }
 
+/** Prompt for confirmation, close the SSE stream, and navigate back to the home page. */
 function cancelPlanning() {
   if (!confirm(t('progress.confirm_cancel'))) return;
   if (S._sseSource) { S._sseSource.close(); S._sseSource = null; }
@@ -199,6 +210,7 @@ function onJobError(data) {
 // SSE subscription (uses openSSE shim which delegates to SSEClient)
 // ---------------------------------------------------------------------------
 
+/** Open an SSE connection for jobId and wire all planning-phase event handlers. */
 function connectSSE(jobId) {
   if (progressSSE) { progressSSE.close(); progressSSE = null; }
   progressSSE = openSSE(jobId, {
