@@ -1,8 +1,13 @@
 'use strict';
 
-/* ── Pretty URL Router ── */
+// Router — pattern-matched pretty URL router using History API.
+// Reads: S (state.js), t (i18n.js), showSection, showLoading, hideLoading, lsGet, lsSet, LS_RESULT, LS_ROUTE, goToStep, showTravelGuide, activateGuideTab, activateStopDetail, activateDayDetail, openTravelsDrawer, openSettingsPage, apiGetTravel, apiGetShared.
+// Provides: Router.init, Router.navigate, Router.slugify, Router.travelPath.
 
 const Router = (() => {
+  // ---------------------------------------------------------------------------
+  // Route table — ordered patterns matched against location.pathname
+  // ---------------------------------------------------------------------------
   const _routes = [
     { pattern: /^\/form\/step\/(\d+)$/,                             handler: '_formStep',       section: 'form-section' },
     { pattern: /^\/form\/?$/,                                       handler: '_form',            section: 'form-section' },
@@ -30,6 +35,11 @@ const Router = (() => {
   // Internal flag to prevent re-entrant dispatch (including across async handlers)
   let _dispatching = false;
 
+  // ---------------------------------------------------------------------------
+  // Public API — init, navigate, slugify, travelPath
+  // ---------------------------------------------------------------------------
+
+  /** Attach popstate listener and dispatch the current URL on page load. */
   function init() {
     window.addEventListener('popstate', () => {
       _dispatch(location.pathname);
@@ -38,6 +48,7 @@ const Router = (() => {
     _dispatch(location.pathname);
   }
 
+  /** Push or replace a URL and dispatch the matching route handler. */
   function navigate(path, opts) {
     opts = opts || {};
     const method = opts.replace ? 'replaceState' : 'pushState';
@@ -73,6 +84,7 @@ const Router = (() => {
     }
   }
 
+  /** Convert a title string to a URL-safe ASCII slug (max 50 chars). */
   function slugify(text) {
     if (!text) return '';
     return text
@@ -85,6 +97,7 @@ const Router = (() => {
       .substring(0, 50);
   }
 
+  /** Build the canonical /travel/{id}-{slug} path for a saved trip. */
   function travelPath(id, title) {
     const slug = slugify(title);
     return slug ? `/travel/${id}-${slug}` : `/travel/${id}`;
@@ -96,7 +109,9 @@ const Router = (() => {
     alert(msg);
   }
 
-  // ── Route handlers ──
+  // ---------------------------------------------------------------------------
+  // Route handlers — one per URL pattern, called by _dispatch
+  // ---------------------------------------------------------------------------
 
   const _handlers = {
     _form() {
