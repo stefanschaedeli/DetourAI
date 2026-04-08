@@ -1,3 +1,5 @@
+"""Agent that researches and recommends restaurants for each trip stop, enriched with Google Places data and images."""
+
 from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
@@ -26,6 +28,8 @@ SYSTEM_PROMPTS = {
 
 
 class RestaurantsAgent:
+    """Agent that generates restaurant recommendations for a single trip stop, merging Claude output with Google Places and image data."""
+
     def __init__(self, request: TravelRequest, job_id: str, token_accumulator: list = None):
         self.request = request
         self.job_id = job_id
@@ -34,6 +38,7 @@ class RestaurantsAgent:
         self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
 
     async def run_stop(self, stop: dict) -> dict:
+        """Research and return restaurant recommendations for one stop, enriched with real Places data and images."""
         req = self.request
         lang = getattr(req, 'language', 'de')
         system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
