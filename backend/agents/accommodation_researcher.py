@@ -1,3 +1,5 @@
+"""Agent that researches accommodation options for each trip stop, enriched with Google Places data, images, and Booking.com links."""
+
 import asyncio
 from datetime import timedelta
 from urllib.parse import quote
@@ -22,6 +24,7 @@ def _booking_lang(language: str) -> str:
 
 
 def _build_booking_url(hotel_name: str, region: str, checkin, nights: int, adults: int, children: int, language: str = "de") -> str:
+    """Build a Booking.com deep-link URL pre-filled with hotel name, dates, and guest count."""
     checkout = checkin + timedelta(days=nights)
     search_term = f"{hotel_name}, {region}"
     return (
@@ -38,7 +41,7 @@ def _build_booking_url(hotel_name: str, region: str, checkin, nights: int, adult
 
 
 def _build_booking_search_url(city: str, country: str, checkin, nights: int, adults: int, children: int, language: str = "de") -> str:
-    """Geheimtipp: Suchlink nur mit Stadt/Region, kein konkreter Hotelname."""
+    """Build a Booking.com search URL for a city/region without a specific hotel name (used for Geheimtipp options)."""
     checkout = checkin + timedelta(days=nights)
     search_term = f"{city}, {country}"
     return (
@@ -70,6 +73,8 @@ SYSTEM_PROMPTS = {
 
 
 class AccommodationResearcherAgent:
+    """Agent that generates 4 accommodation options per stop (3 preference-matched + 1 Geheimtipp), enriched with Places data and Booking.com links."""
+
     def __init__(self, request: TravelRequest, job_id: str, extra_instructions: str = ""):
         self.request = request
         self.job_id = job_id
@@ -79,6 +84,7 @@ class AccommodationResearcherAgent:
 
     async def find_options(self, stop: dict, budget_per_night: float,
                            semaphore: asyncio.Semaphore = None) -> dict:
+        """Research and return accommodation options for one stop, respecting the nightly budget and optional concurrency semaphore."""
         req = self.request
         lang = getattr(req, 'language', 'de')
         system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
