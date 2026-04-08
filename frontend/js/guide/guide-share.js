@@ -7,6 +7,7 @@
 // Share toggle UI
 // ---------------------------------------------------------------------------
 
+/** Returns the HTML for the share toggle switch and, when active, the copy-link row. */
 function _renderShareToggle(travelId, shareToken) {
   const checked = shareToken ? 'checked' : '';
   const shareUrl = shareToken
@@ -27,6 +28,7 @@ function _renderShareToggle(travelId, shareToken) {
   </div>`;
 }
 
+/** Enables or disables sharing for a travel, updating the share token and re-rendering the toggle. */
 async function _handleShareToggle(travelId, checked) {
   const container = document.getElementById('share-toggle-container');
   const checkbox = container ? container.querySelector('input[type="checkbox"]') : null;
@@ -69,6 +71,7 @@ async function _handleShareToggle(travelId, checked) {
   }
 }
 
+/** Copies the share URL to the clipboard and briefly shows a "Kopiert!" confirmation on the button. */
 async function _copyShareLink(btn, url) {
   try {
     await navigator.clipboard.writeText(url);
