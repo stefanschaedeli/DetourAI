@@ -1,3 +1,4 @@
+"""Google Places API client — nearby search, place details, photo URLs, and stop quality checks."""
 import os
 import aiohttp
 from typing import Optional
@@ -13,7 +14,12 @@ async def nearby_search(
     lat: float, lon: float, place_type: str,
     radius_m: int = 10000, keyword: str = "",
 ) -> list[dict]:
-    """Google Places Nearby Search. Gibt [] zurück wenn kein API-Key."""
+    """Query the Google Places Nearby Search API for places of a given type near a coordinate.
+
+    Returns a list of place dicts with place_id, name, rating, user_ratings_total,
+    price_level, address, lat, lon, photo_reference, and opening_hours.
+    Returns an empty list if GOOGLE_MAPS_API_KEY is not set or the request fails.
+    """
     key = _api_key()
     if not key:
         return []
@@ -59,7 +65,11 @@ async def nearby_search(
 
 
 async def place_details(place_id: str) -> dict:
-    """Google Places Details — Telefon, Website, Bewertungen, Fotos."""
+    """Fetch detailed info for a place from the Google Places Details API.
+
+    Returns a dict with name, formatted_address, formatted_phone_number, website,
+    rating, reviews, opening_hours, and photos. Returns an empty dict on failure.
+    """
     key = _api_key()
     if not key:
         return {}
@@ -85,7 +95,7 @@ async def place_details(place_id: str) -> dict:
 
 
 def place_photo_url(photo_reference: str, max_width: int = 400) -> Optional[str]:
-    """Baut eine Google Places Photo URL."""
+    """Build a Google Places Photo URL for the given photo reference. Returns None if no API key."""
     key = _api_key()
     if not key or not photo_reference:
         return None
@@ -205,15 +215,15 @@ async def validate_stop_quality(region: str, country: str, lat: float, lon: floa
 
 
 async def search_restaurants(lat: float, lon: float, radius_m: int = 10000) -> list[dict]:
-    """Convenience: Restaurants in der Nähe."""
+    """Convenience wrapper: search for restaurants near a coordinate."""
     return await nearby_search(lat, lon, "restaurant", radius_m)
 
 
 async def search_hotels(lat: float, lon: float, radius_m: int = 10000) -> list[dict]:
-    """Convenience: Hotels/Unterkünfte in der Nähe."""
+    """Convenience wrapper: search for hotels and lodging near a coordinate."""
     return await nearby_search(lat, lon, "lodging", radius_m)
 
 
 async def search_attractions(lat: float, lon: float, radius_m: int = 10000) -> list[dict]:
-    """Convenience: Sehenswürdigkeiten in der Nähe."""
+    """Convenience wrapper: search for tourist attractions near a coordinate."""
     return await nearby_search(lat, lon, "tourist_attraction", radius_m)
