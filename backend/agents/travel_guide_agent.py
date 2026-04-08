@@ -1,3 +1,5 @@
+"""Agent that generates narrative travel guide content and additional activity suggestions for each trip stop."""
+
 from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
@@ -24,6 +26,8 @@ SYSTEM_PROMPTS = {
 
 
 class TravelGuideAgent:
+    """Agent that writes localized travel guide narratives and suggests further activities for a single stop, enriched with Wikipedia context."""
+
     def __init__(self, request: TravelRequest, job_id: str, token_accumulator: list = None):
         self.request = request
         self.job_id = job_id
@@ -32,6 +36,7 @@ class TravelGuideAgent:
         self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
 
     async def run_stop(self, stop: dict, existing_activity_names: list) -> dict:
+        """Generate travel guide content and additional activities for one stop, avoiding duplication with already-planned activities."""
         req = self.request
         lang = getattr(req, 'language', 'de')
         system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
