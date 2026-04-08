@@ -8,14 +8,24 @@ Do NOT modify backend/, infra/, or docker-compose.yml.
 | File | Responsibility |
 |------|---------------|
 | `js/state.js` | Global `S` object, TRAVEL_STYLES, FLAGS, localStorage layer |
-| `js/api.js` | All fetch wrappers (`_fetch`, `_fetchQuiet`, `_fetchWithAuth`), `openSSE()` |
+| `js/api.js` | All fetch wrappers (`_fetch`, `_fetchQuiet`, `_fetchWithAuth`), `openSSE()` shim, all `apiXxx()` functions |
+| `js/sse-client.js` | SSE wire protocol — EventSource lifecycle, auth token injection, dispatches `window` CustomEvents (`sse:X`) |
 | `js/form.js` | 5-step trip form, `buildPayload()`, tag-input, via-points |
 | `js/route-builder.js` | Interactive stop selection flow |
 | `js/accommodation.js` | Parallel accommodation loading + selection grid |
-| `js/progress.js` | SSE progress handlers, stops timeline |
-| `js/guide.js` | Travel guide tabs + render functions |
+| `js/progress.js` | SSE progress UI — stop timeline, overlay lines, debug log |
+| `js/guide-core.js` | Travel guide entry point, tab routing |
+| `js/guide-overview.js` | Trip overview tab |
+| `js/guide-stops.js` | Stop detail cards |
+| `js/guide-days.js` | Day-by-day itinerary rendering |
+| `js/guide-map.js` | Guide map tab — delegates to GoogleMaps |
+| `js/guide-edit.js` | Stop editing (replace, add, remove, reorder) |
+| `js/guide-share.js` | Share link generation |
 | `js/travels.js` | Saved travels list + management |
-| `js/maps.js` | Google Maps rendering helpers |
+| `js/maps-core.js` | GoogleMaps init, markers, autocomplete, coordinate resolution |
+| `js/maps-images.js` | Photo fetching (4-tier fallback), image cache — edit this to change photo quality/sources |
+| `js/maps-routes.js` | Driving route rendering via Routes API, straight-line fallback |
+| `js/maps-guide.js` | Persistent guide map state, stop markers, ferry lines, pan/fit/dim |
 | `js/loading.js` | Loading state UI |
 | `js/sse-overlay.js` | SSE progress overlay component |
 | `js/auth.js` | Authentication / access control |
@@ -26,6 +36,20 @@ Do NOT modify backend/, infra/, or docker-compose.yml.
 | `js/types.d.ts` | Generated from OpenAPI — do not edit manually |
 | `index.html` | Entry point, `<script>` load order matters |
 | `styles.css` | All styles — see DESIGN_GUIDELINE.md for design system |
+
+## SSE Subscriber Pattern
+
+New code subscribes directly to window events — do not call `openSSE()` in new files:
+
+```js
+// New pattern (direct window event subscription)
+window.addEventListener('sse:stop_done', e => {
+  const data = e.detail;  // parsed SSE payload
+});
+
+// Legacy pattern (still works via openSSE shim — existing files only)
+openSSE(jobId, { stop_done: (data) => { ... } });
+```
 
 ## JavaScript Conventions
 
