@@ -1,3 +1,5 @@
+"""Agent that interactively proposes intermediate stop options along a driving route, supporting both batch and streaming modes."""
+
 import asyncio
 import json
 import re
@@ -62,6 +64,8 @@ SYSTEM_PROMPT = SYSTEM_PROMPTS["de"]  # backward compat for tests
 
 
 class StopOptionsFinderAgent:
+    """Agent that generates exactly 3 localized stop options for each interactive route-building step, with Wikipedia enrichment and island validation."""
+
     def __init__(self, request: TravelRequest, job_id: str):
         self.request = request
         self.job_id = job_id
@@ -81,6 +85,7 @@ class StopOptionsFinderAgent:
         route_geometry: dict,
         architect_context: dict = None,
     ) -> str:
+        """Build a fully localized prompt for Claude to suggest 3 stop options, incorporating route geometry, architect context, and travel style guidance."""
         req = self.request
         lang = getattr(req, 'language', 'de')
         geo = route_geometry or {}
@@ -546,6 +551,7 @@ class StopOptionsFinderAgent:
         route_geometry: dict = None,
         architect_context: dict = None,
     ) -> dict:
+        """Call Claude to produce 3 stop options and enrich results with Wikipedia summaries and island coordinate validation."""
         prompt = self._build_prompt(
             selected_stops=selected_stops,
             stop_number=stop_number,
