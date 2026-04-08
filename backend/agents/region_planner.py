@@ -1,3 +1,5 @@
+"""Agent that interactively plans, replaces, and recalculates region-level route segments, with geographic ordering optimization."""
+
 from __future__ import annotations
 from typing import Optional
 from models.travel_request import TravelRequest
@@ -181,6 +183,8 @@ def _reorder_regions(
 
 
 class RegionPlannerAgent:
+    """Agent that generates and refines a region-level plan for one trip leg, using nearest-neighbor + 2-opt route optimization."""
+
     def __init__(self, request: TravelRequest, job_id: str, token_accumulator: list = None):
         self.request = request
         self.job_id = job_id
@@ -308,6 +312,7 @@ class RegionPlannerAgent:
         return plan
 
     async def plan(self, description: str, leg_index: int) -> RegionPlan:
+        """Generate an initial ordered RegionPlan for the given leg based on the traveler's description."""
         lang = self._get_lang()
         system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
         region_schema = _REGION_SCHEMAS.get(lang, _REGION_SCHEMAS["de"])
@@ -378,6 +383,7 @@ class RegionPlannerAgent:
         self, index: int, instruction: str,
         current_plan: RegionPlan, leg_index: int,
     ) -> RegionPlan:
+        """Replace a single region in the current plan at the given index according to the traveler's instruction."""
         lang = self._get_lang()
         system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
         region_schema = _REGION_SCHEMAS.get(lang, _REGION_SCHEMAS["de"])
@@ -439,6 +445,7 @@ class RegionPlannerAgent:
         self, instruction: str,
         current_plan: RegionPlan, leg_index: int,
     ) -> RegionPlan:
+        """Regenerate the entire region plan from scratch, incorporating the traveler's correction while using the previous plan as context."""
         lang = self._get_lang()
         system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS["de"])
         region_schema = _REGION_SCHEMAS.get(lang, _REGION_SCHEMAS["de"])
