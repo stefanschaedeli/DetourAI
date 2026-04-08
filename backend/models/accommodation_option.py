@@ -1,3 +1,5 @@
+"""Pydantic models for accommodation options, budget tracking, and research requests."""
+
 from typing import List, Optional
 from pydantic import BaseModel
 
