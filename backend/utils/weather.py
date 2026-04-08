@@ -1,9 +1,10 @@
+"""Weather data fetching — Open-Meteo forecast and ERA5 historical climate averages."""
 import aiohttp
 from typing import Optional
 
 from utils.http_session import get_session
 
-# WMO Weather Code → Deutsche Beschreibung
+# WMO weather code → German description (user-facing strings remain in German per i18n)
 _WMO_CODES: dict[int, str] = {
     0: "Klar",
     1: "Überwiegend klar",
@@ -36,8 +37,12 @@ def _wmo_description(code: int) -> str:
 
 
 async def get_forecast(lat: float, lon: float, start_date: str, end_date: str) -> list[dict]:
-    """Tägliche Wettervorhersage von Open-Meteo. Kostenlos, kein API-Key nötig.
-    start_date/end_date im Format YYYY-MM-DD. Max 16 Tage Vorhersage."""
+    """Fetch daily weather forecast from Open-Meteo (free, no API key required).
+
+    start_date and end_date must be in YYYY-MM-DD format. Maximum forecast range is 16 days.
+    Returns a list of daily dicts with date, temp_max, temp_min, precipitation_mm,
+    weather_code, and description. Returns an empty list on any error.
+    """
     try:
         params = {
             "latitude": str(lat),
@@ -79,10 +84,14 @@ async def get_forecast(lat: float, lon: float, start_date: str, end_date: str) -
 
 
 async def get_climate_average(lat: float, lon: float, month: int) -> Optional[dict]:
-    """Historische Klima-Durchschnittswerte für einen Standort/Monat.
-    Nützlich wenn Reisedatum > 16 Tage entfernt (Vorhersage nicht verfügbar)."""
+    """Fetch historical climate averages for a location and month using ERA5 data.
+
+    Useful when the travel date is more than 16 days away and a forecast is unavailable.
+    Queries the Open-Meteo archive API for the 1991–2020 reference period and returns
+    avg_temp (°C), avg_rain_days per month, and sunshine_hours per day. Returns None on error.
+    """
     try:
-        # Open-Meteo Climate API mit ERA5-Daten (30 Jahre Durchschnitt)
+        # Open-Meteo Climate API with ERA5 data (30-year average 1991–2020)
         start_date = f"1991-{month:02d}-01"
         end_date = f"2020-{month:02d}-28"
         params = {
