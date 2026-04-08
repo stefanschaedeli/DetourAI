@@ -1,3 +1,4 @@
+"""JSON parser utilities — strips markdown fences and repairs truncated agent JSON responses."""
 import json
 import re
 from typing import Optional
