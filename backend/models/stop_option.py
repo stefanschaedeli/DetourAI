@@ -1,3 +1,5 @@
+"""Pydantic models for route stop options, stop selection requests, and enriched stop metadata."""
+
 from typing import List, Optional
 from pydantic import BaseModel, field_validator
 
