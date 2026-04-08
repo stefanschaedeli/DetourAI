@@ -1,13 +1,16 @@
 'use strict';
 
-/**
- * GoogleMaps images — photo fetching via Google Places API.
- * Requires maps-core.js to load first.
- * Uses window._mapsImageCache (declared in maps-core.js).
- * Uses GoogleMaps._getApiKey() for static map URLs.
- */
+// Maps Images — photo fetching via Google Places API with 4-tier fallback.
+// Reads: GoogleMaps (maps-core.js), window._mapsImageCache (maps-core.js).
+// Provides: getPlaceImages.
+
 Object.assign(GoogleMaps, (() => {
 
+  // ---------------------------------------------------------------------------
+  // Public API
+  // ---------------------------------------------------------------------------
+
+  /** Fetch up to 5 photo URLs for a place, using a cache keyed on name+coords+context+placeId. */
   async function getPlaceImages(name, lat, lng, context, placeId) {
     const cacheKey = name + '|' + (lat || '') + '|' + (lng || '') + '|' + (context || '') + '|' + (placeId || '');
     if (window._mapsImageCache.has(cacheKey)) return window._mapsImageCache.get(cacheKey);
@@ -15,6 +18,10 @@ Object.assign(GoogleMaps, (() => {
     window._mapsImageCache.set(cacheKey, urls);
     return urls;
   }
+
+  // ---------------------------------------------------------------------------
+  // Fallback chain
+  // ---------------------------------------------------------------------------
 
   async function _fetchImagesWithFallback(name, lat, lng, context, placeId) {
     const googleReady = typeof google !== 'undefined' && google.maps;
@@ -78,6 +85,10 @@ Object.assign(GoogleMaps, (() => {
         return place.photos.slice(0, 5).map(p => p.getURI({ maxWidth: 800, maxHeight: 600 }));
     return [];
   }
+
+  // ---------------------------------------------------------------------------
+  // Static map and placeholder fallbacks
+  // ---------------------------------------------------------------------------
 
   function _staticMapUrl(lat, lng) {
     const key = GoogleMaps._getApiKey();
