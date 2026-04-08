@@ -1,7 +1,10 @@
+// Feedback — feedback modal with category selection and optional html2canvas screenshot.
+// Reads: t (i18n.js), showToast (core), _fetch (api.js).
+// Provides: openFeedbackModal.
+
 // ---------------------------------------------------------------------------
-//  Feedback Modal  (frontend/js/feedback.js)
+// Module state
 // ---------------------------------------------------------------------------
-/* global _fetch, showToast, API */
 
 let _feedbackScreenshot = null; // base64 string (no data: prefix)
 
@@ -17,6 +20,11 @@ function _el(tag, attrs, children) {
   return el;
 }
 
+// ---------------------------------------------------------------------------
+// Modal
+// ---------------------------------------------------------------------------
+
+/** Opens the feedback modal with category select, textarea, and optional screenshot capture. */
 function openFeedbackModal() {
   document.getElementById('feedback-modal')?.remove();
 
