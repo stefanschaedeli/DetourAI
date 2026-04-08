@@ -1,5 +1,13 @@
 'use strict';
 
+// State — global S object, UI constants, localStorage helpers, and DOM utilities.
+// Reads: nothing (foundation module, no dependencies).
+// Provides: S, TRAVEL_STYLES, FLAGS, lsSet, lsGet, lsClear, esc, safeUrl, highlightMustHaves, showSection, buildHeroPhoto, buildHeroPhotoLoading, buildHeroPhotoGallery, buildHeroPhotoGalleryLoading, buildHeroPhotoGalleryCompact, buildHeroPhotoGalleryCompactLoading, openLightbox, lightboxNav, closeLightbox.
+
+// ---------------------------------------------------------------------------
+// Constants — travel style definitions and country flag badges
+// ---------------------------------------------------------------------------
+
 const TRAVEL_STYLES = [
   { id: 'adventure',    label: 'Abenteuer',      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 4 4 4-6 4 10"/></svg>' },
   { id: 'relaxation',  label: 'Entspannung',    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2"/><path d="M12 6v6l4 2"/></svg>' },
@@ -17,6 +25,10 @@ const TRAVEL_STYLES = [
   { id: 'party',       label: 'Nightlife',       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
 ];
 
+// ---------------------------------------------------------------------------
+// Constants — country flag badges
+// ---------------------------------------------------------------------------
+
 const FLAGS = {
   CH: '<span class="flag-badge">CH</span>',
   FR: '<span class="flag-badge">FR</span>',
@@ -30,6 +42,10 @@ const FLAGS = {
   GB: '<span class="flag-badge">GB</span>',
   XX: '<span class="flag-badge">??</span>',
 };
+
+// ---------------------------------------------------------------------------
+// Global mutable state
+// ---------------------------------------------------------------------------
 
 const S = {
   step: 1,
@@ -63,23 +79,34 @@ const S = {
   shareToken: null,
 };
 
+// ---------------------------------------------------------------------------
+// localStorage — typed persistence helpers
+// ---------------------------------------------------------------------------
+
 // localStorage keys
 const LS_FORM          = 'tp_v1_form';
 const LS_ROUTE         = 'tp_v1_route';
 const LS_ACCOMMODATIONS = 'tp_v1_accommodations';
 const LS_RESULT        = 'tp_v1_result';
 
+/** Persist a JSON-serializable value to localStorage. */
 function lsSet(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
 }
 
+/** Retrieve and JSON-parse a value from localStorage; returns null on error. */
 function lsGet(key) {
   try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
 }
 
+/** Remove a key from localStorage. */
 function lsClear(key) {
   try { localStorage.removeItem(key); } catch (e) {}
 }
+
+// ---------------------------------------------------------------------------
+// Utility functions — HTML escaping, URL safety, text highlighting
+// ---------------------------------------------------------------------------
 
 /**
  * Escape text and wrap any matched must-have terms in <strong>.
@@ -117,6 +144,10 @@ function safeUrl(url) {
   const s = String(url).trim();
   return (s.startsWith('https://') || s.startsWith('http://')) ? s : '';
 }
+
+// ---------------------------------------------------------------------------
+// DOM helpers — section visibility and hero photo components
+// ---------------------------------------------------------------------------
 
 /** Show a section, hide all others. */
 function showSection(id) {
@@ -222,6 +253,10 @@ function buildHeroPhotoGalleryCompactLoading() {
     `</div></div>`;
 }
 
+// ---------------------------------------------------------------------------
+// Lightbox — full-screen image overlay with gallery navigation
+// ---------------------------------------------------------------------------
+
 // Lightbox gallery state
 let _lbUrls = [];
 let _lbIndex = 0;
@@ -263,6 +298,10 @@ function closeLightbox() {
   document.body.style.overflow = '';
 }
 
+// ---------------------------------------------------------------------------
+// Event delegation — lightbox open/close via click bubbling
+// ---------------------------------------------------------------------------
+
 // Event delegation for lightbox open/close
 document.addEventListener('click', e => {
   // Hero-photo click → open lightbox with all photos from data-photo-urls
@@ -289,6 +328,10 @@ document.addEventListener('click', e => {
     closeLightbox();
   }
 });
+
+// ---------------------------------------------------------------------------
+// Global error handlers — forward uncaught errors to backend log
+// ---------------------------------------------------------------------------
 
 // Global error handlers → report to backend log
 window.onerror = function(message, source, lineno, colno, error) {
