@@ -20,7 +20,7 @@ Do NOT modify backend/, infra/, core/, maps/, communication/, or features/.
 - All files read from `S.result` (TravelPlan object) — never mutate it directly
 - Tabs: overview / stops / days / calendar / budget / map
 - `guide-core.js` is the entry point; other files are registered as tab renderers
-- Header comments declare `// Reads:` and `// Provides:` as manual dependency contracts
+- Header contracts (`// Reads:` / `// Provides:`) follow the project-wide standard in root CLAUDE.md
 
 ## Crossfade & Navigation
 

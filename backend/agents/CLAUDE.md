@@ -24,6 +24,8 @@ Every agent follows this structure:
 
 ```python
 class MyAgent:
+    """One-line description of what this agent does."""
+
     AGENT_KEY = "MyAgent"
     SYSTEM_PROMPTS = {
         "de": "Du bist ...",

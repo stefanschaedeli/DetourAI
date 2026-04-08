@@ -8,9 +8,9 @@ from utils.settings_store import get_setting
 
 async def call_with_retry(fn, *, job_id: str = None, agent_name: str = None,
                           max_attempts: int = None, token_accumulator: list = None):
+    """Wraps a blocking Anthropic SDK call with exponential backoff on 429/529."""
     if max_attempts is None:
         max_attempts = get_setting("api.retry_max_attempts")
-    """Wraps a blocking Anthropic SDK call with exponential backoff on 429."""
     for attempt in range(1, max_attempts + 1):
         try:
             t0 = time.monotonic()

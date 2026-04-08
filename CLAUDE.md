@@ -51,6 +51,37 @@ cd backend && pip3 install -r requirements.txt
 
 ---
 
+## Code Documentation
+
+**Comment language:** English for all code comments, docstrings, and CLAUDE.md content.
+User-facing strings (UI labels, error messages, API responses) remain in the user's language per i18n.
+
+### Python (backend/)
+- **File header:** One-line module docstring on every `.py` file (except `__init__.py`)
+  `"""Route editing helpers — remove, add, reorder stops."""`
+- **Class docstring:** Required on all classes (skip inline Pydantic request models)
+- **Function docstring:** Required on functions with 3+ params or non-obvious behavior; skip trivial getters
+- **Inline comments:** Explain *why*, not *what*
+- **Section dividers:** `# ---------------------------------------------------------------------------`
+
+### JavaScript (frontend/js/)
+- **File header:** Every `.js` file starts with a description line + dependency contracts:
+  ```
+  // Guide Core — entry point, tab switching, stats.
+  // Reads: S (state.js), Router (router.js).
+  // Provides: showTravelGuide, renderGuide, switchGuideTab.
+  ```
+- **Function docs:** `/** ... */` on global/exported functions (those listed in `Provides:`)
+- **Section dividers:** `// ---------------------------------------------------------------------------`
+- No `@param`/`@returns` tags — `types.d.ts` handles types
+
+### When to document
+- **New files:** Full standard from the start
+- **Changed files:** Add missing file header + docstrings on touched functions (boy scout rule)
+- **Do NOT** rewrite comments in files you did not otherwise change
+
+---
+
 ## Git Workflow (REQUIRED)
 After **every** change, commit immediately as a patch release and push:
 
