@@ -1,3 +1,5 @@
+"""Celery task that updates the night count for a stop and recalculates arrival days and day plans."""
+
 import asyncio
 import json
 import os
