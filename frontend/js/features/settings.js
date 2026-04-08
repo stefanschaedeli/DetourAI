@@ -1,6 +1,12 @@
 'use strict';
 
-/* ── Settings Page ── */
+// Settings — settings page: per-agent model selection (9 AI agents), budget defaults, API keys.
+// Reads: S (state.js), Router (router.js), t (i18n.js).
+// Provides: openSettingsPage, closeSettingsPage, loadSettings.
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const AGENT_META = {
   'route_architect':            { label: 'Route Architect',            get role() { return t('settings.route_architect_role'); } },
@@ -24,6 +30,11 @@ let _settingsData = null;
 let _saveTimer = null;
 let _previousSection = 'form-section';
 
+// ---------------------------------------------------------------------------
+// Page lifecycle
+// ---------------------------------------------------------------------------
+
+/** Shows the settings section and loads current settings from the backend. */
 function openSettingsPage() {
   // Remember which section was active
   document.querySelectorAll('.section').forEach(s => {
@@ -39,6 +50,7 @@ function openSettingsPage() {
   loadSettings();
 }
 
+/** Hides the settings section and restores the previously active section. */
 function closeSettingsPage() {
   document.getElementById('settings-section').classList.remove('active');
   const prev = document.getElementById(_previousSection);
@@ -46,6 +58,7 @@ function closeSettingsPage() {
   history.back();
 }
 
+/** Fetches settings from the backend and renders the full settings page. */
 async function loadSettings() {
   try {
     _settingsData = await apiGetSettings();
