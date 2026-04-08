@@ -19,6 +19,7 @@ let _dragStopSourceIndex = null;
 // Edit Lock — one operation at a time (D-17)
 // ---------------------------------------------------------------------------
 
+/** Sets the edit-in-progress flag and disables all edit icons in the guide. */
 function _lockEditing() {
   _editInProgress = true;
   document.querySelectorAll('.remove-stop-btn, .add-stop-btn, .replace-stop-btn').forEach(btn => {
@@ -32,6 +33,7 @@ function _lockEditing() {
   });
 }
 
+/** Clears the edit-in-progress flag and re-enables all edit icons. */
 function _unlockEditing() {
   _editInProgress = false;
   document.querySelectorAll('.remove-stop-btn, .add-stop-btn, .replace-stop-btn').forEach(btn => {
@@ -49,6 +51,7 @@ function _unlockEditing() {
 // Remove Stop — confirm + execute
 // ---------------------------------------------------------------------------
 
+/** Shows an inline confirmation banner for removing a stop, with a timeout to auto-cancel. */
 function _confirmRemoveStop(stopId) {
   if (_editInProgress) return;
   const plan = S.result;
@@ -97,6 +100,7 @@ function _confirmRemoveStop(stopId) {
   document.body.appendChild(modal);
 }
 
+/** Sends the remove-stop request to the backend and refreshes the guide on success. */
 async function _executeRemoveStop(stopId) {
   const modal = document.getElementById('confirm-remove-modal');
   if (modal) modal.remove();
@@ -140,6 +144,7 @@ async function _executeRemoveStop(stopId) {
 // Add Stop — modal + execute
 // ---------------------------------------------------------------------------
 
+/** Opens the add-stop modal with a map click mode and an autocomplete text field. */
 function _openAddStopModal() {
   if (_editInProgress) return;
   const plan = S.result;
@@ -239,6 +244,7 @@ function _openAddStopModal() {
   setTimeout(() => locInput.focus(), 100);
 }
 
+/** Submits the add-stop request from the modal form and refreshes the guide on success. */
 async function _executeAddStop() {
   const location = (document.getElementById('add-stop-location')?.value || '').trim();
   if (!location) { alert('Bitte Ortsnamen eingeben'); return; }
@@ -288,6 +294,7 @@ async function _executeAddStop() {
 // ---------------------------------------------------------------------------
 
 /** Haversine distance in km between two lat/lng points. */
+/** Returns the great-circle distance in km between two lat/lon coordinates. */
 function _haversineKm(lat1, lon1, lat2, lon2) {
   var R = 6371;
   var dLat = (lat2 - lat1) * Math.PI / 180;
@@ -299,6 +306,7 @@ function _haversineKm(lat1, lon1, lat2, lon2) {
 }
 
 /** Handle click on empty map area — reverse geocode and show popup. */
+/** Handles a map click in add-stop mode: reverse-geocodes and shows a confirmation popup. */
 function _onMapClickToAdd(latLng) {
   if (_editInProgress) return;
   _hideClickToAddPopup();
@@ -334,6 +342,7 @@ function _onMapClickToAdd(latLng) {
 }
 
 /** Show click-to-add popup at map click position. */
+/** Renders the map info-window popup for confirming a click-to-add stop location. */
 function _showClickToAddPopup(latLng, placeName) {
   var popup = document.getElementById('click-to-add-popup');
   if (!popup) return;
@@ -389,6 +398,7 @@ function _showClickToAddPopup(latLng, placeName) {
 }
 
 /** Hide click-to-add popup and clean up listeners. */
+/** Closes and removes the click-to-add confirmation popup from the map. */
 function _hideClickToAddPopup() {
   var popup = document.getElementById('click-to-add-popup');
   if (!popup) return;
@@ -403,6 +413,7 @@ function _hideClickToAddPopup() {
 }
 
 /** Confirm adding a stop at the clicked map location. */
+/** Shows the after-which-stop selector and triggers the add-stop flow from a map click. */
 function _confirmClickToAdd(placeName) {
   if (!placeName) return;
   var plan = S.result;
@@ -461,6 +472,7 @@ function _confirmClickToAdd(placeName) {
 }
 
 /** Execute add-stop from map click — reuses the existing add-stop API flow. */
+/** Submits the add-stop-from-map request with the place name and insertion point. */
 function _doAddStopFromMap(placeName, afterStopId) {
   var plan = S.result;
   if (!plan) return;
@@ -505,6 +517,7 @@ function _doAddStopFromMap(placeName, afterStopId) {
 // Drag-and-Drop Reorder
 // ---------------------------------------------------------------------------
 
+/** Sets the drag-source index and dataTransfer effect when a stop card drag begins. */
 function _onStopDragStart(e, index) {
   if (_editInProgress) { e.preventDefault(); return; }
   _dragStopSourceIndex = index;
@@ -512,11 +525,13 @@ function _onStopDragStart(e, index) {
   e.currentTarget.classList.add('dragging');
 }
 
+/** Clears drag-over styling on all drop targets when a drag ends. */
 function _onStopDragEnd(e) {
   e.currentTarget.classList.remove('dragging');
   document.querySelectorAll('.stop-drop-zone').forEach(z => z.classList.remove('drop-zone-active'));
 }
 
+/** Handles a drop on a stop card: reorders stops and submits the new order to the backend. */
 async function _onStopDrop(e, targetIndex) {
   e.preventDefault();
   document.querySelectorAll('.stop-overview-card, .stop-card-row').forEach(c => {
@@ -571,6 +586,7 @@ async function _onStopDrop(e, targetIndex) {
 // Must be top-level (not inside an IIFE) for inline HTML ondrop attributes.
 // ---------------------------------------------------------------------------
 
+/** Handles a drop on a between-card drop zone: inserts the dragged stop at the new position. */
 async function _onDropZoneDrop(e, dropBeforeIndex) {
   e.preventDefault();
   document.querySelectorAll('.stop-drop-zone').forEach(z => z.classList.remove('drop-zone-active'));
@@ -596,6 +612,7 @@ async function _onDropZoneDrop(e, dropBeforeIndex) {
 // Inline nights edit — triggers backend recalculation via update-nights endpoint
 // ---------------------------------------------------------------------------
 
+/** Opens the edit-nights modal for a stop and submits the change via SSE-streaming API. */
 function _editStopNights(stopId, currentNights) {
   if (_editInProgress) return;
 
@@ -687,6 +704,7 @@ function _editStopNights(stopId, currentNights) {
   });
 }
 
+/** Opens an SSE stream waiting for the nights-edit job to complete, then refreshes the guide. */
 function _listenForNightsComplete(jobId, travelId) {
   var _nightsSSE = openSSE(jobId, {
     update_nights_progress: function(data) {
@@ -716,6 +734,7 @@ function _listenForNightsComplete(jobId, travelId) {
 
 let _replaceStopSSE = null;
 
+/** Opens the replace-stop modal with manual and search tabs for choosing a replacement. */
 function openReplaceStopModal(stopId, currentNights) {
   const plan = S.result;
   if (!plan) return;
@@ -799,6 +818,7 @@ function openReplaceStopModal(stopId, currentNights) {
   if (input) setTimeout(() => input.focus(), 100);
 }
 
+/** Closes and removes the replace-stop modal overlay. */
 function closeReplaceStopModal() {
   const modal = document.getElementById('replace-stop-modal');
   if (modal) {
@@ -811,12 +831,14 @@ function closeReplaceStopModal() {
   }
 }
 
+/** Switches the visible tab (manual/search) within the replace-stop modal. */
 function _switchReplaceTab(tab) {
   document.querySelectorAll('.replace-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.getElementById('replace-tab-manual').style.display = tab === 'manual' ? '' : 'none';
   document.getElementById('replace-tab-search').style.display = tab === 'search' ? '' : 'none';
 }
 
+/** Shows the spinner and progress message inside the replace-stop modal. */
 function _showReplaceProgress(msg) {
   const p = document.getElementById('replace-progress');
   const m = document.getElementById('replace-progress-msg');
@@ -824,11 +846,13 @@ function _showReplaceProgress(msg) {
   if (m) m.textContent = msg || 'Wird bearbeitet…';
 }
 
+/** Hides the spinner and progress message inside the replace-stop modal. */
 function _hideReplaceProgress() {
   const p = document.getElementById('replace-progress');
   if (p) p.style.display = 'none';
 }
 
+/** Submits the manual (free-text) stop replacement and starts the SSE listener. */
 async function _doManualReplace(travelId, stopId) {
   const loc = (document.getElementById('replace-manual-location')?.value || '').trim();
   const nights = parseInt(document.getElementById('replace-manual-nights')?.value) || 1;
@@ -850,6 +874,7 @@ async function _doManualReplace(travelId, stopId) {
   }
 }
 
+/** Submits the AI-search replacement request and renders the option cards returned. */
 async function _doSearchReplace(travelId, stopId) {
   const btn = document.getElementById('replace-search-btn');
   if (btn) btn.disabled = true;
@@ -892,6 +917,7 @@ async function _doSearchReplace(travelId, stopId) {
   }
 }
 
+/** Confirms a search-replace option selection and starts the SSE listener for completion. */
 async function _selectSearchOption(travelId, jobId, optionIndex) {
   _showReplaceProgress('Gewählter Stopp wird recherchiert…');
 
@@ -904,6 +930,7 @@ async function _selectSearchOption(travelId, jobId, optionIndex) {
   }
 }
 
+/** Opens an SSE stream waiting for the replace-stop job to complete, then refreshes the guide. */
 function _listenForReplaceComplete(jobId, travelId) {
   _showReplaceProgress('Recherche läuft…');
 
