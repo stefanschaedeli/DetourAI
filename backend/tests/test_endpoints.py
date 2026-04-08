@@ -16,7 +16,7 @@ def mock_redis(mocker):
     mock.get.return_value = None
     mock.setex.return_value = True
     mock.keys.return_value = []
-    mocker.patch('main.redis_client', mock)
+    mocker.patch('services.redis_store.redis_client', mock)
     return mock
 
 

@@ -22,7 +22,7 @@ def client(mocker):
     mock_redis.get.return_value = None
     mock_redis.setex.return_value = True
     mock_redis.keys.return_value = []
-    mocker.patch('main.redis_client', mock_redis)
+    mocker.patch('services.redis_store.redis_client', mock_redis)
 
     from main import app
     return TestClient(app)
@@ -55,7 +55,7 @@ def mock_job(mocker):
         "region_plan_confirmed": False,
     }
 
-    mock_redis = mocker.patch("main.redis_client")
+    mock_redis = mocker.patch("services.redis_store.redis_client")
     mock_redis.get.side_effect = lambda key: (
         json.dumps(job).encode() if key == f"job:{job_id}" else None
     )
