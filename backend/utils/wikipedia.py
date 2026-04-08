@@ -1,3 +1,4 @@
+"""Wikipedia and Wikidata enrichment — city summaries and factual data for stops."""
 import aiohttp
 from typing import Optional
 
@@ -5,7 +6,11 @@ from utils.http_session import get_session
 
 
 async def get_city_summary(city: str, language: str = "de") -> Optional[dict]:
-    """Wikipedia-Zusammenfassung einer Stadt. Kostenlos, kein API-Key."""
+    """Fetch a Wikipedia page summary for a city (free, no API key required).
+
+    Returns a dict with title, extract, thumbnail_url, lat, and lon.
+    Returns None on any HTTP error or exception.
+    """
     try:
         url = f"https://{language}.wikipedia.org/api/rest_v1/page/summary/{city}"
         session = await get_session()
@@ -31,9 +36,14 @@ async def get_city_summary(city: str, language: str = "de") -> Optional[dict]:
 
 
 async def get_city_facts(city: str, country: str) -> Optional[dict]:
-    """Wikidata-Fakten: Einwohnerzahl, Höhe, Fläche, Zeitzone."""
+    """Fetch factual data for a city from Wikidata: population, elevation, and area.
+
+    Performs a two-step query: first searches for the Wikidata entity by city+country name,
+    then fetches property claims (P1082 population, P2044 elevation, P2046 area).
+    Returns None on any error or if the entity is not found.
+    """
     try:
-        # Suche Wikidata-Entity via Wikipedia-Titel
+        # Search for Wikidata entity via city and country name
         search_url = f"https://www.wikidata.org/w/api.php"
         params = {
             "action": "wbsearchentities",
@@ -56,7 +66,7 @@ async def get_city_facts(city: str, country: str) -> Optional[dict]:
                 return None
             entity_id = results[0]["id"]
 
-        # Lade Entity-Daten
+        # Fetch entity claims
         entity_params = {
             "action": "wbgetentities",
             "ids": entity_id,
