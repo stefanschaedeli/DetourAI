@@ -375,44 +375,32 @@ async function apiUpdateNights(travelId, stopId, nights) {
 
 /**
  * Open SSE connection for a job.
+ * Backward-compat shim — delegates to SSEClient.
+ * New code should subscribe to window 'sse:X' CustomEvents directly.
  * @param {string} jobId
- * @param {Object} handlers - keyed by event name
- * @returns {EventSource}
+ * @param {Object} handlers - keyed by SSE event name
+ * @returns {{ close: function }}
  */
 function openSSE(jobId, handlers) {
-  const token = authGetToken();
-  const qs = token ? `?token=${encodeURIComponent(token)}` : '';
-  const source = new EventSource(`${API}/progress/${jobId}${qs}`);
-
-  const events = [
-    'debug_log', 'route_ready', 'stop_done', 'agent_start', 'agent_done',
-    'job_complete', 'job_error', 'accommodation_loading', 'accommodation_loaded',
-    'accommodations_all_loaded', 'stop_research_started', 'activities_loaded',
-    'restaurants_loaded', 'route_option_ready', 'route_options_done', 'ping',
-    'region_plan_ready', 'region_updated', 'leg_complete',
-    'replace_stop_progress', 'replace_stop_complete',
-    'remove_stop_progress', 'remove_stop_complete',
-    'add_stop_progress', 'add_stop_complete',
-    'reorder_stops_progress', 'reorder_stops_complete',
-    'update_nights_progress', 'update_nights_complete',
-    'style_mismatch_warning', 'ferry_detected',
-  ];
-
-  events.forEach(evt => {
-    if (handlers[evt]) {
-      source.addEventListener(evt, e => {
-        let data = {};
-        try { data = JSON.parse(e.data); } catch (err) {}
-        handlers[evt](data);
-      });
+  const listeners = [];
+  Object.keys(handlers).forEach(evt => {
+    if (evt === 'onerror') {
+      const fn = () => handlers.onerror();
+      window.addEventListener('sse:error', fn, { once: true });
+      listeners.push({ name: 'sse:error', fn });
+    } else {
+      const fn = (e) => handlers[evt](e.detail);
+      window.addEventListener('sse:' + evt, fn);
+      listeners.push({ name: 'sse:' + evt, fn });
     }
   });
-
-  source.onerror = () => {
-    if (handlers.onerror) handlers.onerror();
+  SSEClient.open(jobId);
+  return {
+    close() {
+      SSEClient.close();
+      listeners.forEach(({ name, fn }) => window.removeEventListener(name, fn));
+    },
   };
-
-  return source;
 }
 
 /**
