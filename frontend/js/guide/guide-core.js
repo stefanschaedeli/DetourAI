@@ -17,6 +17,7 @@ let _breadcrumbDelegationReady = false;
 // Crossfade transition timer — guards against rapid navigation (Pitfall 2)
 let _drillTransitionTimer = null;
 
+/** Renders the travel guide section, sets shared-mode classes, and initialises the guide map. */
 function showTravelGuide(plan) {
   S.result = plan;
 
@@ -68,6 +69,7 @@ function showTravelGuide(plan) {
   if (typeof _populateSidebarOverlay === 'function' && !S.sharedMode) _populateSidebarOverlay();
 }
 
+/** Renders the active guide tab content and updates the stats bar and map. */
 function renderGuide(plan, tab) {
   activeTab = tab || 'overview';
 
@@ -180,6 +182,7 @@ function renderGuide(plan, tab) {
   });
 }
 
+/** Switches the active guide tab, resets drill-down state, and updates the URL. */
 function switchGuideTab(tab) {
   if (tab !== 'stops') _activeStopId = null;
   if (tab !== 'days') _activeDayNum = null;
@@ -192,6 +195,7 @@ function switchGuideTab(tab) {
   }
 }
 
+/** Renders the given tab without updating the URL (called by the router only). */
 // Called by router only — render tab without URL update
 function activateGuideTab(tab) {
   renderGuide(S.result, tab);
@@ -201,6 +205,7 @@ function activateGuideTab(tab) {
 // Stats Bar (D-04) — 4 pill widgets at top of overview
 // ---------------------------------------------------------------------------
 
+/** Returns the HTML string for the 4-pill stats bar (days, stops, km, budget). */
 function renderStatsBar(plan) {
   const stops = plan.stops || [];
   const cost = plan.cost_estimate || {};
@@ -338,6 +343,7 @@ function _renderBreadcrumb(level, plan, dayNum, stopId) {
   }
 }
 
+/** Attaches a single delegated click handler on #guide-content for all in-guide navigation. */
 function _initGuideDelegation() {
   if (_guideDelegationReady) return;
   _guideDelegationReady = true;
@@ -493,6 +499,7 @@ function _navigateToOverview() {
   }
 }
 
+/** Restores the travel guide from localStorage cache and shows the guide section. */
 function loadGuideFromCache() {
   const saved = lsGet(LS_RESULT);
   if (saved && saved.plan) {
@@ -503,6 +510,7 @@ function loadGuideFromCache() {
   }
 }
 
+/** Triggers a replan of the currently displayed saved travel with two-step inline confirmation. */
 async function replanCurrentTravel() {
   const plan = S.result;
   if (!plan) return;
