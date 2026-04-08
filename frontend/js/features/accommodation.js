@@ -1,8 +1,21 @@
 'use strict';
 
+// Accommodation — parallel accommodation loading grid; per-stop option cards and selection.
+// Reads: S (state.js), Router (router.js), progressOverlay (progress.js), t (i18n.js), esc (core).
+// Provides: connectAccommodationSSE, startAccommodationPhase, buildAllStopPanels, startPlanningWithAllSelections.
+
+// ---------------------------------------------------------------------------
+// Module state
+// ---------------------------------------------------------------------------
+
 let accSSE = null;
 let allStopPanels = {};  // stop_id → {stop, options}
 
+// ---------------------------------------------------------------------------
+// SSE connection
+// ---------------------------------------------------------------------------
+
+/** Opens the accommodation SSE stream and returns a promise that resolves once the connection is open. */
 function connectAccommodationSSE(jobId) {
   if (accSSE) { accSSE.close(); accSSE = null; }
 
@@ -29,6 +42,11 @@ function onAccDebugLog(data) {
   updateDebugLog();
 }
 
+// ---------------------------------------------------------------------------
+// Phase initialisation
+// ---------------------------------------------------------------------------
+
+/** Initialises the accommodation phase: resets state, renders budget info, and builds all stop panels. */
 function startAccommodationPhase(data) {
   S.allStops = data.selected_stops || [];
   if (typeof updateSidebar === 'function') updateSidebar();
@@ -45,6 +63,7 @@ function startAccommodationPhase(data) {
   if (btn) btn.disabled = true;
 }
 
+/** Renders skeleton panels for every stop in the accommodation grid. */
 function buildAllStopPanels(stops) {
   const container = document.getElementById('accommodation-stops-container');
   if (!container) return;
@@ -287,6 +306,11 @@ async function researchAccommodation(stopId) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Planning submission
+// ---------------------------------------------------------------------------
+
+/** Confirms all accommodation selections with the backend and starts the full planning pipeline. */
 async function startPlanningWithAllSelections() {
   const btn = document.getElementById('start-planning-btn');
   if (btn) { btn.disabled = true; btn.textContent = t('accommodation.starting_planning'); }
