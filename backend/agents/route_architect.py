@@ -1,3 +1,5 @@
+"""Agent that builds the initial full route skeleton with stops, drive times, ferry crossings, and plausibility checks."""
+
 from models.travel_request import TravelRequest
 from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
@@ -31,6 +33,8 @@ SYSTEM_PROMPTS = {
 
 
 class RouteArchitectAgent:
+    """Agent that generates the full route plan including stops, nightly distribution, ferry crossings, and travel-style plausibility warnings."""
+
     def __init__(self, request: TravelRequest, job_id: str, token_accumulator: list = None):
         self.request = request
         self.job_id = job_id
@@ -39,6 +43,7 @@ class RouteArchitectAgent:
         self.model = get_model("claude-opus-4-5", AGENT_KEY)
 
     async def run(self) -> dict:
+        """Build the route plan: detect island destinations, compose a localized prompt, call Claude, and emit SSE events for warnings and ferry crossings."""
         lang = getattr(self.request, 'language', 'de')
         await debug_logger.log(
             LogLevel.AGENT, "RouteArchitect startet",
