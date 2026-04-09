@@ -1240,6 +1240,8 @@ async def plan_location(
 ) -> dict:
     """Ortsreise shortcut: geocode single location leg and jump to accommodation phase."""
     job = get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job nicht gefunden.")
     lang = _job_lang(job)
 
     if len(request.legs) != 1 or request.legs[0].mode != "location":

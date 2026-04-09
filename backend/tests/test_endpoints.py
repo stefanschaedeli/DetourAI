@@ -786,3 +786,4 @@ def test_plan_location_wrong_mode(client, mocker):
     )
 
     assert response.status_code == 400
+    assert "Ortsreise erfordert genau einen Ortsreise-Abschnitt." in response.json()["detail"]
