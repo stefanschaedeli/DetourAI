@@ -1,7 +1,7 @@
 'use strict';
 
 // Router — pattern-matched pretty URL router using History API.
-// Reads: S (state.js), t (i18n.js), showSection, showLoading, hideLoading, lsGet, lsSet, LS_RESULT, LS_ROUTE, goToStep, showTravelGuide, activateGuideTab, activateStopDetail, activateDayDetail, openTravelsDrawer, openSettingsPage, apiGetTravel, apiGetShared.
+// Reads: S (state.js), t (i18n.js), showSection, showLoading, hideLoading, lsGet, lsSet, LS_RESULT, LS_ROUTE, LS_APP_MODE, goToStep, showTravelGuide, activateGuideTab, activateStopDetail, activateDayDetail, openTravelsDrawer, openSettingsPage, apiGetTravel, apiGetShared, initModePicker, renderOrtsreiseForm.
 // Provides: Router.init, Router.navigate, Router.slugify, Router.travelPath.
 
 const Router = (() => {
@@ -116,7 +116,22 @@ const Router = (() => {
   const _handlers = {
     _form() {
       document.title = _titles.form;
-      showSection('form-section');
+      // Restore appMode from localStorage if not yet set in memory
+      if (!S.appMode) {
+        const saved = lsGet(LS_APP_MODE);
+        if (saved) S.appMode = saved;
+      }
+      if (!S.appMode) {
+        // No mode chosen yet — show the mode picker landing page
+        showSection('mode-picker');
+        initModePicker();
+      } else if (S.appMode === 'ortsreise') {
+        showSection('form-section');
+        if (typeof renderOrtsreiseForm === 'function') renderOrtsreiseForm();
+      } else {
+        // rundreise or erkunden — show the standard planning form
+        showSection('form-section');
+      }
     },
 
     _formStep(m) {
