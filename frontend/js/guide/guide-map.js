@@ -139,7 +139,7 @@ function _setupGuideMap(plan) {
   });
 }
 
-/** Wires the collapse/expand toggle button for the guide map section. */
+/** Wires the collapse/expand toggle button for the guide map section, plus scroll-based auto-collapse. */
 function _initMapCollapse(map) {
   const section = document.getElementById('guide-map-section');
   const toggle  = document.getElementById('guide-map-toggle');
@@ -151,10 +151,11 @@ function _initMapCollapse(map) {
     toggle.setAttribute('aria-expanded', 'false');
   }
 
-  toggle.addEventListener('click', function () {
-    const collapsed = section.classList.toggle('is-collapsed');
+  // Shared collapse/expand helper — triggers map resize on expand
+  function _setCollapsed(collapsed) {
+    if (collapsed === section.classList.contains('is-collapsed')) return; // no-op
+    section.classList.toggle('is-collapsed', collapsed);
     toggle.setAttribute('aria-expanded', String(!collapsed));
-    // Trigger map resize after expand animation completes
     if (!collapsed) {
       setTimeout(() => {
         if (typeof GoogleMaps !== 'undefined' && GoogleMaps.guideMap) {
@@ -162,7 +163,35 @@ function _initMapCollapse(map) {
         }
       }, 350);
     }
+  }
+
+  // Manual toggle button
+  toggle.addEventListener('click', function () {
+    _setCollapsed(!section.classList.contains('is-collapsed'));
   });
+
+  // Scroll-based auto-collapse: collapse when scrolling down, expand when near top
+  let _lastScrollY = window.scrollY;
+  let _userManuallyCollapsed = false; // track manual collapse to avoid fighting user
+
+  window.addEventListener('scroll', function () {
+    const currentY = window.scrollY;
+    const delta = currentY - _lastScrollY;
+
+    if (delta > 30 && currentY > 80) {
+      // Scrolling down — collapse
+      if (!section.classList.contains('is-collapsed')) {
+        _setCollapsed(true);
+      }
+    } else if (currentY < 60) {
+      // Back near the top — expand
+      if (section.classList.contains('is-collapsed') && window.innerWidth > 767) {
+        _setCollapsed(false);
+      }
+    }
+
+    _lastScrollY = currentY;
+  }, { passive: true });
 }
 
 /** Wires the marker-type filter pill buttons. */
