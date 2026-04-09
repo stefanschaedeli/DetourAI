@@ -10,7 +10,10 @@
 
 const ICONS = {
   roadtrip: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path d="M3 12h18M3 12l4-4m-4 4 4 4M21 12l-4-4m4 4-4 4"/>
+    <path d="M4 21 C4 21 8 21 10 17 C12 13 12 10 16 8 C18 7 20 7 20 7"/>
+    <circle cx="4" cy="21" r="1.5"/>
+    <path d="M20 3 C18.5 3 17 4.5 17 6 C17 7.8 20 11 20 11 C20 11 23 7.8 23 6 C23 4.5 21.5 3 20 3Z"/>
+    <circle cx="20" cy="6" r="1" fill="currentColor" stroke="none"/>
   </svg>`,
   erkunden: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <circle cx="12" cy="12" r="10"/>
