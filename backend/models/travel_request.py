@@ -82,6 +82,8 @@ class TravelRequest(BaseModel):
         leg = self.legs[-1]
         if leg.mode == "explore":
             return f"[Erkunden] {(leg.explore_description or '')[:50]}"
+        if leg.mode == "location":
+            return leg.start_location.strip()
         return leg.end_location.strip()
 
     @property
@@ -112,7 +114,9 @@ class TravelRequest(BaseModel):
     def validate_legs_chain(self):
         for i in range(1, len(self.legs)):
             prev, curr = self.legs[i - 1], self.legs[i]
-            # Skip location chain check if either leg is explore (locations optional)
+            # location legs have no end_location — skip chain validation involving them
+            if prev.mode == "location" or curr.mode == "location":
+                continue
             prev_end = prev.end_location.strip().lower() if prev.end_location else ""
             curr_start = curr.start_location.strip().lower() if curr.start_location else ""
             if prev_end and curr_start and prev_end != curr_start:

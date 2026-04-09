@@ -888,3 +888,33 @@ def test_location_leg_no_explore_description_needed():
         explore_description=None,
     )
     assert leg.explore_description is None
+
+
+def test_travel_request_single_location_leg():
+    """A TravelRequest with a single location leg must be valid."""
+    leg = TripLeg(
+        leg_id="leg-0",
+        start_location="Lissabon, Portugal",
+        end_location="",
+        start_date=date(2026, 6, 1),
+        end_date=date(2026, 6, 8),
+        mode="location",
+    )
+    req = TravelRequest(legs=[leg], adults=2)
+    assert req.start_location == "Lissabon, Portugal"
+    assert req.main_destination == "Lissabon, Portugal"
+
+
+def test_travel_request_location_leg_start_location_property():
+    """start_location and main_destination return start_location for a location leg."""
+    leg = TripLeg(
+        leg_id="leg-0",
+        start_location="Amsterdam, Niederlande",
+        end_location="",
+        start_date=date(2026, 6, 1),
+        end_date=date(2026, 6, 5),
+        mode="location",
+    )
+    req = TravelRequest(legs=[leg], adults=1)
+    assert req.start_location == "Amsterdam, Niederlande"
+    assert req.main_destination == "Amsterdam, Niederlande"
