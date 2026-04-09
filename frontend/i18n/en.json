@@ -37,6 +37,7 @@
   "form.step.budget": "Budget",
   "form.step.summary": "Summary",
   "form.plan_trip": "Plan your trip",
+  "form.switch_mode": "Switch mode",
   "form.legs_label": "Trip segments",
   "form.legs_hint": "Each segment defines a section of your trip with start, destination, and dates.",
   "form.add_leg": "+ Add segment",

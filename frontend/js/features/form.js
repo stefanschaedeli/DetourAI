@@ -2,7 +2,7 @@
 
 // Form — 5-step trip planning wizard; collects legs, preferences, and budget.
 // Reads: S (state.js), Router (router.js), GoogleMaps (maps-core.js), t (i18n.js), esc (core).
-// Provides: initForm, goToStep, buildPayload, submitTrip, clearAppData, updateQuickSubmitBar.
+// Provides: initForm, goToStep, buildPayload, submitTrip, clearAppData, updateQuickSubmitBar, renderOrtsreiseForm, submitLocationTrip, showModePicker.
 
 // ---------------------------------------------------------------------------
 // Initialisation
@@ -1078,3 +1078,299 @@ function clearAppData() {
   Router.navigate('/');
 }
 
+// ---------------------------------------------------------------------------
+// Ortsreise — single-location form
+// ---------------------------------------------------------------------------
+
+/**
+ * Renders a single-page scrollable Ortsreise form inside #form-section,
+ * replacing the step wizard. Called when S.appMode === 'ortsreise'.
+ */
+function renderOrtsreiseForm() {
+  const section = document.getElementById('form-section');
+  if (!section) return;
+
+  // Build travel style grid HTML with current selection state
+  const stylesHtml = TRAVEL_STYLES.map(style => {
+    const selected = S.travelStyles.includes(style.id);
+    return `<div class="style-card${selected ? ' selected' : ''}"
+         data-id="${esc(style.id)}"
+         onclick="toggleStyle(this)"
+         tabindex="0" role="button"
+         aria-pressed="${selected ? 'true' : 'false'}">
+      <div class="style-icon">${style.icon}</div>
+      <div class="style-label">${esc(t('travel_styles.' + style.id))}</div>
+    </div>`;
+  }).join('');
+
+  // Replace section contents with single-page form
+  section.innerHTML = `
+    <div class="ortsreise-form">
+      <div class="ortsreise-form-header">
+        <h2 class="form-section-title">${esc(t('mode_picker.ortsreise.name'))}</h2>
+        <button class="btn btn-link mode-switch-link" type="button" onclick="showModePicker()">${esc(t('form.switch_mode'))}</button>
+      </div>
+
+      <div class="form-group">
+        <label for="ortsreise-location">${esc(t('form.location_label'))}</label>
+        <input type="text" id="ortsreise-location"
+          value="${esc(S.locationQuery)}"
+          placeholder="${esc(t('form.location_placeholder'))}"
+          oninput="S.locationQuery = this.value">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ortsreise-start-date">${esc(t('form.leg_start_date_label'))}</label>
+          <input type="date" id="ortsreise-start-date" value="">
+        </div>
+        <div class="form-group">
+          <label for="ortsreise-nights">${esc(t('form.nights_label'))}</label>
+          <input type="number" id="ortsreise-nights"
+            min="1" max="30"
+            value="${S.locationNights}"
+            oninput="S.locationNights = parseInt(this.value) || 1">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>${esc(t('form.adults_label'))}</label>
+        <div class="adults-counter">
+          <button type="button" onclick="changeAdults(-1)" aria-label="${esc(t('form.decrease_adults_aria'))}">−</button>
+          <span class="adults-count" id="adults-count">${S.adults}</span>
+          <button type="button" onclick="changeAdults(1)" aria-label="${esc(t('form.increase_adults_aria'))}">+</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>${esc(t('form.children_label'))}</label>
+        <div id="children-list"></div>
+        <button class="btn btn-secondary" type="button" onclick="addChild()" style="margin-top:8px">${esc(t('form.add_child'))}</button>
+      </div>
+
+      <div class="form-group">
+        <label>${esc(t('form.travel_style_label'))}</label>
+        <div class="style-grid" id="ortsreise-style-grid">${stylesHtml}</div>
+      </div>
+
+      <div class="form-group">
+        <label>${esc(t('form.mandatory_activities_label'))}</label>
+        <div class="tag-input-row">
+          <input type="text" id="mandatory-tag-input"
+            placeholder="${esc(t('form.mandatory_activities_placeholder'))}"
+            onkeydown="if(event.key==='Enter'){addTagFromInput();event.preventDefault()}">
+          <button class="btn btn-secondary" type="button" onclick="addTagFromInput()">${esc(t('form.add_tag'))}</button>
+        </div>
+        <div class="tags-container" id="mandatory-tags"></div>
+      </div>
+
+      <div class="form-group">
+        <label>${esc(t('form.preferred_activities_label'))}</label>
+        <div class="tag-input-row">
+          <input type="text" id="preferred-tag-input"
+            placeholder="${esc(t('form.preferred_activities_placeholder'))}"
+            onkeydown="if(event.key==='Enter'){addPreferredTagFromInput();event.preventDefault()}">
+          <button class="btn btn-secondary" type="button" onclick="addPreferredTagFromInput()">${esc(t('form.add_tag'))}</button>
+        </div>
+        <div class="tags-container" id="preferred-tags"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="travel-description">${esc(t('form.travel_description_label'))}</label>
+        <textarea id="travel-description" rows="3"
+          placeholder="${esc(t('form.travel_description_placeholder'))}"
+          oninput="S.ortsreiseDescription = this.value">${esc(S.ortsreiseDescription)}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label>${esc(t('form.accommodation_prefs_label'))}</label>
+        <label for="acc-pref-0" class="sr-only">${esc(t('form.accommodation_pref1_placeholder'))}</label>
+        <input type="text" id="acc-pref-0"
+          placeholder="${esc(t('form.accommodation_pref1_placeholder'))}"
+          oninput="saveFormToCache()">
+        <label for="acc-pref-1" class="sr-only">${esc(t('form.accommodation_pref2_placeholder'))}</label>
+        <input type="text" id="acc-pref-1"
+          placeholder="${esc(t('form.accommodation_pref2_placeholder'))}"
+          oninput="saveFormToCache()" style="margin-top:8px">
+        <label for="acc-pref-2" class="sr-only">${esc(t('form.accommodation_pref3_placeholder'))}</label>
+        <input type="text" id="acc-pref-2"
+          placeholder="${esc(t('form.accommodation_pref3_placeholder'))}"
+          oninput="saveFormToCache()" style="margin-top:8px">
+        <p class="form-hint">${esc(t('form.accommodation_4th_hint'))}</p>
+      </div>
+
+      <button class="btn advanced-toggle" type="button"
+              id="ortsreise-advanced-toggle"
+              aria-expanded="false"
+              onclick="this.setAttribute('aria-expanded',this.getAttribute('aria-expanded')==='true'?'false':'true');document.getElementById('ortsreise-advanced-section').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
+        <span>${esc(t('form.advanced_toggle'))}</span>
+      </button>
+      <div class="advanced-section" id="ortsreise-advanced-section">
+        <div class="form-group">
+          <label for="ortsreise-max-activities">${esc(t('header.max_activities_label'))}</label>
+          <select id="ortsreise-max-activities">
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="7">7</option>
+            <option value="10">10</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="ortsreise-max-restaurants">${esc(t('header.max_restaurants_label'))}</label>
+          <select id="ortsreise-max-restaurants">
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>${esc(t('form.hotel_radius_label'))} <strong id="ortsreise-hotel-radius-display">10</strong> km</label>
+          <div class="slider-row">
+            <input type="range" id="ortsreise-hotel-radius" min="1" max="50" value="10" step="1"
+              oninput="document.getElementById('ortsreise-hotel-radius-display').textContent=this.value">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="ortsreise-log-verbosity">${esc(t('header.log_verbosity_label'))}</label>
+          <select id="ortsreise-log-verbosity">
+            <option value="minimal">${esc(t('header.log_minimal'))}</option>
+            <option value="normal" selected>${esc(t('header.log_normal'))}</option>
+            <option value="verbose">${esc(t('header.log_verbose'))}</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="ortsreise-submit-error" class="field-error" style="display:none;margin-bottom:12px"></div>
+
+      <button class="btn cta-secondary" type="button" onclick="submitLocationTrip()">
+        ${esc(t('form.plan_trip'))} →
+      </button>
+    </div>
+  `;
+
+  // Populate tag and children containers after innerHTML swap
+  renderTags();
+  renderPreferredTags();
+  renderChildren();
+
+  // Wire Google Places autocomplete if Maps API is ready
+  _attachOrtsreiseAutocomplete();
+}
+
+/** Attaches Google Places autocomplete to the Ortsreise location input. Updates S.locationQuery on selection. */
+function _attachOrtsreiseAutocomplete() {
+  if (typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+  const acOpts = { types: ['(cities)'], fields: ['formatted_address', 'place_id', 'geometry'] };
+  const ac = GoogleMaps.attachAutocomplete('ortsreise-location', acOpts);
+  if (!ac) return;
+  ac.addListener('place_changed', () => {
+    const place = ac.getPlace();
+    if (place && place.formatted_address) {
+      S.locationQuery = place.formatted_address;
+      const input = document.getElementById('ortsreise-location');
+      if (input) input.value = place.formatted_address;
+    }
+  });
+}
+
+/**
+ * Adds `days` days to a YYYY-MM-DD date string and returns the result.
+ * @param {string} dateStr - Source date in YYYY-MM-DD format
+ * @param {number} days    - Number of days to add
+ * @returns {string} Resulting date in YYYY-MM-DD format
+ */
+function _addDaysToDateStr(dateStr, days) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Validates, builds the Ortsreise TravelRequest payload, and triggers planning via apiPlanLocation(). */
+async function submitLocationTrip() {
+  const errEl = document.getElementById('ortsreise-submit-error');
+  if (errEl) errEl.style.display = 'none';
+
+  const location = S.locationQuery.trim();
+  if (!location) {
+    if (errEl) { errEl.textContent = t('form.start_location_required'); errEl.style.display = ''; }
+    return;
+  }
+
+  const startDate = document.getElementById('ortsreise-start-date')?.value || '';
+  if (!startDate) {
+    if (errEl) { errEl.textContent = t('form.start_date_required'); errEl.style.display = ''; }
+    return;
+  }
+
+  const nights = Math.max(1, S.locationNights || 7);
+  const endDate = _addDaysToDateStr(startDate, nights);
+
+  const payload = {
+    legs: [{
+      leg_id: 'leg-0',
+      mode: 'location',
+      start_location: location,
+      end_location: '',
+      start_date: startDate,
+      end_date: endDate,
+      via_points: [],
+    }],
+    total_days: nights,
+    adults: S.adults,
+    children: S.children,
+    travel_styles: S.travelStyles,
+    travel_description: document.getElementById('travel-description')?.value || '',
+    mandatory_activities: S.mandatoryTags.map(name => ({ name })),
+    preferred_activities: S.preferredTags,
+    max_activities_per_stop: parseInt(document.getElementById('ortsreise-max-activities')?.value) || 5,
+    max_restaurants_per_stop: parseInt(document.getElementById('ortsreise-max-restaurants')?.value) || 3,
+    activities_radius_km: 30,
+    max_drive_hours_per_day: 0,
+    proximity_origin_pct: 0,
+    proximity_target_pct: 0,
+    min_nights_per_stop: nights,
+    max_nights_per_stop: nights,
+    accommodation_preferences: getAccPreferences(),
+    hotel_radius_km: parseInt(document.getElementById('ortsreise-hotel-radius')?.value) || 10,
+    log_verbosity: document.getElementById('ortsreise-log-verbosity')?.value || 'normal',
+    language: (typeof getLocale === 'function') ? getLocale() : 'de',
+  };
+
+  const submitBtn = document.querySelector('.ortsreise-form .cta-secondary');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="btn-spinner"></span> ' + esc(t('form.planning_trip'));
+  }
+
+  try {
+    // Pre-init job so SSE can open before Claude starts planning
+    const initData = await apiInitJob(payload);
+    const jobId = initData.job_id;
+    S.jobId = jobId;
+
+    lsSet(LS_ROUTE, { jobId, stops: {}, stopsOrder: [] });
+    lsClear(LS_ACCOMMODATIONS);
+
+    // Transition to route-builder and start SSE stream
+    showSection('route-builder');
+    Router.navigate('/route-builder/' + jobId);
+    if (typeof _showSkeletonCards === 'function') _showSkeletonCards();
+    progressOverlay.open(t('form.planning_trip') + '…');
+    openRouteSSE(jobId);
+
+    // Trigger actual planning; SSE delivers progress
+    const data = await apiPlanLocation(payload, jobId);
+    S.currentOptions = data.options || [];
+    if (typeof startRouteBuilding === 'function') startRouteBuilding(data);
+
+  } catch (err) {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = t('form.plan_trip') + ' →';
+    }
+    const msg = err.message || '';
+    if (errEl) { errEl.textContent = t('form.trip_planning_error') + ' ' + msg; errEl.style.display = ''; }
+    else { alert(t('form.trip_planning_error') + ' ' + msg); }
+  }
+}
