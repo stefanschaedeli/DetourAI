@@ -33,7 +33,6 @@
   <div class="app-subtitle" data-i18n="header.subtitle">KI-gestützter Reiseplaner</div>
   <span class="app-version">v14.0.1</span>
   <button class="btn-my-travels" onclick="openTravelsDrawer()" data-i18n="header.my_travels">Meine Reisen</button>
-  <button class="btn-clear-data" onclick="clearAppData()" title="Daten löschen und neu starten" data-i18n="header.reset_data">Neu starten</button>
   <span id="header-username" style="display:none" class="header-username"></span>
   <button id="btn-admin" onclick="showSection('admin-section'); loadAdminUsers();" style="display:none" class="btn-secondary">Admin</button>
   <button id="btn-logout" onclick="handleLogout()" style="display:none" class="btn-secondary" data-i18n="header.logout">Abmelden</button>
@@ -822,7 +821,7 @@
     document.getElementById('header-username').style.display = 'none';
     document.getElementById('btn-admin').style.display = 'none';
     document.getElementById('btn-logout').style.display = 'none';
-    document.querySelectorAll('.btn-my-travels, .btn-clear-data').forEach(b => b.style.display = 'none');
+    document.querySelectorAll('.btn-my-travels').forEach(b => b.style.display = 'none');
   }
 
   function showAppForUser(user) {
@@ -832,7 +831,7 @@
     if (user.is_admin) {
       document.getElementById('btn-admin').style.display = '';
     }
-    document.querySelectorAll('.btn-my-travels, .btn-clear-data').forEach(b => b.style.display = '');
+    document.querySelectorAll('.btn-my-travels').forEach(b => b.style.display = '');
     // Navigate via router so mode-picker / form logic is applied correctly.
     // On first login _initAppOnce hasn't run yet (Router.init not called), so
     // we fall back to showing mode-picker directly. On re-login (logout→login)

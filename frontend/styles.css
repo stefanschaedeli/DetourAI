@@ -345,20 +345,6 @@ html[lang="hi"] button {
   .btn-my-travels { transition: none; }
 }
 
-.btn-clear-data {
-  padding: 0 14px;
-  height: 32px;
-  font-size: 13px;
-  font-weight: 500;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.14s, color 0.14s;
-}
-.btn-clear-data:hover { background: rgba(232, 139, 139, 0.1); color: var(--danger); }
-
 main { max-width: none; margin: 0; padding: 0 0 96px; }
 
 /* Per-section width constraints */

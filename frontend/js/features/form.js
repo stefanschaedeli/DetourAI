@@ -2,7 +2,7 @@
 
 // Form — 5-step trip planning wizard; collects legs, preferences, and budget.
 // Reads: S (state.js), Router (router.js), GoogleMaps (maps-core.js), t (i18n.js), esc (core).
-// Provides: initForm, goToStep, buildPayload, submitTrip, clearAppData, updateQuickSubmitBar, renderOrtsreiseForm, submitLocationTrip, showModePicker, saveOrtsreiseToCache, restoreOrtsreiseForm.
+// Provides: initForm, goToStep, buildPayload, submitTrip, updateQuickSubmitBar, renderOrtsreiseForm, submitLocationTrip, showModePicker, saveOrtsreiseToCache, restoreOrtsreiseForm.
 
 // ---------------------------------------------------------------------------
 // Initialisation
@@ -1035,51 +1035,6 @@ function restoreFormFromCache() {
   }
 
   updateBudgetPreview();
-}
-
-/** Resets all app state and localStorage, then returns to form step 1. */
-function clearAppData() {
-  if (!confirm(t('form.confirm_clear_data'))) return;
-
-  // Close any open SSE connections
-  if (S.sse) { try { S.sse.close(); } catch (e) {} S.sse = null; }
-  if (typeof accSSE !== 'undefined' && accSSE) { try { accSSE.close(); } catch (e) {} }
-
-  // Clear all non-form localStorage keys
-  lsClear(LS_ROUTE);
-  lsClear(LS_ACCOMMODATIONS);
-  lsClear(LS_RESULT);
-  lsClear(LS_APP_MODE);
-
-  // Reset runtime state (keep form-related fields)
-  S.step = 1;
-  S.legs = [];
-  S.jobId = null;
-  S.logs = [];
-  S.apiCalls = 0;
-  S.debugOpen = false;
-  S.result = null;
-  S.selectedStops = [];
-  S.currentOptions = [];
-  S.loadingOptions = false;
-  S.confirmingRoute = false;
-  S.allStops = [];
-  S.selectedAccommodations = {};
-  S.prefetchedOptions = {};
-  S.pendingSelections = {};
-  S.allAccLoaded = false;
-  S.accSelectionCount = 0;
-  S.appMode = null;
-  S.locationQuery = '';
-  S.locationNights = 7;
-  S.ortsreiseDescription = '';
-
-  // Hide resume banner
-  document.getElementById('resume-banner').style.display = 'none';
-
-  // Return to form step 1
-  goToStep(1);
-  Router.navigate('/');
 }
 
 // ---------------------------------------------------------------------------
