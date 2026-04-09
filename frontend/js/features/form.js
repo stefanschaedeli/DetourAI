@@ -1258,6 +1258,80 @@ function renderOrtsreiseForm() {
   _attachOrtsreiseAutocomplete();
 }
 
+/** Persists current Ortsreise form values into the ortsreise sub-object of LS_FORM. */
+function saveOrtsreiseToCache() {
+  const existing = lsGet(LS_FORM) || {};
+  existing.ortsreise = {
+    locationQuery:  S.locationQuery,
+    locationNights: S.locationNights,
+    startDate:      document.getElementById('ortsreise-start-date')?.value || '',
+    description:    S.ortsreiseDescription,
+    maxActivities:  parseInt(document.getElementById('ortsreise-max-activities')?.value) || 5,
+    maxRestaurants: parseInt(document.getElementById('ortsreise-max-restaurants')?.value) || 3,
+    hotelRadius:    parseInt(document.getElementById('ortsreise-hotel-radius')?.value) || 10,
+    logVerbosity:   document.getElementById('ortsreise-log-verbosity')?.value || 'normal',
+  };
+  lsSet(LS_FORM, existing);
+}
+
+/** Restores persisted Ortsreise values into S and the DOM after renderOrtsreiseForm() builds the HTML. */
+function restoreOrtsreiseForm() {
+  const cached = lsGet(LS_FORM)?.ortsreise;
+  if (!cached) return;
+
+  // Restore state
+  if (cached.locationQuery)  { S.locationQuery  = cached.locationQuery; }
+  if (cached.locationNights) { S.locationNights = cached.locationNights; }
+  if (cached.description)    { S.ortsreiseDescription = cached.description; }
+
+  // Restore DOM — simple value fields
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val != null) el.value = val;
+  };
+
+  setVal('ortsreise-location', cached.locationQuery);
+  setVal('ortsreise-nights',   cached.locationNights);
+  setVal('travel-description', cached.description);
+  setVal('ortsreise-max-activities',  cached.maxActivities);
+  setVal('ortsreise-max-restaurants', cached.maxRestaurants);
+  setVal('ortsreise-log-verbosity',   cached.logVerbosity);
+
+  // Restore range slider + update display label
+  if (cached.hotelRadius != null) {
+    setVal('ortsreise-hotel-radius', cached.hotelRadius);
+    const display = document.getElementById('ortsreise-hotel-radius-display');
+    if (display) display.textContent = cached.hotelRadius;
+  }
+
+  // Restore start date only if it is today or in the future
+  if (cached.startDate) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (cached.startDate >= today) {
+      setVal('ortsreise-start-date', cached.startDate);
+    }
+  }
+}
+
+/** Attaches input/change listeners to all Ortsreise form controls so every edit is auto-saved. */
+function _wireOrtsreiseSaveListeners() {
+  [
+    'ortsreise-location',
+    'ortsreise-start-date',
+    'ortsreise-nights',
+    'travel-description',
+    'ortsreise-max-activities',
+    'ortsreise-max-restaurants',
+    'ortsreise-hotel-radius',
+    'ortsreise-log-verbosity',
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input',  saveOrtsreiseToCache);
+    el.addEventListener('change', saveOrtsreiseToCache);
+  });
+}
+
 /** Attaches Google Places autocomplete to the Ortsreise location input. Updates S.locationQuery on selection. */
 function _attachOrtsreiseAutocomplete() {
   if (typeof google === 'undefined' || !google.maps || !google.maps.places) return;
