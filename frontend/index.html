@@ -819,7 +819,15 @@
       document.getElementById('btn-admin').style.display = '';
     }
     document.querySelectorAll('.btn-my-travels, .btn-clear-data').forEach(b => b.style.display = '');
-    showSection('form-section');
+    // Navigate via router so mode-picker / form logic is applied correctly.
+    // On first login _initAppOnce hasn't run yet (Router.init not called), so
+    // we fall back to showing mode-picker directly. On re-login (logout→login)
+    // Router is already initialised and navigate() works normally.
+    if (_appInitialized) {
+      Router.navigate('/', { replace: true });
+    } else {
+      showSection('mode-picker');
+    }
   }
 
   async function handleLogin(event) {
