@@ -1352,17 +1352,19 @@ async function submitLocationTrip() {
     lsSet(LS_ROUTE, { jobId, stops: {}, stopsOrder: [] });
     lsClear(LS_ACCOMMODATIONS);
 
-    // Transition to route-builder and start SSE stream
-    showSection('route-builder');
-    Router.navigate('/route-builder/' + jobId);
-    if (typeof _showSkeletonCards === 'function') _showSkeletonCards();
+    // Trigger Ortsreise planning — backend geocodes and jumps straight to accommodation
     progressOverlay.open(t('form.planning_trip') + '…');
-    openRouteSSE(jobId);
-
-    // Trigger actual planning; SSE delivers progress
     const data = await apiPlanLocation(payload, jobId);
-    S.currentOptions = data.options || [];
-    if (typeof startRouteBuilding === 'function') startRouteBuilding(data);
+    S.allStops = data.selected_stops || [];
+
+    // Go straight to accommodation phase — no route-building needed for Ortsreise
+    showSection('accommodation');
+    Router.navigate('/accommodation/' + jobId);
+    startAccommodationPhase(data);
+    progressOverlay.open(t('accommodation.searching_options', { region: '' }));
+
+    await connectAccommodationSSE(jobId);
+    await apiStartAccommodations(jobId);
 
   } catch (err) {
     if (submitBtn) {
