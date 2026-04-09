@@ -1,6 +1,7 @@
 // Guide Edit — route editing (add/remove/reorder/replace/drag), SSE edit handlers.
 // Reads: S (state.js), esc() (state.js), activeTab (guide-core.js),
-//        _fetch/_fetchQuiet/openSSE (api.js), GoogleMaps (maps.js).
+//        _fetch/_fetchQuiet/openSSE (api.js), GoogleMaps (maps.js),
+//        progressOverlay, overlayAddUpcoming, overlaySetProgress (unified-overlay.js), t (i18n.js).
 // Provides: _lockEditing, _unlockEditing, _confirmRemoveStop, _executeRemoveStop,
 //           _openAddStopModal, _executeAddStop, _haversineKm, _onMapClickToAdd,
 //           _showClickToAddPopup, _hideClickToAddPopup, _confirmClickToAdd,
@@ -111,9 +112,23 @@ async function _executeRemoveStop(stopId) {
   _lockEditing();
   try {
     const res = await apiRemoveStop(travelId, stopId);
+    progressOverlay.open(t('api.removing_stop'));
+    overlayAddUpcoming('removing', t('edit.phase_removing'));
+    overlayAddUpcoming('directions', t('edit.phase_directions'));
+    overlayAddUpcoming('day_planner', t('edit.phase_day_planner'));
+    overlaySetProgress(0);
     _editSSE = openSSE(res.job_id, {
-      remove_stop_progress: () => {},
+      remove_stop_progress: (data) => {
+        const phaseMap = { removing: 10, directions: 40, day_planner: 90 };
+        const phase = data.phase || '';
+        if (phaseMap[phase] !== undefined) {
+          progressOverlay.completeLine(phase, '');
+          overlaySetProgress(phaseMap[phase]);
+        }
+      },
       remove_stop_complete: (data) => {
+        overlaySetProgress(100);
+        progressOverlay.close();
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         data._saved_travel_id = travelId;
         S.result = data;
@@ -125,11 +140,13 @@ async function _executeRemoveStop(stopId) {
       },
       job_error: (data) => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        progressOverlay.close();
         _unlockEditing();
         alert('Fehler beim Entfernen: ' + (data.error || 'Unbekannter Fehler'));
       },
       onerror: () => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        progressOverlay.close();
         _unlockEditing();
         alert('Verbindung verloren beim Entfernen des Stopps.');
       },
@@ -261,9 +278,23 @@ async function _executeAddStop() {
   _lockEditing();
   try {
     const res = await apiAddStop(travelId, afterId, location, nights);
+    progressOverlay.open(t('api.adding_stop'));
+    overlayAddUpcoming('directions', t('edit.phase_directions'));
+    overlayAddUpcoming('research', t('edit.phase_research'));
+    overlayAddUpcoming('day_planner', t('edit.phase_day_planner'));
+    overlaySetProgress(0);
     _editSSE = openSSE(res.job_id, {
-      add_stop_progress: () => {},
+      add_stop_progress: (data) => {
+        const phaseMap = { directions: 20, research: 40, day_planner: 90 };
+        const phase = data.phase || '';
+        if (phaseMap[phase] !== undefined) {
+          progressOverlay.completeLine(phase, '');
+          overlaySetProgress(phaseMap[phase]);
+        }
+      },
       add_stop_complete: (data) => {
+        overlaySetProgress(100);
+        progressOverlay.close();
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         data._saved_travel_id = travelId;
         S.result = data;
@@ -274,11 +305,13 @@ async function _executeAddStop() {
       },
       job_error: (data) => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        progressOverlay.close();
         _unlockEditing();
         alert('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'));
       },
       onerror: () => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        progressOverlay.close();
         _unlockEditing();
         alert('Verbindung verloren beim Hinzuf\u00fcgen des Stopps.');
       },
@@ -485,9 +518,23 @@ function _doAddStopFromMap(placeName, afterStopId) {
 
   _lockEditing();
   apiAddStop(travelId, afterStopId, placeName, 1).then(function(res) {
+    progressOverlay.open(t('api.adding_stop'));
+    overlayAddUpcoming('directions', t('edit.phase_directions'));
+    overlayAddUpcoming('research', t('edit.phase_research'));
+    overlayAddUpcoming('day_planner', t('edit.phase_day_planner'));
+    overlaySetProgress(0);
     _editSSE = openSSE(res.job_id, {
-      add_stop_progress: function() {},
+      add_stop_progress: function(data) {
+        const phaseMap = { directions: 20, research: 40, day_planner: 90 };
+        const phase = data.phase || '';
+        if (phaseMap[phase] !== undefined) {
+          progressOverlay.completeLine(phase, '');
+          overlaySetProgress(phaseMap[phase]);
+        }
+      },
       add_stop_complete: function(data) {
+        overlaySetProgress(100);
+        progressOverlay.close();
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         data._saved_travel_id = travelId;
         S.result = data;
@@ -498,11 +545,13 @@ function _doAddStopFromMap(placeName, afterStopId) {
       },
       job_error: function(data) {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        progressOverlay.close();
         _unlockEditing();
         alert('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'));
       },
       onerror: function() {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        progressOverlay.close();
         _unlockEditing();
         alert('Verbindung verloren beim Hinzuf\u00fcgen des Stopps.');
       },
@@ -553,9 +602,23 @@ async function _onStopDrop(e, targetIndex) {
   _lockEditing();
   try {
     const res = await apiReorderStops(travelId, oldIdx, targetIndex);
+    progressOverlay.open(t('api.reordering_stops'));
+    overlayAddUpcoming('reordering', t('edit.phase_reordering'));
+    overlayAddUpcoming('directions', t('edit.phase_directions'));
+    overlayAddUpcoming('day_planner', t('edit.phase_day_planner'));
+    overlaySetProgress(0);
     _editSSE = openSSE(res.job_id, {
-      reorder_stops_progress: () => {},
+      reorder_stops_progress: (data) => {
+        const phaseMap = { reordering: 10, directions: 40, day_planner: 90 };
+        const phase = data.phase || '';
+        if (phaseMap[phase] !== undefined) {
+          progressOverlay.completeLine(phase, '');
+          overlaySetProgress(phaseMap[phase]);
+        }
+      },
       reorder_stops_complete: (data) => {
+        overlaySetProgress(100);
+        progressOverlay.close();
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         data._saved_travel_id = travelId;
         S.result = data;
@@ -566,11 +629,13 @@ async function _onStopDrop(e, targetIndex) {
       },
       job_error: (data) => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        progressOverlay.close();
         _unlockEditing();
         alert('Fehler beim Sortieren: ' + (data.error || 'Unbekannter Fehler'));
       },
       onerror: () => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        progressOverlay.close();
         _unlockEditing();
         alert('Verbindung verloren beim Sortieren.');
       },
@@ -706,11 +771,20 @@ function _editStopNights(stopId, currentNights) {
 
 /** Opens an SSE stream waiting for the nights-edit job to complete, then refreshes the guide. */
 function _listenForNightsComplete(jobId, travelId) {
+  progressOverlay.open(t('api.updating_nights'));
+  overlayAddUpcoming('recalc', t('edit.phase_recalc'));
+  overlaySetProgress(0);
   var _nightsSSE = openSSE(jobId, {
     update_nights_progress: function(data) {
-      // Progress events received — SSE overlay provides visual feedback
+      const phase = data.phase || '';
+      if (phase === 'recalc') {
+        progressOverlay.completeLine('recalc', '');
+        overlaySetProgress(50);
+      }
     },
     update_nights_complete: function(data) {
+      overlaySetProgress(100);
+      progressOverlay.close();
       _nightsSSE.close();
       data._saved_travel_id = travelId;
       S.result = data;
@@ -721,6 +795,7 @@ function _listenForNightsComplete(jobId, travelId) {
     },
     job_error: function(data) {
       _nightsSSE.close();
+      progressOverlay.close();
       _unlockEditing();
       alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
       renderGuide(S.result, 'stops');
@@ -862,7 +937,6 @@ async function _doManualReplace(travelId, stopId) {
   const btn = document.getElementById('replace-manual-btn');
   if (btn) btn.disabled = true;
   _lockEditing();
-  _showReplaceProgress('Ort wird gesucht…');
 
   try {
     const res = await apiReplaceStop(travelId, stopId, 'manual', loc, nights, hints);
@@ -919,8 +993,6 @@ async function _doSearchReplace(travelId, stopId) {
 
 /** Confirms a search-replace option selection and starts the SSE listener for completion. */
 async function _selectSearchOption(travelId, jobId, optionIndex) {
-  _showReplaceProgress('Gewählter Stopp wird recherchiert…');
-
   try {
     const res = await apiReplaceStopSelect(travelId, jobId, optionIndex);
     _listenForReplaceComplete(res.job_id, travelId);
@@ -932,14 +1004,26 @@ async function _selectSearchOption(travelId, jobId, optionIndex) {
 
 /** Opens an SSE stream waiting for the replace-stop job to complete, then refreshes the guide. */
 function _listenForReplaceComplete(jobId, travelId) {
-  _showReplaceProgress('Recherche läuft…');
+  progressOverlay.open(t('api.replacing_stop'));
+  overlayAddUpcoming('directions', t('edit.phase_directions'));
+  overlayAddUpcoming('research', t('edit.phase_research'));
+  overlayAddUpcoming('guide', t('edit.phase_guide'));
+  overlayAddUpcoming('accommodation', t('edit.phase_accommodation'));
+  overlayAddUpcoming('day_planner', t('edit.phase_day_planner'));
+  overlaySetProgress(0);
 
   _replaceStopSSE = openSSE(jobId, {
     replace_stop_progress: (data) => {
-      const msg = data.message || 'Wird bearbeitet…';
-      _showReplaceProgress(msg);
+      const phaseMap = { directions: 20, research: 40, guide: 60, accommodation: 80, day_planner: 90 };
+      const phase = data.phase || '';
+      if (phaseMap[phase] !== undefined) {
+        progressOverlay.completeLine(phase, '');
+        overlaySetProgress(phaseMap[phase]);
+      }
     },
     replace_stop_complete: (data) => {
+      overlaySetProgress(100);
+      progressOverlay.close();
       if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
       // data is the full updated plan
       data._saved_travel_id = travelId;
@@ -952,15 +1036,13 @@ function _listenForReplaceComplete(jobId, travelId) {
     },
     job_error: (data) => {
       if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
+      progressOverlay.close();
       _unlockEditing();
-      _hideReplaceProgress();
       alert('Fehler beim Ersetzen: ' + (data.error || 'Unbekannter Fehler'));
-    },
-    debug_log: (data) => {
-      if (data.message) _showReplaceProgress(data.message);
     },
     onerror: () => {
       if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
+      progressOverlay.close();
       _unlockEditing();
       alert('Verbindung verloren beim Ersetzen des Stopps.');
     },

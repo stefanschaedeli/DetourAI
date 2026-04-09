@@ -48,9 +48,11 @@ async function _fetchWithAuth(url, opts = {}) {
 /** Fetch with auth, show loading overlay; throws on non-2xx. */
 async function _fetch(url, opts = {}, label) {
   S.apiCalls++;
+  if (typeof overlayDebugPush === 'function') overlayDebugPush({ level: 'REQ', message: (opts && opts.method ? opts.method : 'GET') + ' ' + url });
   showLoading(label || t('api.default_loading'));
   try {
     const res = await _fetchWithAuth(url, opts);
+    if (typeof overlayDebugPush === 'function') overlayDebugPush({ level: 'RES', message: res.status + ' ' + url });
     if (!res.ok) {
       let detail = '';
       try { detail = (await res.json()).detail || ''; } catch (e) {}
@@ -65,7 +67,9 @@ async function _fetch(url, opts = {}, label) {
 /** Like _fetch but without the blocking loading overlay (skeleton cards provide feedback). */
 async function _fetchQuiet(url, opts = {}) {
   S.apiCalls++;
+  if (typeof overlayDebugPush === 'function') overlayDebugPush({ level: 'REQ', message: (opts && opts.method ? opts.method : 'GET') + ' ' + url });
   const res = await _fetchWithAuth(url, opts);
+  if (typeof overlayDebugPush === 'function') overlayDebugPush({ level: 'RES', message: res.status + ' ' + url });
   if (!res.ok) {
     let detail = '';
     try { detail = (await res.json()).detail || ''; } catch (e) {}

@@ -598,5 +598,16 @@
   "form.location_label": "Reiseziel",
   "form.location_placeholder": "Stadt oder Ort eingeben…",
   "form.nights_label": "Nächte",
-  "form.change_mode": "Modus wechseln"
+  "form.change_mode": "Modus wechseln",
+  "overlay.debug_toggle": "Debug",
+  "overlay.debug_header": "API-Kommunikation",
+  "api.updating_nights": "Nächte werden aktualisiert…",
+  "edit.phase_directions": "Fahrtzeiten berechnen",
+  "edit.phase_research": "Aktivitäten & Restaurants recherchieren",
+  "edit.phase_guide": "Reiseführer schreiben",
+  "edit.phase_accommodation": "Unterkunft suchen",
+  "edit.phase_day_planner": "Tagesplan erstellen",
+  "edit.phase_recalc": "Nächte neu berechnen",
+  "edit.phase_removing": "Stopp entfernen",
+  "edit.phase_reordering": "Reihenfolge anpassen"
 }

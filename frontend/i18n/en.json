@@ -598,5 +598,16 @@
   "form.location_label": "Destination",
   "form.location_placeholder": "Enter city or place…",
   "form.nights_label": "Nights",
-  "form.change_mode": "Change mode"
+  "form.change_mode": "Change mode",
+  "overlay.debug_toggle": "Debug",
+  "overlay.debug_header": "API Communication",
+  "api.updating_nights": "Updating nights…",
+  "edit.phase_directions": "Calculating directions",
+  "edit.phase_research": "Researching activities & restaurants",
+  "edit.phase_guide": "Writing travel guide",
+  "edit.phase_accommodation": "Finding accommodation",
+  "edit.phase_day_planner": "Creating day plan",
+  "edit.phase_recalc": "Recalculating nights",
+  "edit.phase_removing": "Removing stop",
+  "edit.phase_reordering": "Reordering stops"
 }

@@ -598,5 +598,16 @@
   "form.location_label": "गंतव्य",
   "form.location_placeholder": "शहर या स्थान दर्ज करें…",
   "form.nights_label": "रातें",
-  "form.change_mode": "मोड बदलें"
+  "form.change_mode": "मोड बदलें",
+  "overlay.debug_toggle": "Debug",
+  "overlay.debug_header": "API संचार",
+  "api.updating_nights": "रातें अपडेट हो रही हैं…",
+  "edit.phase_directions": "दिशाएं गणना करें",
+  "edit.phase_research": "गतिविधियां और रेस्तरां खोजें",
+  "edit.phase_guide": "यात्रा गाइड लिखें",
+  "edit.phase_accommodation": "आवास खोजें",
+  "edit.phase_day_planner": "दिन की योजना बनाएं",
+  "edit.phase_recalc": "रातें पुनर्गणना करें",
+  "edit.phase_removing": "स्टॉप हटाएं",
+  "edit.phase_reordering": "स्टॉप पुनर्व्यवस्थित करें"
 }

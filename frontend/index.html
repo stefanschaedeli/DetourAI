@@ -31,7 +31,7 @@
 <header class="app-header">
   <div class="app-logo" onclick="Router.navigate('/')" style="cursor:pointer" title="Zur Startseite" data-i18n="header.home_link_title" data-i18n-attr="title">DetourAI</div>
   <div class="app-subtitle" data-i18n="header.subtitle">KI-gestützter Reiseplaner</div>
-  <span class="app-version">v12.1.10</span>
+  <span class="app-version">v12.1.11</span>
   <button class="btn-my-travels" onclick="openTravelsDrawer()" data-i18n="header.my_travels">Meine Reisen</button>
   <button class="btn-clear-data" onclick="clearAppData()" title="Daten löschen und neu starten" data-i18n="header.reset_data">Neu starten</button>
   <span id="header-username" style="display:none" class="header-username"></span>
@@ -709,29 +709,23 @@
   </button>
 </div>
 
-<!-- ================================================= SSE Progress Overlay -->
-<div id="sse-progress-overlay" class="spo-overlay" style="display:none" aria-live="polite">
-  <div class="spo-card">
-    <div class="spo-progress-bar">
-      <div class="spo-progress-fill spo-progress-indeterminate"></div>
+<!-- ======================================================== Unified Overlay -->
+<div id="unified-overlay" class="uo-overlay" style="display:none" aria-live="polite" aria-busy="false">
+  <div class="uo-card">
+    <div class="uo-top">
+      <div class="uo-header">
+        <span class="uo-logo">DetourAI</span>
+        <span class="uo-summary" id="uo-summary"></span>
+      </div>
+      <div class="uo-progress-bar">
+        <div class="uo-progress-fill" id="uo-progress-fill"></div>
+      </div>
     </div>
-    <div class="spo-header">
-      <span class="spo-logo">DetourAI</span>
-      <span class="spo-phase" id="spo-phase" data-i18n="loading.default">Bitte warten…</span>
+    <div class="uo-tasks" id="uo-tasks"></div>
+    <div class="uo-debug" id="uo-debug">
+      <button class="uo-debug-toggle" id="uo-debug-toggle" data-i18n="overlay.debug_toggle">Debug</button>
+      <div class="uo-debug-log" id="uo-debug-log" style="display:none"></div>
     </div>
-    <div class="spo-lines" id="spo-lines"></div>
-  </div>
-</div>
-
-<!-- ======================================================== Loading overlay -->
-<div id="loading-overlay" class="loading-overlay" aria-live="polite" aria-busy="false" style="display:none">
-  <div class="loading-overlay-inner">
-    <div class="loading-progress-bar">
-      <div class="loading-progress-fill loading-progress-indeterminate"></div>
-    </div>
-    <div class="spinner"></div>
-    <div class="loading-label" id="loading-label" data-i18n="loading.default">Bitte warten…</div>
-    <div class="loading-counter" id="loading-counter" style="display:none"></div>
   </div>
 </div>
 
@@ -762,16 +756,6 @@
   </div>
 </div>
 
-<!-- ======================================================== Debug panel -->
-<button class="debug-toggle" onclick="toggleDebugLog()" data-i18n="debug.toggle_btn">Debug</button>
-<div class="debug-panel" id="debug-panel">
-  <div class="debug-panel-header">
-    <span data-i18n="debug.header">Debug Log</span>
-    <button onclick="toggleDebugLog()" style="background:none;border:none;color:#e0e0e0;cursor:pointer">×</button>
-  </div>
-  <div id="debug-log"></div>
-</div>
-
 <!-- ======================================================== Leaflet (for zone maps) -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
@@ -782,7 +766,7 @@
 <!-- ======================================================== JS modules -->
 <!-- core — foundation, must load first -->
 <script src="/js/core/i18n.js"></script>
-<script src="/js/core/loading.js"></script>
+<script src="/js/communication/unified-overlay.js"></script>
 <!-- maps — GoogleMaps namespace before state -->
 <script src="/js/maps/maps-core.js"></script>
 <script src="/js/maps/maps-images.js"></script>
@@ -795,7 +779,6 @@
 <script src="/js/core/api.js"></script>
 <!-- communication — SSE protocol + progress overlay -->
 <script src="/js/communication/sse-client.js"></script>
-<script src="/js/communication/sse-overlay.js"></script>
 <!-- features — planning pipeline -->
 <script src="/js/features/mode-picker.js"></script>
 <script src="/js/features/form.js"></script>

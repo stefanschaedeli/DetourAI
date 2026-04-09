@@ -4,8 +4,9 @@
 // Reads: S (state.js), Router (router.js), progressOverlay (sse-overlay.js),
 //        openSSE (api.js), t (i18n.js), esc (core), showTravelGuide (guide-core.js),
 //        showSection, showLoading, hideLoading, showToast (ui helpers),
-//        apiSaveTravel (api.js), lsSet (state.js), updateSidebar (sidebar.js).
-// Provides: updateDebugLog, toggleDebugLog, buildStopsTimeline, cancelPlanning, connectSSE.
+//        apiSaveTravel (api.js), lsSet (state.js), updateSidebar (sidebar.js),
+//        overlayDebugPush, overlaySetProgress, toggleDebugLog (unified-overlay.js).
+// Provides: buildStopsTimeline, cancelPlanning, connectSSE.
 
 // ---------------------------------------------------------------------------
 // State
@@ -13,32 +14,8 @@
 
 let progressSSE  = null;
 let stopProgress = {};  // stop_id => {activities: bool, restaurants: bool}
-
-// ---------------------------------------------------------------------------
-// UI: Debug log panel
-// ---------------------------------------------------------------------------
-
-/** Re-render the last 50 log entries in the debug log panel. */
-function updateDebugLog() {
-  if (!S.debugOpen) return;
-  const log = document.getElementById('debug-log');
-  if (!log) return;
-  const recent = S.logs.slice(-50);
-  log.innerHTML = recent.map(entry => {
-    const level = entry.level || 'INFO';
-    const agent = entry.agent ? '[' + entry.agent + '] ' : '';
-    return '<div class="log-line log-' + level.toLowerCase() + '">' + esc(agent) + esc(entry.message || '') + '</div>';
-  }).join('');
-  log.scrollTop = log.scrollHeight;
-}
-
-/** Toggle the debug panel open/closed and refresh its content when opening. */
-function toggleDebugLog() {
-  S.debugOpen = !S.debugOpen;
-  const panel = document.getElementById('debug-panel');
-  if (panel) panel.classList.toggle('open', S.debugOpen);
-  if (S.debugOpen) updateDebugLog();
-}
+let _totalStops = 0;  // set from route_ready event for research phase interpolation
+let _researchDone = 0; // count of stop_done events received
 
 // ---------------------------------------------------------------------------
 // UI: Stops timeline
@@ -104,16 +81,15 @@ function cancelPlanning() {
 // ---------------------------------------------------------------------------
 
 function onProgressDebugLog(data) {
-  S.logs.push(data);
-  updateDebugLog();
+  overlayDebugPush(data);
   const key   = data.message_key || '';
   const count = (data.data && data.data.count) ? data.data.count : 0;
   if      (key === 'progress.orchestrator_start')    { progressOverlay.addLine('orchestrator',  t('progress.orchestrator_starting')); progressOverlay.completeLine('orchestrator', ''); }
-  else if (key === 'progress.route_architect_start') { progressOverlay.addLine('route_arch',     t('progress.route_analysis')); }
+  else if (key === 'progress.route_architect_start') { progressOverlay.addLine('route_arch',     t('progress.route_analysis')); overlaySetProgress(5); }
   else if (key === 'progress.research_phase')        { progressOverlay.addLine('research_phase', t('progress.research_activities', {count})); progressOverlay.completeLine('research_phase', ''); }
-  else if (key === 'progress.guide_writing')         { progressOverlay.addLine('guide_phase',    t('progress.guide_writing', {count})); }
-  else if (key === 'progress.day_planner_start')     { progressOverlay.completeLine('guide_phase', t('progress.guide_complete')); progressOverlay.addLine('day_planner', t('progress.day_planner_starting')); }
-  else if (key === 'progress.analysis_start')        { progressOverlay.completeLine('day_planner', t('progress.day_plan_complete')); progressOverlay.addLine('trip_analysis', t('progress.trip_analysis_starting')); _addAnalysisTimelineRow(); }
+  else if (key === 'progress.guide_writing')         { progressOverlay.addLine('guide_phase',    t('progress.guide_writing', {count})); overlaySetProgress(60); }
+  else if (key === 'progress.day_planner_start')     { progressOverlay.completeLine('guide_phase', t('progress.guide_complete')); progressOverlay.addLine('day_planner', t('progress.day_planner_starting')); overlaySetProgress(75); }
+  else if (key === 'progress.analysis_start')        { progressOverlay.completeLine('day_planner', t('progress.day_plan_complete')); progressOverlay.addLine('trip_analysis', t('progress.trip_analysis_starting')); _addAnalysisTimelineRow(); overlaySetProgress(90); }
   else if (key === 'progress.analysis_failed')       { progressOverlay.completeLine('trip_analysis', t('progress.analysis_skipped')); _completeAnalysisTimelineRow(); }
 }
 
@@ -127,6 +103,9 @@ function onRouteReady(data) {
   progressOverlay.completeLine('route_arch', t('progress.route_confirmed'));
   buildStopsTimeline(data.stops || []);
   if (typeof updateSidebar === 'function') updateSidebar();
+  _totalStops = (data.stops || []).length;
+  _researchDone = 0;
+  overlaySetProgress(10);
 }
 
 function onActivitiesLoaded(data) {
@@ -159,6 +138,10 @@ function onStopDone(data) {
   const stopEl = document.getElementById('timeline-stop-' + data.stop_id);
   if (stopEl) stopEl.classList.add('done');
   if (typeof updateSidebar === 'function') updateSidebar();
+  _researchDone++;
+  if (_totalStops > 0) {
+    overlaySetProgress(10 + Math.round((_researchDone / _totalStops) * 50));
+  }
 }
 
 function onAgentStart(data) {
@@ -178,6 +161,7 @@ async function onJobComplete(data) {
   progressOverlay.completeLine('guide_phase',   t('progress.guide_complete'));
   progressOverlay.completeLine('route_arch',    t('progress.route_confirmed'));
   _completeAnalysisTimelineRow();
+  overlaySetProgress(100);
   progressOverlay.close();
   S.result = data;
   if (typeof updateSidebar === 'function') updateSidebar();
