@@ -412,12 +412,13 @@ function renderLegCard(leg, index) {
           <div class="leg-badge" style="background:${modeColor}">${index + 1}</div>
           <span class="leg-days-label" id="leg-days-${index}">${days > 0 ? (days !== 1 ? t('form.days_label_plural', {days}) : t('form.days_label', {days})) : ''}</span>
           <div class="leg-controls">
+              ${S.appMode !== 'roadtrip' && S.appMode !== 'erkunden' ? `
               <div class="mode-toggle">
                   <button class="mode-btn ${leg.mode === 'transit' ? 'active' : ''}"
                       onclick="setLegMode(${index}, 'transit')" style="border-color:${modeColor}">${t('form.transit_mode')}</button>
                   <button class="mode-btn ${leg.mode === 'explore' ? 'active' : ''}"
                       onclick="setLegMode(${index}, 'explore')" style="border-color:${modeColor}">${t('form.explore_mode')}</button>
-              </div>
+              </div>` : ""}
               ${canDelete ? `<button class="leg-delete-btn" onclick="removeLeg(${index})" aria-label="${t('form.remove_segment_aria')}">×</button>` : ""}
           </div>
       </div>
@@ -1016,6 +1017,9 @@ function restoreFormFromCache() {
   // Restore legs — handle legacy cache that used top-level start/end fields
   if (cached.legs && cached.legs.length > 0) {
     S.legs = cached.legs;
+    // Enforce fixed leg mode for modes that don't allow user selection
+    if (S.appMode === 'roadtrip') S.legs.forEach(leg => { leg.mode = 'transit'; });
+    if (S.appMode === 'erkunden') S.legs.forEach(leg => { leg.mode = 'explore'; });
   } else if (cached.start_location || cached.main_destination) {
     S.legs = [{
       leg_id: "leg-0",

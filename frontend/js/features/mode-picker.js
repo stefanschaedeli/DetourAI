@@ -1,6 +1,6 @@
 'use strict';
 
-// Mode Picker — landing page overlay for choosing Rundreise / Erkunden / Ortsreise.
+// Mode Picker — landing page overlay for choosing Roadtrip / Erkunden / Ortsreise.
 // Reads: S (state.js), t (i18n.js), showSection (state.js), lsSet (state.js).
 // Provides: initModePicker, showModePicker.
 
@@ -9,7 +9,7 @@
 // ---------------------------------------------------------------------------
 
 const ICONS = {
-  rundreise: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  roadtrip: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path d="M3 12h18M3 12l4-4m-4 4 4 4M21 12l-4-4m4 4-4 4"/>
   </svg>`,
   erkunden: `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -34,7 +34,7 @@ function initModePicker() {
   const el = document.getElementById('mode-picker');
   if (!el) return;
 
-  const modes = ['rundreise', 'erkunden', 'ortsreise'];
+  const modes = ['roadtrip', 'erkunden', 'ortsreise'];
   const cardsHtml = modes.map((mode) => `
     <div class="mode-card" data-mode="${mode}" role="button" tabindex="0"
          aria-label="${t(`mode_picker.${mode}.name`)}">
@@ -66,7 +66,7 @@ function initModePicker() {
 
 /**
  * Set S.appMode and navigate to the correct section.
- * @param {string} mode - 'rundreise' | 'erkunden' | 'ortsreise'
+ * @param {string} mode - 'roadtrip' | 'erkunden' | 'ortsreise'
  */
 function _selectMode(mode) {
   S.appMode = mode;
@@ -75,6 +75,9 @@ function _selectMode(mode) {
     showSection('form-section');
     if (typeof renderOrtsreiseForm === 'function') renderOrtsreiseForm();
   } else {
+    // Fix leg mode based on app mode: roadtrip → transit, erkunden → explore
+    const fixedLegMode = mode === 'erkunden' ? 'explore' : 'transit';
+    if (S.legs) S.legs.forEach(leg => { leg.mode = fixedLegMode; });
     showSection('form-section');
   }
 }
