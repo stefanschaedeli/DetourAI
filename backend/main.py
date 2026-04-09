@@ -1266,7 +1266,7 @@ async def plan_location(
         "id": 1,
         "option_type": "city",
         "region": location,
-        "country": "XX",
+        "country": "XX",  # placeholder — country is not used in single-stop Ortsreise flow
         "lat": lat,
         "lon": lon,
         "place_id": place_id,

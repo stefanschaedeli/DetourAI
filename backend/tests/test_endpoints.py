@@ -720,13 +720,6 @@ def test_generate_output_removed(client):
 # plan-location endpoint
 # ---------------------------------------------------------------------------
 
-def _async_return(val):
-    """Return a coroutine that resolves to val — used to mock async functions."""
-    async def _inner(*args, **kwargs):
-        return val
-    return _inner
-
-
 def _location_request_payload(mode="location", start="Zürich", end="", start_date="2026-06-01", end_date="2026-06-08"):
     """Build a minimal valid TravelRequest payload for plan-location tests."""
     return {
@@ -754,7 +747,7 @@ def _location_request_payload(mode="location", start="Zürich", end="", start_da
 def test_plan_location_valid(client, mocker):
     """plan-location endpoint geocodes location and returns loading_accommodations."""
     mocker.patch("main.get_job", return_value={"lang": "de"})
-    mocker.patch("main.geocode_google", side_effect=_async_return((47.3769, 8.5417, "ChIJ_place_id")))
+    mocker.patch("main.geocode_google", new=AsyncMock(return_value=(47.3769, 8.5417, "ChIJ_place_id")))
     mock_save = mocker.patch("main.save_job")
 
     response = client.post(
@@ -787,3 +780,18 @@ def test_plan_location_wrong_mode(client, mocker):
 
     assert response.status_code == 400
     assert "Ortsreise erfordert genau einen Ortsreise-Abschnitt." in response.json()["detail"]
+
+
+def test_plan_location_geocode_fail(client, mocker):
+    """plan-location returns 422 when geocoding fails."""
+    mocker.patch("main.get_job", return_value={"lang": "de"})
+    mocker.patch("main.geocode_google", new=AsyncMock(return_value=None))
+
+    response = client.post(
+        "/api/plan-location/test-job-789",
+        json=_location_request_payload(),
+        headers={"Authorization": "Bearer testtoken"},
+    )
+
+    assert response.status_code == 422
+    assert "konnte nicht gefunden werden" in response.json()["detail"]
