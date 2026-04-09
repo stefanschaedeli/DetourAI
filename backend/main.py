@@ -3151,6 +3151,7 @@ async def serve_index():
 
 if FRONTEND_DIR.exists():
     app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="frontend-js")
+    app.mount("/i18n", StaticFiles(directory=str(FRONTEND_DIR / "i18n")), name="frontend-i18n")
     app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend-assets")
 
     # SPA catch-all: any non-API, non-static path → index.html for client-side routing
