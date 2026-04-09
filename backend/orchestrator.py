@@ -386,11 +386,12 @@ class TravelPlannerOrchestrator:
             stop["further_activities"] = guide_result.get("further_activities", [])
             further = stop["further_activities"]
             region = stop.get("region", "")
-            for act in further:
-                images = await fetch_unsplash_images(
-                    f"{act.get('name', '')} {region}", "activity"
-                )
+
+            async def _fetch_act_image(act: dict, r: str) -> None:
+                images = await fetch_unsplash_images(f"{act.get('name', '')} {r}", "activity")
                 act.update(images)
+
+            await asyncio.gather(*[_fetch_act_image(a, region) for a in further])
 
         await debug_logger.log(LogLevel.INFO, i18n_t("progress.day_planner_start", lang),
                                job_id=job_id, message_key="progress.day_planner_start")
