@@ -583,5 +583,18 @@
   "form.searching_stops": "Searching stops…",
   "sidebar.days_singular": "{days} day",
   "sidebar.days_plural": "{days} days",
-  "router.loading_trip": "Loading trip…"
+  "router.loading_trip": "Loading trip…",
+  "mode_picker.title": "How would you like to travel?",
+  "mode_picker.subtitle": "Choose your travel style",
+  "mode_picker.rundreise.name": "Road Trip",
+  "mode_picker.rundreise.description": "A→B road trip with multiple stops along the route. The AI plans the route and finds the best places.",
+  "mode_picker.erkunden.name": "Explore",
+  "mode_picker.erkunden.description": "Free exploration from a starting point. The AI selects regions — you decide which ones.",
+  "mode_picker.ortsreise.name": "Destination",
+  "mode_picker.ortsreise.description": "Deep dive into a single place. Hotels, activities, restaurants and daily planning — all for your destination.",
+  "mode_picker.start_cta": "Start →",
+  "form.location_label": "Destination",
+  "form.location_placeholder": "Enter city or place…",
+  "form.nights_label": "Nights",
+  "form.change_mode": "Change mode"
 }

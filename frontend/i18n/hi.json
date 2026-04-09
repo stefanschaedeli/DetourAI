@@ -583,5 +583,18 @@
   "form.searching_stops": "स्टॉप खोजे जा रहे हैं…",
   "sidebar.days_singular": "{days} दिन",
   "sidebar.days_plural": "{days} दिन",
-  "router.loading_trip": "यात्रा योजना लोड हो रही है…"
+  "router.loading_trip": "यात्रा योजना लोड हो रही है…",
+  "mode_picker.title": "आप कैसे यात्रा करना चाहते हैं?",
+  "mode_picker.subtitle": "अपनी यात्रा शैली चुनें",
+  "mode_picker.rundreise.name": "रोड ट्रिप",
+  "mode_picker.rundreise.description": "मार्ग के साथ कई पड़ावों के साथ A→B रोड ट्रिप। AI मार्ग की योजना बनाता है और सबसे अच्छी जगहें ढूंढता है।",
+  "mode_picker.erkunden.name": "अन्वेषण",
+  "mode_picker.erkunden.description": "एक शुरुआती बिंदु से मुक्त अन्वेषण। AI क्षेत्रों का चयन करता है — आप तय करते हैं कि कौन से।",
+  "mode_picker.ortsreise.name": "गंतव्य",
+  "mode_picker.ortsreise.description": "एक ही स्थान में गहरी डुबकी। होटल, गतिविधियां, रेस्तरां और दैनिक योजना — सब आपके गंतव्य के लिए।",
+  "mode_picker.start_cta": "शुरू करें →",
+  "form.location_label": "गंतव्य",
+  "form.location_placeholder": "शहर या स्थान दर्ज करें…",
+  "form.nights_label": "रातें",
+  "form.change_mode": "मोड बदलें"
 }

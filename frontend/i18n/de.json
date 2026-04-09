@@ -583,5 +583,18 @@
   "form.searching_stops": "Zwischenstopps werden gesucht…",
   "sidebar.days_singular": "{days} Tag",
   "sidebar.days_plural": "{days} Tage",
-  "router.loading_trip": "Reiseplan wird geladen…"
+  "router.loading_trip": "Reiseplan wird geladen…",
+  "mode_picker.title": "Wie möchtest du reisen?",
+  "mode_picker.subtitle": "Wähle deinen Reisestil",
+  "mode_picker.rundreise.name": "Rundreise",
+  "mode_picker.rundreise.description": "A→B Roadtrip mit mehreren Stopps entlang der Route. Die KI plant die Strecke und findet die besten Orte.",
+  "mode_picker.erkunden.name": "Erkunden",
+  "mode_picker.erkunden.description": "Freie Erkundung ab einem Startpunkt. Die KI wählt Regionen aus — du entscheidest, welche.",
+  "mode_picker.ortsreise.name": "Ortsreise",
+  "mode_picker.ortsreise.description": "Tieftauchen in einen einzigen Ort. Hotels, Aktivitäten, Restaurants und Tagesplanung — alles für dein Reiseziel.",
+  "mode_picker.start_cta": "Starten →",
+  "form.location_label": "Reiseziel",
+  "form.location_placeholder": "Stadt oder Ort eingeben…",
+  "form.nights_label": "Nächte",
+  "form.change_mode": "Modus wechseln"
 }
