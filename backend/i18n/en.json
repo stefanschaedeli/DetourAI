@@ -42,5 +42,8 @@
   "progress.softlimit_warning": "Soft limit warning for {region}",
   "progress.target_added": "Destination '{location}' was missing from route — added automatically",
   "progress.origin_added": "Start '{location}' was missing from route — added automatically",
-  "progress.token_quota_exhausted": "Token quota exhausted"
+  "progress.token_quota_exhausted": "Token quota exhausted",
+
+  "error.location_mode_required": "Location trip requires exactly one location leg.",
+  "error.geocoding_failed": "The location could not be found. Please try again."
 }

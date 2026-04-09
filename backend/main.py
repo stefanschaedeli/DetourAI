@@ -1228,6 +1228,64 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None, curren
     }
 
 
+# ---------------------------------------------------------------------------
+# POST /api/plan-location/{job_id}
+# ---------------------------------------------------------------------------
+
+@app.post("/api/plan-location/{job_id}")
+async def plan_location(
+    job_id: str,
+    request: TravelRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> dict:
+    """Ortsreise shortcut: geocode single location leg and jump to accommodation phase."""
+    job = get_job(job_id)
+    lang = _job_lang(job)
+
+    if len(request.legs) != 1 or request.legs[0].mode != "location":
+        raise HTTPException(
+            status_code=400,
+            detail=i18n_t("error.location_mode_required", lang),
+        )
+
+    leg = request.legs[0]
+    location = leg.start_location.strip()
+    nights = (leg.end_date - leg.start_date).days
+
+    geo = await geocode_google(location)
+    if geo is None:
+        raise HTTPException(
+            status_code=422,
+            detail=i18n_t("error.geocoding_failed", lang),
+        )
+
+    lat, lon, place_id = geo
+    stop = {
+        "id": 1,
+        "option_type": "city",
+        "region": location,
+        "country": "XX",
+        "lat": lat,
+        "lon": lon,
+        "place_id": place_id,
+        "drive_hours": 0,
+        "drive_km": 0,
+        "nights": nights,
+        "arrival_day": 1,
+        "highlights": [],
+        "teaser": location,
+        "is_fixed": True,
+    }
+
+    job["request"] = request.model_dump(mode="json")
+    job["user_id"] = current_user.id
+    job["selected_stops"] = [stop]
+    job["stop_counter"] = 1
+    job["status"] = "loading_accommodations"
+    save_job(job_id, job)
+
+    return {"job_id": job_id, "status": "loading_accommodations", "selected_stops": [stop]}
+
 
 # ---------------------------------------------------------------------------
 # POST /api/select-stop/{job_id}

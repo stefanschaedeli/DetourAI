@@ -42,5 +42,8 @@
   "progress.softlimit_warning": "{region} के लिए सॉफ्ट लिमिट चेतावनी",
   "progress.target_added": "गंतव्य '{location}' मार्ग में गायब था — स्वचालित रूप से जोड़ा गया",
   "progress.origin_added": "शुरुआत '{location}' मार्ग में गायब था — स्वचालित रूप से जोड़ा गया",
-  "progress.token_quota_exhausted": "टोकन कोटा समाप्त"
+  "progress.token_quota_exhausted": "टोकन कोटा समाप्त",
+
+  "error.location_mode_required": "स्थान यात्रा के लिए बिल्कुल एक स्थान खंड आवश्यक है।",
+  "error.geocoding_failed": "स्थान नहीं मिल सका। कृपया पुनः प्रयास करें।"
 }

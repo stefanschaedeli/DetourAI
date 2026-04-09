@@ -42,5 +42,8 @@
   "progress.softlimit_warning": "Softlimit-Warnung für {region}",
   "progress.target_added": "Ziel '{location}' fehlte in Route — automatisch ergänzt",
   "progress.origin_added": "Startort '{location}' fehlte in Route — automatisch ergänzt",
-  "progress.token_quota_exhausted": "Token-Kontingent erschöpft"
+  "progress.token_quota_exhausted": "Token-Kontingent erschöpft",
+
+  "error.location_mode_required": "Ortsreise erfordert genau einen Ortsreise-Abschnitt.",
+  "error.geocoding_failed": "Der Ort konnte nicht gefunden werden. Bitte versuche es erneut."
 }

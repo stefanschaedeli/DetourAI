@@ -714,3 +714,75 @@ def test_generate_output_removed(client):
     """Regression guard: /api/generate-output endpoint must not exist after SHR-04 cleanup."""
     res = client.post("/api/generate-output/test-job/pdf")
     assert res.status_code in (404, 405), f"generate-output endpoint still exists: {res.status_code}"
+
+
+# ---------------------------------------------------------------------------
+# plan-location endpoint
+# ---------------------------------------------------------------------------
+
+def _async_return(val):
+    """Return a coroutine that resolves to val — used to mock async functions."""
+    async def _inner(*args, **kwargs):
+        return val
+    return _inner
+
+
+def _location_request_payload(mode="location", start="Zürich", end="", start_date="2026-06-01", end_date="2026-06-08"):
+    """Build a minimal valid TravelRequest payload for plan-location tests."""
+    return {
+        "legs": [
+            {
+                "leg_id": "leg-0",
+                "mode": mode,
+                "start_location": start,
+                "end_location": end,
+                "start_date": start_date,
+                "end_date": end_date,
+                "via_points": [],
+            }
+        ],
+        "adults": 2,
+        "children": [],
+        "budget_chf": 3000,
+        "budget_accommodation_pct": 60,
+        "budget_food_pct": 20,
+        "budget_activities_pct": 20,
+        "language": "de",
+    }
+
+
+def test_plan_location_valid(client, mocker):
+    """plan-location endpoint geocodes location and returns loading_accommodations."""
+    mocker.patch("main.get_job", return_value={"lang": "de"})
+    mocker.patch("main.geocode_google", side_effect=_async_return((47.3769, 8.5417, "ChIJ_place_id")))
+    mock_save = mocker.patch("main.save_job")
+
+    response = client.post(
+        "/api/plan-location/test-job-123",
+        json=_location_request_payload(),
+        headers={"Authorization": "Bearer testtoken"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "loading_accommodations"
+    assert data["job_id"] == "test-job-123"
+    assert len(data["selected_stops"]) == 1
+    stop = data["selected_stops"][0]
+    assert stop["region"] == "Zürich"
+    assert stop["nights"] == 7
+    assert stop["lat"] == 47.3769
+    mock_save.assert_called_once()
+
+
+def test_plan_location_wrong_mode(client, mocker):
+    """plan-location returns 400 when leg mode is not location."""
+    mocker.patch("main.get_job", return_value={"lang": "de"})
+
+    response = client.post(
+        "/api/plan-location/test-job-456",
+        json=_location_request_payload(mode="transit", end="Bern"),
+        headers={"Authorization": "Bearer testtoken"},
+    )
+
+    assert response.status_code == 400
