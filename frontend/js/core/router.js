@@ -116,13 +116,10 @@ const Router = (() => {
   const _handlers = {
     _form() {
       document.title = _titles.form;
-      // Restore appMode from localStorage if not yet set in memory
-      if (!S.appMode) {
-        const saved = lsGet(LS_APP_MODE);
-        if (saved) S.appMode = saved;
-      }
-      if (!S.appMode) {
-        // No mode chosen yet — show the mode picker landing page
+      // Always show the mode picker on the root route unless the user has
+      // an active planning session in progress (jobId set).
+      if (!S.appMode || !S.jobId) {
+        S.appMode = null;
         showSection('mode-picker');
         initModePicker();
       } else if (S.appMode === 'ortsreise') {
