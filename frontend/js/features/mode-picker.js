@@ -46,7 +46,7 @@ function initModePicker() {
   `).join('');
 
   el.innerHTML = `
-    <p class="overline">REISE PLANEN</p>
+    <p class="overline">${t('mode_picker.eyebrow')}</p>
     <h1>${t('mode_picker.title')}</h1>
     <p class="subtitle">${t('mode_picker.subtitle')}</p>
     <div class="mode-picker-cards">${cardsHtml}</div>
@@ -70,7 +70,7 @@ function initModePicker() {
  */
 function _selectMode(mode) {
   S.appMode = mode;
-  lsSet('app_mode', mode);
+  lsSet(LS_APP_MODE, mode);
   if (mode === 'ortsreise') {
     showSection('form-section');
     if (typeof renderOrtsreiseForm === 'function') renderOrtsreiseForm();
@@ -84,6 +84,6 @@ function _selectMode(mode) {
  */
 function showModePicker() {
   S.appMode = null;
-  lsSet('app_mode', null);
+  lsClear(LS_APP_MODE);
   showSection('mode-picker');
 }

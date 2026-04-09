@@ -1282,7 +1282,7 @@ function _attachOrtsreiseAutocomplete() {
  */
 function _addDaysToDateStr(dateStr, days) {
   const d = new Date(dateStr);
-  d.setDate(d.getDate() + days);
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 

@@ -593,6 +593,7 @@
   "mode_picker.erkunden.description": "एक शुरुआती बिंदु से मुक्त अन्वेषण। AI क्षेत्रों का चयन करता है — आप तय करते हैं कि कौन से।",
   "mode_picker.ortsreise.name": "गंतव्य",
   "mode_picker.ortsreise.description": "एक ही स्थान में गहरी डुबकी। होटल, गतिविधियां, रेस्तरां और दैनिक योजना — सब आपके गंतव्य के लिए।",
+  "mode_picker.eyebrow": "यात्रा योजना",
   "mode_picker.start_cta": "शुरू करें →",
   "form.location_label": "गंतव्य",
   "form.location_placeholder": "शहर या स्थान दर्ज करें…",

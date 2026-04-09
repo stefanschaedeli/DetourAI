@@ -1,4 +1,4 @@
-openapi: 3.1.0
+ openapi: 3.1.0
 info:
   title: DetourAI API
   version: 1.0.0
@@ -358,6 +358,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/plan-location/{job_id}:
+    post:
+      summary: Start Ortsreise planning (single-location trip)
+      description: >
+        Geocodes the single location leg and immediately transitions the job to
+        loading_accommodations, skipping RouteArchitect and StopOptionsFinder.
+      tags:
+        - Planning
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TravelRequest'
+      responses:
+        '200':
+          description: Job transitioned to loading_accommodations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                  status:
+                    type: string
+                    example: loading_accommodations
+                  selected_stops:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          description: Leg is not a location-mode leg
+        '404':
+          description: Job not found
+        '422':
+          description: Geocoding failed
   /api/select-stop/{job_id}:
     post:
       summary: Select Stop
@@ -1952,6 +1997,7 @@ components:
           enum:
           - transit
           - explore
+          - location
           title: Mode
         via_points:
           items:

@@ -593,6 +593,7 @@
   "mode_picker.erkunden.description": "Free exploration from a starting point. The AI selects regions — you decide which ones.",
   "mode_picker.ortsreise.name": "Destination",
   "mode_picker.ortsreise.description": "Deep dive into a single place. Hotels, activities, restaurants and daily planning — all for your destination.",
+  "mode_picker.eyebrow": "PLAN YOUR TRIP",
   "mode_picker.start_cta": "Start →",
   "form.location_label": "Destination",
   "form.location_placeholder": "Enter city or place…",
