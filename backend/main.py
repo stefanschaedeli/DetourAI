@@ -1,3 +1,4 @@
+"""FastAPI application — all HTTP endpoints, SSE streaming, and startup configuration."""
 import asyncio
 import json
 import math
@@ -1119,6 +1120,7 @@ async def init_job(request: TravelRequest, current_user: CurrentUser = Depends(g
 
 @app.post("/api/plan-trip")
 async def plan_trip(request: TravelRequest, job_id: Optional[str] = None, current_user: CurrentUser = Depends(get_current_user)):
+    """Start a new trip-planning session: initialise job state and return the first set of stop options."""
     await _check_user_quota(current_user.id, estimate_trip_tokens(request))
     from agents.stop_options_finder import StopOptionsFinderAgent
 
@@ -1233,6 +1235,7 @@ async def plan_trip(request: TravelRequest, job_id: Optional[str] = None, curren
 
 @app.post("/api/select-stop/{job_id}")
 async def select_stop(job_id: str, body: StopSelectRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Record the user's chosen stop option and return the next set of options (or signal route completion)."""
     from agents.stop_options_finder import StopOptionsFinderAgent
 
     job = get_job(job_id)
@@ -1489,6 +1492,7 @@ async def select_stop(job_id: str, body: StopSelectRequest, current_user: Curren
 
 @app.post("/api/recompute-options/{job_id}")
 async def recompute_options(job_id: str, body: RecomputeRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Re-run StopOptionsFinder for the current position, optionally guided by extra_instructions."""
     from agents.stop_options_finder import StopOptionsFinderAgent
 
     job = get_job(job_id)
@@ -1579,6 +1583,7 @@ class PatchJobRequest(BaseModel):
 
 @app.post("/api/patch-job/{job_id}")
 async def patch_job(job_id: str, body: PatchJobRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Adjust job when all options exceed the drive limit: add days or insert a via-point, then recompute options."""
     from agents.stop_options_finder import StopOptionsFinderAgent
 
     job = get_job(job_id)
@@ -1799,6 +1804,7 @@ async def start_accommodations(job_id: str, current_user: CurrentUser = Depends(
 
 @app.post("/api/confirm-accommodations/{job_id}")
 async def confirm_accommodations(job_id: str, body: dict, current_user: CurrentUser = Depends(get_current_user)):
+    """Bulk-confirm accommodation selections for all stops and advance job to accommodations_confirmed."""
     job = get_job(job_id)
     request = TravelRequest(**job["request"])
 
@@ -1842,6 +1848,7 @@ async def confirm_accommodations(job_id: str, body: dict, current_user: CurrentU
 
 @app.post("/api/select-accommodation/{job_id}")
 async def select_accommodation(job_id: str, body: AccommodationSelectRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Sequential fallback: confirm one accommodation at a time and return the next stop's options."""
     job = get_job(job_id)
     request = TravelRequest(**job["request"])
     selected_stops = job["selected_stops"]
@@ -1969,6 +1976,7 @@ async def start_planning(job_id: str, current_user: CurrentUser = Depends(get_cu
 
 @app.get("/api/progress/{job_id}")
 async def progress(job_id: str, request: Request, token: Optional[str] = None, current_user: CurrentUser = Depends(get_current_user_sse)):
+    """SSE stream: drain Redis-queued events and forward them to the client until job_complete or job_error."""
     # Verify job exists and ownership
     raw = redis_client.get(f"job:{job_id}")
     if raw:
@@ -2159,6 +2167,7 @@ async def api_save_travel(body: SaveTravelRequest, current_user: CurrentUser = D
 
 @app.patch("/api/travels/{travel_id}")
 async def api_update_travel(travel_id: int, body: UpdateTravelRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Update custom name or rating for a saved travel."""
     updated = await update_travel(travel_id, current_user.id, body.custom_name, body.rating)
     if not updated:
         raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
@@ -2284,6 +2293,7 @@ class UpdateNightsRequest(BaseModel):
 
 @app.post("/api/travels/{travel_id}/replace-stop")
 async def api_replace_stop(travel_id: int, body: ReplaceStopRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Replace a stop in a finished travel plan: manual location or AI-searched options."""
     from agents.stop_options_finder import StopOptionsFinderAgent
 
     plan = await get_travel(travel_id, current_user.id)
@@ -2404,6 +2414,7 @@ class ReplaceStopSelectRequest(BaseModel):
 
 @app.post("/api/travels/{travel_id}/replace-stop-select")
 async def api_replace_stop_select(travel_id: int, body: ReplaceStopSelectRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Confirm one of the AI-searched replacement options and trigger the background replace job."""
     job = get_job(body.job_id)
     if job.get("travel_id") != travel_id:
         raise HTTPException(400, detail=i18n_t("error.job_not_travel", _job_lang(job)))
@@ -2447,6 +2458,7 @@ async def api_replace_stop_select(travel_id: int, body: ReplaceStopSelectRequest
 
 @app.post("/api/travels/{travel_id}/remove-stop")
 async def api_remove_stop(travel_id: int, body: RemoveStopRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Remove a stop from a finished travel plan and queue a background job to update day plans."""
     plan = await get_travel(travel_id, current_user.id)
     if plan is None:
         raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
@@ -2481,6 +2493,7 @@ async def api_remove_stop(travel_id: int, body: RemoveStopRequest, current_user:
 
 @app.post("/api/travels/{travel_id}/add-stop")
 async def api_add_stop(travel_id: int, body: AddStopRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Add a new geocoded stop after a given stop in a finished travel plan and queue a background job."""
     if not body.location or not body.location.strip():
         raise HTTPException(400, detail=i18n_t("error.location_empty", "de"))
 
@@ -2525,6 +2538,7 @@ async def api_add_stop(travel_id: int, body: AddStopRequest, current_user: Curre
 
 @app.post("/api/travels/{travel_id}/reorder-stops")
 async def api_reorder_stops(travel_id: int, body: ReorderStopsRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Move a stop from old_index to new_index in a finished travel plan and queue a background job."""
     plan = await get_travel(travel_id, current_user.id)
     if plan is None:
         raise HTTPException(404, detail=i18n_t("error.travel_not_found", "de", travel_id=travel_id))
@@ -2561,6 +2575,7 @@ async def api_reorder_stops(travel_id: int, body: ReorderStopsRequest, current_u
 
 @app.post("/api/travels/{travel_id}/update-nights")
 async def api_update_nights(travel_id: int, body: UpdateNightsRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Update the number of nights for a stop and queue a background job to recalculate day plans."""
     if body.nights < 1 or body.nights > 14:
         raise HTTPException(400, detail=i18n_t("error.nights_range", "de"))
 
@@ -2875,6 +2890,7 @@ async def skip_segment(job_id: str, current_user: CurrentUser = Depends(get_curr
 
 @app.post("/api/replace-region/{job_id}")
 async def replace_region(job_id: str, body: ReplaceRegionRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Replace one region in the current explore-leg plan using RegionPlannerAgent and broadcast the update."""
     from agents.region_planner import RegionPlannerAgent
     from models.trip_leg import RegionPlan
 
@@ -2913,6 +2929,7 @@ async def replace_region(job_id: str, body: ReplaceRegionRequest, current_user: 
 
 @app.post("/api/recompute-regions/{job_id}")
 async def recompute_regions(job_id: str, body: RecomputeRegionsRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Regenerate the entire explore-leg region plan from scratch with new instructions."""
     from agents.region_planner import RegionPlannerAgent
     from models.trip_leg import RegionPlan
 
@@ -2947,6 +2964,7 @@ async def recompute_regions(job_id: str, body: RecomputeRegionsRequest, current_
 
 @app.post("/api/geocode-region/{job_id}")
 async def geocode_region_endpoint(job_id: str, body: GeocodeRegionRequest, current_user: CurrentUser = Depends(get_current_user)):
+    """Geocode a region name via Google and return a region dict ready for the frontend to add to the plan."""
     get_job(job_id)  # validate job exists
 
     geo_result = await geocode_google(body.name.strip())
@@ -2972,6 +2990,7 @@ async def geocode_region_endpoint(job_id: str, body: GeocodeRegionRequest, curre
 
 @app.post("/api/confirm-regions/{job_id}")
 async def confirm_regions(job_id: str, body: ConfirmRegionsBody = None, current_user: CurrentUser = Depends(get_current_user)):
+    """Confirm the explore-leg region plan: inject regions as via-points, compute budgets, and start route building."""
     from models.trip_leg import RegionPlan
 
     job = get_job(job_id)
