@@ -13,18 +13,34 @@ function renderOverview(plan) {
   const dayPlans = plan.day_plans || [];
   const lastStop = stops[stops.length - 1] || {};
 
+  // SVG car icon for travel days
+  const carIcon = '<svg class="day-card-v2__car-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+    '<rect x="1" y="6" width="15" height="10" rx="2"/>' +
+    '<path d="M16 10h4l3 4v3h-7V10z"/>' +
+    '<circle cx="5.5" cy="18.5" r="2.5"/>' +
+    '<circle cx="18.5" cy="18.5" r="2.5"/>' +
+    '</svg>';
+
   // Day cards HTML
   const dayCardsHtml = dayPlans.map(function(dp) {
     const dayStops = _findStopsForDay(plan, dp.day);
     const stopCount = dayStops.length;
     const driveHours = dayStops.reduce(function(sum, s) {
       return sum + (typeof s.drive_hours_from_prev === 'number' ? s.drive_hours_from_prev : 0);
-    }, 0).toFixed(1);
-    return '<div class="day-card-v2" data-day-num="' + dp.day + '" tabindex="0" role="button">' +
+    }, 0);
+
+    // A day is a "travel day" when driving takes up a significant portion (> 3h)
+    const isTravelDay = driveHours > 3;
+
+    // Pick most interesting photo subject: first activity with place_id > any activity > hotel > region
+    const photoSubject = _pickDayPhotoSubject(dayStops);
+
+    return '<div class="day-card-v2' + (isTravelDay ? ' day-card-v2--travel' : '') + '" data-day-num="' + dp.day + '" tabindex="0" role="button">' +
       '<div class="day-card-v2__thumb">' + buildHeroPhotoLoading('sm') + '</div>' +
+      (isTravelDay ? '<div class="day-card-v2__ribbon">Fahrtag</div>' + carIcon : '') +
       '<div class="day-card-v2__body">' +
         '<div class="day-card-v2__title">Tag ' + dp.day + ': ' + esc(dp.title) + '</div>' +
-        '<div class="day-card-v2__meta">' + stopCount + ' Stopp' + (stopCount !== 1 ? 's' : '') + ' · ' + driveHours + 'h Fahrt</div>' +
+        '<div class="day-card-v2__meta">' + stopCount + ' Stopp' + (stopCount !== 1 ? 's' : '') + ' · ' + driveHours.toFixed(1) + 'h Fahrt</div>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -73,22 +89,62 @@ function _initOverviewInteractions(plan) {
     });
   }
 
-  // 2. Day card thumbnail lazy loading (Pitfall 4)
+  // 2. Day card thumbnail lazy loading — uses most interesting entity per day
   var cards = document.querySelectorAll('.day-card-v2');
   cards.forEach(function(card) {
     var dayNum = Number(card.dataset.dayNum);
     var dayStops = _findStopsForDay(plan, dayNum);
-    var firstStop = dayStops[0];
-    if (firstStop) {
-      var thumb = card.querySelector('.day-card-v2__thumb');
-      if (thumb) {
-        _lazyLoadEntityImages(thumb, firstStop.region || firstStop.name, firstStop.lat, firstStop.lng, 'city', 'sm');
-      }
+    var subject = _pickDayPhotoSubject(dayStops);
+    var thumb = card.querySelector('.day-card-v2__thumb');
+    if (thumb && subject) {
+      _lazyLoadEntityImages(thumb, subject.name, subject.lat, subject.lng, subject.context, 'sm');
     }
   });
 
   // 3. Lazy load further activities images inside collapsible
   _lazyLoadOverviewImages(plan);
+}
+
+// ---------------------------------------------------------------------------
+// Photo subject selection
+// ---------------------------------------------------------------------------
+
+/**
+ * Picks the most visually interesting photo subject for a day's card thumbnail.
+ * Priority: activity with place_id > any activity > hotel > region/city fallback.
+ * Returns { name, lat, lng, context } or null.
+ */
+function _pickDayPhotoSubject(dayStops) {
+  // Collect all activities across all stops for this day
+  const activities = dayStops.flatMap(s => (s.top_activities || []).map(a => ({ a, s })));
+
+  // Best: activity that has a place_id (most specific photo)
+  const withPlaceId = activities.find(({ a }) => a.place_id);
+  if (withPlaceId) {
+    const { a, s } = withPlaceId;
+    return { name: a.name, lat: a.lat || s.lat, lng: a.lon || a.lng || s.lng, context: 'activity' };
+  }
+
+  // Good: any activity
+  if (activities.length > 0) {
+    const { a, s } = activities[0];
+    return { name: a.name, lat: a.lat || s.lat, lng: a.lon || a.lng || s.lng, context: 'activity' };
+  }
+
+  // Fallback: hotel
+  for (const stop of dayStops) {
+    if (stop.accommodation && stop.accommodation.name) {
+      return { name: stop.accommodation.name, lat: stop.lat, lng: stop.lng, context: 'hotel' };
+    }
+  }
+
+  // Last resort: region/city of first stop
+  const first = dayStops[0];
+  if (first) {
+    return { name: first.region || first.name, lat: first.lat, lng: first.lng, context: 'city' };
+  }
+
+  return null;
 }
 
 // Highlight requirement keywords (from plan.request) in an already-escaped string
