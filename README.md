@@ -2,7 +2,7 @@
 
 > An AI-powered road trip planner that builds a personalised day-by-day travel guide through an interactive, multi-agent conversation with Claude.
 
-[![Current Version](https://img.shields.io/badge/version-v12.0.0-blue)](#releases)
+[![Current Version](https://img.shields.io/badge/version-v13.0.0-blue)](#releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](#license)
 [![Stack](https://img.shields.io/badge/stack-FastAPI%20·%20Vanilla%20JS%20·%20Redis%20·%20Docker-orange)](#tech-stack)
 [![Agents](https://img.shields.io/badge/AI%20agents-10%20Claude%20agents-purple)](#ai-agents)
@@ -36,12 +36,17 @@ DetourAI lets you plan a complete road trip in minutes. You describe where you w
 
 ```mermaid
 flowchart TD
-    A["5-Schritte-Formular\n(Route · Reisende · Legs · Unterkunft · Budget)"] --> B["Login / Register"]
+    M["Modus wählen"] --> R["Roadtrip\n5-Schritte-Formular"]
+    M --> X["Erkunden\n5-Schritte-Formular\n+ Zonen-Karte"]
+    M --> O["Ortsreise\n1 Ort · Tage · Budget"]
+    R --> B["Login / Register"]
+    X --> B
+    O --> B
     B --> C["RegionPlannerAgent\nplant Regionen — du bestätigst"]
     C --> D["Stop-Optionen pro Segment\n(DetourOptionsAgent bei kurzen Segmenten)\n(ExploreZoneAgent bei Explore-Legs)"]
     D --> E["3 Unterkunfts-Optionen pro Stop\n(Budget · Komfort · Premium)"]
-    E --> F["10 Agenten recherchieren\nAktivitäten · Restaurants · Tagesplan · Guide"]
-    F --> G["Reiseführer\nÜbersicht · Stops · Tagesplan · Budget\n+ PDF · PPTX · Tageskarten"]
+    E --> F["9 Agenten recherchieren\nAktivitäten · Restaurants · Tagesplan · Guide"]
+    F --> G["Reiseführer\nHorizontale Karte mit Hotel-/Aktivitäts-Pins\nÜbersicht · Stops · Tagesplan · Budget\n+ PDF · PPTX"]
 ```
 
 ---
@@ -49,7 +54,9 @@ flowchart TD
 ## Features
 
 ### Trip Planning
+- **Three trip modes** — Roadtrip (A→B transit), Erkunden (zone exploration), Ortsreise (single location)
 - **Leg-based trip architecture** — build trips from Transit legs (A → B routing) and Explore legs (discover a geographic zone)
+- **Ortsreise mode** — plan a multi-day stay at a single location with a dedicated single-step form
 - **Interactive route building** — Claude suggests stops segment by segment; you pick the ones you want
 - **Explore mode** — define a zone on the map and let ExploreZoneAgent discover anchor points, scenic spots, and hidden gems via a guided questionnaire
 - **Region planning** — RegionPlannerAgent autonomously plans multi-region sequences after route confirmation
@@ -57,6 +64,7 @@ flowchart TD
 - **Detour fallback** — when a segment is too short for classic stops, DetourOptionsAgent proposes scenic side-trips
 - **"Direkt weiterfahren" option** — skip a stop and add freed nights to the next destination
 - **Rundkurs display** — explore legs show a circular route through discovered stops
+- **Form persistence** — form state saved to localStorage; survives page refresh
 
 ### Route Quality
 - **Only real towns** — StopOptionsFinder always returns concrete towns/cities, never regions
@@ -77,11 +85,14 @@ flowchart TD
 - **Budget tracking** — remaining budget updates live after every accommodation selection
 
 ### AI & Agents
-- **10 specialised AI agents** — route architect, region planner, stop finder, detour finder, explore zone, accommodation researcher, activities, restaurants, day planner, travel guide, trip analysis
+- **10 specialised AI agents** — pre-planner, route architect, region planner, stop finder, detour finder, explore zone, accommodation researcher, activities, restaurants, day planner, travel guide, trip analysis
 - **Real-time progress** — Server-Sent Events stream every agent action to the browser
-- **Live progress overlay** — spinner log with green checkmarks during all wait phases
+- **Live progress overlay** — unified overlay with spinner log and green checkmarks during all wait phases
 
 ### Day Details & Maps
+- **Horizontal collapsible map** — full-width map strip above the guide content; collapse/expand toggle; sticky on mobile
+- **Hotel & activity pins on main map** — hotel (🏨) and activity emoji pins alongside numbered stop markers, loaded async with session-cached coordinate resolution
+- **Marker filter pills** — toggle Stopps / Hotels / Aktivitäten visibility independently
 - **Interactive day maps** — route polylines connecting all stops per day
 - **POI markers** — accommodation, restaurant, and activity pins on each day map
 - **Google Places details** — photos, opening hours, and ratings via Google Places API
@@ -173,6 +184,7 @@ flowchart TD
         JWT["JWT Middleware"]
         JWT --> Orchestrator
         subgraph Orchestrator["TravelPlannerOrchestrator"]
+            A0["ArchitectPrePlanAgent (sonnet)"]
             A1["RouteArchitectAgent (opus)"]
             A2["RegionPlannerAgent (opus)"]
             A3["StopOptionsFinderAgent (sonnet)"]
@@ -227,6 +239,7 @@ DetourAI uses ten specialised Claude agents. Each has a single, clearly scoped t
 
 | Agent | Production | TEST_MODE=true |
 |-------|-----------|----------------|
+| ArchitectPrePlanAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
 | RouteArchitectAgent | claude-opus-4-5 | claude-haiku-4-5 |
 | RegionPlannerAgent | claude-opus-4-5 | claude-haiku-4-5 |
 | StopOptionsFinderAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
@@ -240,6 +253,8 @@ DetourAI uses ten specialised Claude agents. Each has a single, clearly scoped t
 | TripAnalysisAgent | claude-sonnet-4-5 | claude-haiku-4-5 |
 
 ### Agent Details
+
+**ArchitectPrePlanAgent** (`claude-sonnet-4-5`) — Generates a region overview before full route architecture, giving RouteArchitectAgent richer context for stop placement decisions.
 
 **RouteArchitectAgent** (`claude-opus-4-5`) — Analyses the full trip and produces a high-level multi-segment route plan: which cities to pass through, how many days per segment, and the logical order of all waypoints. Uses Opus for its ability to reason across the entire trip simultaneously.
 
@@ -426,7 +441,7 @@ celery -A tasks worker --loglevel=info
 
 ### Frontend
 
-Open `frontend/index.html` directly, or serve with any static file server. For local dev without Nginx, change `API_BASE` in `frontend/js/api.js` to `http://localhost:8000/api`.
+Open `frontend/index.html` directly, or serve with any static file server. For local dev without Nginx, change `API_BASE` in `frontend/js/core/api.js` to `http://localhost:8000/api`.
 
 ### Tests
 
@@ -534,8 +549,7 @@ DetourAI/
 │       │   ├── auth.js                # JWT token management + session restore
 │       │   ├── router.js              # client-side SPA routing
 │       │   ├── api.js                 # all fetch() + SSE calls
-│       │   ├── i18n.js                # translation loader (de/en/hi)
-│       │   └── loading.js             # loading state UI
+│       │   └── i18n.js                # translation loader (de/en/hi)
 │       ├── maps/                      # Google Maps modules
 │       │   ├── maps-core.js           # map init, markers, autocomplete
 │       │   ├── maps-images.js         # Place photos + fallback chain
@@ -543,7 +557,7 @@ DetourAI/
 │       │   └── maps-guide.js          # guide tab map + POI markers
 │       ├── communication/             # SSE protocol
 │       │   ├── sse-client.js          # SSE connection lifecycle
-│       │   ├── sse-overlay.js         # spinner overlay during planning
+│       │   ├── unified-overlay.js     # unified spinner overlay (loading + SSE phases)
 │       │   └── progress.js            # debug log + stops timeline
 │       ├── guide/                     # travel guide viewer
 │       │   ├── guide-core.js          # tab switching + entry point
@@ -554,7 +568,8 @@ DetourAI/
 │       │   ├── guide-edit.js          # inline stop editing
 │       │   └── guide-share.js         # PDF/PPTX export + share
 │       ├── features/                  # planning pipeline + standalone pages
-│       │   ├── form.js                # 5-step form + legs builder
+│       │   ├── mode-picker.js         # trip mode selection (roadtrip/erkunden/ortsreise)
+│       │   ├── form.js                # 5-step form + legs builder (roadtrip/erkunden)
 │       │   ├── route-builder.js       # route builder + explore UI
 │       │   ├── accommodation.js       # parallel acc loading + grid
 │       │   ├── travels.js             # saved trips drawer
@@ -580,6 +595,21 @@ DetourAI/
 ---
 
 ## Releases
+
+### v13.0.0 — Horizontal Map, Ortsreise Mode & UX Overhaul (2026-04-09)
+
+Major release bringing a new trip mode, a completely redesigned map layout, and form persistence.
+
+- **Ortsreise mode** — new single-location trip type with a dedicated one-step form; plan a multi-day stay at one destination without route building
+- **Three trip modes** — mode picker at app start lets users choose Roadtrip, Erkunden, or Ortsreise before entering the form
+- **Horizontal collapsible map** — guide map redesigned from a fixed left panel (45% width) to a full-width horizontal strip above the content; collapse/expand toggle with animated transition; sticky on mobile
+- **Hotel & activity pins on main map** — hotel (🏨) and activity emoji markers loaded async alongside numbered stop markers; coordinates resolved via session-cached Google Places API
+- **Marker filter pills** — three toggle buttons (Stopps / Hotels / Aktivitäten) independently control which marker types are visible
+- **Dim/restore across entity types** — drill-down into day or stop dims hotel/activity markers for non-focused stops as well as stop markers
+- **Form persistence** — full form state (all 5 steps + legs) saved to localStorage; survives page refresh; cleared on successful submission
+- **Unified progress overlay** — `loading.js` and `sse-overlay.js` merged into `unified-overlay.js`; single overlay handles both app loading and SSE planning phases
+- **Header refresh** — flat design with version badge, subtle animations
+- **327 tests passing**
 
 ### v12.0.0 — Project-Wide Documentation Standard (2026-04-08)
 
