@@ -69,7 +69,7 @@ class TripLeg(BaseModel):
     end_location: str = Field(default="", max_length=200)
     start_date: date
     end_date: date
-    mode: Literal["transit", "explore"]
+    mode: Literal["transit", "explore", "location"]
     via_points: list[ViaPoint] = Field(default=[])
     zone_bbox: Optional[ZoneBBox] = None
     zone_guidance: list[str] = Field(default=[])
@@ -83,6 +83,8 @@ class TripLeg(BaseModel):
             raise ValueError("transit legs require start_location and end_location")
         if self.mode == "explore" and not self.explore_description:
             raise ValueError("explore legs require explore_description")
+        if self.mode == "location" and not self.start_location:
+            raise ValueError("location legs require start_location")
         return self
 
     @property

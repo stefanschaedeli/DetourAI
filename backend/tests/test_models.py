@@ -2,6 +2,7 @@ import pytest
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from pydantic import ValidationError
 from models.travel_request import TravelRequest, Child, ViaPoint, MandatoryActivity
 from models.travel_response import TravelPlan, TravelStop, DayPlan, CostEstimate, StopAccommodation, StopActivity, Restaurant, TravelGuide, TimeBlock
 from models.stop_option import StopOption, StopOptionsResponse, StopSelectRequest
@@ -842,3 +843,48 @@ class TestTravelRequestLegs:
         req = self._base_req([leg0])
         assert len(req.via_points) == 1
         assert req.via_points[0].location == "Bern"
+
+
+# ---------------------------------------------------------------------------
+# TripLeg location mode
+# ---------------------------------------------------------------------------
+
+def test_location_leg_valid():
+    """A location leg requires only start_location."""
+    leg = TripLeg(
+        leg_id="leg-0",
+        start_location="Paris, Frankreich",
+        end_location="",
+        start_date=date(2026, 6, 1),
+        end_date=date(2026, 6, 8),
+        mode="location",
+    )
+    assert leg.mode == "location"
+    assert leg.start_location == "Paris, Frankreich"
+
+
+def test_location_leg_requires_start_location():
+    """A location leg without start_location must fail validation."""
+    with pytest.raises(ValidationError):
+        TripLeg(
+            leg_id="leg-0",
+            start_location="",
+            end_location="",
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 8),
+            mode="location",
+        )
+
+
+def test_location_leg_no_explore_description_needed():
+    """A location leg must not require explore_description."""
+    leg = TripLeg(
+        leg_id="leg-0",
+        start_location="Lissabon, Portugal",
+        end_location="",
+        start_date=date(2026, 6, 1),
+        end_date=date(2026, 6, 8),
+        mode="location",
+        explore_description=None,
+    )
+    assert leg.explore_description is None
