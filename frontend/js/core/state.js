@@ -77,6 +77,11 @@ const S = {
   // Sharing
   sharedMode: false,
   shareToken: null,
+  // App mode — selects planning flow
+  appMode: null,              // 'rundreise' | 'erkunden' | 'ortsreise' | null
+  locationQuery: '',          // raw location input for Ortsreise
+  locationNights: 7,          // number of nights for Ortsreise
+  ortsreiseDescription: '',   // free-text description for Ortsreise
 };
 
 // ---------------------------------------------------------------------------
@@ -88,6 +93,7 @@ const LS_FORM          = 'tp_v1_form';
 const LS_ROUTE         = 'tp_v1_route';
 const LS_ACCOMMODATIONS = 'tp_v1_accommodations';
 const LS_RESULT        = 'tp_v1_result';
+const LS_APP_MODE      = 'app_mode';
 
 /** Persist a JSON-serializable value to localStorage. */
 function lsSet(key, value) {

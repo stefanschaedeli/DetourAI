@@ -931,6 +931,7 @@ async function submitTrip() {
 function saveFormToCache() {
   const p = buildPayload();
   lsSet(LS_FORM, { ...p, travelStyles: S.travelStyles, children: S.children, mandatoryTags: S.mandatoryTags, preferredTags: S.preferredTags });
+  lsSet(LS_APP_MODE, S.appMode);
   updateQuickSubmitBar();
 }
 
@@ -947,6 +948,10 @@ function setupFormAutoSave() {
 function restoreFormFromCache() {
   const cached = lsGet(LS_FORM);
   if (!cached) return;
+
+  // Restore appMode separately (stored under its own key)
+  const savedMode = lsGet(LS_APP_MODE);
+  if (savedMode) S.appMode = savedMode;
 
   const setVal = (id, val) => {
     const el = document.getElementById(id);
@@ -1040,6 +1045,7 @@ function clearAppData() {
   lsClear(LS_ROUTE);
   lsClear(LS_ACCOMMODATIONS);
   lsClear(LS_RESULT);
+  lsClear(LS_APP_MODE);
 
   // Reset runtime state (keep form-related fields)
   S.step = 1;
@@ -1059,6 +1065,10 @@ function clearAppData() {
   S.pendingSelections = {};
   S.allAccLoaded = false;
   S.accSelectionCount = 0;
+  S.appMode = null;
+  S.locationQuery = '';
+  S.locationNights = 7;
+  S.ortsreiseDescription = '';
 
   // Hide resume banner
   document.getElementById('resume-banner').style.display = 'none';

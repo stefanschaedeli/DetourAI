@@ -2,7 +2,7 @@
 
 // API — fetch wrappers with auth injection and all apiXxx() backend call helpers.
 // Reads: authGetToken, authSilentRefresh, showLoginRequired (auth.js), showLoading, hideLoading (loading.js), S (state.js), t (i18n.js), getLocale (i18n.js), SSEClient (communication/sse-client.js).
-// Provides: apiLogin, apiLogout, apiGetMe, apiChangePassword, apiInitJob, apiPlanTrip, apiSelectStop, apiConfirmRoute, apiStartAccommodations, apiConfirmAccommodations, apiSelectAccommodation, apiStartPlanning, apiConfirmAccommodationsQuiet, apiStartPlanningQuiet, apiGetResult, apiPatchJob, apiResearchAccommodation, apiRecomputeOptions, apiSetRundreiseMode, apiSkipToLegEnd, apiSkipSegment, replaceRegion, recomputeRegions, confirmRegions, geocodeRegion, apiSaveTravel, apiGetTravels, apiGetTravel, apiDeleteTravel, apiReplanTravel, apiUpdateTravel, apiGetShared, apiShareTravel, apiUnshareTravel, apiLogError, apiGetSettings, apiSaveSettings, apiResetSettings, apiReplaceStop, apiRemoveStop, apiAddStop, apiReorderStops, apiReplaceStopSelect, apiUpdateNights, openSSE, showToast.
+// Provides: apiLogin, apiLogout, apiGetMe, apiChangePassword, apiInitJob, apiPlanTrip, apiPlanLocation, apiSelectStop, apiConfirmRoute, apiStartAccommodations, apiConfirmAccommodations, apiSelectAccommodation, apiStartPlanning, apiConfirmAccommodationsQuiet, apiStartPlanningQuiet, apiGetResult, apiPatchJob, apiResearchAccommodation, apiRecomputeOptions, apiSetRundreiseMode, apiSkipToLegEnd, apiSkipSegment, replaceRegion, recomputeRegions, confirmRegions, geocodeRegion, apiSaveTravel, apiGetTravels, apiGetTravel, apiDeleteTravel, apiReplanTravel, apiUpdateTravel, apiGetShared, apiShareTravel, apiUnshareTravel, apiLogError, apiGetSettings, apiSaveSettings, apiResetSettings, apiReplaceStop, apiRemoveStop, apiAddStop, apiReorderStops, apiReplaceStopSelect, apiUpdateNights, openSSE, showToast.
 
 // ---------------------------------------------------------------------------
 // Internal helpers — fetch wrappers with auth, loading overlay, and retry
@@ -122,6 +122,15 @@ async function apiPlanTrip(payload, jobId) {
   // No loading overlay — skeleton cards stream in progressively
   const url = jobId ? `${API}/plan-trip?job_id=${encodeURIComponent(jobId)}` : `${API}/plan-trip`;
   const res = await _fetchQuiet(url, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
+/** POST /api/plan-location/{jobId} — Ortsreise shortcut, returns {job_id, status, selected_stops}. */
+async function apiPlanLocation(payload, jobId) {
+  const res = await _fetchQuiet(`${API}/plan-location/${jobId}`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
