@@ -29,12 +29,10 @@ function connectAccommodationSSE(jobId) {
     },
   });
 
-  // Return a promise that resolves once the EventSource connection is open
-  return new Promise(resolve => {
-    accSSE.addEventListener('open', resolve, { once: true });
-    // Fallback: resolve after 500ms even if open event never fires
-    setTimeout(resolve, 500);
-  });
+  // Resolve after a short delay to let the EventSource connection open.
+  // openSSE() returns a plain wrapper object (not an EventSource), so we
+  // cannot attach an 'open' listener on it — the timeout is the only signal.
+  return new Promise(resolve => setTimeout(resolve, 300));
 }
 
 function onAccDebugLog(data) {
