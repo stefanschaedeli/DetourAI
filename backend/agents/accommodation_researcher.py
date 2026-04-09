@@ -80,7 +80,8 @@ class AccommodationResearcherAgent:
         self.job_id = job_id
         self.extra_instructions = extra_instructions
         self.client = get_client()
-        self.model = get_model("claude-sonnet-4-5", AGENT_KEY)
+        # Haiku is sufficient for structured accommodation selection; much faster generation.
+        self.model = get_model("claude-haiku-4-5", AGENT_KEY)
 
     async def find_options(self, stop: dict, budget_per_night: float,
                            semaphore: asyncio.Semaphore = None) -> dict:
@@ -349,7 +350,7 @@ Gib exakt dieses JSON zurück:
                     def call():
                         return self.client.messages.create(
                             model=self.model,
-                            max_tokens=get_max_tokens(AGENT_KEY, 3500),
+                            max_tokens=get_max_tokens(AGENT_KEY, 2048),
                             system=system_prompt,
                             messages=[{"role": "user", "content": prompt}],
                         )
@@ -358,7 +359,7 @@ Gib exakt dieses JSON zurück:
                 def call():
                     return self.client.messages.create(
                         model=self.model,
-                        max_tokens=get_max_tokens(AGENT_KEY, 3500),
+                        max_tokens=get_max_tokens(AGENT_KEY, 2048),
                         system=system_prompt,
                         messages=[{"role": "user", "content": prompt}],
                     )
@@ -371,7 +372,7 @@ Gib exakt dieses JSON zurück:
         arrival_day = stop.get("arrival_day", 1)
         checkin = req.start_date + timedelta(days=arrival_day - 1)
 
-        async def enrich_option(opt: dict) -> dict:
+        async def enrich_option(opt: dict, cached_gp: list) -> dict:
             hotel_name = opt.get("name", "")
             is_geheimtipp = opt.get("is_geheimtipp", False)
 
@@ -399,11 +400,11 @@ Gib exakt dieses JSON zurück:
                     language=lang,
                 )
 
-            # Bilder: Google Places wenn verfügbar
+            # Bilder: Google Places — reuse cached results from the pre-fetch above
+            # to avoid 4 redundant identical API calls per stop.
             hotel_name_lower = hotel_name.lower()
-            if lat and lon:
-                gp_hotels = await search_hotels(lat, lon, radius_m=req.hotel_radius_km * 1000)
-                gp_match = next((h for h in gp_hotels if h["name"].lower() == hotel_name_lower), None)
+            if cached_gp:
+                gp_match = next((h for h in cached_gp if h["name"].lower() == hotel_name_lower), None)
             else:
                 gp_match = None
 
@@ -430,7 +431,8 @@ Gib exakt dieses JSON zurück:
                 opt["place_id"] = gp_match["place_id"]
             return opt
 
-        options = list(await asyncio.gather(*[enrich_option(opt) for opt in result.get("options", [])]))
+        cached_gp = gp_results if lat and lon else []
+        options = list(await asyncio.gather(*[enrich_option(opt, cached_gp) for opt in result.get("options", [])]))
 
         # ACC-01: drop geheimtipps that are too far from stop center
         options = [o for o in options if not o.pop("_geheimtipp_too_far", False)]

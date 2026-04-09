@@ -52,7 +52,7 @@ DEFAULTS: dict[str, Any] = {
     # ── API & Performance ──
     "api.wikipedia_timeout_s": 8,
     "api.retry_max_attempts": 5,
-    "api.accommodation_parallelism": 2,
+    "api.accommodation_parallelism": 3,
 
     # ── Geografie ──
     "geo.corridor_buffer_km": 30,
