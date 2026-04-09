@@ -231,43 +231,122 @@ html[lang="hi"] button {
 }
 
 /* ============================================================ Layout */
-.app-header {
-  background: rgba(250, 248, 255, 0.88);
-  backdrop-filter: blur(20px);
-  position: sticky; top: 0; z-index: 100;
-  border-bottom: 1px solid var(--border);
-  padding: 16px clamp(24px, 4vw, 60px);
-  display: flex; align-items: center; gap: 12px;
+
+@keyframes header-line-in {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
-.app-logo { font-size: 22px; font-weight: 800; color: var(--accent-dark); letter-spacing: -0.02em; }
-.app-subtitle { color: var(--text-sub); font-size: 14px; }
-.app-version { font-size: 11px; color: var(--text-sub); opacity: 0.45; letter-spacing: 0.03em; margin-left: -4px; }
+@keyframes header-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.app-header {
+  background: rgba(250, 248, 255, 0.96);
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 clamp(20px, 4vw, 56px);
+  height: 56px;
+  display: flex; align-items: center; gap: 10px;
+  animation: header-fade-in 0.3s ease both;
+}
+
+/* Animated accent line at the very bottom of the header */
+.app-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 60%, transparent 100%);
+  opacity: 0.35;
+  transform-origin: left;
+  animation: header-line-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.1s both;
+}
+
+/* Logo lockup */
+.app-logo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  user-select: none;
+}
+
+/* Flat icon mark before the wordmark */
+.app-logo::before {
+  content: '';
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--accent-primary);
+  flex-shrink: 0;
+  /* Arrow/compass icon via clip-path */
+  clip-path: polygon(50% 8%, 88% 40%, 70% 40%, 70% 76%, 30% 76%, 30% 40%, 12% 40%);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s;
+}
+.app-logo:hover::before { transform: rotate(8deg) scale(1.08); opacity: 0.85; }
+
+.app-subtitle {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  padding-left: 10px;
+  margin-left: 2px;
+  border-left: 1px solid var(--border-subtle);
+}
+
+.app-version {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  opacity: 0.5;
+  letter-spacing: 0.04em;
+  margin-left: -2px;
+  background: var(--bg-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Header action buttons — flat pill style */
 .btn-my-travels {
   margin-left: auto;
-  padding: 6px 14px; font-size: 13px; font-weight: 500;
-  border: 1px solid var(--accent); border-radius: 8px;
-  background: transparent; color: var(--accent); cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s;
+  padding: 0 14px;
+  height: 32px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  background: var(--surface-active);
+  color: var(--accent-primary);
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  transition: background 0.14s, color 0.14s, opacity 0.14s;
 }
-.btn-my-travels:hover { background: var(--accent); color: #fff; transform: translateY(-2px); box-shadow: var(--lift-shadow-sm); }
-.btn-my-travels:active { transform: scale(var(--press-scale)); transition-duration: 0.08s; }
+.btn-my-travels:hover { background: var(--accent-primary); color: #fff; }
+.btn-my-travels:active { opacity: 0.8; }
 @media (prefers-reduced-motion: reduce) {
-  .btn-my-travels:hover  { transform: none; }
-  .btn-my-travels:active { transform: none; }
+  .btn-my-travels { transition: none; }
 }
 
 .btn-clear-data {
-  padding: 6px 14px;
+  padding: 0 14px;
+  height: 32px;
   font-size: 13px;
   font-weight: 500;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: none;
+  border-radius: 6px;
   background: transparent;
-  color: var(--text-sub);
+  color: var(--text-muted);
   cursor: pointer;
-  transition: background .15s, color .15s;
+  transition: background 0.14s, color 0.14s;
 }
-.btn-clear-data:hover { background: var(--bg); color: var(--danger); border-color: var(--danger); }
+.btn-clear-data:hover { background: rgba(232, 139, 139, 0.1); color: var(--danger); }
 
 main { max-width: none; margin: 0; padding: 0 0 96px; }
 
@@ -2594,8 +2673,15 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
 
 /* ============================================================ Settings menu */
 .header-settings { position: relative; }
-.settings-btn { background: none; border: none; cursor: pointer; color: var(--text-sub); padding: 10px; border-radius: 6px; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
-.settings-btn:hover { background: var(--bg-subtle); }
+.settings-btn {
+  background: none; border: none; cursor: pointer; color: var(--text-muted);
+  padding: 6px; border-radius: 6px; min-width: 36px; min-height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background 0.14s, color 0.14s;
+}
+.settings-btn svg { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.settings-btn:hover { background: var(--surface-hover); color: var(--accent-primary); }
+.settings-btn:hover svg { transform: rotate(45deg); }
 .settings-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .settings-menu {
   position: absolute; top: calc(100% + 8px); right: 0;
@@ -2608,6 +2694,35 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
 .settings-item:last-child { border-bottom: none; }
 .settings-item label { font-size: 14px; color: var(--text); }
 .settings-item select { font-size: 14px; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
+
+/* Scoped header pill overrides for Admin / Logout (btn-secondary inside header) */
+.app-header .btn-secondary {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+  border: none;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+.app-header .btn-secondary:hover {
+  background: var(--surface-active);
+  color: var(--accent-primary);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Username chip in header */
+.header-username {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: -0.01em;
+}
 
 /* ============================================================ Travels drawer */
 .travels-drawer-overlay {
