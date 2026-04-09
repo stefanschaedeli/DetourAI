@@ -1000,7 +1000,7 @@ function _showNoStopsFoundUI(corridor) {
         { lat: corridor.start_coords[0], lng: corridor.start_coords[1] },
         { lat: corridor.end_coords[0], lng: corridor.end_coords[1] },
       ],
-      strokeColor: '#4a90d9', strokeWeight: 3, strokeOpacity: 0.7,
+      strokeColor: '#C4623A', strokeWeight: 3, strokeOpacity: 0.7,
       map,
     });
   }
@@ -1170,7 +1170,7 @@ function _initRegionMap(regions) {
   const regionWaypoints = path.map(p => ({ lat: p.lat, lng: p.lng || p.lon }));
   if (regionWaypoints.length >= 2) {
     GoogleMaps.renderDrivingRoute(_regionPlanMap, regionWaypoints, {
-      strokeColor: '#4a90d9', strokeWeight: 3, strokeOpacity: 0.8,
+      strokeColor: '#C4623A', strokeWeight: 3, strokeOpacity: 0.8,
     }).then(r => { _regionPolyline = r; });
   }
 

@@ -338,7 +338,7 @@ function renderLegs() {
 
 function renderLegCard(leg, index) {
   const isFirst = index === 0;
-  const modeColor = leg.mode === "explore" ? "#e0b840" : "#4a90d9";
+  const modeColor = leg.mode === "explore" ? "#D4923A" : "#C4623A";
   const days = leg.start_date && leg.end_date ? dateDiffDays(leg.start_date, leg.end_date) : 0;
   const canDelete = S.legs.length > 1;
 

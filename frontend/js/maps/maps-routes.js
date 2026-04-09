@@ -14,7 +14,7 @@ Object.assign(GoogleMaps, (() => {
   async function renderDrivingRoute(map, waypoints, opts) {
     if (!waypoints || waypoints.length < 2) return { setMap() {} };
     const polyOpts = {
-      strokeColor:   (opts && opts.strokeColor)   || '#4a90d9',
+      strokeColor:   (opts && opts.strokeColor)   || '#C4623A',
       strokeWeight:  (opts && opts.strokeWeight)  || 3,
       strokeOpacity: opts && opts.strokeOpacity != null ? opts.strokeOpacity : 0.8,
     };
