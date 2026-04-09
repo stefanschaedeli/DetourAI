@@ -1,4 +1,4 @@
-"""Celery task that removes a stop from a saved travel plan and reconnects the surrounding route segments."""
+"""Async task that removes a stop from a saved travel plan and reconnects the surrounding route segments."""
 
 import asyncio
 import json
@@ -7,8 +7,6 @@ import sys
 import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from tasks import celery_app
 
 
 def _get_store():
@@ -115,9 +113,3 @@ async def _remove_stop_job(job_id: str) -> None:
         store.setex(f"job:{job_id}", 86400, json.dumps(job))
     finally:
         release_edit_lock(travel_id)
-
-
-@celery_app.task(name="tasks.remove_stop_job.remove_stop_job_task")
-def remove_stop_job_task(job_id: str) -> None:
-    """Runs _remove_stop_job() in asyncio event loop."""
-    asyncio.run(_remove_stop_job(job_id))

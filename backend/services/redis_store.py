@@ -45,7 +45,7 @@ def _make_redis_client():
 
 
 redis_client = _make_redis_client()
-_USE_CELERY = not isinstance(redis_client, _InMemoryStore)
+_USE_CELERY = False  # Tasks run as asyncio coroutines in-process; Celery container removed
 
 _JOB_ID_RE = re.compile(r'^[a-f0-9]{32}$')
 

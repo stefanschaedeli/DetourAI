@@ -45,60 +45,32 @@ from utils.maps_helper import (
 )
 from utils.ferry_ports import is_island_destination
 from utils.google_places import validate_stop_quality
-from services.redis_store import redis_client, get_job, save_job, _USE_CELERY, _InMemoryStore, _job_lang
+from services.redis_store import redis_client, get_job, save_job, _InMemoryStore, _job_lang
 
 
 def _fire_task(task_name: str, job_id: str, **kwargs):
-    """
-    Dispatch a background task.
-    - With Redis available: use Celery (.delay)
-    - Without Redis: run as asyncio background task in the same process
-    """
-    if _USE_CELERY:
-        if task_name == "prefetch_accommodations":
-            from tasks.prefetch_accommodations import prefetch_accommodations_task
-            prefetch_accommodations_task.delay(job_id)
-        elif task_name == "run_planning_job":
-            from tasks.run_planning_job import run_planning_job_task
-            run_planning_job_task.delay(job_id, **kwargs)
-        elif task_name == "replace_stop_job":
-            from tasks.replace_stop_job import replace_stop_job_task
-            replace_stop_job_task.delay(job_id)
-        elif task_name == "remove_stop_job":
-            from tasks.remove_stop_job import remove_stop_job_task
-            remove_stop_job_task.delay(job_id)
-        elif task_name == "add_stop_job":
-            from tasks.add_stop_job import add_stop_job_task
-            add_stop_job_task.delay(job_id)
-        elif task_name == "reorder_stops_job":
-            from tasks.reorder_stops_job import reorder_stops_job_task
-            reorder_stops_job_task.delay(job_id)
-        elif task_name == "update_nights_job":
-            from tasks.update_nights_job import update_nights_job_task
-            update_nights_job_task.delay(job_id)
-    else:
-        # Run inline as a fire-and-forget asyncio task
-        if task_name == "prefetch_accommodations":
-            from tasks.prefetch_accommodations import _prefetch_all_accommodations
-            asyncio.ensure_future(_prefetch_all_accommodations(job_id))
-        elif task_name == "run_planning_job":
-            from tasks.run_planning_job import _run_job
-            asyncio.ensure_future(_run_job(job_id, **kwargs))
-        elif task_name == "replace_stop_job":
-            from tasks.replace_stop_job import _replace_stop_job
-            asyncio.ensure_future(_replace_stop_job(job_id))
-        elif task_name == "remove_stop_job":
-            from tasks.remove_stop_job import _remove_stop_job
-            asyncio.ensure_future(_remove_stop_job(job_id))
-        elif task_name == "add_stop_job":
-            from tasks.add_stop_job import _add_stop_job
-            asyncio.ensure_future(_add_stop_job(job_id))
-        elif task_name == "reorder_stops_job":
-            from tasks.reorder_stops_job import _reorder_stops_job
-            asyncio.ensure_future(_reorder_stops_job(job_id))
-        elif task_name == "update_nights_job":
-            from tasks.update_nights_job import _update_nights_job
-            asyncio.ensure_future(_update_nights_job(job_id))
+    """Dispatch a background task as a fire-and-forget asyncio coroutine."""
+    if task_name == "prefetch_accommodations":
+        from tasks.prefetch_accommodations import _prefetch_all_accommodations
+        asyncio.ensure_future(_prefetch_all_accommodations(job_id))
+    elif task_name == "run_planning_job":
+        from tasks.run_planning_job import _run_job
+        asyncio.ensure_future(_run_job(job_id, **kwargs))
+    elif task_name == "replace_stop_job":
+        from tasks.replace_stop_job import _replace_stop_job
+        asyncio.ensure_future(_replace_stop_job(job_id))
+    elif task_name == "remove_stop_job":
+        from tasks.remove_stop_job import _remove_stop_job
+        asyncio.ensure_future(_remove_stop_job(job_id))
+    elif task_name == "add_stop_job":
+        from tasks.add_stop_job import _add_stop_job
+        asyncio.ensure_future(_add_stop_job(job_id))
+    elif task_name == "reorder_stops_job":
+        from tasks.reorder_stops_job import _reorder_stops_job
+        asyncio.ensure_future(_reorder_stops_job(job_id))
+    elif task_name == "update_nights_job":
+        from tasks.update_nights_job import _update_nights_job
+        asyncio.ensure_future(_update_nights_job(job_id))
 
 
 async def _periodic_subscriber_cleanup():
@@ -1772,8 +1744,6 @@ async def patch_job(job_id: str, body: PatchJobRequest, current_user: CurrentUse
 
 @app.post("/api/confirm-route/{job_id}")
 async def confirm_route(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
-    from tasks.prefetch_accommodations import prefetch_accommodations_task
-
     job = get_job(job_id)
     request = TravelRequest(**job["request"])
 
@@ -2010,8 +1980,6 @@ async def research_accommodation(job_id: str, body: AccommodationResearchRequest
 
 @app.post("/api/start-planning/{job_id}")
 async def start_planning(job_id: str, current_user: CurrentUser = Depends(get_current_user)):
-    from tasks.run_planning_job import run_planning_job_task
-
     job = get_job(job_id)
     selected_stops = job.get("selected_stops", [])
     selected_accommodations = job.get("selected_accommodations", [])

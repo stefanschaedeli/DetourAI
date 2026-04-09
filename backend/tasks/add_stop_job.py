@@ -1,4 +1,4 @@
-"""Celery task that inserts a new stop into a saved travel plan, runs full research, and refreshes day plans."""
+"""Async task that inserts a new stop into a saved travel plan, runs full research, and refreshes day plans."""
 
 import asyncio
 import json
@@ -7,8 +7,6 @@ import sys
 import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from tasks import celery_app
 
 
 def _get_store():
@@ -140,9 +138,3 @@ async def _add_stop_job(job_id: str) -> None:
         store.setex(f"job:{job_id}", 86400, json.dumps(job))
     finally:
         release_edit_lock(travel_id)
-
-
-@celery_app.task(name="tasks.add_stop_job.add_stop_job_task")
-def add_stop_job_task(job_id: str) -> None:
-    """Runs _add_stop_job() in asyncio event loop."""
-    asyncio.run(_add_stop_job(job_id))

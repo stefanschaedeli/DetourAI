@@ -1,4 +1,4 @@
-"""Celery task that pre-fetches accommodation options for all selected stops in parallel."""
+"""Async task that pre-fetches accommodation options for all selected stops in parallel."""
 
 import asyncio
 import json
@@ -6,8 +6,6 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from tasks import celery_app
 
 
 def _get_store():
@@ -98,9 +96,3 @@ async def _prefetch_all_accommodations(job_id: str):
         f"Alle {len(selected_stops)} Unterkünfte geladen",
         job_id=job_id, agent="AccommodationPrefetch",
     )
-
-
-@celery_app.task(name="tasks.prefetch_accommodations.prefetch_accommodations_task")
-def prefetch_accommodations_task(job_id: str):
-    """Runs _prefetch_all_accommodations() in asyncio event loop."""
-    asyncio.run(_prefetch_all_accommodations(job_id))

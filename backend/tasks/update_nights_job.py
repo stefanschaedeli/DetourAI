@@ -1,4 +1,4 @@
-"""Celery task that updates the night count for a stop and recalculates arrival days and day plans."""
+"""Async task that updates the night count for a stop and recalculates arrival days and day plans."""
 
 import asyncio
 import json
@@ -7,8 +7,6 @@ import sys
 import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from tasks import celery_app
 
 
 def _get_store():
@@ -102,9 +100,3 @@ async def _update_nights_job(job_id: str) -> None:
         store.setex(f"job:{job_id}", 86400, json.dumps(job))
     finally:
         release_edit_lock(travel_id)
-
-
-@celery_app.task(name="tasks.update_nights_job.update_nights_job_task")
-def update_nights_job_task(job_id: str) -> None:
-    """Runs _update_nights_job() in asyncio event loop."""
-    asyncio.run(_update_nights_job(job_id))

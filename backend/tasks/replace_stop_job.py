@@ -1,4 +1,4 @@
-"""Celery task that replaces a route stop with a new location, re-running directions, research, and day planning."""
+"""Async task that replaces a route stop with a new location, re-running directions, research, and day planning."""
 
 import asyncio
 import json
@@ -7,8 +7,6 @@ import sys
 import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from tasks import celery_app
 
 
 def _get_store():
@@ -270,9 +268,3 @@ async def _replace_stop_job(job_id: str):
         store.setex(f"job:{job_id}", 86400, json.dumps(job))
     finally:
         release_edit_lock(travel_id)
-
-
-@celery_app.task(name="tasks.replace_stop_job.replace_stop_job_task")
-def replace_stop_job_task(job_id: str):
-    """Runs _replace_stop_job() in asyncio event loop."""
-    asyncio.run(_replace_stop_job(job_id))

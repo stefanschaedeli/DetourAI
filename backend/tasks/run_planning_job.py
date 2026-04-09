@@ -1,4 +1,4 @@
-"""Celery task that runs the full TravelPlannerOrchestrator pipeline and persists the result."""
+"""Async task that runs the full TravelPlannerOrchestrator pipeline and persists the result."""
 
 import asyncio
 import json
@@ -7,8 +7,6 @@ import sys
 import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from tasks import celery_app
 
 
 def _get_store():
@@ -87,9 +85,3 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
         job3["error"] = str(e)
         redis_client.setex(f"job:{job_id}", 86400, json.dumps(job3))
         await debug_logger.push_event(job_id, "job_error", None, {"error": str(e)})
-
-
-@celery_app.task(name="tasks.run_planning_job.run_planning_job_task")
-def run_planning_job_task(job_id: str, pre_built_stops=None, pre_selected_accommodations=None):
-    """Runs TravelPlannerOrchestrator.run() in asyncio event loop."""
-    asyncio.run(_run_job(job_id, pre_built_stops, pre_selected_accommodations))

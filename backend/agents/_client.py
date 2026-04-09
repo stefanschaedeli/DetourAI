@@ -1,18 +1,23 @@
-"""Shared Anthropic client factory — reads env vars at call time, not import time."""
+"""Shared Anthropic client factory — singleton instance shared across all agents."""
 import os
 import anthropic
 from utils.settings_store import get_setting
 
+_client: anthropic.Anthropic = None
+
 
 def get_client() -> anthropic.Anthropic:
-    """Return an Anthropic client using the current ANTHROPIC_API_KEY env var."""
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise RuntimeError(
-            "ANTHROPIC_API_KEY ist nicht gesetzt. "
-            "Bitte backend/.env mit dem API-Key erstellen."
-        )
-    return anthropic.Anthropic(api_key=api_key)
+    """Return the shared Anthropic client, creating it on first call."""
+    global _client
+    if _client is None:
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "ANTHROPIC_API_KEY ist nicht gesetzt. "
+                "Bitte backend/.env mit dem API-Key erstellen."
+            )
+        _client = anthropic.Anthropic(api_key=api_key)
+    return _client
 
 
 def get_model(prod_model: str, agent_key: str = None) -> str:
