@@ -1,3 +1,4 @@
+"""Travel planner orchestrator — coordinates all agent phases from route to day planning."""
 import asyncio
 import json
 import os
@@ -19,6 +20,14 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
 
 class TravelPlannerOrchestrator:
+    """Coordinates the full planning pipeline: route building, research, day planning, and analysis.
+
+    Phases:
+      1. Route — RouteArchitectAgent per transit leg; RegionPlannerAgent for explore legs
+      2. Research — parallel ActivitiesAgent, RestaurantsAgent, TravelGuideAgent per stop
+      3. Day Planning — DayPlannerAgent assembles the complete itinerary
+      4. Analysis — TripAnalysisAgent enriches the plan with trip-level insights
+    """
 
     def __init__(self, request: TravelRequest, job_id: str):
         self.request = request
@@ -39,6 +48,7 @@ class TravelPlannerOrchestrator:
         store.setex(f"job:{self.job_id}", 86400, json.dumps(job))
 
     async def progress(self, event_type: str, agent_id, data: dict, percent: int = 0):
+        """Push a progress SSE event for this job via the debug_logger event bus."""
         await debug_logger.push_event(self.job_id, event_type, agent_id, data, percent)
 
     async def _check_quota_mid_job(self, user_id: Optional[int]) -> None:
@@ -60,6 +70,7 @@ class TravelPlannerOrchestrator:
 
     async def run(self, pre_built_stops=None, pre_selected_accommodations=None,
                   pre_all_accommodation_options=None, user_id: Optional[int] = None) -> dict:
+        """Execute all planning phases and return the final travel plan dict."""
         self._user_id = user_id
         req = self.request
         job_id = self.job_id
