@@ -6105,7 +6105,7 @@ strong.req-keyword {
 }
 
 .mode-card {
-  background: var(--bg-surface);
+  background: var(--bg-elevated);
   border-radius: 20px;
   padding: 2rem 1.75rem;
   flex: 1 1 260px;
@@ -6114,15 +6114,17 @@ strong.req-keyword {
   flex-direction: column;
   gap: 1rem;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.08));
   opacity: 0;
   animation: modeFadeIn 0.4s ease forwards;
 }
 
 .mode-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  border-color: var(--accent-light, rgba(124, 107, 224, 0.4));
 }
 
 .mode-card:nth-child(1) { animation-delay: 0s; }
