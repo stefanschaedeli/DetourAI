@@ -2,7 +2,7 @@
 
 > An AI-powered road trip planner that builds a personalised day-by-day travel guide through an interactive, multi-agent conversation with Claude.
 
-[![Current Version](https://img.shields.io/badge/version-v9.5.27-blue)](#releases)
+[![Current Version](https://img.shields.io/badge/version-v12.0.0-blue)](#releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](#license)
 [![Stack](https://img.shields.io/badge/stack-FastAPI%20·%20Vanilla%20JS%20·%20Redis%20·%20Docker-orange)](#tech-stack)
 [![Agents](https://img.shields.io/badge/AI%20agents-10%20Claude%20agents-purple)](#ai-agents)
@@ -529,20 +529,38 @@ DetourAI/
 │   ├── index.html
 │   ├── styles.css
 │   └── js/
-│       ├── state.js                   # global S object + localStorage
-│       ├── api.js                     # all fetch() + SSE calls
-│       ├── form.js                    # 5-step form + legs builder
-│       ├── route-builder.js           # route builder + explore UI
-│       ├── accommodation.js           # parallel acc loading + grid
-│       ├── progress.js                # SSE progress handlers
-│       ├── guide.js                   # 4-tab travel guide
-│       ├── travels.js                 # saved trips drawer
-│       ├── maps.js                    # map rendering helpers
-│       ├── loading.js                 # loading state UI
-│       ├── sse-overlay.js             # SSE progress overlay
-│       ├── auth.js                    # frontend auth token management
-│       ├── router.js                  # client-side SPA routing
-│       ├── settings.js                # user settings + quota UI
+│       ├── core/                      # foundation modules
+│       │   ├── state.js               # global S object + localStorage helpers
+│       │   ├── auth.js                # JWT token management + session restore
+│       │   ├── router.js              # client-side SPA routing
+│       │   ├── api.js                 # all fetch() + SSE calls
+│       │   ├── i18n.js                # translation loader (de/en/hi)
+│       │   └── loading.js             # loading state UI
+│       ├── maps/                      # Google Maps modules
+│       │   ├── maps-core.js           # map init, markers, autocomplete
+│       │   ├── maps-images.js         # Place photos + fallback chain
+│       │   ├── maps-routes.js         # driving route polylines
+│       │   └── maps-guide.js          # guide tab map + POI markers
+│       ├── communication/             # SSE protocol
+│       │   ├── sse-client.js          # SSE connection lifecycle
+│       │   ├── sse-overlay.js         # spinner overlay during planning
+│       │   └── progress.js            # debug log + stops timeline
+│       ├── guide/                     # travel guide viewer
+│       │   ├── guide-core.js          # tab switching + entry point
+│       │   ├── guide-overview.js      # overview tab + trip analysis
+│       │   ├── guide-stops.js         # stops tab cards
+│       │   ├── guide-days.js          # day-by-day tab
+│       │   ├── guide-map.js           # guide map tab
+│       │   ├── guide-edit.js          # inline stop editing
+│       │   └── guide-share.js         # PDF/PPTX export + share
+│       ├── features/                  # planning pipeline + standalone pages
+│       │   ├── form.js                # 5-step form + legs builder
+│       │   ├── route-builder.js       # route builder + explore UI
+│       │   ├── accommodation.js       # parallel acc loading + grid
+│       │   ├── travels.js             # saved trips drawer
+│       │   ├── settings.js            # user settings + quota UI
+│       │   ├── sidebar.js             # collapsible sidebar nav
+│       │   └── feedback.js            # user feedback modal
 │       └── types.d.ts                 # generated from OpenAPI
 ├── docs/
 │   └── database.md                    # DB schema + API reference
@@ -562,6 +580,34 @@ DetourAI/
 ---
 
 ## Releases
+
+### v12.0.0 — Project-Wide Documentation Standard (2026-04-08)
+
+Complete end-to-end application of a project-wide code documentation standard across all 66 source files.
+
+- **English-first comments** — all code comments, docstrings, and internal documentation now in English; user-facing strings remain in the configured language
+- **Python module docstrings** — every `.py` file (except `__init__.py`) has a one-line module docstring as the first statement
+- **Python class & function docstrings** — all non-Pydantic classes and functions with 3+ parameters have docstrings explaining their purpose
+- **JS file header contracts** — every `.js` file starts with a three-line dependency contract (`// Description / Reads: / Provides:`) making module dependencies explicit
+- **JS function JSDoc** — all exported/global functions listed in `Provides:` have `/** one-line description */` blocks
+- **Section dividers** — `# ---` (Python) and `// ---` (JS) dividers separate logical sections in every file
+- **Zero functional changes** — purely documentation; all 319 tests pass unchanged
+
+### v11.x — i18n, AI Quality & Codebase Architecture
+
+- **Multi-language support** — full de/en/hi i18n across frontend and backend; language switcher in UI
+- **RegionPlanner country names** — region names always include country (e.g. "Peloponnes, Griechenland") to prevent geocoding ambiguity
+- **Frontend JS modularisation** — 27 JS files reorganised from flat directory into 5 specialised worker folders (`core/`, `maps/`, `communication/`, `guide/`, `features/`), each with its own `CLAUDE.md`
+- **Truncated JSON repair** — `json_parser.py` automatically repairs truncated Claude responses to prevent job failures
+- **Explore mode start-point fix** — user's departure point correctly preserved through explore mode planning
+- **SSE message keys** — progress events carry language-independent `message_key` fields for i18n-safe frontend rendering
+
+### v10.x — Route Editing & Stop Management
+
+- **Stop replacement** — swap any stop in a saved trip; async Celery job re-runs all research for the new destination
+- **Add / remove / reorder stops** — full CRUD on the stop list of a saved trip
+- **Update nights** — adjust the night count per stop and trigger day plan recalculation
+- **Route edit locking** — optimistic locking prevents concurrent edits from corrupting trip state
 
 ### v9.x — Token Tracking & Quota Enforcement
 
