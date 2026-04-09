@@ -800,6 +800,12 @@ function _listenForNightsComplete(jobId, travelId) {
       alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
       renderGuide(S.result, 'stops');
     },
+    onerror: function() {
+      _nightsSSE.close();
+      progressOverlay.close();
+      _unlockEditing();
+      alert('Verbindung verloren beim Aktualisieren der Nächte.');
+    },
   });
 }
 
@@ -944,6 +950,7 @@ async function _doManualReplace(travelId, stopId) {
   } catch (err) {
     _hideReplaceProgress();
     if (btn) btn.disabled = false;
+    _unlockEditing();
     alert('Fehler: ' + err.message);
   }
 }
@@ -987,6 +994,7 @@ async function _doSearchReplace(travelId, stopId) {
   } catch (err) {
     _hideReplaceProgress();
     if (btn) btn.disabled = false;
+    _unlockEditing();
     alert('Fehler: ' + err.message);
   }
 }
@@ -998,6 +1006,7 @@ async function _selectSearchOption(travelId, jobId, optionIndex) {
     _listenForReplaceComplete(res.job_id, travelId);
   } catch (err) {
     _hideReplaceProgress();
+    _unlockEditing();
     alert('Fehler: ' + err.message);
   }
 }

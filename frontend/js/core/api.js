@@ -1,7 +1,7 @@
 'use strict';
 
 // API — fetch wrappers with auth injection and all apiXxx() backend call helpers.
-// Reads: authGetToken, authSilentRefresh, showLoginRequired (auth.js), showLoading, hideLoading (loading.js), S (state.js), t (i18n.js), getLocale (i18n.js), SSEClient (communication/sse-client.js).
+// Reads: authGetToken, authSilentRefresh, showLoginRequired (auth.js), showLoading, hideLoading (unified-overlay.js), S (state.js), t (i18n.js), getLocale (i18n.js), SSEClient (communication/sse-client.js).
 // Provides: apiLogin, apiLogout, apiGetMe, apiChangePassword, apiInitJob, apiPlanTrip, apiPlanLocation, apiSelectStop, apiConfirmRoute, apiStartAccommodations, apiConfirmAccommodations, apiSelectAccommodation, apiStartPlanning, apiConfirmAccommodationsQuiet, apiStartPlanningQuiet, apiGetResult, apiPatchJob, apiResearchAccommodation, apiRecomputeOptions, apiSetRundreiseMode, apiSkipToLegEnd, apiSkipSegment, replaceRegion, recomputeRegions, confirmRegions, geocodeRegion, apiSaveTravel, apiGetTravels, apiGetTravel, apiDeleteTravel, apiReplanTravel, apiUpdateTravel, apiGetShared, apiShareTravel, apiUnshareTravel, apiLogError, apiGetSettings, apiSaveSettings, apiResetSettings, apiReplaceStop, apiRemoveStop, apiAddStop, apiReorderStops, apiReplaceStopSelect, apiUpdateNights, openSSE, showToast.
 
 // ---------------------------------------------------------------------------
