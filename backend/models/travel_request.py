@@ -43,7 +43,7 @@ class TravelRequest(BaseModel):
     activities_radius_km: int = Field(default=30, ge=1, le=200)
 
     # Route rules (global — apply to all legs)
-    max_drive_hours_per_day: float = Field(default=4.5, ge=0.5, le=16)
+    max_drive_hours_per_day: float = Field(default=4.5, ge=0, le=16)  # 0 = location mode (no driving)
     min_nights_per_stop: int = Field(default=1, ge=1, le=14)
     max_nights_per_stop: int = Field(default=5, ge=1, le=30)
     proximity_origin_pct: int = Field(default=10, ge=0, le=30)   # % of segment km — min distance from trip start
