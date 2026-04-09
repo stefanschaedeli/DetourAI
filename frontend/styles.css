@@ -1700,64 +1700,125 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   margin: 0;
 }
 
-.guide-split-panel {
+/* ============================================================ Guide Layout — horizontal collapsible map */
+
+.guide-layout {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
 }
 
-.guide-map-panel {
-  position: fixed;
-  left: 0;
+/* Collapsible map section */
+.guide-map-section {
+  position: sticky;
   top: 0;
-  width: 45%;
-  height: 100vh; /* fallback for older browsers */
-  height: 100dvh;
-  z-index: 1;
+  z-index: 10;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
 }
 
-.guide-map-panel .guide-map-container {
+.guide-map-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   width: 100%;
-  height: 100%;
+  padding: var(--space-xs) var(--space-md);
+  background: var(--bg-secondary);
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
 }
 
-/* Override old #guide-map styles when inside split panel */
-.guide-map-panel #guide-map {
+.guide-map-toggle:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.guide-map-toggle__chevron {
+  font-size: 0.7rem;
+  transition: transform 0.25s ease;
+  display: inline-block;
+}
+
+.guide-map-section.is-collapsed .guide-map-toggle__chevron {
+  transform: rotate(-90deg);
+}
+
+/* Collapsible body */
+.guide-map-body {
+  max-height: 50vh;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+
+.guide-map-section.is-collapsed .guide-map-body {
+  max-height: 0;
+}
+
+/* Map container inside the collapsible */
+.guide-map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 45vh;
+}
+
+.guide-map-wrapper .guide-map-container,
+.guide-map-wrapper #guide-map {
+  width: 100%;
   height: 100%;
   border-radius: 0;
   border: none;
   margin-top: 0;
 }
 
-.guide-content-panel {
-  margin-left: 45%;
-  width: 55%;
-  min-height: 100dvh;
+/* Filter pill buttons */
+.guide-map-filters {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.guide-map-filter-btn {
+  padding: 2px var(--space-sm);
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.guide-map-filter-btn.active {
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-blue);
+}
+
+/* Full-width content section */
+.guide-content-section {
+  width: 100%;
   padding: var(--space-lg);
-  overflow-y: auto;
   background: var(--bg-primary);
 }
 
-/* Tablet: 50/50 split */
-@media (max-width: 1099px) and (min-width: 768px) {
-  .guide-map-panel { width: 50%; }
-  .guide-content-panel { margin-left: 50%; width: 50%; }
-}
-
-/* Mobile: stacked layout */
+/* Mobile: reduce map height, start collapsed */
 @media (max-width: 767px) {
-  .guide-split-panel {
-    flex-direction: column;
-  }
-  .guide-map-panel {
-    position: sticky;
-    top: 0;
-    width: 100%;
+  .guide-map-wrapper {
     height: 30vh;
-    z-index: 10;
   }
-  .guide-content-panel {
-    margin-left: 0;
-    width: 100%;
+  .guide-map-body {
+    max-height: 35vh;
+  }
+  .guide-content-section {
     padding: var(--space-md);
   }
 }

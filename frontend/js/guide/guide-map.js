@@ -2,7 +2,8 @@
 // Reads: S (state.js), activeTab/_activeStopId (guide-core.js), GoogleMaps (maps.js).
 // Provides: _initGuideMap, _setupGuideMap, _updateMapForTab, _onMarkerClick,
 //           _scrollToAndHighlightCard, _initScrollSync, _scrollToGuideStop,
-//           _lazyLoadEntityImages, _getActivityIcon
+//           _lazyLoadEntityImages, _getActivityIcon,
+//           _initMapCollapse, _initMapFilters
 'use strict';
 
 let _guideMarkers = [];
@@ -107,6 +108,15 @@ function _setupGuideMap(plan) {
   GoogleMaps.setGuideMarkers(plan, _onMarkerClick);
   _guideMapInitialized = true;
 
+  // Load hotel + activity markers async (markers appear as coordinates resolve)
+  GoogleMaps.setGuideEntityMarkers(plan);
+
+  // Wire collapsible map toggle
+  _initMapCollapse(map);
+
+  // Wire filter pill buttons
+  _initMapFilters();
+
   // Enable click-to-add-stop on empty map areas (D-10)
   GoogleMaps.enableClickToAdd(map, _onMapClickToAdd);
 
@@ -125,6 +135,60 @@ function _setupGuideMap(plan) {
     if (overlay && overlay.classList.contains('expanded')) {
       overlay.classList.remove('expanded');
       overlay.classList.add('collapsed');
+    }
+  });
+}
+
+/** Wires the collapse/expand toggle button for the guide map section. */
+function _initMapCollapse(map) {
+  const section = document.getElementById('guide-map-section');
+  const toggle  = document.getElementById('guide-map-toggle');
+  if (!section || !toggle) return;
+
+  // On mobile: start collapsed
+  if (window.innerWidth <= 767) {
+    section.classList.add('is-collapsed');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+
+  toggle.addEventListener('click', function () {
+    const collapsed = section.classList.toggle('is-collapsed');
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    // Trigger map resize after expand animation completes
+    if (!collapsed) {
+      setTimeout(() => {
+        if (typeof GoogleMaps !== 'undefined' && GoogleMaps.guideMap) {
+          google.maps.event.trigger(GoogleMaps.guideMap, 'resize');
+        }
+      }, 350);
+    }
+  });
+}
+
+/** Wires the marker-type filter pill buttons. */
+function _initMapFilters() {
+  const container = document.getElementById('guide-map-filters');
+  if (!container) return;
+
+  container.addEventListener('click', function (e) {
+    const btn = e.target.closest('.guide-map-filter-btn');
+    if (!btn) return;
+    btn.classList.toggle('active');
+
+    // Collect all active filter types
+    const activeTypes = Array.from(container.querySelectorAll('.guide-map-filter-btn.active'))
+      .map(b => b.dataset.filterType);
+
+    // Toggle stop markers (numbered pins)
+    const showStops = activeTypes.indexOf('stops') !== -1;
+    window._mapsGuideMarkers.forEach(m => {
+      if (m && m._div) m._div.style.display = showStops ? '' : 'none';
+    });
+
+    // Toggle entity markers (hotels/activities)
+    const entityTypes = activeTypes.filter(t => t !== 'stops');
+    if (typeof GoogleMaps !== 'undefined') {
+      GoogleMaps.filterGuideEntityMarkers(entityTypes);
     }
   });
 }

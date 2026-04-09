@@ -31,7 +31,7 @@
 <header class="app-header">
   <div class="app-logo" onclick="Router.navigate('/')" style="cursor:pointer" title="Zur Startseite" data-i18n="header.home_link_title" data-i18n-attr="title">DetourAI</div>
   <div class="app-subtitle" data-i18n="header.subtitle">KI-gestützter Reiseplaner</div>
-  <span class="app-version">v12.1.14</span>
+  <span class="app-version">v12.1.16</span>
   <button class="btn-my-travels" onclick="openTravelsDrawer()" data-i18n="header.my_travels">Meine Reisen</button>
   <button class="btn-clear-data" onclick="clearAppData()" title="Daten löschen und neu starten" data-i18n="header.reset_data">Neu starten</button>
   <span id="header-username" style="display:none" class="header-username"></span>
@@ -552,21 +552,35 @@
 
   <!-- ============================================================ Travel guide -->
   <section class="section section--full-width" id="travel-guide">
-    <div class="guide-split-panel">
-      <!-- LEFT: Map panel (fixed, persistent) -->
-      <div class="guide-map-panel">
-        <div id="guide-map" class="guide-map-container"></div>
-        <div class="sidebar-overlay collapsed" id="sidebar-overlay">
-          <button class="sidebar-overlay-toggle" onclick="toggleSidebarOverlay()" aria-label="Route-Uebersicht" data-i18n="guide.sidebar_overlay_aria" data-i18n-attr="aria-label">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
-          </button>
-          <div class="sidebar-overlay-content" id="sidebar-overlay-content"></div>
+    <div class="guide-layout">
+
+      <!-- Collapsible map strip -->
+      <div class="guide-map-section" id="guide-map-section">
+        <button class="guide-map-toggle" id="guide-map-toggle" aria-expanded="true" data-i18n="guide.map_toggle">
+          <span class="guide-map-toggle__chevron">▾</span>
+          Karte
+        </button>
+        <div class="guide-map-body" id="guide-map-body">
+          <div class="guide-map-wrapper">
+            <div id="guide-map" class="guide-map-container"></div>
+            <div class="sidebar-overlay collapsed" id="sidebar-overlay">
+              <button class="sidebar-overlay-toggle" onclick="toggleSidebarOverlay()" aria-label="Route-Uebersicht" data-i18n="guide.sidebar_overlay_aria" data-i18n-attr="aria-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+              </button>
+              <div class="sidebar-overlay-content" id="sidebar-overlay-content"></div>
+            </div>
+            <div class="click-to-add-popup" id="click-to-add-popup" style="display:none"></div>
+          </div>
+          <div class="guide-map-filters" id="guide-map-filters">
+            <button class="guide-map-filter-btn active" data-filter-type="stops" data-i18n="guide.filter_stops">Stopps</button>
+            <button class="guide-map-filter-btn active" data-filter-type="hotel" data-i18n="guide.filter_hotels">Hotels</button>
+            <button class="guide-map-filter-btn active" data-filter-type="activity" data-i18n="guide.filter_activities">Aktivitäten</button>
+          </div>
         </div>
-        <div class="click-to-add-popup" id="click-to-add-popup" style="display:none"></div>
       </div>
 
-      <!-- RIGHT: Content panel (scrollable) -->
-      <div class="guide-content-panel" id="guide-content-panel">
+      <!-- Content panel (full width) -->
+      <div class="guide-content-section" id="guide-content-panel">
         <div class="guide-header-row">
           <h2 data-i18n="guide.title">Ihr Reiseplan</h2>
           <div class="guide-header-actions">

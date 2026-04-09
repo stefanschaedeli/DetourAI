@@ -9,10 +9,11 @@ const GoogleMaps = (() => {
   // ---------------------------------------------------------------------------
   // Shared state — other maps-*.js files access these via window.*
   // ---------------------------------------------------------------------------
-  window._mapsImageCache    = new Map();   // used by maps-images.js
-  window._mapsCoordCache    = new Map();   // used here in resolveEntityCoordinates
-  window._mapsGuideMarkers  = [];          // used by maps-guide.js
-  window._mapsGuidePolyline = null;        // used by maps-guide.js
+  window._mapsImageCache         = new Map();   // used by maps-images.js
+  window._mapsCoordCache         = new Map();   // used here in resolveEntityCoordinates
+  window._mapsGuideMarkers       = [];          // used by maps-guide.js
+  window._mapsGuidePolyline      = null;        // used by maps-guide.js
+  window._mapsGuideEntityMarkers = [];          // used by maps-guide.js (hotel/activity pins)
 
   let _routeMap = null;
   let _guideMap = null;

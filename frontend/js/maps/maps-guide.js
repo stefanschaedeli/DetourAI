@@ -1,11 +1,12 @@
 'use strict';
 
-// Maps Guide — persistent guide map state: stop markers, ferry lines, pan/fit/dim.
+// Maps Guide — persistent guide map state: stop markers, entity pins, ferry lines, pan/fit/dim.
 // Reads: GoogleMaps (maps-core.js), GoogleMaps.renderDrivingRoute (maps-routes.js),
-//        window._mapsGuideMarkers, window._mapsGuidePolyline (maps-core.js).
+//        window._mapsGuideMarkers, window._mapsGuidePolyline, window._mapsGuideEntityMarkers (maps-core.js).
+//        _buildStopMapPin, _buildStopMapPopup (guide-stops.js globals).
 // Provides: getGuideMap, clearGuideMarkers, setGuideMarkers, highlightGuideMarker,
 //           panToStop, fitAllStops, fitDayStops, dimNonFocusedMarkers, restoreAllMarkers,
-//           enableClickToAdd.
+//           enableClickToAdd, setGuideEntityMarkers, clearGuideEntityMarkers, filterGuideEntityMarkers.
 
 Object.assign(GoogleMaps, (() => {
 
@@ -27,6 +28,113 @@ Object.assign(GoogleMaps, (() => {
       if (typeof window._mapsGuidePolyline.setMap === 'function') window._mapsGuidePolyline.setMap(null);
       window._mapsGuidePolyline = null;
     }
+    clearGuideEntityMarkers();
+  }
+
+  /** Remove all hotel/activity entity markers from the guide map. */
+  function clearGuideEntityMarkers() {
+    window._mapsGuideEntityMarkers.forEach(m => {
+      if (m && typeof m.setMap   === 'function') m.setMap(null);
+      if (m && typeof m.onRemove === 'function') m.onRemove();
+    });
+    window._mapsGuideEntityMarkers = [];
+  }
+
+  /**
+   * Async: place hotel and activity markers for every stop on the main guide map.
+   * Coordinates are resolved via resolveEntityCoordinates (cached per session).
+   * Uses _buildStopMapPin / _buildStopMapPopup from guide-stops.js (globals).
+   */
+  async function setGuideEntityMarkers(plan) {
+    const map = GoogleMaps.guideMap;
+    if (!map) return;
+    const stops = plan.stops || [];
+
+    // Build entity list — hotels + top activities only (keep density manageable)
+    const entities = [];
+    stops.forEach(stop => {
+      const acc = stop.accommodation;
+      if (acc && acc.name) {
+        entities.push({
+          key: 'gm-hotel-' + stop.id,
+          placeId: acc.place_id || null,
+          name: acc.name,
+          stopLat: stop.lat, stopLng: stop.lng,
+          searchType: 'hotel',
+          type: 'hotel', data: acc, stopId: String(stop.id),
+        });
+      }
+      (stop.top_activities || []).forEach((act, i) => {
+        if (!act.name) return;
+        entities.push({
+          key: 'gm-act-' + stop.id + '-' + i,
+          placeId: act.place_id || null,
+          lat: act.lat || null,
+          lng: act.lon || null,   // API uses "lon" not "lng"
+          name: act.name,
+          stopLat: stop.lat, stopLng: stop.lng,
+          searchType: 'activity',
+          type: 'activity', data: act, stopId: String(stop.id),
+        });
+      });
+    });
+
+    if (entities.length === 0) return;
+
+    let coords;
+    try {
+      coords = await GoogleMaps.resolveEntityCoordinates(entities);
+    } catch (e) {
+      return;
+    }
+    if (!coords || coords.size === 0) return;
+
+    let _openInfoWindow = null;
+    for (const ent of entities) {
+      const pos = coords.get(ent.key);
+      if (!pos) continue;
+
+      // Use pin/popup builders from guide-stops.js (loaded as globals)
+      const pinHtml   = typeof _buildStopMapPin  === 'function' ? _buildStopMapPin(ent.type, ent.data)  : '<div class="stop-map-pin">📍</div>';
+      const popupHtml = typeof _buildStopMapPopup === 'function' ? _buildStopMapPopup(ent.type, ent.data) : '<div>' + esc(ent.name) + '</div>';
+      const infoWindow = new google.maps.InfoWindow({ content: popupHtml });
+
+      let hoverTimeout = null;
+      const overlay = GoogleMaps.createDivMarker(map, pos, pinHtml, null);
+      overlay._entityType = ent.type;
+      overlay._stopId     = ent.stopId;
+
+      // Hover → open info window
+      const origOnAdd = overlay.onAdd;
+      overlay.onAdd = function () {
+        origOnAdd.call(this);
+        const div = this._div;
+        if (!div) return;
+        div.addEventListener('mouseenter', () => {
+          clearTimeout(hoverTimeout);
+          if (_openInfoWindow) _openInfoWindow.close();
+          infoWindow.setPosition(pos);
+          infoWindow.open(map);
+          _openInfoWindow = infoWindow;
+        });
+        div.addEventListener('mouseleave', () => {
+          hoverTimeout = setTimeout(() => {
+            infoWindow.close();
+            if (_openInfoWindow === infoWindow) _openInfoWindow = null;
+          }, 300);
+        });
+      };
+
+      window._mapsGuideEntityMarkers.push(overlay);
+    }
+  }
+
+  /** Show/hide entity markers by type array, e.g. ['hotel', 'activity']. */
+  function filterGuideEntityMarkers(visibleTypes) {
+    window._mapsGuideEntityMarkers.forEach(m => {
+      if (!m || !m._div) return;
+      m._div.style.display = visibleTypes.indexOf(m._entityType) !== -1 ? '' : 'none';
+    });
   }
 
   /** Place numbered stop markers and a driving route polyline for the full plan. */
@@ -141,11 +249,21 @@ Object.assign(GoogleMaps, (() => {
       m._div.style.transition = 'opacity 0.3s ease';
       m._div.style.opacity = (m._stopId === undefined || focusedStopIds.indexOf(String(m._stopId)) === -1) ? '0.35' : '1';
     });
+    window._mapsGuideEntityMarkers.forEach(function (m) {
+      if (!m || !m._div) return;
+      m._div.style.transition = 'opacity 0.3s ease';
+      m._div.style.opacity = (m._stopId === undefined || focusedStopIds.indexOf(String(m._stopId)) === -1) ? '0.35' : '1';
+    });
   }
 
   /** Restore all markers to full opacity. */
   function restoreAllMarkers() {
     window._mapsGuideMarkers.forEach(function (m) {
+      if (!m || !m._div) return;
+      m._div.style.transition = 'opacity 0.3s ease';
+      m._div.style.opacity    = '1';
+    });
+    window._mapsGuideEntityMarkers.forEach(function (m) {
       if (!m || !m._div) return;
       m._div.style.transition = 'opacity 0.3s ease';
       m._div.style.opacity    = '1';
@@ -165,5 +283,6 @@ Object.assign(GoogleMaps, (() => {
   }
 
   return { getGuideMap, clearGuideMarkers, setGuideMarkers, highlightGuideMarker,
-           panToStop, fitAllStops, fitDayStops, dimNonFocusedMarkers, restoreAllMarkers, enableClickToAdd };
+           panToStop, fitAllStops, fitDayStops, dimNonFocusedMarkers, restoreAllMarkers, enableClickToAdd,
+           setGuideEntityMarkers, clearGuideEntityMarkers, filterGuideEntityMarkers };
 })());
