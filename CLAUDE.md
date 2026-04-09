@@ -95,6 +95,7 @@ git push && git push --tags
 - Version scheme: `x.x.y` — only increment `y` for each change
 - Check current version with `git tag --sort=-v:refname | head -1`
 - Commit message in German, type prefix in English (fix/feat/perf/docs/refactor)
+- **REQUIRED: update `<span class="app-version">` in `frontend/index.html` to match the new tag on every release**
 
 ---
 
