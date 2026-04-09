@@ -2,7 +2,7 @@
 
 // Form — 5-step trip planning wizard; collects legs, preferences, and budget.
 // Reads: S (state.js), Router (router.js), GoogleMaps (maps-core.js), t (i18n.js), esc (core).
-// Provides: initForm, goToStep, buildPayload, submitTrip, clearAppData, updateQuickSubmitBar, renderOrtsreiseForm, submitLocationTrip, showModePicker.
+// Provides: initForm, goToStep, buildPayload, submitTrip, clearAppData, updateQuickSubmitBar, renderOrtsreiseForm, submitLocationTrip, showModePicker, saveOrtsreiseToCache, restoreOrtsreiseForm.
 
 // ---------------------------------------------------------------------------
 // Initialisation
@@ -1254,6 +1254,10 @@ function renderOrtsreiseForm() {
   renderPreferredTags();
   renderChildren();
 
+  // Restore persisted values and wire auto-save listeners
+  restoreOrtsreiseForm();
+  _wireOrtsreiseSaveListeners();
+
   // Wire Google Places autocomplete if Maps API is ready
   _attachOrtsreiseAutocomplete();
 }
@@ -1266,9 +1270,9 @@ function saveOrtsreiseToCache() {
     locationNights: S.locationNights,
     startDate:      document.getElementById('ortsreise-start-date')?.value || '',
     description:    S.ortsreiseDescription,
-    maxActivities:  parseInt(document.getElementById('ortsreise-max-activities')?.value) || 5,
-    maxRestaurants: parseInt(document.getElementById('ortsreise-max-restaurants')?.value) || 3,
-    hotelRadius:    parseInt(document.getElementById('ortsreise-hotel-radius')?.value) || 10,
+    maxActivities:  parseInt(document.getElementById('ortsreise-max-activities')?.value, 10) || 5,
+    maxRestaurants: parseInt(document.getElementById('ortsreise-max-restaurants')?.value, 10) || 3,
+    hotelRadius:    parseInt(document.getElementById('ortsreise-hotel-radius')?.value, 10) || 10,
     logVerbosity:   document.getElementById('ortsreise-log-verbosity')?.value || 'normal',
   };
   lsSet(LS_FORM, existing);
@@ -1344,6 +1348,7 @@ function _attachOrtsreiseAutocomplete() {
       S.locationQuery = place.formatted_address;
       const input = document.getElementById('ortsreise-location');
       if (input) input.value = place.formatted_address;
+      saveOrtsreiseToCache();
     }
   });
 }
