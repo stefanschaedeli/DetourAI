@@ -204,7 +204,7 @@ function _openAddStopModal() {
   locInput.type = 'text';
   locInput.id = 'add-stop-location';
   locInput.className = 'form-input';
-  locInput.placeholder = 'z.B. Lyon, Marseille...';
+  locInput.placeholder = t('guide.edit.location_placeholder');
   locGroup.appendChild(locLabel);
   locGroup.appendChild(locInput);
   content.appendChild(locGroup);
@@ -221,7 +221,7 @@ function _openAddStopModal() {
   stops.forEach(s => {
     const opt = document.createElement('option');
     opt.value = s.id;
-    opt.textContent = s.region + ' (Stop ' + s.id + ')';
+    opt.textContent = s.region + ' ' + t('guide.edit.stop_label').replace('{id}', s.id);
     afterSelect.appendChild(opt);
   });
   afterGroup.appendChild(afterLabel);
@@ -866,7 +866,7 @@ function openReplaceStopModal(stopId, currentNights) {
       <div class="replace-hints-section" style="margin-bottom:16px">
         <label style="display:block;font-size:var(--text-sm,14px);color:var(--text-secondary,#666);margin-bottom:4px">${esc(t('guide.edit.replace_hints_label'))}</label>
         <input type="text" id="replace-stop-hints" class="replace-input"
-          placeholder="z.B. mehr Strand, weniger Fahrzeit"
+          placeholder="${t('guide.edit.replace_hints_placeholder')}"
           style="width:100%;padding:12px 16px;font-size:16px;border:1px solid var(--border-default,#ddd);border-radius:8px;box-sizing:border-box" />
       </div>
 
@@ -990,9 +990,9 @@ async function _doSearchReplace(travelId, stopId) {
         </div>
         <p class="replace-option-teaser">${esc(opt.teaser || '')}</p>
         <div class="replace-option-meta">
-          ${opt.drive_hours ? `${opt.drive_hours}h Fahrt` : ''}
+          ${opt.drive_hours ? `${opt.drive_hours}${t('guide.edit.drive_label')}` : ''}
           ${opt.drive_km ? ` · ${opt.drive_km} km` : ''}
-          ${opt.nights ? ` · ${opt.nights} Nacht${opt.nights !== 1 ? 'e' : ''}` : ''}
+          ${opt.nights ? ` · ${opt.nights} ${opt.nights !== 1 ? t('guide.edit.night_plural') : t('guide.edit.night_singular')}` : ''}
         </div>
       </div>
     `).join('');

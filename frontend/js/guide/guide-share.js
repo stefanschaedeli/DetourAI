@@ -19,7 +19,7 @@ function _renderShareToggle(travelId, shareToken) {
     : '';
   return `<div class="share-control" data-travel-id="${travelId}">
     <label class="toggle-switch">
-      <input type="checkbox" ${checked} aria-label="Teilen aktivieren"
+      <input type="checkbox" ${checked} aria-label="${t('guide.share.toggle_label')}"
              onchange="_handleShareToggle(${travelId}, this.checked)">
       <span class="toggle-slider"></span>
     </label>
