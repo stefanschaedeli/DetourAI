@@ -165,7 +165,7 @@ function validateStep(n) {
     const food = parseInt(document.getElementById('budget-food-pct')?.value) || 0;
     const act  = parseInt(document.getElementById('budget-act-pct')?.value)  || 0;
     if (acc + food + act !== 100) {
-      alert(t('form.budget_must_equal_100'));
+      showToast(t('form.budget_must_equal_100'), 'warning');
       return false;
     }
   }
@@ -203,7 +203,7 @@ async function quickSubmitTrip() {
     if (l.mode === "explore") return datesOk && l.start_location && l.explore_description && l.explore_description.trim();
     return datesOk && l.start_location && l.end_location;
   });
-  if (!legsReady) { alert(t('form.complete_all_segments')); return; }
+  if (!legsReady) { showToast(t('form.complete_all_segments'), 'warning'); return; }
   await submitTrip();
 }
 
@@ -441,7 +441,7 @@ function addLeg() {
   if (prevLeg.start_date && prevLeg.end_date) {
     const totalDays = dateDiffDays(prevLeg.start_date, prevLeg.end_date);
     if (totalDays < 2) {
-      alert(t('form.segment_too_short_to_split'));
+      showToast(t('form.segment_too_short_to_split'), 'warning');
       return;
     }
     const halfDays = Math.max(1, Math.floor(totalDays / 2));
@@ -918,7 +918,7 @@ async function submitTrip() {
     if (msg.startsWith('HTTP 402:')) {
       _showFormError(msg.replace('HTTP 402: ', ''));
     } else {
-      alert(t('form.trip_planning_error') + ' ' + msg);
+      showToast(t('form.trip_planning_error') + ' ' + msg, 'error');
     }
     btn.disabled = false;
     btn.textContent = t('form.plan_trip');
@@ -1411,6 +1411,6 @@ async function submitLocationTrip() {
     }
     const msg = err.message || '';
     if (errEl) { errEl.textContent = t('form.trip_planning_error') + ' ' + msg; errEl.style.display = ''; }
-    else { alert(t('form.trip_planning_error') + ' ' + msg); }
+    else { showToast(t('form.trip_planning_error') + ' ' + msg, 'error'); }
   }
 }

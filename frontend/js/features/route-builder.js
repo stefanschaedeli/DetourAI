@@ -833,7 +833,7 @@ async function confirmRoute() {
     await apiStartAccommodations(S.jobId);
 
   } catch (err) {
-    alert(t('route_builder.confirm_error') + ' ' + err.message);
+    showToast(t('route_builder.confirm_error') + ' ' + err.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = t('route_builder.confirm_route'); }
     S.confirmingRoute = false;
   }
@@ -1063,7 +1063,7 @@ async function applyRouteAdjust() {
   const viaLoc = (document.getElementById('modal-via-input')?.value || '').trim();
 
   if (action === 'add_via_point' && !viaLoc) {
-    alert(t('route_builder.enter_location'));
+    showToast(t('route_builder.enter_location'), 'warning');
     return;
   }
 

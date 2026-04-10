@@ -5569,6 +5569,30 @@ strong.req-keyword {
   justify-content: center;
   z-index: 1000;
 }
+/* Confirm modal — open/close animations */
+.modal-confirm-backdrop {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.modal-confirm-backdrop.modal-open {
+  opacity: 1;
+}
+.modal-confirm-backdrop .modal-content {
+  transform: scale(0.95) translateY(-8px);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0;
+}
+.modal-confirm-backdrop.modal-open .modal-content {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+.modal-confirm-backdrop.modal-closing {
+  opacity: 0;
+}
+.modal-confirm-backdrop.modal-closing .modal-content {
+  transform: scale(0.95) translateY(-8px);
+  opacity: 0;
+}
 .modal-content {
   background: var(--card, #fff);
   border-radius: 12px;
@@ -5884,6 +5908,35 @@ strong.req-keyword {
   background: #E3F2FD;
   color: #1565C0;
   border-left: 3px solid #90CAF9;
+}
+.app-toast--error {
+  background: #FFEBEE;
+  color: #B71C1C;
+  border-left: 3px solid #EF9A9A;
+}
+.app-toast--success {
+  background: #E8F5E9;
+  color: #1B5E20;
+  border-left: 3px solid #A5D6A7;
+}
+.app-toast__close {
+  margin-left: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  color: inherit;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.app-toast__close:hover { opacity: 1; }
+/* Persistent toasts need flex layout for text + close button */
+.app-toast:has(.app-toast__close) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 /* ---------------------------------------------------------------------------

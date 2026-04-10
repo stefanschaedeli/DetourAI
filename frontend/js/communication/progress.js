@@ -70,8 +70,8 @@ function _completeAnalysisTimelineRow() {
 }
 
 /** Prompt for confirmation, close the SSE stream, and navigate back to the home page. */
-function cancelPlanning() {
-  if (!confirm(t('progress.confirm_cancel'))) return;
+async function cancelPlanning() {
+  if (!await showConfirm(t('progress.confirm_cancel'))) return;
   if (S._sseSource) { S._sseSource.close(); S._sseSource = null; }
   Router.navigate('/');
 }

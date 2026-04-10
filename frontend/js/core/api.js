@@ -452,22 +452,104 @@ function openSSE(jobId, handlers) {
 }
 
 /**
- * Show a brief auto-dismissing toast notification.
+ * Show a toast notification.
  * @param {string} message
- * @param {'info'|'warning'} type
+ * @param {'info'|'warning'|'error'|'success'} type
+ * @param {{ persistent?: boolean }} [opts] - If persistent, skips auto-dismiss and shows close button.
  */
-function showToast(message, type) {
+function showToast(message, type, opts) {
+  const persistent = opts && opts.persistent;
   const toast = document.createElement('div');
   toast.className = `app-toast app-toast--${type}`;
-  toast.textContent = message;
+  if (persistent) {
+    // Persistent toasts need pointer-events for the close button
+    toast.style.pointerEvents = 'auto';
+    const text = document.createElement('span');
+    text.textContent = message;
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'app-toast__close';
+    closeBtn.setAttribute('aria-label', 'Schließen');
+    closeBtn.textContent = '×';
+    closeBtn.onclick = () => {
+      toast.classList.remove('visible');
+      setTimeout(() => toast.remove(), 300);
+    };
+    toast.appendChild(text);
+    toast.appendChild(closeBtn);
+  } else {
+    toast.textContent = message;
+  }
   // Stack above existing toasts
   const existing = document.querySelectorAll('.app-toast');
   const offset = 24 + existing.length * 48;
   toast.style.bottom = offset + 'px';
   document.body.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add('visible'));
-  setTimeout(() => {
-    toast.classList.remove('visible');
-    setTimeout(() => toast.remove(), 300);
-  }, 6000);
+  if (!persistent) {
+    setTimeout(() => {
+      toast.classList.remove('visible');
+      setTimeout(() => toast.remove(), 300);
+    }, 6000);
+  }
+}
+
+/**
+ * Show a styled confirmation modal.
+ * @param {string} message
+ * @returns {Promise<boolean>} Resolves true on confirm, false on cancel.
+ */
+function showConfirm(message) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop modal-confirm-backdrop';
+
+    const content = document.createElement('div');
+    content.className = 'modal-content';
+
+    const p = document.createElement('p');
+    p.textContent = message;
+
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-secondary';
+    cancelBtn.textContent = 'Abbrechen';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn btn-primary';
+    confirmBtn.textContent = 'Bestätigen';
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(confirmBtn);
+    content.appendChild(p);
+    content.appendChild(actions);
+    backdrop.appendChild(content);
+    document.body.appendChild(backdrop);
+
+    // Trigger open animation
+    requestAnimationFrame(() => backdrop.classList.add('modal-open'));
+
+    function close(result) {
+      backdrop.classList.add('modal-closing');
+      backdrop.classList.remove('modal-open');
+      setTimeout(() => backdrop.remove(), 200);
+      resolve(result);
+    }
+
+    confirmBtn.onclick = () => close(true);
+    cancelBtn.onclick = () => close(false);
+    // Close on backdrop click (outside modal-content)
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) close(false);
+    });
+    // Close on Escape key
+    function onKey(e) {
+      if (e.key === 'Escape') { document.removeEventListener('keydown', onKey); close(false); }
+    }
+    document.addEventListener('keydown', onKey);
+    // Remove key listener when modal closes
+    confirmBtn.addEventListener('click', () => document.removeEventListener('keydown', onKey), { once: true });
+    cancelBtn.addEventListener('click', () => document.removeEventListener('keydown', onKey), { once: true });
+  });
 }

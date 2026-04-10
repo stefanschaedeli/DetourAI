@@ -142,18 +142,18 @@ async function _executeRemoveStop(stopId) {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        alert('Fehler beim Entfernen: ' + (data.error || 'Unbekannter Fehler'));
+        showToast('Fehler beim Entfernen: ' + (data.error || 'Unbekannter Fehler'), 'error');
       },
       onerror: () => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        alert('Verbindung verloren beim Entfernen des Stopps.');
+        showToast('Verbindung verloren beim Entfernen des Stopps.', 'error', { persistent: true });
       },
     });
   } catch (err) {
     _unlockEditing();
-    alert('Fehler: ' + err.message);
+    showToast('Fehler: ' + err.message, 'error');
   }
 }
 
@@ -169,7 +169,7 @@ function _openAddStopModal() {
 
   const savedId = plan._saved_travel_id;
   if (!savedId) {
-    alert('Reise muss zuerst gespeichert werden.');
+    showToast('Reise muss zuerst gespeichert werden.', 'warning');
     return;
   }
 
@@ -264,7 +264,7 @@ function _openAddStopModal() {
 /** Submits the add-stop request from the modal form and refreshes the guide on success. */
 async function _executeAddStop() {
   const location = (document.getElementById('add-stop-location')?.value || '').trim();
-  if (!location) { alert('Bitte Ortsnamen eingeben'); return; }
+  if (!location) { showToast('Bitte Ortsnamen eingeben', 'warning'); return; }
 
   const afterId = parseInt(document.getElementById('add-stop-after')?.value) || 1;
   const nights = parseInt(document.getElementById('add-stop-nights')?.value) || 1;
@@ -307,18 +307,18 @@ async function _executeAddStop() {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        alert('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'));
+        showToast('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'), 'error');
       },
       onerror: () => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        alert('Verbindung verloren beim Hinzuf\u00fcgen des Stopps.');
+        showToast('Verbindung verloren beim Hinzuf\u00fcgen des Stopps.', 'error', { persistent: true });
       },
     });
   } catch (err) {
     _unlockEditing();
-    alert('Fehler: ' + err.message);
+    showToast('Fehler: ' + err.message, 'error');
   }
 }
 
@@ -512,7 +512,7 @@ function _doAddStopFromMap(placeName, afterStopId) {
 
   var travelId = plan._saved_travel_id || plan.id;
   if (!travelId) {
-    alert('Reise muss zuerst gespeichert werden.');
+    showToast('Reise muss zuerst gespeichert werden.', 'warning');
     return;
   }
 
@@ -547,18 +547,18 @@ function _doAddStopFromMap(placeName, afterStopId) {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        alert('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'));
+        showToast('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'), 'error');
       },
       onerror: function() {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        alert('Verbindung verloren beim Hinzuf\u00fcgen des Stopps.');
+        showToast('Verbindung verloren beim Hinzuf\u00fcgen des Stopps.', 'error', { persistent: true });
       },
     });
   }).catch(function(err) {
     _unlockEditing();
-    alert('Fehler: ' + err.message);
+    showToast('Fehler: ' + err.message, 'error');
   });
 }
 
@@ -631,18 +631,18 @@ async function _onStopDrop(e, targetIndex) {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        alert('Fehler beim Sortieren: ' + (data.error || 'Unbekannter Fehler'));
+        showToast('Fehler beim Sortieren: ' + (data.error || 'Unbekannter Fehler'), 'error');
       },
       onerror: () => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        alert('Verbindung verloren beim Sortieren.');
+        showToast('Verbindung verloren beim Sortieren.', 'error', { persistent: true });
       },
     });
   } catch (err) {
     _unlockEditing();
-    alert('Fehler: ' + err.message);
+    showToast('Fehler: ' + err.message, 'error');
   }
 }
 
@@ -683,7 +683,7 @@ function _editStopNights(stopId, currentNights) {
 
   var plan = S.result;
   if (!plan || !plan._saved_travel_id) {
-    alert('Reise muss zuerst gespeichert werden.');
+    showToast('Reise muss zuerst gespeichert werden.', 'warning');
     return;
   }
 
@@ -723,7 +723,7 @@ function _editStopNights(stopId, currentNights) {
   function doConfirm() {
     var nights = parseInt(input.value);
     if (isNaN(nights) || nights < 1 || nights > 14) {
-      alert('Bitte eine Zahl zwischen 1 und 14 eingeben.');
+      showToast('Bitte eine Zahl zwischen 1 und 14 eingeben.', 'warning');
       return;
     }
     if (nights === currentNights) {
@@ -739,7 +739,7 @@ function _editStopNights(stopId, currentNights) {
       })
       .catch(function(err) {
         _unlockEditing();
-        alert('Fehler: ' + err.message);
+        showToast('Fehler: ' + err.message, 'error');
         renderGuide(S.result, 'stops');
       });
   }
@@ -797,14 +797,14 @@ function _listenForNightsComplete(jobId, travelId) {
       _nightsSSE.close();
       progressOverlay.close();
       _unlockEditing();
-      alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+      showToast('Fehler: ' + (data.error || 'Unbekannter Fehler'), 'error');
       renderGuide(S.result, 'stops');
     },
     onerror: function() {
       _nightsSSE.close();
       progressOverlay.close();
       _unlockEditing();
-      alert('Verbindung verloren beim Aktualisieren der Nächte.');
+      showToast('Verbindung verloren beim Aktualisieren der N\u00e4chte.', 'error', { persistent: true });
     },
   });
 }
@@ -822,7 +822,7 @@ function openReplaceStopModal(stopId, currentNights) {
 
   const savedId = plan._saved_travel_id;
   if (!savedId) {
-    alert('Reise muss zuerst gespeichert werden.');
+    showToast('Reise muss zuerst gespeichert werden.', 'warning');
     return;
   }
 
@@ -938,7 +938,7 @@ async function _doManualReplace(travelId, stopId) {
   const loc = (document.getElementById('replace-manual-location')?.value || '').trim();
   const nights = parseInt(document.getElementById('replace-manual-nights')?.value) || 1;
   const hints = (document.getElementById('replace-stop-hints')?.value || '').trim();
-  if (!loc) { alert('Bitte einen Ort eingeben.'); return; }
+  if (!loc) { showToast('Bitte einen Ort eingeben.', 'warning'); return; }
 
   const btn = document.getElementById('replace-manual-btn');
   if (btn) btn.disabled = true;
@@ -951,7 +951,7 @@ async function _doManualReplace(travelId, stopId) {
     _hideReplaceProgress();
     if (btn) btn.disabled = false;
     _unlockEditing();
-    alert('Fehler: ' + err.message);
+    showToast('Fehler: ' + err.message, 'error');
   }
 }
 
@@ -995,7 +995,7 @@ async function _doSearchReplace(travelId, stopId) {
     _hideReplaceProgress();
     if (btn) btn.disabled = false;
     _unlockEditing();
-    alert('Fehler: ' + err.message);
+    showToast('Fehler: ' + err.message, 'error');
   }
 }
 
@@ -1007,7 +1007,7 @@ async function _selectSearchOption(travelId, jobId, optionIndex) {
   } catch (err) {
     _hideReplaceProgress();
     _unlockEditing();
-    alert('Fehler: ' + err.message);
+    showToast('Fehler: ' + err.message, 'error');
   }
 }
 
@@ -1047,13 +1047,13 @@ function _listenForReplaceComplete(jobId, travelId) {
       if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
       progressOverlay.close();
       _unlockEditing();
-      alert('Fehler beim Ersetzen: ' + (data.error || 'Unbekannter Fehler'));
+      showToast('Fehler beim Ersetzen: ' + (data.error || 'Unbekannter Fehler'), 'error');
     },
     onerror: () => {
       if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
       progressOverlay.close();
       _unlockEditing();
-      alert('Verbindung verloren beim Ersetzen des Stopps.');
+      showToast('Verbindung verloren beim Ersetzen des Stopps.', 'error', { persistent: true });
     },
   });
 }

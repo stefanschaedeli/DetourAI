@@ -343,7 +343,7 @@ async function startPlanningWithAllSelections() {
 
   } catch (err) {
     progressOverlay.close();
-    alert(t('accommodation.planning_error') + ' ' + err.message);
+    showToast(t('accommodation.planning_error') + ' ' + err.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = t('accommodation.start_planning'); }
   }
 }

@@ -166,7 +166,7 @@ async function openSavedTravel(id) {
     showSection('travel-guide');
     Router.navigate(Router.travelPath(id, title));
   } catch (err) {
-    alert(t('travels.load_error') + ' ' + err.message);
+    showToast(t('travels.load_error') + ' ' + err.message, 'error');
   } finally {
     hideLoading();
   }
@@ -174,7 +174,7 @@ async function openSavedTravel(id) {
 
 /** Deletes a saved travel after confirmation and removes its card from the list. */
 async function deleteSavedTravel(id, btn) {
-  if (!confirm(t('travels.confirm_delete'))) return;
+  if (!await showConfirm(t('travels.confirm_delete'))) return;
   btn.disabled = true;
   try {
     await apiDeleteTravel(id);
@@ -191,7 +191,7 @@ async function deleteSavedTravel(id, btn) {
       }, 200);
     }
   } catch (err) {
-    alert(t('travels.delete_error') + ' ' + err.message);
+    showToast(t('travels.delete_error') + ' ' + err.message, 'error');
     btn.disabled = false;
   }
 }

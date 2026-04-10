@@ -105,8 +105,7 @@ const Router = (() => {
 
   // Toast helper for error messages
   function _toast(msg) {
-    // Use existing alert as fallback — could be upgraded to a toast component
-    alert(msg);
+    showToast(msg, 'error');
   }
 
   // ---------------------------------------------------------------------------

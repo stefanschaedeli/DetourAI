@@ -370,7 +370,7 @@ function showSettingsToast() {
 }
 
 async function resetSettingsSection(section) {
-  if (!confirm(`Alle ${section === 'all' ? '' : section + '-'}Einstellungen auf Standard zurücksetzen?`)) return;
+  if (!await showConfirm(`Alle ${section === 'all' ? '' : section + '-'}Einstellungen auf Standard zur\u00fccksetzen?`)) return;
   try {
     await apiResetSettings(section);
     await loadSettings();

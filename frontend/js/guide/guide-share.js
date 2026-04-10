@@ -47,11 +47,11 @@ async function _handleShareToggle(travelId, checked) {
     } catch (err) {
       // Revert toggle
       if (checkbox) checkbox.checked = false;
-      alert('Teilen fehlgeschlagen. Bitte erneut versuchen.');
+      showToast('Teilen fehlgeschlagen. Bitte erneut versuchen.', 'error');
     }
   } else {
     // Confirm before revoking
-    if (!confirm('Link deaktivieren? Bestehende Empfaenger verlieren Zugriff.')) {
+    if (!await showConfirm('Link deaktivieren? Bestehende Empfaenger verlieren Zugriff.')) {
       if (checkbox) checkbox.checked = true;
       return;
     }
@@ -66,7 +66,7 @@ async function _handleShareToggle(travelId, checked) {
       }
     } catch (err) {
       if (checkbox) checkbox.checked = true;
-      alert('Teilen fehlgeschlagen. Bitte erneut versuchen.');
+      showToast('Teilen fehlgeschlagen. Bitte erneut versuchen.', 'error');
     }
   }
 }
@@ -78,6 +78,6 @@ async function _copyShareLink(btn, url) {
     btn.textContent = 'Kopiert!';
     setTimeout(() => { btn.textContent = 'Link kopieren'; }, 2000);
   } catch (err) {
-    alert('Link konnte nicht kopiert werden.');
+    showToast('Link konnte nicht kopiert werden.', 'error');
   }
 }
