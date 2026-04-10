@@ -1505,6 +1505,7 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 .acc-resarch-input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; }
 .acc-resarch-input:focus { outline: none; border-color: var(--accent); }
 .acc-error { padding: 20px; color: var(--danger); font-size: 13px; }
+.route-sse-error { padding: 24px 20px; text-align: center; color: var(--danger); font-size: 13px; background: var(--bg-subtle); border-radius: 12px; }
 
 .acc-guide-description { font-size: 13px; color: var(--text-sub); line-height: 1.6; margin-top: 10px; }
 .acc-guide-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }

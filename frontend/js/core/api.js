@@ -436,6 +436,8 @@ function openSSE(jobId, handlers) {
       const fn = () => handlers.onerror();
       window.addEventListener('sse:error', fn, { once: true });
       listeners.push({ name: 'sse:error', fn });
+      window.addEventListener('sse:fatal_error', fn, { once: true });
+      listeners.push({ name: 'sse:fatal_error', fn });
     } else {
       const fn = (e) => handlers[evt](e.detail);
       window.addEventListener('sse:' + evt, fn);

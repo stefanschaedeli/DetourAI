@@ -8,7 +8,7 @@ Do NOT modify backend/, infra/, core/, maps/, guide/, or features/.
 | File | Responsibility |
 |------|---------------|
 | `sse-client.js` | `SSEClient` IIFE — EventSource lifecycle, auth token injection, CustomEvent dispatch |
-| `sse-overlay.js` | `progressOverlay` IIFE — phase spinner/check lines during planning |
+| `unified-overlay.js` | `progressOverlay` IIFE — phase spinner/check lines during planning (replaced `sse-overlay.js`) |
 | `progress.js` | SSE stop timeline, debug log panel, overlay status lines |
 
 ## SSE Subscriber Pattern
@@ -43,9 +43,12 @@ Auth token injected via `?token=` query param (EventSource doesn't support heade
 | `job_complete` | Planning finished — full TravelPlan available |
 | `job_error` | Fatal error — SSE stream closes |
 | `ping` | Keepalive |
+| `sse:reconnecting` | Connection lost — reconnect attempt in progress (detail: `{ attempt, maxAttempts }`) |
+| `sse:reconnected` | Connection successfully restored after a failure |
+| `sse:fatal_error` | All reconnect attempts exhausted — stream permanently closed |
 
 ## progress.js
 
 Renders the stop timeline and debug log panel during the planning phase.
 Subscribes to `sse:*` events to update the UI in real time.
-Also manages overlay status lines via `progressOverlay` from `sse-overlay.js`.
+Also manages overlay status lines via `progressOverlay` from `unified-overlay.js`.

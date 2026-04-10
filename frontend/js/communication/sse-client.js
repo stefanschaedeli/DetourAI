@@ -64,11 +64,13 @@ const SSEClient = (() => {
     source.onerror = () => {
       // Only attempt reconnection when there is still a job to reconnect to.
       if (!_currentJobId) {
+        if (_openResolve) { _openResolve(); _openResolve = null; }
         window.dispatchEvent(new CustomEvent('sse:error'));
         return;
       }
 
       if (_reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        if (_openResolve) { _openResolve(); _openResolve = null; }
         window.dispatchEvent(new CustomEvent('sse:fatal_error'));
         return;
       }
