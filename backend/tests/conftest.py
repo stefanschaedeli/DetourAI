@@ -52,7 +52,6 @@ def mock_job(mocker):
         "selected_stops": [],
         "leg_index": 0,
         "region_plan": None,
-        "region_plan_confirmed": False,
     }
 
     mock_redis = mocker.patch("services.redis_store.redis_client")

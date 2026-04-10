@@ -2,7 +2,7 @@
 
 // API — fetch wrappers with auth injection and all apiXxx() backend call helpers.
 // Reads: authGetToken, authSilentRefresh, showLoginRequired (auth.js), showLoading, hideLoading (unified-overlay.js), S (state.js), t (i18n.js), getLocale (i18n.js), SSEClient (communication/sse-client.js).
-// Provides: apiLogin, apiLogout, apiGetMe, apiChangePassword, apiInitJob, apiPlanTrip, apiPlanLocation, apiSelectStop, apiConfirmRoute, apiStartAccommodations, apiConfirmAccommodations, apiSelectAccommodation, apiStartPlanning, apiConfirmAccommodationsQuiet, apiStartPlanningQuiet, apiGetResult, apiPatchJob, apiResearchAccommodation, apiRecomputeOptions, apiSetRundreiseMode, apiSkipToLegEnd, apiSkipSegment, replaceRegion, recomputeRegions, confirmRegions, geocodeRegion, apiSaveTravel, apiGetTravels, apiGetTravel, apiDeleteTravel, apiReplanTravel, apiUpdateTravel, apiGetShared, apiShareTravel, apiUnshareTravel, apiLogError, apiGetSettings, apiSaveSettings, apiResetSettings, apiReplaceStop, apiRemoveStop, apiAddStop, apiReorderStops, apiReplaceStopSelect, apiUpdateNights, openSSE, showToast.
+// Provides: apiLogin, apiLogout, apiGetMe, apiChangePassword, apiInitJob, apiPlanTrip, apiPlanLocation, apiSelectStop, apiConfirmRoute, apiStartAccommodations, apiConfirmAccommodations, apiSelectAccommodation, apiStartPlanning, apiConfirmAccommodationsQuiet, apiStartPlanningQuiet, apiGetResult, apiPatchJob, apiResearchAccommodation, apiRecomputeOptions, apiSetRundreiseMode, apiSkipToLegEnd, apiSkipSegment, apiSaveTravel, apiGetTravels, apiGetTravel, apiDeleteTravel, apiReplanTravel, apiUpdateTravel, apiGetShared, apiShareTravel, apiUnshareTravel, apiLogError, apiGetSettings, apiSaveSettings, apiResetSettings, apiReplaceStop, apiRemoveStop, apiAddStop, apiReorderStops, apiReplaceStopSelect, apiUpdateNights, openSSE, showToast.
 
 // ---------------------------------------------------------------------------
 // Internal helpers — fetch wrappers with auth, loading overlay, and retry
@@ -259,38 +259,6 @@ async function apiSkipToLegEnd(jobId) {
 /** Skip the current route segment and move to the next. */
 async function apiSkipSegment(jobId) {
   return (await _fetchQuiet(`${API}/skip-segment/${jobId}`, { method: 'POST' })).json();
-}
-
-/** Replace a single region at the given index with a new AI-generated suggestion. */
-async function replaceRegion(jobId, index, instruction) {
-  return await _fetchQuiet(`${API}/replace-region/${jobId}`, {
-    method: 'POST',
-    body: JSON.stringify({ index, instruction }),
-  }).then(r => r.json());
-}
-
-/** Recompute all regions with an optional free-text instruction. */
-async function recomputeRegions(jobId, instruction) {
-  return await _fetchQuiet(`${API}/recompute-regions/${jobId}`, {
-    method: 'POST',
-    body: JSON.stringify({ instruction }),
-  }).then(r => r.json());
-}
-
-/** Confirm the region list and advance the job to route building. */
-async function confirmRegions(jobId, regions) {
-  return await _fetchQuiet(`${API}/confirm-regions/${jobId}`, {
-    method: 'POST',
-    body: JSON.stringify(regions ? { regions } : {}),
-  }).then(r => r.json());
-}
-
-/** Geocode a region name to coordinates via the backend (Google Maps proxy). */
-async function geocodeRegion(jobId, name) {
-  return await _fetchQuiet(`${API}/geocode-region/${jobId}`, {
-    method: 'POST',
-    body: JSON.stringify({ name }),
-  }).then(r => r.json());
 }
 
 // ---------------------------------------------------------------------------

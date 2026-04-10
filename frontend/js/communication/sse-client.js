@@ -13,7 +13,7 @@ const SSEClient = (() => {
     'job_complete', 'job_error', 'accommodation_loading', 'accommodation_loaded',
     'accommodations_all_loaded', 'stop_research_started', 'activities_loaded',
     'restaurants_loaded', 'route_option_ready', 'route_options_done', 'ping',
-    'region_plan_ready', 'region_updated', 'leg_complete',
+    'leg_complete',
     'replace_stop_progress', 'replace_stop_complete',
     'remove_stop_progress',  'remove_stop_complete',
     'add_stop_progress',     'add_stop_complete',

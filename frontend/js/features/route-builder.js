@@ -2,7 +2,7 @@
 
 // Route Builder — interactive stop selection; renders option cards and map from SSE-streamed route data.
 // Reads: S (state.js), Router (router.js), GoogleMaps (maps-core.js), progressOverlay (progress.js), t (i18n.js).
-// Provides: openRouteSSE, closeRouteSSE, startRouteBuilding, renderOptions, selectOption, confirmRoute, showRegionPlanUI, updateRegionPlanUI, openRouteAdjustModal.
+// Provides: openRouteSSE, closeRouteSSE, startRouteBuilding, renderOptions, selectOption, confirmRoute, openRouteAdjustModal.
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -32,8 +32,6 @@ function openRouteSSE(jobId) {
     route_option_ready:     onRouteOptionReady,
     route_options_done:     onRouteOptionsDone,
     debug_log:              _onRouteBuildDebugLog,
-    region_plan_ready: data => { showRegionPlanUI(data.regions, data.summary, data.leg_id); },
-    region_updated:    data => { updateRegionPlanUI(data.regions, data.summary); },
     leg_complete:           data => { console.log(`Schnitt ${(data.leg_index || 0) + 1} abgeschlossen (${data.mode || ''})`); },
     style_mismatch_warning: _onStyleMismatchWarning,
     ferry_detected: _onFerryDetected,
@@ -295,23 +293,8 @@ function startRouteBuilding(data) {
   if (cachedForm && cachedForm.max_drive_hours_per_day) {
     routeMeta.max_drive_hours = cachedForm.max_drive_hours_per_day;
   }
-  // Explore-Modus: Region-Plan wird angezeigt via SSE region_plan_ready
-  if (data.explore_pending) {
-    S.loadingOptions = false;
-    _updateRouteStatus(data.meta || {});
-    renderBuiltStops();
-    // If region_plan is included directly (non-SSE path), show it immediately
-    if (data.region_plan) {
-      showRegionPlanUI(data.region_plan.regions, data.region_plan.summary, data.meta?.leg_id || '');
-    }
-    return;
-  }
-
   // If streaming already populated the container, only update state + map
   if (_streamingOptions.length >= (data.options || []).length && _streamingOptions.length > 0) {
-    // Region-Plan-Panel entfernen und Options-Panel wieder anzeigen
-    const regionPanel = document.getElementById('region-plan-panel');
-    if (regionPanel) regionPanel.remove();
     const optionsPanel = document.getElementById('options-panel');
     if (optionsPanel) optionsPanel.style.display = '';
 
@@ -694,19 +677,6 @@ async function selectOption(idx) {
     const options = data.options || [];
     const meta    = data.meta || {};
 
-    // Handle leg advancement
-    if (data.leg_advanced && data.explore_pending) {
-      // Explore leg started — wait for SSE region_plan_ready
-      progressOverlay.close();
-      closeRouteSSE();
-      _streamingOptions = [];
-      S.loadingOptions = false;
-      routeMeta = { ...routeMeta, ...meta };
-      renderBuiltStops();
-      _updateRouteStatus(meta);
-      return;
-    }
-
     if (options.length === 0 && meta.route_could_be_complete) {
       // Route done — close SSE and show confirm
       progressOverlay.close();
@@ -783,17 +753,6 @@ async function skipStop() {
       const options = data.options || [];
       const newMeta = data.meta || {};
 
-      if (data.explore_pending) {
-        progressOverlay.close();
-        closeRouteSSE();
-        _streamingOptions = [];
-        S.loadingOptions = false;
-        routeMeta = { ...routeMeta, ...newMeta };
-        renderBuiltStops();
-        _updateRouteStatus(newMeta);
-        return;
-      }
-
       progressOverlay.close();
       closeRouteSSE();
       _streamingOptions = [];
@@ -827,17 +786,6 @@ async function skipStop() {
 
       const options = data.options || [];
       const newMeta = data.meta || {};
-
-      if (data.explore_pending) {
-        progressOverlay.close();
-        closeRouteSSE();
-        _streamingOptions = [];
-        S.loadingOptions = false;
-        routeMeta = { ...routeMeta, ...newMeta };
-        renderBuiltStops();
-        _updateRouteStatus(newMeta);
-        return;
-      }
 
       progressOverlay.close();
       closeRouteSSE();
@@ -1022,287 +970,6 @@ async function _submitGuidance() {
     progressOverlay.close();
     closeRouteSSE();
     console.error('Guidance retry fehlgeschlagen:', err);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Explore mode: Region plan UI
-// ---------------------------------------------------------------------------
-
-let _regionPlanMap = null;
-let _regionMarkers = [];
-let _regionPolyline = null;
-
-function _buildRegionCardHtml(r, i) {
-  const highlightsHtml = (r.highlights || []).length > 0
-    ? `<ul class="region-highlights">${r.highlights.map(h => `<li>${esc(h)}</li>`).join('')}</ul>`
-    : '';
-  const teaserHtml = r.teaser ? `<p class="region-teaser">${esc(r.teaser)}</p>` : '';
-  return `
-    <div class="region-card" draggable="true" data-index="${i}"
-         ondragstart="_onRegionDragStart(event, ${i})"
-         ondragover="event.preventDefault(); this.classList.add('drag-over')"
-         ondragleave="this.classList.remove('drag-over')"
-         ondrop="_onRegionDrop(event, ${i}); this.classList.remove('drag-over')">
-      ${buildHeroPhotoLoading('md')}
-      <div class="region-card-body">
-        <div class="region-card-header">
-          <span class="region-card-number">${i + 1}</span>
-          <h3>${esc(r.name)}</h3>
-          <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); _toggleReplaceRegion(${i})">Ersetzen</button>
-          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); _deleteRegion(${i})" ${window._currentRegions && window._currentRegions.length <= 1 ? 'disabled' : ''}>Entfernen</button>
-        </div>
-        ${teaserHtml}
-        ${highlightsHtml}
-        <p class="region-reason">${esc(r.reason)}</p>
-      </div>
-      <div class="region-replace-form" id="region-replace-${i}" style="display:none">
-        <input type="text" id="region-replace-text-${i}"
-          placeholder="Wie soll diese Region ersetzt werden?">
-        <button class="btn btn-sm btn-primary" onclick="_doReplaceRegion(${i})">Ersetzen</button>
-      </div>
-    </div>`;
-}
-
-/** Renders the explore-mode region plan panel with draggable region cards and a map. */
-function showRegionPlanUI(regions, summary, legId) {
-  progressOverlay.close();
-  closeRouteSSE();
-  S.loadingOptions = false;
-
-  // Hide options panel, show region plan in its place
-  const optionsPanel = document.getElementById('options-panel');
-  if (optionsPanel) optionsPanel.style.display = 'none';
-
-  // Remove existing region panel if present
-  const existing = document.getElementById('region-plan-panel');
-  if (existing) existing.remove();
-
-  // Store regions globally for drag-and-drop
-  window._currentRegions = regions;
-  window._currentRegionLegId = legId;
-
-  const regionCardsHtml = regions.map((r, i) => _buildRegionCardHtml(r, i)).join('');
-
-  const panel = document.createElement('div');
-  panel.id = 'region-plan-panel';
-  panel.className = 'route-panel';
-  panel.innerHTML = `
-    <div class="route-panel-header">
-      <h3>Regionen-Plan</h3>
-      <div class="region-actions">
-        <button class="btn btn-secondary btn-sm" onclick="_toggleAddRegion()">Region hinzufügen</button>
-        <button class="btn btn-secondary btn-sm" onclick="_toggleRecompute()">Neu berechnen</button>
-        <button class="btn btn-primary btn-sm" onclick="_confirmRegions()">Route bestätigen</button>
-      </div>
-    </div>
-    <div class="route-panel-body">
-      <p class="region-summary">${esc(summary)}</p>
-      <div class="region-plan-layout">
-        <div class="region-cards-list" id="region-list">${regionCardsHtml}</div>
-        <div class="region-map-panel">
-          <div id="region-plan-map"></div>
-        </div>
-      </div>
-      <div id="recompute-form" style="display:none;margin-top:12px">
-        <div class="recompute-bar">
-          <input type="text" id="recompute-text"
-            placeholder="${t('route_builder.modify_placeholder')}" style="flex:1">
-          <button class="btn btn-sm btn-primary" onclick="_doRecompute()">Neu berechnen</button>
-        </div>
-      </div>
-      <div id="add-region-form" style="display:none;margin-top:12px">
-        <div class="recompute-bar">
-          <input type="text" id="add-region-text"
-            placeholder="Name der Region oder Stadt eingeben" style="flex:1">
-          <button class="btn btn-sm btn-primary" onclick="_doAddRegion()">Hinzufügen</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Insert after built-stops-panel or after map
-  const builtPanel = document.getElementById('built-stops-panel');
-  const routeMap = document.getElementById('route-map');
-  const insertAfter = builtPanel || routeMap;
-  if (insertAfter && insertAfter.parentNode) {
-    insertAfter.parentNode.insertBefore(panel, insertAfter.nextSibling);
-  }
-
-  _initRegionMap(regions);
-  _lazyLoadRegionImages(regions);
-}
-
-function _lazyLoadRegionImages(regions) {
-  regions.forEach((r, i) => {
-    const card = document.querySelector(`.region-card[data-index="${i}"]`);
-    if (card && r.lat && r.lon) {
-      _lazyLoadEntityImages(card, r.name, r.lat, r.lon, 'city', 'md');
-    }
-  });
-}
-
-function _initRegionMap(regions) {
-  const mapDiv = document.getElementById('region-plan-map');
-  if (!mapDiv || typeof google === 'undefined') return;
-
-  const bounds = new google.maps.LatLngBounds();
-  const path = [];
-
-  _regionPlanMap = new google.maps.Map(mapDiv, { zoom: 5 });
-  _regionMarkers = [];
-
-  regions.forEach((r, i) => {
-    const pos = { lat: r.lat, lng: r.lon };
-    bounds.extend(pos);
-    path.push(pos);
-
-    const marker = new google.maps.Marker({
-      position: pos,
-      map: _regionPlanMap,
-      label: { text: String(i + 1), color: '#fff' },
-      title: r.name,
-    });
-    _regionMarkers.push(marker);
-  });
-
-  // Render driving route; fallback to straight line on error
-  const regionWaypoints = path.map(p => ({ lat: p.lat, lng: p.lng || p.lon }));
-  if (regionWaypoints.length >= 2) {
-    GoogleMaps.renderDrivingRoute(_regionPlanMap, regionWaypoints, {
-      strokeColor: '#C4623A', strokeWeight: 3, strokeOpacity: 0.8,
-    }).then(r => { _regionPolyline = r; });
-  }
-
-  _regionPlanMap.fitBounds(bounds, 50);
-}
-
-/** Updates the region plan panel cards and map after a drag, replace, or recompute. */
-function updateRegionPlanUI(regions, summary) {
-  window._currentRegions = regions;
-  // Re-render the cards list
-  const list = document.getElementById('region-list');
-  if (list) {
-    list.innerHTML = regions.map((r, i) => _buildRegionCardHtml(r, i)).join('');
-    _lazyLoadRegionImages(regions);
-  }
-  // Update summary
-  const summaryEl = document.querySelector('.region-summary');
-  if (summaryEl) summaryEl.textContent = summary;
-  // Update map
-  _updateRegionMap(regions);
-}
-
-function _updateRegionMap(regions) {
-  if (!_regionPlanMap) return;
-  _regionMarkers.forEach(m => m.setMap(null));
-  if (_regionPolyline) _regionPolyline.setMap(null);
-  _initRegionMap(regions);
-}
-
-// Drag and drop
-let _dragSourceIndex = null;
-
-function _onRegionDragStart(e, index) {
-  _dragSourceIndex = index;
-  e.dataTransfer.effectAllowed = 'move';
-}
-
-function _onRegionDrop(e, targetIndex) {
-  e.preventDefault();
-  if (_dragSourceIndex === null || _dragSourceIndex === targetIndex) return;
-  const regions = window._currentRegions;
-  const [moved] = regions.splice(_dragSourceIndex, 1);
-  regions.splice(targetIndex, 0, moved);
-  _dragSourceIndex = null;
-  updateRegionPlanUI(regions, document.querySelector('.region-summary')?.textContent || '');
-}
-
-function _toggleReplaceRegion(index) {
-  const form = document.getElementById(`region-replace-${index}`);
-  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
-}
-
-async function _doReplaceRegion(index) {
-  const input = document.getElementById(`region-replace-text-${index}`);
-  if (!input || !input.value.trim()) return;
-  progressOverlay.open('Region wird ersetzt…');
-  try {
-    const data = await replaceRegion(S.jobId, index, input.value.trim());
-    progressOverlay.close();
-    if (data.region_plan) {
-      updateRegionPlanUI(data.region_plan.regions, data.region_plan.summary);
-    }
-  } catch (err) {
-    progressOverlay.close();
-    console.error('Region ersetzen fehlgeschlagen:', err);
-  }
-}
-
-function _deleteRegion(index) {
-  const regions = window._currentRegions;
-  if (!regions || regions.length <= 1) return;
-  regions.splice(index, 1);
-  const summary = document.querySelector('.region-summary')?.textContent || '';
-  updateRegionPlanUI(regions, summary);
-}
-
-function _toggleAddRegion() {
-  const form = document.getElementById('add-region-form');
-  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
-}
-
-async function _doAddRegion() {
-  const input = document.getElementById('add-region-text');
-  if (!input || !input.value.trim()) return;
-  progressOverlay.open('Region wird gesucht…');
-  try {
-    const data = await geocodeRegion(S.jobId, input.value.trim());
-    progressOverlay.close();
-    if (data.region) {
-      window._currentRegions.push(data.region);
-      const summary = document.querySelector('.region-summary')?.textContent || '';
-      updateRegionPlanUI(window._currentRegions, summary);
-      input.value = '';
-      document.getElementById('add-region-form').style.display = 'none';
-    }
-  } catch (err) {
-    progressOverlay.close();
-    console.error('Region hinzufügen fehlgeschlagen:', err);
-  }
-}
-
-function _toggleRecompute() {
-  const form = document.getElementById('recompute-form');
-  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
-}
-
-async function _doRecompute() {
-  const input = document.getElementById('recompute-text');
-  if (!input || !input.value.trim()) return;
-  progressOverlay.open('Route wird neu berechnet…');
-  try {
-    const data = await recomputeRegions(S.jobId, input.value.trim());
-    progressOverlay.close();
-    if (data.region_plan) {
-      updateRegionPlanUI(data.region_plan.regions, data.region_plan.summary);
-    }
-  } catch (err) {
-    progressOverlay.close();
-    console.error('Neu berechnen fehlgeschlagen:', err);
-  }
-}
-
-async function _confirmRegions() {
-  progressOverlay.open(t('route_builder.confirming_regions'));
-  openRouteSSE(S.jobId);
-  try {
-    const data = await confirmRegions(S.jobId, window._currentRegions);
-    startRouteBuilding(data);
-  } catch (err) {
-    progressOverlay.close();
-    closeRouteSSE();
-    console.error('Region-Bestätigung fehlgeschlagen:', err);
   }
 }
 

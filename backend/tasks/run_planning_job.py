@@ -29,10 +29,6 @@ async def _run_job(job_id: str, pre_built_stops=None, pre_selected_accommodation
     job = json.loads(raw)
     user_id: int = job.get("user_id", 1)  # fallback to 1 (admin) for pre-auth trips
 
-    # Skip if paused waiting for region confirmation
-    if job.get("status") == "awaiting_region_confirmation":
-        return
-
     job["status"] = "running"
     redis_client.setex(f"job:{job_id}", 86400, json.dumps(job))
 

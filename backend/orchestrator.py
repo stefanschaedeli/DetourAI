@@ -107,8 +107,8 @@ class TravelPlannerOrchestrator:
         finally:
             debug_logger.clear_verbosity(job_id)
 
-    async def _run_all_legs(self) -> Optional[list]:
-        """Runs all legs sequentially. Returns None if paused mid-explore."""
+    async def _run_all_legs(self) -> list:
+        """Runs all legs sequentially and returns all collected stops."""
         req = self.request
         job = self._load_job()
         all_stops = list(job.get("selected_stops", []))
@@ -119,8 +119,6 @@ class TravelPlannerOrchestrator:
                 leg_stops = await self._run_transit_leg(leg, leg_index)
             else:
                 leg_stops = await self._run_explore_leg(leg, leg_index)
-                if leg_stops is None:
-                    return None  # Paused for zone guidance
 
             all_stops.extend(leg_stops)
 
@@ -132,7 +130,6 @@ class TravelPlannerOrchestrator:
             job["segment_index"] = 0
             job["segment_stops"] = []
             job["region_plan"] = None
-            job["region_plan_confirmed"] = False
             self._save_job(job)
 
             await debug_logger.push_event(
@@ -257,29 +254,25 @@ class TravelPlannerOrchestrator:
 
         return stops
 
-    async def _run_explore_leg(self, leg, leg_index: int) -> Optional[list]:
-        """Explore leg: RegionPlannerAgent plans regions, user confirms interactively."""
-        job = self._load_job()
+    async def _run_explore_leg(self, leg, leg_index: int) -> list:
+        """Explore leg: RegionPlannerAgent plans regions, auto-confirms, then runs transit stop selection."""
+        from main import _auto_confirm_regions
 
-        if not job.get("region_plan"):
-            # First call: generate region plan
-            description = leg.explore_description or f"{leg.start_location} bis {leg.end_location} erkunden"
-            agent = RegionPlannerAgent(self.request, self.job_id, token_accumulator=self._token_accumulator)
-            region_plan = await agent.plan(description=description, leg_index=leg_index)
-            job = self._load_job()
-            job["region_plan"] = region_plan.model_dump()
-            job["status"] = "awaiting_region_confirmation"
-            self._save_job(job)
-            await debug_logger.push_event(
-                self.job_id, "region_plan_ready", None,
-                {"regions": [r.model_dump() for r in region_plan.regions],
-                 "summary": region_plan.summary, "leg_id": leg.leg_id}
-            )
-            return None  # Pause — user confirms via /api/confirm-regions
-
-        # Region plan confirmed — stops are being selected via normal transit flow
         job = self._load_job()
-        return job.get("selected_stops", [])
+        description = leg.explore_description or f"{leg.start_location} bis {leg.end_location} erkunden"
+        agent = RegionPlannerAgent(self.request, self.job_id, token_accumulator=self._token_accumulator)
+        region_plan = await agent.plan(description=description, leg_index=leg_index)
+        job = self._load_job()
+        job["region_plan"] = region_plan.model_dump()
+        self._save_job(job)
+
+        # Auto-confirm: inject regions as via_points and update request
+        updated_request = await _auto_confirm_regions(job, self.job_id, region_plan)
+        self.request = updated_request
+
+        # Run the leg as a transit leg now that via_points are set
+        updated_leg = updated_request.legs[leg_index]
+        return await self._run_transit_leg(updated_leg, leg_index)
 
     async def _run_research_and_planning(self, stops, pre_selected_accommodations,
                                           pre_all_accommodation_options) -> dict:

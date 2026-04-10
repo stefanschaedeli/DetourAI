@@ -75,8 +75,7 @@ backend/
 ## Redis Job State
 
 - Key pattern: `job:{job_id}` (hex UUID, 32 chars), TTL 24h
-- Job statuses: `building_route` → `awaiting_region_confirmation` → `selecting_accommodations`
-  → `running` → `complete` | `error`
+- Job statuses: `building_route` → `selecting_accommodations` → `running` → `complete` | `error`
 - SSE event list key: `sse:{job_id}` (Redis list, drained by SSE endpoint)
 - Without Redis: `_InMemoryStore` in `main.py` provides drop-in replacement for local dev
 

@@ -46,23 +46,6 @@ class RegionPlan(BaseModel):
     summary: str = Field(max_length=1000)
 
 
-class ReplaceRegionRequest(BaseModel):
-    index: int = Field(ge=0)
-    instruction: str = Field(max_length=1000)
-
-
-class RecomputeRegionsRequest(BaseModel):
-    instruction: str = Field(max_length=1000)
-
-
-class GeocodeRegionRequest(BaseModel):
-    name: str = Field(max_length=200)
-
-
-class ConfirmRegionsBody(BaseModel):
-    regions: Optional[list[dict]] = None
-
-
 class TripLeg(BaseModel):
     leg_id: str = Field(pattern=r"^leg-\d+$")
     start_location: str = Field(default="", max_length=200)

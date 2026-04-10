@@ -26,7 +26,7 @@ load_dotenv()
 from models.travel_request import TravelRequest
 from models.stop_option import StopSelectRequest
 from models.accommodation_option import AccommodationSelectRequest, BudgetState, AccommodationResearchRequest
-from models.trip_leg import ReplaceRegionRequest, RecomputeRegionsRequest, GeocodeRegionRequest, ConfirmRegionsBody
+from models.trip_leg import RegionPlan
 from utils.auth import get_current_user, get_current_user_sse, CurrentUser, verify_jwt_secret, hash_password
 from utils.i18n import get_request_language, SUPPORTED_LANGUAGES, t as i18n_t
 from utils.auth_db import admin_exists, create_user, assign_orphan_trips, get_user_by_username
@@ -228,7 +228,6 @@ def _advance_to_next_leg(job: dict, request: TravelRequest) -> dict:
     job["segment_budget"] = _calc_leg_segment_budget(request, new_idx) if new_idx < len(request.legs) else 0
     job["segment_stops"] = []
     job["region_plan"] = None
-    job["region_plan_confirmed"] = False
     job["explore_segment_budgets"] = []
     job["explore_regions"] = []
     return job
@@ -318,8 +317,56 @@ async def _start_leg_route_building(job: dict, job_id: str, request: TravelReque
     }
 
 
+async def _auto_confirm_regions(job: dict, job_id: str, region_plan) -> TravelRequest:
+    """Inject region plan as via_points and set explore job fields. Returns updated TravelRequest."""
+    leg_index = job["leg_index"]
+    req_data = job["request"]
+    leg_data = req_data["legs"][leg_index]
+    total_days = (date.fromisoformat(leg_data["end_date"]) - date.fromisoformat(leg_data["start_date"])).days
+    num_regions = len(region_plan.regions)
+    request_obj = TravelRequest(**req_data)
+
+    base_nights = total_days // num_regions
+    remainder = total_days % num_regions
+    per_region_nights = []
+    for i in range(num_regions):
+        n = base_nights + (1 if i < remainder else 0)
+        n = max(n, request_obj.min_nights_per_stop)
+        per_region_nights.append(n)
+
+    leg_data["via_points"] = [
+        {"location": r.name, "fixed_date": None, "notes": f"Region: {r.reason}"}
+        for r in region_plan.regions[:-1]
+    ]
+    leg_data["mode"] = "transit"
+    if not leg_data.get("start_location"):
+        first_leg_start = req_data["legs"][0].get("start_location", "").strip()
+        if first_leg_start and not first_leg_start.startswith("[Erkunden]"):
+            leg_data["start_location"] = first_leg_start
+        else:
+            raise HTTPException(status_code=400, detail=i18n_t("error.start_location_required", _job_lang(job)))
+    if not leg_data.get("end_location"):
+        leg_data["end_location"] = region_plan.regions[-1].name
+    job["request"] = req_data
+
+    job["explore_segment_budgets"] = [n + 1 for n in per_region_nights]
+    job["explore_regions"] = [
+        {"name": r.name, "lat": r.lat, "lon": r.lon,
+         "highlights": r.highlights or [], "teaser": r.teaser or r.reason}
+        for r in region_plan.regions
+    ]
+    job["current_leg_mode"] = "transit"
+    job["segment_index"] = 0
+    job["segment_stops"] = []
+    job["segment_budget"] = job["explore_segment_budgets"][0]
+
+    updated_request = TravelRequest(**req_data)
+    save_job(job_id, job)
+    return updated_request
+
+
 async def _start_explore_leg(job: dict, job_id: str, request: TravelRequest) -> dict:
-    """Start explore-mode leg: runs RegionPlannerAgent, returns region plan."""
+    """Start explore-mode leg: runs RegionPlannerAgent and auto-confirms into stop selection."""
     from agents.region_planner import RegionPlannerAgent
 
     leg_index = job["leg_index"]
@@ -330,28 +377,18 @@ async def _start_explore_leg(job: dict, job_id: str, request: TravelRequest) -> 
     region_plan = await agent.plan(description=description, leg_index=leg_index)
 
     job["region_plan"] = region_plan.model_dump()
-    job["status"] = "awaiting_region_confirmation"
     save_job(job_id, job)
 
-    await debug_logger.push_event(
-        job_id, "region_plan_ready", None,
-        {"regions": [r.model_dump() for r in region_plan.regions],
-         "summary": region_plan.summary,
-         "leg_id": leg.leg_id}
-    )
+    # Auto-confirm: inject regions as via_points and start route building immediately
+    request = await _auto_confirm_regions(job, job_id, region_plan)
 
-    return {
-        "options": [],
-        "meta": {
-            "leg_index": leg_index,
-            "total_legs": len(request.legs),
-            "leg_mode": leg.mode,
-            "leg_id": leg.leg_id,
-        },
-        "explore_pending": True,
-        "region_plan": region_plan.model_dump(),
-        "leg_advanced": True,
-    }
+    region = region_plan.regions[0]
+    extra = (f"Suche Städte/Orte IN der Region {region.name}. "
+             f"Highlights der Region: {', '.join(region.highlights or [])}.")
+
+    result = await _start_leg_route_building(job, job_id, request, extra_instructions=extra)
+    result["job_id"] = job_id
+    return result
 
 
 def _leg_meta(request: TravelRequest, leg_index: int, *, is_explore: bool = False) -> dict:
@@ -415,7 +452,6 @@ def _new_job(job_id: str, request: TravelRequest) -> dict:
 
         # Explore/Region leg state (reset on each explore leg transition)
         "region_plan": None,           # RegionPlan dict after planning
-        "region_plan_confirmed": False, # True after user confirms
         "explore_segment_budgets": [], # Pro-Region-Budget für Explore-Legs
         "explore_regions": [],         # Region-Metadaten für StopFinder-Kontext
 
@@ -2911,185 +2947,6 @@ async def skip_segment(job_id: str, current_user: CurrentUser = Depends(get_curr
                 },
             }
 
-
-# ---------------------------------------------------------------------------
-# POST /api/replace-region/{job_id}
-# ---------------------------------------------------------------------------
-
-@app.post("/api/replace-region/{job_id}")
-async def replace_region(job_id: str, body: ReplaceRegionRequest, current_user: CurrentUser = Depends(get_current_user)):
-    """Replace one region in the current explore-leg plan using RegionPlannerAgent and broadcast the update."""
-    from agents.region_planner import RegionPlannerAgent
-    from models.trip_leg import RegionPlan
-
-    job = get_job(job_id)
-    if not job.get("region_plan"):
-        raise HTTPException(status_code=409, detail=i18n_t("error.no_region_plan", _job_lang(job)))
-
-    current_plan = RegionPlan(**job["region_plan"])
-    if body.index >= len(current_plan.regions):
-        raise HTTPException(status_code=400, detail=i18n_t("error.invalid_region_index", _job_lang(job)))
-
-    request = TravelRequest(**job["request"])
-    agent = RegionPlannerAgent(request, job_id)
-    new_plan = await agent.replace_region(
-        index=body.index,
-        instruction=body.instruction,
-        current_plan=current_plan,
-        leg_index=job["leg_index"],
-    )
-
-    job["region_plan"] = new_plan.model_dump()
-    save_job(job_id, job)
-
-    await debug_logger.push_event(
-        job_id, "region_updated", None,
-        {"regions": [r.model_dump() for r in new_plan.regions],
-         "summary": new_plan.summary}
-    )
-
-    return {"status": "ok", "region_plan": new_plan.model_dump()}
-
-
-# ---------------------------------------------------------------------------
-# POST /api/recompute-regions/{job_id}
-# ---------------------------------------------------------------------------
-
-@app.post("/api/recompute-regions/{job_id}")
-async def recompute_regions(job_id: str, body: RecomputeRegionsRequest, current_user: CurrentUser = Depends(get_current_user)):
-    """Regenerate the entire explore-leg region plan from scratch with new instructions."""
-    from agents.region_planner import RegionPlannerAgent
-    from models.trip_leg import RegionPlan
-
-    job = get_job(job_id)
-    if not job.get("region_plan"):
-        raise HTTPException(status_code=409, detail=i18n_t("error.no_region_plan", _job_lang(job)))
-
-    current_plan = RegionPlan(**job["region_plan"])
-    request = TravelRequest(**job["request"])
-    agent = RegionPlannerAgent(request, job_id)
-    new_plan = await agent.recalculate(
-        instruction=body.instruction,
-        current_plan=current_plan,
-        leg_index=job["leg_index"],
-    )
-
-    job["region_plan"] = new_plan.model_dump()
-    save_job(job_id, job)
-
-    await debug_logger.push_event(
-        job_id, "region_updated", None,
-        {"regions": [r.model_dump() for r in new_plan.regions],
-         "summary": new_plan.summary}
-    )
-
-    return {"status": "ok", "region_plan": new_plan.model_dump()}
-
-
-# ---------------------------------------------------------------------------
-# POST /api/geocode-region/{job_id}
-# ---------------------------------------------------------------------------
-
-@app.post("/api/geocode-region/{job_id}")
-async def geocode_region_endpoint(job_id: str, body: GeocodeRegionRequest, current_user: CurrentUser = Depends(get_current_user)):
-    """Geocode a region name via Google and return a region dict ready for the frontend to add to the plan."""
-    get_job(job_id)  # validate job exists
-
-    geo_result = await geocode_google(body.name.strip())
-    if not geo_result:
-        raise HTTPException(status_code=400, detail=i18n_t("error.location_not_found", "de", location=body.name))
-
-    lat, lon, place_id = geo_result
-    region = {
-        "name": body.name.strip(),
-        "lat": lat,
-        "lon": lon,
-        "place_id": place_id,
-        "reason": "Manuell hinzugefügt",
-        "teaser": "",
-        "highlights": [],
-    }
-    return {"status": "ok", "region": region}
-
-
-# ---------------------------------------------------------------------------
-# POST /api/confirm-regions/{job_id}
-# ---------------------------------------------------------------------------
-
-@app.post("/api/confirm-regions/{job_id}")
-async def confirm_regions(job_id: str, body: ConfirmRegionsBody = None, current_user: CurrentUser = Depends(get_current_user)):
-    """Confirm the explore-leg region plan: inject regions as via-points, compute budgets, and start route building."""
-    from models.trip_leg import RegionPlan
-
-    job = get_job(job_id)
-    if not job.get("region_plan"):
-        raise HTTPException(status_code=409, detail=i18n_t("error.no_region_plan", _job_lang(job)))
-
-    region_plan = RegionPlan(**job["region_plan"])
-
-    # Frontend kann geänderte Regionen senden (Drag-Reorder, Löschen, Hinzufügen)
-    if body and body.regions:
-        region_plan = RegionPlan(regions=body.regions, summary=region_plan.summary)
-        job["region_plan"] = region_plan.model_dump()
-        save_job(job_id, job)
-    request = TravelRequest(**job["request"])
-    leg_index = job["leg_index"]
-    leg = request.legs[leg_index]
-    total_days = leg.total_days
-    num_regions = len(region_plan.regions)
-
-    # --- Nächte pro Region berechnen ---
-    base_nights = total_days // num_regions
-    remainder = total_days % num_regions
-    per_region_nights = []
-    for i in range(num_regions):
-        n = base_nights + (1 if i < remainder else 0)
-        n = max(n, request.min_nights_per_stop)
-        per_region_nights.append(n)
-
-    # --- Regionen als via_points injizieren ---
-    req_data = job["request"]
-    leg_data = req_data["legs"][leg_index]
-    leg_data["via_points"] = [
-        {"location": r.name, "fixed_date": None, "notes": f"Region: {r.reason}"}
-        for r in region_plan.regions[:-1]   # alle ausser letzte
-    ]
-    leg_data["mode"] = "transit"
-    if not leg_data.get("start_location"):
-        # Fallback: use raw start_location from first leg (avoids "[Erkunden]..." placeholder)
-        first_leg_start = req_data["legs"][0].get("start_location", "").strip()
-        if first_leg_start and not first_leg_start.startswith("[Erkunden]"):
-            leg_data["start_location"] = first_leg_start
-        else:
-            raise HTTPException(status_code=400, detail=i18n_t("error.start_location_required", _job_lang(job)))
-    if not leg_data.get("end_location"):
-        leg_data["end_location"] = region_plan.regions[-1].name
-    job["request"] = req_data
-
-    # --- Explore-spezifische Job-Felder ---
-    job["explore_segment_budgets"] = [n + 1 for n in per_region_nights]  # nights + 1 drive day
-    job["explore_regions"] = [
-        {"name": r.name, "lat": r.lat, "lon": r.lon,
-         "highlights": r.highlights or [], "teaser": r.teaser or r.reason}
-        for r in region_plan.regions
-    ]
-    job["region_plan_confirmed"] = True
-    job["current_leg_mode"] = "transit"
-    job["segment_index"] = 0
-    job["segment_stops"] = []
-    job["segment_budget"] = job["explore_segment_budgets"][0]
-
-    request = TravelRequest(**req_data)
-    save_job(job_id, job)
-
-    # Extra-Instructions für StopFinder: "Suche in Region X"
-    region = region_plan.regions[0]
-    extra = (f"Suche Städte/Orte IN der Region {region.name}. "
-             f"Highlights der Region: {', '.join(region.highlights or [])}.")
-
-    result = await _start_leg_route_building(job, job_id, request, extra_instructions=extra)
-    result["job_id"] = job_id
-    return result
 
 
 # ---------------------------------------------------------------------------

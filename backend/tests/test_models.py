@@ -653,7 +653,7 @@ def test_stop_activity_age_fields_set():
 # ---------------------------------------------------------------------------
 
 from models.trip_leg import (ZoneBBox, ExploreStop,
-                              RegionPlanItem, RegionPlan, ReplaceRegionRequest, RecomputeRegionsRequest, TripLeg)
+                              RegionPlanItem, RegionPlan, TripLeg)
 from models.via_point import ViaPoint
 from datetime import date
 
@@ -716,27 +716,6 @@ class TestRegionPlan:
                 regions=[RegionPlanItem(name="X", lat=0, lon=0, reason="ok")],
                 summary="x" * 1001
             )
-
-
-class TestReplaceRegionRequest:
-    def test_valid(self):
-        r = ReplaceRegionRequest(index=0, instruction="Ersetze durch Wallis")
-        assert r.index == 0
-
-    def test_negative_index_rejected(self):
-        with pytest.raises(ValueError):
-            ReplaceRegionRequest(index=-1, instruction="test")
-
-
-class TestRecomputeRegionsRequest:
-    def test_valid(self):
-        r = RecomputeRegionsRequest(instruction="Mehr Küste")
-        assert r.instruction == "Mehr Küste"
-
-    def test_empty_instruction_allowed(self):
-        # Empty string is allowed — no min_length constraint
-        r = RecomputeRegionsRequest(instruction="")
-        assert r.instruction == ""
 
 
 class TestTripLeg:
