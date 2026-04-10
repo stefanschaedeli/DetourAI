@@ -2,7 +2,7 @@
 
 // API — fetch wrappers with auth injection and all apiXxx() backend call helpers.
 // Reads: authGetToken, authSilentRefresh, showLoginRequired (auth.js), showLoading, hideLoading (unified-overlay.js), S (state.js), t (i18n.js), getLocale (i18n.js), SSEClient (communication/sse-client.js).
-// Provides: apiLogin, apiLogout, apiGetMe, apiChangePassword, apiInitJob, apiPlanTrip, apiPlanLocation, apiSelectStop, apiConfirmRoute, apiStartAccommodations, apiConfirmAccommodations, apiSelectAccommodation, apiStartPlanning, apiConfirmAccommodationsQuiet, apiStartPlanningQuiet, apiGetResult, apiPatchJob, apiResearchAccommodation, apiRecomputeOptions, apiSetRundreiseMode, apiSkipToLegEnd, apiSkipSegment, apiSaveTravel, apiGetTravels, apiGetTravel, apiDeleteTravel, apiReplanTravel, apiUpdateTravel, apiGetShared, apiShareTravel, apiUnshareTravel, apiLogError, apiGetSettings, apiSaveSettings, apiResetSettings, apiReplaceStop, apiRemoveStop, apiAddStop, apiReorderStops, apiReplaceStopSelect, apiUpdateNights, openSSE, showToast.
+// Provides: apiLogin, apiLogout, apiGetMe, apiChangePassword, apiInitJob, apiPlanTrip, apiPlanLocation, apiSelectStop, apiConfirmRoute, apiStartAccommodations, apiConfirmAccommodations, apiSelectAccommodation, apiStartPlanning, apiConfirmAccommodationsQuiet, apiStartPlanningQuiet, apiGetResult, apiPatchJob, apiResearchAccommodation, apiRecomputeOptions, apiSetRundreiseMode, apiSkipToLegEnd, apiSkipSegment, apiSaveTravel, apiGetTravels, apiGetTravel, apiDeleteTravel, apiReplanTravel, apiUpdateTravel, apiGetShared, apiShareTravel, apiUnshareTravel, apiLogError, apiGetSettings, apiSaveSettings, apiResetSettings, apiReplaceStop, apiRemoveStop, apiAddStop, apiReorderStops, apiReplaceStopSelect, apiUpdateNights, openSSE, showToast, showConfirm.
 
 // ---------------------------------------------------------------------------
 // Internal helpers — fetch wrappers with auth, loading overlay, and retry
@@ -514,11 +514,11 @@ function showConfirm(message) {
 
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'btn btn-secondary';
-    cancelBtn.textContent = 'Abbrechen';
+    cancelBtn.textContent = t('common.cancel');
 
     const confirmBtn = document.createElement('button');
     confirmBtn.className = 'btn btn-primary';
-    confirmBtn.textContent = 'Bestätigen';
+    confirmBtn.textContent = t('common.confirm');
 
     actions.appendChild(cancelBtn);
     actions.appendChild(confirmBtn);
@@ -527,8 +527,8 @@ function showConfirm(message) {
     backdrop.appendChild(content);
     document.body.appendChild(backdrop);
 
-    // Trigger open animation
-    requestAnimationFrame(() => backdrop.classList.add('modal-open'));
+    // Trigger open animation and move focus to confirm button for keyboard users
+    requestAnimationFrame(() => { backdrop.classList.add('modal-open'); confirmBtn.focus(); });
 
     function close(result) {
       backdrop.classList.add('modal-closing');
@@ -543,13 +543,10 @@ function showConfirm(message) {
     backdrop.addEventListener('click', (e) => {
       if (e.target === backdrop) close(false);
     });
-    // Close on Escape key
+    // Close on Escape key — self-removes to avoid leaking the listener
     function onKey(e) {
       if (e.key === 'Escape') { document.removeEventListener('keydown', onKey); close(false); }
     }
     document.addEventListener('keydown', onKey);
-    // Remove key listener when modal closes
-    confirmBtn.addEventListener('click', () => document.removeEventListener('keydown', onKey), { once: true });
-    cancelBtn.addEventListener('click', () => document.removeEventListener('keydown', onKey), { once: true });
   });
 }

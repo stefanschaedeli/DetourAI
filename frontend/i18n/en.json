@@ -607,5 +607,7 @@
   "edit.phase_day_planner": "Creating day plan",
   "edit.phase_recalc": "Recalculating nights",
   "edit.phase_removing": "Removing stop",
-  "edit.phase_reordering": "Reordering stops"
+  "edit.phase_reordering": "Reordering stops",
+  "common.cancel": "Cancel",
+  "common.confirm": "Confirm"
 }

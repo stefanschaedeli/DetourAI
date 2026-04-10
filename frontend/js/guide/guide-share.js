@@ -51,7 +51,7 @@ async function _handleShareToggle(travelId, checked) {
     }
   } else {
     // Confirm before revoking
-    if (!await showConfirm('Link deaktivieren? Bestehende Empfaenger verlieren Zugriff.')) {
+    if (!await showConfirm('Link deaktivieren? Bestehende Empfänger verlieren Zugriff.')) {
       if (checkbox) checkbox.checked = true;
       return;
     }

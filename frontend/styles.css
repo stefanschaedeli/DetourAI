@@ -5593,6 +5593,15 @@ strong.req-keyword {
   transform: scale(0.95) translateY(-8px);
   opacity: 0;
 }
+@media (prefers-reduced-motion: reduce) {
+  .modal-confirm-backdrop {
+    transition: opacity 0.2s ease;
+  }
+  .modal-confirm-backdrop .modal-content {
+    transform: none;
+    transition: opacity 0.2s ease;
+  }
+}
 .modal-content {
   background: var(--card, #fff);
   border-radius: 12px;
@@ -5937,6 +5946,12 @@ strong.req-keyword {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-toast {
+    transition: opacity 0.25s ease;
+    transform: none;
+  }
 }
 
 /* ---------------------------------------------------------------------------

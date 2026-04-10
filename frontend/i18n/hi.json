@@ -607,5 +607,7 @@
   "edit.phase_day_planner": "दिन की योजना बनाएं",
   "edit.phase_recalc": "रातें पुनर्गणना करें",
   "edit.phase_removing": "स्टॉप हटाएं",
-  "edit.phase_reordering": "स्टॉप पुनर्व्यवस्थित करें"
+  "edit.phase_reordering": "स्टॉप पुनर्व्यवस्थित करें",
+  "common.cancel": "रद्द करें",
+  "common.confirm": "पुष्टि करें"
 }

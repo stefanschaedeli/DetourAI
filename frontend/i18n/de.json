@@ -607,5 +607,7 @@
   "edit.phase_day_planner": "Tagesplan erstellen",
   "edit.phase_recalc": "Nächte neu berechnen",
   "edit.phase_removing": "Stopp entfernen",
-  "edit.phase_reordering": "Reihenfolge anpassen"
+  "edit.phase_reordering": "Reihenfolge anpassen",
+  "common.cancel": "Abbrechen",
+  "common.confirm": "Bestätigen"
 }
