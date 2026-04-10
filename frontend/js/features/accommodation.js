@@ -176,6 +176,8 @@ function renderAccCards(stopId, options, mustHaves) {
 // are near the viewport — consistent with the lazy-loading pattern in guide-stops.js.
 function _observeAccCardImages(grid, options, stop) {
   if (typeof _lazyLoadEntityImages !== 'function') return;
+  // Disconnect any previous observer on this grid before creating a new one.
+  if (grid._accObserver) { grid._accObserver.disconnect(); }
 
   const observer = new IntersectionObserver((entries, obs) => {
     entries.forEach(entry => {
@@ -189,6 +191,7 @@ function _observeAccCardImages(grid, options, stop) {
       obs.unobserve(card);
     });
   }, { rootMargin: '200px' });
+  grid._accObserver = observer;  // store for cleanup
 
   grid.querySelectorAll('.acc-option-card').forEach(card => observer.observe(card));
 }

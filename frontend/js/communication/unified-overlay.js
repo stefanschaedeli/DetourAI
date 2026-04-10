@@ -156,7 +156,7 @@
   function _renderDebugLog() {
     if (!_debugLogEl) return;
 
-    // On overflow, reset and do a full redraw so the capped ring buffer stays consistent.
+    // Defensive guard: _lastDebugCount should never exceed log length.
     if (_lastDebugCount > _debugEntries.length) {
       _clearEl(_debugLogEl);
       _lastDebugCount = 0;
@@ -323,6 +323,7 @@
       // Replace all tasks with a single active line.
       _tasks.clear();
       if (_tasksEl) _clearEl(_tasksEl);
+      _taskOrderDirty = true;
       _createTaskEl('simple', _summary, 'active');
     }
     _scheduleRender();

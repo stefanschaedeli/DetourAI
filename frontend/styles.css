@@ -707,7 +707,7 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   to   { opacity: 1; transform: translateX(0); }
 }
 .form-step { display: none; }
-.form-step.active { display: block; animation: stepFadeIn 0.25s ease; }
+.form-step.active { display: block; animation: stepFadeIn 0.25s ease-out; }
 @media (prefers-reduced-motion: reduce) {
   .form-step.active { animation: none; opacity: 1; }
 }
