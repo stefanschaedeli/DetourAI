@@ -386,6 +386,7 @@
   "photos": "फ़ोटो",
   "route_builder.rejected_near_origin": "{place} — शुरुआत के बहुत पास, छोड़ा जा रहा है",
   "route_builder.rejected_near_target": "{place} — गंतव्य के बहुत पास, छोड़ा जा रहा है",
+  "route_builder.retry": "पुनः प्रयास करें",
   "route_builder.retry_with_hint": "केवल {count} वैध विकल्प — आगे खोज जारी...",
   "route_builder.analyzing_trip": "यात्रा डेटा का विश्लेषण हो रहा है…",
   "route_builder.searching_stops": "{label} से स्टॉप खोज रहे हैं…",
@@ -609,5 +610,9 @@
   "edit.phase_removing": "स्टॉप हटाएं",
   "edit.phase_reordering": "स्टॉप पुनर्व्यवस्थित करें",
   "common.cancel": "रद्द करें",
-  "common.confirm": "पुष्टि करें"
+  "common.confirm": "पुष्टि करें",
+  "sse.connection_error": "सर्वर से कनेक्शन टूट गया।",
+  "sse.reconnecting": "पुनः कनेक्ट हो रहा है…",
+  "sse.reconnected": "कनेक्शन बहाल हुआ।",
+  "sse.fatal_error": "कनेक्शन स्थायी रूप से खो गया। कृपया पृष्ठ पुनः लोड करें।"
 }

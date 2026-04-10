@@ -386,6 +386,7 @@
   "photos": "Fotos",
   "route_builder.rejected_near_origin": "{place} — zu nahe am Startpunkt, wird uebersprungen",
   "route_builder.rejected_near_target": "{place} — zu nahe am Ziel, wird uebersprungen",
+  "route_builder.retry": "Erneut versuchen",
   "route_builder.retry_with_hint": "Nur {count} brauchbare Option(en) — suche weiter...",
   "route_builder.analyzing_trip": "Reisedaten werden analysiert…",
   "route_builder.searching_stops": "Suche Zwischenstopps von {label}…",
@@ -609,5 +610,9 @@
   "edit.phase_removing": "Stopp entfernen",
   "edit.phase_reordering": "Reihenfolge anpassen",
   "common.cancel": "Abbrechen",
-  "common.confirm": "Bestätigen"
+  "common.confirm": "Bestätigen",
+  "sse.connection_error": "Verbindung zum Server unterbrochen.",
+  "sse.reconnecting": "Verbindung wird wiederhergestellt…",
+  "sse.reconnected": "Verbindung wiederhergestellt.",
+  "sse.fatal_error": "Verbindung endgültig verloren. Bitte die Seite neu laden."
 }

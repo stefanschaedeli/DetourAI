@@ -386,6 +386,7 @@
   "photos": "Photos",
   "route_builder.rejected_near_origin": "{place} — too close to start, skipping",
   "route_builder.rejected_near_target": "{place} — too close to destination, skipping",
+  "route_builder.retry": "Try again",
   "route_builder.retry_with_hint": "Only {count} valid option(s) — searching further...",
   "route_builder.analyzing_trip": "Analyzing trip data…",
   "route_builder.searching_stops": "Searching stops from {label}…",
@@ -609,5 +610,9 @@
   "edit.phase_removing": "Removing stop",
   "edit.phase_reordering": "Reordering stops",
   "common.cancel": "Cancel",
-  "common.confirm": "Confirm"
+  "common.confirm": "Confirm",
+  "sse.connection_error": "Connection to server lost.",
+  "sse.reconnecting": "Reconnecting…",
+  "sse.reconnected": "Connection restored.",
+  "sse.fatal_error": "Connection permanently lost. Please reload the page."
 }

@@ -458,4 +458,29 @@
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // SSE reconnection feedback
+  // ---------------------------------------------------------------------------
+
+  window.addEventListener('sse:reconnecting', function (e) {
+    const detail = (e && e.detail) || {};
+    showToast(
+      (typeof t === 'function' ? t('sse.reconnecting') : 'Verbindung wird wiederhergestellt…') +
+        ' (' + (detail.attempt || '') + '/' + (detail.maxAttempts || '') + ')',
+      'warning'
+    );
+  });
+
+  window.addEventListener('sse:reconnected', function () {
+    showToast(typeof t === 'function' ? t('sse.reconnected') : 'Verbindung wiederhergestellt.', 'success');
+  });
+
+  window.addEventListener('sse:fatal_error', function () {
+    showToast(
+      typeof t === 'function' ? t('sse.fatal_error') : 'Verbindung endgültig verloren. Bitte die Seite neu laden.',
+      'error',
+      { persistent: true }
+    );
+  });
+
 })();

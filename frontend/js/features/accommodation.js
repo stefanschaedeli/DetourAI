@@ -25,14 +25,22 @@ function connectAccommodationSSE(jobId) {
     accommodations_all_loaded:  onAccommodationsAllLoaded,
     debug_log:                  onAccDebugLog,
     onerror: () => {
-      console.warn('Accommodation SSE error');
+      showToast(t('sse.connection_error'), 'error');
+      // Replace any shimmer grids still showing placeholder cards with a visible error state.
+      document.querySelectorAll('#accommodation-stops-container .acc-options-grid').forEach(grid => {
+        if (grid.querySelector('.shimmer-card')) {
+          const errDiv = document.createElement('div');
+          errDiv.className = 'acc-error';
+          errDiv.textContent = t('sse.connection_error');
+          while (grid.firstChild) grid.removeChild(grid.firstChild);
+          grid.appendChild(errDiv);
+        }
+      });
     },
   });
 
-  // Resolve after a short delay to let the EventSource connection open.
-  // openSSE() returns a plain wrapper object (not an EventSource), so we
-  // cannot attach an 'open' listener on it — the timeout is the only signal.
-  return new Promise(resolve => setTimeout(resolve, 300));
+  // Await the EventSource onopen signal via the Promise exposed on the shim.
+  return accSSE.opened;
 }
 
 function onAccDebugLog(data) {

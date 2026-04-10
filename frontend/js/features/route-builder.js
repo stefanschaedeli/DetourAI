@@ -34,8 +34,26 @@ function openRouteSSE(jobId) {
     debug_log:              _onRouteBuildDebugLog,
     leg_complete:           data => { console.log(`Schnitt ${(data.leg_index || 0) + 1} abgeschlossen (${data.mode || ''})`); },
     style_mismatch_warning: _onStyleMismatchWarning,
-    ferry_detected: _onFerryDetected,
-    onerror: () => {},  // silently ignore — HTTP response is the fallback
+    ferry_detected:         _onFerryDetected,
+    onerror: () => {
+      showToast(t('sse.connection_error'), 'error');
+      // Replace any skeleton/shimmer cards that never received real content.
+      const container = document.getElementById('route-options-container');
+      if (container && container.querySelector('.option-skeleton')) {
+        while (container.firstChild) container.removeChild(container.firstChild);
+        const errDiv = document.createElement('div');
+        errDiv.className = 'route-sse-error';
+        const msg = document.createElement('p');
+        msg.textContent = t('sse.connection_error');
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-secondary';
+        btn.textContent = t('route_builder.retry');
+        btn.onclick = () => recomputeOptions();
+        errDiv.appendChild(msg);
+        errDiv.appendChild(btn);
+        container.appendChild(errDiv);
+      }
+    },
   });
 }
 

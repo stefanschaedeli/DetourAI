@@ -1,6 +1,6 @@
 'use strict';
 
-// SSE Client — EventSource lifecycle and SSE wire protocol.
+// SSE Client — EventSource lifecycle, reconnection logic, and SSE wire protocol.
 // Reads: authGetToken (auth.js).
 // Provides: SSEClient.open, SSEClient.close.
 
@@ -22,31 +22,112 @@ const SSEClient = (() => {
     'style_mismatch_warning', 'ferry_detected',
   ];
 
-  let _source = null;
+  const MAX_RECONNECT_ATTEMPTS = 5;
+
+  let _source             = null;
+  let _currentJobId       = null;
+  let _currentToken       = null;
+  let _reconnectAttempts  = 0;
+  let _reconnectTimer     = null;
+  let _wasReconnecting    = false;
+  let _openResolve        = null;  // resolves the Promise returned by open()
 
   // ---------------------------------------------------------------------------
-  // Connection management
+  // Internal helpers
   // ---------------------------------------------------------------------------
 
-  /** Open an EventSource for jobId, injecting the auth token as a query param. */
-  function open(jobId) {
-    close();
-    const token = (typeof authGetToken === 'function') ? authGetToken() : null;
-    const qs    = token ? '?token=' + encodeURIComponent(token) : '';
-    _source     = new EventSource('/api/progress/' + jobId + qs);
+  // Attach all known event listeners and error/open handlers to an EventSource.
+  function _attachListeners(source) {
+    source.onopen = () => {
+      // Resolve the open() Promise on first successful connection.
+      if (_openResolve) {
+        const resolve = _openResolve;
+        _openResolve = null;
+        resolve();
+      }
+      // Fire sse:reconnected if we recovered from a failure.
+      if (_wasReconnecting) {
+        _wasReconnecting    = false;
+        _reconnectAttempts  = 0;
+        window.dispatchEvent(new CustomEvent('sse:reconnected'));
+      }
+    };
+
     EVENTS.forEach(evt => {
-      _source.addEventListener(evt, (e) => {
+      source.addEventListener(evt, (e) => {
         let data = {};
         try { data = JSON.parse(e.data); } catch (_) {}
         window.dispatchEvent(new CustomEvent('sse:' + evt, { detail: data }));
       });
     });
-    _source.onerror = () => { window.dispatchEvent(new CustomEvent('sse:error')); };
+
+    source.onerror = () => {
+      // Only attempt reconnection when there is still a job to reconnect to.
+      if (!_currentJobId) {
+        window.dispatchEvent(new CustomEvent('sse:error'));
+        return;
+      }
+
+      if (_reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        window.dispatchEvent(new CustomEvent('sse:fatal_error'));
+        return;
+      }
+
+      _wasReconnecting = true;
+      _reconnectAttempts++;
+      const delay = Math.min(1000 * Math.pow(2, _reconnectAttempts - 1), 16000);
+
+      window.dispatchEvent(new CustomEvent('sse:reconnecting', {
+        detail: { attempt: _reconnectAttempts, maxAttempts: MAX_RECONNECT_ATTEMPTS },
+      }));
+
+      // Close the broken source before scheduling the retry.
+      if (_source) { _source.close(); _source = null; }
+
+      _reconnectTimer = setTimeout(() => {
+        _reconnectTimer = null;
+        _connectSource(_currentJobId, _currentToken);
+      }, delay);
+    };
   }
 
-  /** Close the active EventSource connection if one is open. */
+  // Create and store a new EventSource, attaching all listeners.
+  function _connectSource(jobId, token) {
+    const qs  = token ? '?token=' + encodeURIComponent(token) : '';
+    _source   = new EventSource('/api/progress/' + jobId + qs);
+    _attachListeners(_source);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Connection management
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Open an EventSource for jobId, injecting the auth token as a query param.
+   * Returns a Promise that resolves when the EventSource `onopen` fires.
+   */
+  function open(jobId) {
+    close();
+    _currentJobId      = jobId;
+    _currentToken      = (typeof authGetToken === 'function') ? authGetToken() : null;
+    _reconnectAttempts = 0;
+    _wasReconnecting   = false;
+
+    return new Promise(resolve => {
+      _openResolve = resolve;
+      _connectSource(_currentJobId, _currentToken);
+    });
+  }
+
+  /** Close the active EventSource connection and cancel any pending reconnect. */
   function close() {
-    if (_source) { _source.close(); _source = null; }
+    if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
+    if (_source)         { _source.close(); _source = null; }
+    _currentJobId      = null;
+    _currentToken      = null;
+    _reconnectAttempts = 0;
+    _wasReconnecting   = false;
+    _openResolve       = null;
   }
 
   return { open, close };
