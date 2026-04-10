@@ -69,22 +69,28 @@ function _confirmRemoveStop(stopId) {
 
   // Build modal content safely using esc() for user data
   const heading = document.createElement('h3');
-  heading.textContent = 'Stopp entfernen?';
+  heading.textContent = t('guide.edit.remove_confirm_title');
 
+  // Build confirm paragraph using DOM nodes — keeps region text XSS-safe, body text translated
   const para = document.createElement('p');
-  para.innerHTML = 'M\u00f6chtest du <strong>' + esc(stop.region) + '</strong> wirklich entfernen? Alle recherchierten Daten (Aktivit\u00e4ten, Restaurants, Unterk\u00fcnfte) gehen verloren.';
+  const bodyParts = t('guide.edit.remove_confirm_body').split('{region}');
+  para.appendChild(document.createTextNode(bodyParts[0] || ''));
+  const strong = document.createElement('strong');
+  strong.textContent = stop.region;
+  para.appendChild(strong);
+  para.appendChild(document.createTextNode(bodyParts[1] || ''));
 
   const actions = document.createElement('div');
   actions.className = 'modal-actions';
 
   const cancelBtn = document.createElement('button');
   cancelBtn.className = 'btn btn-secondary';
-  cancelBtn.textContent = 'Abbrechen';
+  cancelBtn.textContent = t('common.cancel');
   cancelBtn.onclick = () => modal.remove();
 
   const removeBtn = document.createElement('button');
   removeBtn.className = 'btn btn-danger';
-  removeBtn.textContent = 'Entfernen';
+  removeBtn.textContent = t('guide.edit.remove_btn');
   removeBtn.onclick = () => _executeRemoveStop(stopId);
 
   actions.appendChild(cancelBtn);
@@ -142,18 +148,18 @@ async function _executeRemoveStop(stopId) {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        showToast('Fehler beim Entfernen: ' + (data.error || 'Unbekannter Fehler'), 'error');
+        showToast(t('guide.edit.error_remove') + ' ' + (data.error || t('progress.unknown_error')), 'error');
       },
       onerror: () => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        showToast('Verbindung verloren beim Entfernen des Stopps.', 'error', { persistent: true });
+        showToast(t('guide.edit.connection_lost_remove'), 'error', { persistent: true });
       },
     });
   } catch (err) {
     _unlockEditing();
-    showToast('Fehler: ' + err.message, 'error');
+    showToast(t('guide.edit.error_generic') + ' ' + err.message, 'error');
   }
 }
 
@@ -169,7 +175,7 @@ function _openAddStopModal() {
 
   const savedId = plan._saved_travel_id;
   if (!savedId) {
-    showToast('Reise muss zuerst gespeichert werden.', 'warning');
+    showToast(t('guide.edit.save_first'), 'warning');
     return;
   }
 
@@ -185,14 +191,14 @@ function _openAddStopModal() {
   content.className = 'modal-content';
 
   const heading = document.createElement('h3');
-  heading.textContent = 'Stopp hinzuf\u00fcgen';
+  heading.textContent = t('guide.edit.add_stop_title');
   content.appendChild(heading);
 
   // Location input
   const locGroup = document.createElement('div');
   locGroup.className = 'form-group';
   const locLabel = document.createElement('label');
-  locLabel.textContent = 'Ort';
+  locLabel.textContent = t('guide.edit.location_label');
   locLabel.setAttribute('for', 'add-stop-location');
   const locInput = document.createElement('input');
   locInput.type = 'text';
@@ -207,7 +213,7 @@ function _openAddStopModal() {
   const afterGroup = document.createElement('div');
   afterGroup.className = 'form-group';
   const afterLabel = document.createElement('label');
-  afterLabel.textContent = 'Einf\u00fcgen nach';
+  afterLabel.textContent = t('guide.edit.insert_after_label');
   afterLabel.setAttribute('for', 'add-stop-after');
   const afterSelect = document.createElement('select');
   afterSelect.id = 'add-stop-after';
@@ -226,7 +232,7 @@ function _openAddStopModal() {
   const nightsGroup = document.createElement('div');
   nightsGroup.className = 'form-group';
   const nightsLabel = document.createElement('label');
-  nightsLabel.textContent = 'N\u00e4chte';
+  nightsLabel.textContent = t('guide.edit.nights_label');
   nightsLabel.setAttribute('for', 'add-stop-nights');
   const nightsInput = document.createElement('input');
   nightsInput.type = 'number';
@@ -245,11 +251,11 @@ function _openAddStopModal() {
   actions.className = 'modal-actions';
   const cancelBtn = document.createElement('button');
   cancelBtn.className = 'btn btn-secondary';
-  cancelBtn.textContent = 'Abbrechen';
+  cancelBtn.textContent = t('common.cancel');
   cancelBtn.onclick = () => modal.remove();
   const addBtn = document.createElement('button');
   addBtn.className = 'btn btn-primary';
-  addBtn.textContent = 'Hinzuf\u00fcgen';
+  addBtn.textContent = t('guide.edit.add_btn');
   addBtn.onclick = () => _executeAddStop();
   actions.appendChild(cancelBtn);
   actions.appendChild(addBtn);
@@ -264,7 +270,7 @@ function _openAddStopModal() {
 /** Submits the add-stop request from the modal form and refreshes the guide on success. */
 async function _executeAddStop() {
   const location = (document.getElementById('add-stop-location')?.value || '').trim();
-  if (!location) { showToast('Bitte Ortsnamen eingeben', 'warning'); return; }
+  if (!location) { showToast(t('guide.edit.location_required'), 'warning'); return; }
 
   const afterId = parseInt(document.getElementById('add-stop-after')?.value) || 1;
   const nights = parseInt(document.getElementById('add-stop-nights')?.value) || 1;
@@ -307,18 +313,18 @@ async function _executeAddStop() {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        showToast('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'), 'error');
+        showToast(t('guide.edit.error_add') + ' ' + (data.error || t('progress.unknown_error')), 'error');
       },
       onerror: () => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        showToast('Verbindung verloren beim Hinzuf\u00fcgen des Stopps.', 'error', { persistent: true });
+        showToast(t('guide.edit.connection_lost_add'), 'error', { persistent: true });
       },
     });
   } catch (err) {
     _unlockEditing();
-    showToast('Fehler: ' + err.message, 'error');
+    showToast(t('guide.edit.error_generic') + ' ' + err.message, 'error');
   }
 }
 
@@ -394,7 +400,7 @@ function _showClickToAddPopup(latLng, placeName) {
 
   var btn = document.createElement('button');
   btn.className = 'popup-add-btn';
-  btn.textContent = 'Stopp hier hinzuf\u00fcgen?';
+  btn.textContent = t('guide.edit.map_add_btn');
   btn.onclick = function() { _confirmClickToAdd(popup._placeName); };
 
   // Clear previous content safely and append new DOM elements
@@ -512,7 +518,7 @@ function _doAddStopFromMap(placeName, afterStopId) {
 
   var travelId = plan._saved_travel_id || plan.id;
   if (!travelId) {
-    showToast('Reise muss zuerst gespeichert werden.', 'warning');
+    showToast(t('guide.edit.save_first'), 'warning');
     return;
   }
 
@@ -547,18 +553,18 @@ function _doAddStopFromMap(placeName, afterStopId) {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        showToast('Fehler beim Hinzuf\u00fcgen: ' + (data.error || 'Unbekannter Fehler'), 'error');
+        showToast(t('guide.edit.error_add') + ' ' + (data.error || t('progress.unknown_error')), 'error');
       },
       onerror: function() {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        showToast('Verbindung verloren beim Hinzuf\u00fcgen des Stopps.', 'error', { persistent: true });
+        showToast(t('guide.edit.connection_lost_add'), 'error', { persistent: true });
       },
     });
   }).catch(function(err) {
     _unlockEditing();
-    showToast('Fehler: ' + err.message, 'error');
+    showToast(t('guide.edit.error_generic') + ' ' + err.message, 'error');
   });
 }
 
@@ -631,18 +637,18 @@ async function _onStopDrop(e, targetIndex) {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        showToast('Fehler beim Sortieren: ' + (data.error || 'Unbekannter Fehler'), 'error');
+        showToast(t('guide.edit.error_reorder') + ' ' + (data.error || t('progress.unknown_error')), 'error');
       },
       onerror: () => {
         if (_editSSE) { _editSSE.close(); _editSSE = null; }
         progressOverlay.close();
         _unlockEditing();
-        showToast('Verbindung verloren beim Sortieren.', 'error', { persistent: true });
+        showToast(t('guide.edit.connection_lost_reorder'), 'error', { persistent: true });
       },
     });
   } catch (err) {
     _unlockEditing();
-    showToast('Fehler: ' + err.message, 'error');
+    showToast(t('guide.edit.error_generic') + ' ' + err.message, 'error');
   }
 }
 
@@ -683,7 +689,7 @@ function _editStopNights(stopId, currentNights) {
 
   var plan = S.result;
   if (!plan || !plan._saved_travel_id) {
-    showToast('Reise muss zuerst gespeichert werden.', 'warning');
+    showToast(t('guide.edit.save_first'), 'warning');
     return;
   }
 
@@ -704,12 +710,12 @@ function _editStopNights(stopId, currentNights) {
 
   var confirmBtn = document.createElement('button');
   confirmBtn.className = 'nights-confirm';
-  confirmBtn.title = 'Best\u00e4tigen';
+  confirmBtn.title = t('common.confirm');
   confirmBtn.textContent = '\u2713';
 
   var cancelBtn = document.createElement('button');
   cancelBtn.className = 'nights-cancel';
-  cancelBtn.title = 'Abbrechen';
+  cancelBtn.title = t('common.cancel');
   cancelBtn.textContent = '\u2717';
 
   editor.appendChild(input);
@@ -723,7 +729,7 @@ function _editStopNights(stopId, currentNights) {
   function doConfirm() {
     var nights = parseInt(input.value);
     if (isNaN(nights) || nights < 1 || nights > 14) {
-      showToast('Bitte eine Zahl zwischen 1 und 14 eingeben.', 'warning');
+      showToast(t('guide.edit.nights_range_error'), 'warning');
       return;
     }
     if (nights === currentNights) {
@@ -739,7 +745,7 @@ function _editStopNights(stopId, currentNights) {
       })
       .catch(function(err) {
         _unlockEditing();
-        showToast('Fehler: ' + err.message, 'error');
+        showToast(t('guide.edit.error_generic') + ' ' + err.message, 'error');
         renderGuide(S.result, 'stops');
       });
   }
@@ -797,14 +803,14 @@ function _listenForNightsComplete(jobId, travelId) {
       _nightsSSE.close();
       progressOverlay.close();
       _unlockEditing();
-      showToast('Fehler: ' + (data.error || 'Unbekannter Fehler'), 'error');
+      showToast(t('guide.edit.error_generic') + ' ' + (data.error || t('progress.unknown_error')), 'error');
       renderGuide(S.result, 'stops');
     },
     onerror: function() {
       _nightsSSE.close();
       progressOverlay.close();
       _unlockEditing();
-      showToast('Verbindung verloren beim Aktualisieren der N\u00e4chte.', 'error', { persistent: true });
+      showToast(t('guide.edit.connection_lost_nights'), 'error', { persistent: true });
     },
   });
 }
@@ -822,7 +828,7 @@ function openReplaceStopModal(stopId, currentNights) {
 
   const savedId = plan._saved_travel_id;
   if (!savedId) {
-    showToast('Reise muss zuerst gespeichert werden.', 'warning');
+    showToast(t('guide.edit.save_first'), 'warning');
     return;
   }
 
@@ -848,17 +854,17 @@ function openReplaceStopModal(stopId, currentNights) {
     <div class="replace-modal-backdrop" onclick="closeReplaceStopModal()"></div>
     <div class="replace-modal-content">
       <div class="replace-modal-header">
-        <h3>Stopp ersetzen: ${esc(stop.region)}</h3>
+        <h3>${esc(t('guide.edit.replace_title').replace('{region}', stop.region))}</h3>
         <button class="replace-modal-close" onclick="closeReplaceStopModal()">&times;</button>
       </div>
 
       <div class="replace-modal-tabs">
-        <button class="replace-tab active" data-tab="manual" onclick="_switchReplaceTab('manual')">Ort eingeben</button>
-        <button class="replace-tab" data-tab="search" onclick="_switchReplaceTab('search')">Neue Suche</button>
+        <button class="replace-tab active" data-tab="manual" onclick="_switchReplaceTab('manual')">${esc(t('guide.edit.replace_tab_manual'))}</button>
+        <button class="replace-tab" data-tab="search" onclick="_switchReplaceTab('search')">${esc(t('guide.edit.replace_tab_search'))}</button>
       </div>
 
       <div class="replace-hints-section" style="margin-bottom:16px">
-        <label style="display:block;font-size:var(--text-sm,14px);color:var(--text-secondary,#666);margin-bottom:4px">Hinweise (optional)</label>
+        <label style="display:block;font-size:var(--text-sm,14px);color:var(--text-secondary,#666);margin-bottom:4px">${esc(t('guide.edit.replace_hints_label'))}</label>
         <input type="text" id="replace-stop-hints" class="replace-input"
           placeholder="z.B. mehr Strand, weniger Fahrzeit"
           style="width:100%;padding:12px 16px;font-size:16px;border:1px solid var(--border-default,#ddd);border-radius:8px;box-sizing:border-box" />
@@ -866,28 +872,27 @@ function openReplaceStopModal(stopId, currentNights) {
 
       <div class="replace-tab-content" id="replace-tab-manual">
         <div class="replace-form">
-          <label>Neuer Ort</label>
+          <label>${esc(t('guide.edit.replace_new_location'))}</label>
           <input type="text" id="replace-manual-location" class="replace-input" placeholder="z.B. Lyon, Frankreich" />
-          <label>Nächte <small>(Standard: ${currentNights})</small></label>
+          <label>${esc(t('guide.edit.replace_nights_label').replace('{nights}', currentNights))}</label>
           <input type="number" id="replace-manual-nights" class="replace-input" min="1" max="14" value="${currentNights}" />
           <button class="btn btn-primary replace-submit-btn" id="replace-manual-btn"
-            onclick="_doManualReplace(${savedId}, ${stopId})">Ersetzen</button>
+            onclick="_doManualReplace(${savedId}, ${stopId})">${esc(t('guide.edit.replace_btn'))}</button>
         </div>
       </div>
 
       <div class="replace-tab-content" id="replace-tab-search" style="display:none">
         <p class="replace-search-info">
-          Suche basierend auf ${esc(prevLabel)} → ${nextLabel ? esc(nextLabel) : 'Reiseende'}
-          mit den Original-Einstellungen.
+          ${esc(t('guide.edit.replace_search_info').replace('{prev}', prevLabel).replace('{next}', nextLabel || t('guide.edit.replace_end')))}
         </p>
         <button class="btn btn-primary replace-submit-btn" id="replace-search-btn"
-          onclick="_doSearchReplace(${savedId}, ${stopId})">Alternativen suchen</button>
+          onclick="_doSearchReplace(${savedId}, ${stopId})">${esc(t('guide.edit.replace_search_btn'))}</button>
         <div id="replace-search-results" class="replace-search-results"></div>
       </div>
 
       <div id="replace-progress" class="replace-progress" style="display:none">
         <div class="replace-spinner"></div>
-        <p id="replace-progress-msg">Wird bearbeitet…</p>
+        <p id="replace-progress-msg">${esc(t('guide.edit.replace_processing'))}</p>
       </div>
     </div>
   `;
@@ -924,7 +929,7 @@ function _showReplaceProgress(msg) {
   const p = document.getElementById('replace-progress');
   const m = document.getElementById('replace-progress-msg');
   if (p) p.style.display = '';
-  if (m) m.textContent = msg || 'Wird bearbeitet…';
+  if (m) m.textContent = msg || t('guide.edit.replace_processing');
 }
 
 /** Hides the spinner and progress message inside the replace-stop modal. */
@@ -938,7 +943,7 @@ async function _doManualReplace(travelId, stopId) {
   const loc = (document.getElementById('replace-manual-location')?.value || '').trim();
   const nights = parseInt(document.getElementById('replace-manual-nights')?.value) || 1;
   const hints = (document.getElementById('replace-stop-hints')?.value || '').trim();
-  if (!loc) { showToast('Bitte einen Ort eingeben.', 'warning'); return; }
+  if (!loc) { showToast(t('guide.edit.place_required'), 'warning'); return; }
 
   const btn = document.getElementById('replace-manual-btn');
   if (btn) btn.disabled = true;
@@ -951,7 +956,7 @@ async function _doManualReplace(travelId, stopId) {
     _hideReplaceProgress();
     if (btn) btn.disabled = false;
     _unlockEditing();
-    showToast('Fehler: ' + err.message, 'error');
+    showToast(t('guide.edit.error_generic') + ' ' + err.message, 'error');
   }
 }
 
@@ -961,7 +966,7 @@ async function _doSearchReplace(travelId, stopId) {
   if (btn) btn.disabled = true;
   const hints = (document.getElementById('replace-stop-hints')?.value || '').trim();
   _lockEditing();
-  _showReplaceProgress('Alternativen werden gesucht…');
+  _showReplaceProgress(t('guide.edit.replace_searching'));
 
   try {
     const res = await apiReplaceStop(travelId, stopId, 'search', null, null, hints);
@@ -973,7 +978,7 @@ async function _doSearchReplace(travelId, stopId) {
     if (!container) return;
 
     if (!options.length) {
-      container.innerHTML = '<p class="replace-no-results">Keine Alternativen gefunden.</p>';
+      container.innerHTML = '<p class="replace-no-results">' + esc(t('guide.edit.replace_no_results')) + '</p>';
       return;
     }
 
@@ -995,7 +1000,7 @@ async function _doSearchReplace(travelId, stopId) {
     _hideReplaceProgress();
     if (btn) btn.disabled = false;
     _unlockEditing();
-    showToast('Fehler: ' + err.message, 'error');
+    showToast(t('guide.edit.error_generic') + ' ' + err.message, 'error');
   }
 }
 
@@ -1007,7 +1012,7 @@ async function _selectSearchOption(travelId, jobId, optionIndex) {
   } catch (err) {
     _hideReplaceProgress();
     _unlockEditing();
-    showToast('Fehler: ' + err.message, 'error');
+    showToast(t('guide.edit.error_generic') + ' ' + err.message, 'error');
   }
 }
 
@@ -1047,13 +1052,13 @@ function _listenForReplaceComplete(jobId, travelId) {
       if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
       progressOverlay.close();
       _unlockEditing();
-      showToast('Fehler beim Ersetzen: ' + (data.error || 'Unbekannter Fehler'), 'error');
+      showToast(t('guide.edit.error_replace') + ' ' + (data.error || t('progress.unknown_error')), 'error');
     },
     onerror: () => {
       if (_replaceStopSSE) { _replaceStopSSE.close(); _replaceStopSSE = null; }
       progressOverlay.close();
       _unlockEditing();
-      showToast('Verbindung verloren beim Ersetzen des Stopps.', 'error', { persistent: true });
+      showToast(t('guide.edit.connection_lost_replace'), 'error', { persistent: true });
     },
   });
 }

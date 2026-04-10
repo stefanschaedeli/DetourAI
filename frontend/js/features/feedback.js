@@ -193,17 +193,17 @@ async function _submitFeedback() {
         category,
         screenshot: _feedbackScreenshot || null,
       }),
-    }, 'Feedback wird gesendet\u2026');
+    }, t('feedback.sending'));
 
     await resp.json();
     closeFeedbackModal();
-    showToast('Danke f\u00fcr dein Feedback!', 'info');
+    showToast(t('feedback.success'), 'info');
   } catch (err) {
     if (btn) {
       btn.disabled = false;
       btn.textContent = t('feedback.submit');
     }
-    const msg = err.message || 'Unbekannter Fehler';
-    showToast('Feedback konnte nicht gesendet werden: ' + msg, 'warning');
+    const msg = err.message || t('feedback.unknown_error');
+    showToast(t('feedback.send_error') + ' ' + msg, 'warning');
   }
 }

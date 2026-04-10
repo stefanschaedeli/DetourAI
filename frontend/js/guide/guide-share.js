@@ -15,7 +15,7 @@ function _renderShareToggle(travelId, shareToken) {
     : '';
   const urlSection = shareToken
     ? `<input type="text" class="share-url-input" value="${esc(shareUrl)}" readonly aria-label="Teilbarer Link">
-       <button class="btn btn-sm btn-secondary share-copy-btn" onclick="_copyShareLink(this, '${esc(shareUrl)}')">Link kopieren</button>`
+       <button class="btn btn-sm btn-secondary share-copy-btn" onclick="_copyShareLink(this, '${esc(shareUrl)}')">${esc(t('guide.share.copy_btn'))}</button>`
     : '';
   return `<div class="share-control" data-travel-id="${travelId}">
     <label class="toggle-switch">
@@ -23,7 +23,7 @@ function _renderShareToggle(travelId, shareToken) {
              onchange="_handleShareToggle(${travelId}, this.checked)">
       <span class="toggle-slider"></span>
     </label>
-    <span class="share-label">Teilen</span>
+    <span class="share-label">${esc(t('guide.share.label'))}</span>
     ${urlSection}
   </div>`;
 }
@@ -47,11 +47,11 @@ async function _handleShareToggle(travelId, checked) {
     } catch (err) {
       // Revert toggle
       if (checkbox) checkbox.checked = false;
-      showToast('Teilen fehlgeschlagen. Bitte erneut versuchen.', 'error');
+      showToast(t('guide.share.error'), 'error');
     }
   } else {
     // Confirm before revoking
-    if (!await showConfirm('Link deaktivieren? Bestehende Empfänger verlieren Zugriff.')) {
+    if (!await showConfirm(t('guide.share.disable_confirm'))) {
       if (checkbox) checkbox.checked = true;
       return;
     }
@@ -66,7 +66,7 @@ async function _handleShareToggle(travelId, checked) {
       }
     } catch (err) {
       if (checkbox) checkbox.checked = true;
-      showToast('Teilen fehlgeschlagen. Bitte erneut versuchen.', 'error');
+      showToast(t('guide.share.error'), 'error');
     }
   }
 }
@@ -75,9 +75,9 @@ async function _handleShareToggle(travelId, checked) {
 async function _copyShareLink(btn, url) {
   try {
     await navigator.clipboard.writeText(url);
-    btn.textContent = 'Kopiert!';
-    setTimeout(() => { btn.textContent = 'Link kopieren'; }, 2000);
+    btn.textContent = t('guide.share.copied');
+    setTimeout(() => { btn.textContent = t('guide.share.copy_btn'); }, 2000);
   } catch (err) {
-    showToast('Link konnte nicht kopiert werden.', 'error');
+    showToast(t('guide.share.copy_error'), 'error');
   }
 }
