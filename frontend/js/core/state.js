@@ -40,7 +40,6 @@ const FLAGS = {
   BE: '<span class="flag-badge">BE</span>',
   PT: '<span class="flag-badge">PT</span>',
   GB: '<span class="flag-badge">GB</span>',
-  XX: '<span class="flag-badge">??</span>',
 };
 
 // ---------------------------------------------------------------------------
