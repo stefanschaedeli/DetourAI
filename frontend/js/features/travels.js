@@ -33,7 +33,7 @@ async function _handleStarClick(starEl) {
   try {
     await apiUpdateTravel(id, { rating: newRating });
   } catch (err) {
-    console.error(t('travels.rating_failed'), err.message);
+    console.error('Rating update failed:', err.message);
     loadTravelsList();
   }
 }
@@ -64,7 +64,7 @@ function _startRename(titleEl) {
       } catch (err) {
         titleEl.innerHTML = esc(currentText) + (badge ? ' ' + badge.outerHTML : '');
         titleEl.dataset.current = currentText;
-        console.error(t('travels.rename_failed'), err.message);
+        console.error('Rename failed:', err.message);
       }
     }
   }
@@ -121,24 +121,24 @@ async function loadTravelsList() {
         { day: '2-digit', month: '2-digit', year: 'numeric' });
       const cost = typeof t.total_cost_chf === 'number'
         ? `CHF ${t.total_cost_chf.toLocaleString('de-CH')}` : '–';
-      const hasGuide = t.has_travel_guide ? '<span class="travel-card-badge">' + esc(window.t('travels.guide_badge')) + '</span>' : '';
+      const hasGuide = t.has_travel_guide ? '<span class="travel-card-badge">' + esc(t('travels.guide_badge')) + '</span>' : '';
       const displayName = t.custom_name || t.title;
       const starsHtml = _renderStars(t.id, t.rating || 0);
       return `
         <div class="travel-card" data-id="${t.id}">
           <div class="travel-card-body">
-            <div class="travel-card-title" data-id="${t.id}" data-title="${esc(t.title)}" data-current="${esc(displayName)}" title="${esc(window.t('travels.rename_title'))}">${esc(displayName)} ${hasGuide}</div>
+            <div class="travel-card-title" data-id="${t.id}" data-title="${esc(t.title)}" data-current="${esc(displayName)}" title="${esc(t('travels.rename_title'))}">${esc(displayName)} ${hasGuide}</div>
             <div class="travel-card-rating">${starsHtml}</div>
             <div class="travel-card-meta">
               <span>${esc(date)}</span>
-              <span>${esc(window.t('travels.stops_days', {stops: t.num_stops, days: t.total_days}))}</span>
+              <span>${esc(t('travels.stops_days', {stops: t.num_stops, days: t.total_days}))}</span>
               <span>${cost}</span>
             </div>
           </div>
           <div class="travel-card-actions">
-            <button class="btn btn-sm btn-primary" onclick="openSavedTravel(${t.id})">${esc(window.t('travels.open_btn'))}</button>
-            <button class="btn btn-sm btn-secondary" onclick="replanSavedTravel(${t.id},this)" title="${esc(window.t('travels.replan_title'))}">${esc(window.t('travels.replan_btn'))}</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteSavedTravel(${t.id},this)">${esc(window.t('travels.delete_btn'))}</button>
+            <button class="btn btn-sm btn-primary" onclick="openSavedTravel(${t.id})">${esc(t('travels.open_btn'))}</button>
+            <button class="btn btn-sm btn-secondary" onclick="replanSavedTravel(${t.id},this)" title="${esc(t('travels.replan_title'))}">${esc(t('travels.replan_btn'))}</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteSavedTravel(${t.id},this)">${esc(t('travels.delete_btn'))}</button>
           </div>
         </div>`;
     }).join('');
@@ -186,12 +186,13 @@ async function deleteSavedTravel(id, btn) {
       setTimeout(() => {
         card.remove();
         const c = document.getElementById('travels-list');
-        if (c && !c.querySelector('.travel-card'))
+        if (c && !c.querySelector('.travel-card')) {
           c.textContent = '';
           const emptyDiv = document.createElement('div');
           emptyDiv.className = 'travels-empty';
           emptyDiv.textContent = t('travels.no_travels');
           c.appendChild(emptyDiv);
+        }
       }, 200);
     }
   } catch (err) {

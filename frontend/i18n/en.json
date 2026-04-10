@@ -532,7 +532,6 @@
   "guide.edit.remove_title": "Remove stop?",
   "guide.edit.remove_confirm": "Do you really want to remove {stop}? All researched data will be lost.",
   "guide.edit.cancel": "Cancel",
-  "guide.edit.remove_btn": "Remove",
   "guide.edit.remove_error": "Error removing: {msg}",
   "guide.edit.remove_unknown_error": "Error removing: Unknown error",
   "guide.edit.remove_connection_lost": "Connection lost while removing stop.",
@@ -603,7 +602,7 @@
   "sse.reconnected": "Connection restored.",
   "sse.fatal_error": "Connection permanently lost. Please reload the page.",
   "guide.edit.remove_confirm_title": "Remove stop?",
-  "guide.edit.remove_confirm_body": "Do you really want to remove <strong>{region}</strong>? All researched data (activities, restaurants, accommodation) will be lost.",
+  "guide.edit.remove_confirm_body": "Do you really want to remove {region}? All researched data (activities, restaurants, accommodation) will be lost.",
   "guide.edit.remove_btn": "Remove",
   "guide.edit.error_remove": "Error removing stop:",
   "guide.edit.connection_lost_remove": "Connection lost while removing stop.",
@@ -657,5 +656,6 @@
   "guide.edit.drive_label": "h drive",
   "guide.edit.night_singular": "night",
   "guide.edit.night_plural": "nights",
-  "guide.share.toggle_label": "Enable sharing"
+  "guide.share.toggle_label": "Enable sharing",
+  "guide.share.url_input_label": "Shareable link"
 }

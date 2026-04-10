@@ -532,7 +532,6 @@
   "guide.edit.remove_title": "स्टॉप हटाएं?",
   "guide.edit.remove_confirm": "क्या आप वाकई {stop} हटाना चाहते हैं? सभी शोध किए गए डेटा खो जाएंगे।",
   "guide.edit.cancel": "रद्द करें",
-  "guide.edit.remove_btn": "हटाएं",
   "guide.edit.remove_error": "हटाने में त्रुटि: {msg}",
   "guide.edit.remove_unknown_error": "हटाने में त्रुटि: अज्ञात त्रुटि",
   "guide.edit.remove_connection_lost": "स्टॉप हटाते समय कनेक्शन खो गया।",
@@ -603,7 +602,7 @@
   "sse.reconnected": "कनेक्शन बहाल हुआ।",
   "sse.fatal_error": "कनेक्शन स्थायी रूप से खो गया। कृपया पृष्ठ पुनः लोड करें।",
   "guide.edit.remove_confirm_title": "स्टॉप हटाएं?",
-  "guide.edit.remove_confirm_body": "क्या आप वाकई <strong>{region}</strong> को हटाना चाहते हैं? सभी शोध डेटा (गतिविधियां, रेस्तरां, आवास) खो जाएगा।",
+  "guide.edit.remove_confirm_body": "क्या आप वाकई {region} को हटाना चाहते हैं? सभी शोध डेटा (गतिविधियां, रेस्तरां, आवास) खो जाएगा।",
   "guide.edit.remove_btn": "हटाएं",
   "guide.edit.error_remove": "स्टॉप हटाने में त्रुटि:",
   "guide.edit.connection_lost_remove": "स्टॉप हटाते समय कनेक्शन टूट गया।",
@@ -657,5 +656,6 @@
   "guide.edit.drive_label": "घंटे ड्राइव",
   "guide.edit.night_singular": "रात",
   "guide.edit.night_plural": "रातें",
-  "guide.share.toggle_label": "शेयरिंग सक्रिय करें"
+  "guide.share.toggle_label": "शेयरिंग सक्रिय करें",
+  "guide.share.url_input_label": "साझा करने योग्य लिंक"
 }

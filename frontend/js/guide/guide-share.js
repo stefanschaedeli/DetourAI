@@ -14,7 +14,7 @@ function _renderShareToggle(travelId, shareToken) {
     ? `${location.origin}/travel/${travelId}?share=${encodeURIComponent(shareToken)}`
     : '';
   const urlSection = shareToken
-    ? `<input type="text" class="share-url-input" value="${esc(shareUrl)}" readonly aria-label="Teilbarer Link">
+    ? `<input type="text" class="share-url-input" value="${esc(shareUrl)}" readonly aria-label="${t('guide.share.url_input_label')}">
        <button class="btn btn-sm btn-secondary share-copy-btn" onclick="_copyShareLink(this, '${esc(shareUrl)}')">${esc(t('guide.share.copy_btn'))}</button>`
     : '';
   return `<div class="share-control" data-travel-id="${travelId}">

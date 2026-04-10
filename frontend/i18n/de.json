@@ -532,7 +532,6 @@
   "guide.edit.remove_title": "Stopp entfernen?",
   "guide.edit.remove_confirm": "Möchtest du {stop} wirklich entfernen? Alle recherchierten Daten gehen verloren.",
   "guide.edit.cancel": "Abbrechen",
-  "guide.edit.remove_btn": "Entfernen",
   "guide.edit.remove_error": "Fehler beim Entfernen: {msg}",
   "guide.edit.remove_unknown_error": "Fehler beim Entfernen: Unbekannter Fehler",
   "guide.edit.remove_connection_lost": "Verbindung verloren beim Entfernen des Stopps.",
@@ -603,7 +602,7 @@
   "sse.reconnected": "Verbindung wiederhergestellt.",
   "sse.fatal_error": "Verbindung endgültig verloren. Bitte die Seite neu laden.",
   "guide.edit.remove_confirm_title": "Stopp entfernen?",
-  "guide.edit.remove_confirm_body": "Möchtest du <strong>{region}</strong> wirklich entfernen? Alle recherchierten Daten (Aktivitäten, Restaurants, Unterkünfte) gehen verloren.",
+  "guide.edit.remove_confirm_body": "Möchtest du {region} wirklich entfernen? Alle recherchierten Daten (Aktivitäten, Restaurants, Unterkünfte) gehen verloren.",
   "guide.edit.remove_btn": "Entfernen",
   "guide.edit.error_remove": "Fehler beim Entfernen:",
   "guide.edit.connection_lost_remove": "Verbindung verloren beim Entfernen des Stopps.",
@@ -657,5 +656,6 @@
   "guide.edit.drive_label": "h Fahrt",
   "guide.edit.night_singular": "Nacht",
   "guide.edit.night_plural": "Nächte",
-  "guide.share.toggle_label": "Teilen aktivieren"
+  "guide.share.toggle_label": "Teilen aktivieren",
+  "guide.share.url_input_label": "Teilbarer Link"
 }
