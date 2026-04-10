@@ -11,16 +11,23 @@
   // Internal state
   // ---------------------------------------------------------------------------
 
-  let _pendingCount   = 0;          // reference counter (showLoading / hideLoading)
-  let _mode           = null;       // 'simple' | 'sse' | null
-  let _summary        = '';         // text shown in top summary zone
-  let _progress       = null;       // null = indeterminate, 0-100 = determinate
-  const _tasks        = new Map();  // key → {text, status, detail, el, iconEl, textEl, detailEl}
-  let _debugOpen      = false;      // persisted to localStorage
-  const _debugEntries = [];         // ring buffer, max 200 entries
-  const _DEBUG_KEY    = 'tp_v1_debug_open';
-  const _DEBUG_MAX    = 200;
-  const _DEBUG_SHOW   = 50;         // number of entries rendered at once
+  let _pendingCount    = 0;          // reference counter (showLoading / hideLoading)
+  let _mode            = null;       // 'simple' | 'sse' | null
+  let _summary         = '';         // text shown in top summary zone
+  let _progress        = null;       // null = indeterminate, 0-100 = determinate
+  const _tasks         = new Map();  // key → {text, status, detail, el, iconEl, textEl, detailEl}
+  let _debugOpen       = false;      // persisted to localStorage
+  const _debugEntries  = [];         // ring buffer, max 200 entries
+  const _DEBUG_KEY     = 'tp_v1_debug_open';
+  const _DEBUG_MAX     = 200;
+  const _DEBUG_SHOW    = 50;         // number of entries rendered at once
+
+  // RAF batching — coalesce multiple _scheduleRender() calls into one animation frame.
+  let _rafPending      = false;
+  // Incremental debug log — track how many entries have already been rendered.
+  let _lastDebugCount  = 0;
+  // Dirty flag — only re-sort the task list when a status change has occurred.
+  let _taskOrderDirty  = true;
 
   // ---------------------------------------------------------------------------
   // DOM refs (resolved lazily)
@@ -132,15 +139,35 @@
   }
 
   // ---------------------------------------------------------------------------
+  // RAF-batched render scheduler
+  // ---------------------------------------------------------------------------
+
+  // Coalesce rapid state changes into a single DOM update per animation frame.
+  function _scheduleRender() {
+    if (_rafPending) return;
+    _rafPending = true;
+    requestAnimationFrame(function () { _rafPending = false; _render(); });
+  }
+
+  // ---------------------------------------------------------------------------
   // Debug log rendering
   // ---------------------------------------------------------------------------
 
   function _renderDebugLog() {
     if (!_debugLogEl) return;
-    // Clear existing entries safely.
-    _clearEl(_debugLogEl);
+
+    // On overflow, reset and do a full redraw so the capped ring buffer stays consistent.
+    if (_lastDebugCount > _debugEntries.length) {
+      _clearEl(_debugLogEl);
+      _lastDebugCount = 0;
+    }
+
+    // Append only entries added since the last render (incremental update).
     const slice = _debugEntries.slice(-_DEBUG_SHOW);
-    for (const entry of slice) {
+    // Determine how many of the current slice are new since last render.
+    const newStart = Math.max(0, _lastDebugCount - (_debugEntries.length - slice.length));
+    for (let i = newStart; i < slice.length; i++) {
+      const entry    = slice[i];
       const div      = document.createElement('div');
       const level    = (entry.level || 'info').toLowerCase();
       div.className  = 'uo-log-entry uo-log-' + level;
@@ -155,6 +182,7 @@
       div.appendChild(msgNode);
       _debugLogEl.appendChild(div);
     }
+    _lastDebugCount = _debugEntries.length;
     _debugLogEl.scrollTop = _debugLogEl.scrollHeight;
   }
 
@@ -226,23 +254,32 @@
   }
 
   // SSE mode: render done → active → upcoming groups in order.
+  // Re-sort only when _taskOrderDirty is set; otherwise just sync status classes.
   function _renderTasksSSE() {
-    const done     = [];
-    const active   = [];
-    const upcoming = [];
+    if (_taskOrderDirty) {
+      const done     = [];
+      const active   = [];
+      const upcoming = [];
 
-    for (const [key, entry] of _tasks) {
-      if (entry.status === 'done')         done.push(key);
-      else if (entry.status === 'active')  active.push(key);
-      else                                 upcoming.push(key);
-    }
+      for (const [key, entry] of _tasks) {
+        if (entry.status === 'done')         done.push(key);
+        else if (entry.status === 'active')  active.push(key);
+        else                                 upcoming.push(key);
+      }
 
-    const orderedKeys = [...done, ...active, ...upcoming];
-    for (const key of orderedKeys) {
-      const entry = _tasks.get(key);
-      _applyTaskStatus(entry);
-      // appendChild moves the element if it is already in the DOM.
-      _tasksEl.appendChild(entry.el);
+      const orderedKeys = [...done, ...active, ...upcoming];
+      for (const key of orderedKeys) {
+        const entry = _tasks.get(key);
+        _applyTaskStatus(entry);
+        // appendChild moves the element if it is already in the DOM.
+        _tasksEl.appendChild(entry.el);
+      }
+      _taskOrderDirty = false;
+    } else {
+      // No reorder needed — just keep status classes in sync.
+      for (const [, entry] of _tasks) {
+        _applyTaskStatus(entry);
+      }
     }
 
     _tasksEl.scrollTop = _tasksEl.scrollHeight;
@@ -288,7 +325,7 @@
       if (_tasksEl) _clearEl(_tasksEl);
       _createTaskEl('simple', _summary, 'active');
     }
-    _render();
+    _scheduleRender();
   };
 
   /**
@@ -300,7 +337,7 @@
     if (_pendingCount === 0 && _mode === 'simple') {
       _mode = null;
     }
-    _render();
+    _scheduleRender();
   };
 
   /**
@@ -310,7 +347,7 @@
   window.resetLoading = function () {
     _pendingCount = 0;
     if (_mode === 'simple') _mode = null;
-    _render();
+    _scheduleRender();
   };
 
   /**
@@ -319,7 +356,7 @@
    */
   window.setLoadingProgress = function (value) {
     _progress = value;
-    _render();
+    _scheduleRender();
   };
 
   /**
@@ -352,9 +389,10 @@
       _mode = 'sse';
       _tasks.clear();
       if (_tasksEl) _clearEl(_tasksEl);
-      _summary  = phase || (typeof t === 'function' ? t('loading.default') : 'Laden…');
-      _progress = null;
-      _render();
+      _summary        = phase || (typeof t === 'function' ? t('loading.default') : 'Laden…');
+      _progress       = null;
+      _taskOrderDirty = true;
+      _scheduleRender();
     },
 
     /**
@@ -364,7 +402,7 @@
     close: function () {
       _mode = null;
       _progress = null;
-      _render();
+      _scheduleRender();
     },
 
     /**
@@ -378,6 +416,8 @@
         _tasksEl.appendChild(el);
         _tasksEl.scrollTop = _tasksEl.scrollHeight;
       }
+      // A new task changes the group order (active before upcoming).
+      _taskOrderDirty = true;
     },
 
     /**
@@ -389,9 +429,9 @@
       entry.status = 'done';
       entry.detail = detail || '';
       if (detail) entry.detailEl.textContent = '— ' + detail;
-      _applyTaskStatus(entry);
-      // Re-render task order so done items move to the top of the list.
-      if (_mode === 'sse' && _tasksEl) _renderTasksSSE();
+      // Status changed — re-sort is needed on next render.
+      _taskOrderDirty = true;
+      _scheduleRender();
     },
 
     /**
@@ -425,7 +465,7 @@
    */
   window.overlaySetProgress = function (pct) {
     _progress = pct;
-    _render();
+    _scheduleRender();
   };
 
   /**

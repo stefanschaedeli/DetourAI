@@ -263,48 +263,52 @@ const Sidebar = (() => {
   // Lazy image loading
   // ---------------------------------------------------------------------------
 
-  async function _lazyLoadImages(nodes) {
-    for (const node of nodes) {
-      if (!node.lat && !node.lng && !node.placeId && !node.name) continue;
+  // Fetch and display a single avatar image; reads from / writes to _imageCache.
+  async function _loadNodeImage(node) {
+    if (!node.lat && !node.lng && !node.placeId && !node.name) return;
 
-      const cacheKey = node.id;
+    const cacheKey = node.id;
 
-      try {
-        let imgUrl = null;
+    try {
+      let imgUrl = null;
 
-        if (_imageCache.has(cacheKey)) {
-          imgUrl = _imageCache.get(cacheKey);
-        } else {
-          if (typeof GoogleMaps === 'undefined' || !GoogleMaps.getPlaceImages) continue;
-          const imgs = await GoogleMaps.getPlaceImages(node.name, node.lat, node.lng, 'city', node.placeId);
-          imgUrl = Array.isArray(imgs) ? imgs[0] : imgs;
-          _imageCache.set(cacheKey, imgUrl);
-        }
-
-        if (!imgUrl) continue;
-
-        const avatarEl = document.getElementById(`sb-av-${node.id}`);
-        if (!avatarEl) continue;
-
-        // Don't replace if already has an image
-        if (avatarEl.querySelector('.sb-avatar-img')) continue;
-
-        const img = document.createElement('img');
-        img.className = 'sb-avatar-img';
-        img.alt = node.name;
-        img.style.opacity = '0';
-        img.style.transition = 'opacity 0.3s ease';
-        img.onload = () => {
-          img.style.opacity = '1';
-          const fallback = avatarEl.querySelector('.sb-avatar-fallback');
-          if (fallback) avatarEl.replaceChild(img, fallback);
-          else if (!avatarEl.contains(img)) avatarEl.appendChild(img);
-        };
-        img.src = imgUrl;
-      } catch (_err) {
-        // Silently ignore image loading errors
+      if (_imageCache.has(cacheKey)) {
+        imgUrl = _imageCache.get(cacheKey);
+      } else {
+        if (typeof GoogleMaps === 'undefined' || !GoogleMaps.getPlaceImages) return;
+        const imgs = await GoogleMaps.getPlaceImages(node.name, node.lat, node.lng, 'city', node.placeId);
+        imgUrl = Array.isArray(imgs) ? imgs[0] : imgs;
+        _imageCache.set(cacheKey, imgUrl);
       }
+
+      if (!imgUrl) return;
+
+      const avatarEl = document.getElementById(`sb-av-${node.id}`);
+      if (!avatarEl) return;
+
+      // Don't replace if already has an image
+      if (avatarEl.querySelector('.sb-avatar-img')) return;
+
+      const img = document.createElement('img');
+      img.className = 'sb-avatar-img';
+      img.alt = node.name;
+      img.style.opacity = '0';
+      img.style.transition = 'opacity 0.3s ease';
+      img.onload = () => {
+        img.style.opacity = '1';
+        const fallback = avatarEl.querySelector('.sb-avatar-fallback');
+        if (fallback) avatarEl.replaceChild(img, fallback);
+        else if (!avatarEl.contains(img)) avatarEl.appendChild(img);
+      };
+      img.src = imgUrl;
+    } catch (_err) {
+      // Silently ignore image loading errors
     }
+  }
+
+  // Fetch all node avatar images in parallel instead of sequentially.
+  function _lazyLoadImages(nodes) {
+    Promise.allSettled(nodes.map(node => _loadNodeImage(node)));
   }
 
   // ---------------------------------------------------------------------------

@@ -702,8 +702,15 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
 .step-connector.done { background: var(--success); }
 
 /* ============================================================ Form */
+@keyframes stepFadeIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 .form-step { display: none; }
-.form-step.active { display: block; }
+.form-step.active { display: block; animation: stepFadeIn 0.25s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .form-step.active { animation: none; opacity: 1; }
+}
 .form-section-title { font-family: var(--font-display); font-size: 2rem; font-weight: 600; margin-bottom: 24px; letter-spacing: -0.01em; color: var(--text-primary); }
 .form-group { margin-bottom: 20px; }
 .form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--text-secondary); letter-spacing: 0.01em; }

@@ -172,6 +172,27 @@ function renderAccCards(stopId, options, mustHaves) {
   }).join('');
 }
 
+// Use IntersectionObserver (rootMargin 200px) to defer image loading until cards
+// are near the viewport — consistent with the lazy-loading pattern in guide-stops.js.
+function _observeAccCardImages(grid, options, stop) {
+  if (typeof _lazyLoadEntityImages !== 'function') return;
+
+  const observer = new IntersectionObserver((entries, obs) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const card = entry.target;
+      const i    = Number(card.dataset.idx);
+      const opt  = options[i];
+      if (opt) {
+        _lazyLoadEntityImages(card, opt.name, stop.lat, stop.lng, 'hotel');
+      }
+      obs.unobserve(card);
+    });
+  }, { rootMargin: '200px' });
+
+  grid.querySelectorAll('.acc-option-card').forEach(card => observer.observe(card));
+}
+
 function onAccommodationLoaded(data) {
   const stopId = data.stop_id;
   const options = data.options || [];
@@ -184,15 +205,8 @@ function onAccommodationLoaded(data) {
 
   grid.innerHTML = renderAccCards(stopId, options, []);
 
-  // Lazy-load images for each card
-  requestAnimationFrame(() => {
-    grid.querySelectorAll('.acc-option-card').forEach((card, i) => {
-      const opt = options[i];
-      if (opt && typeof _lazyLoadEntityImages === 'function') {
-        _lazyLoadEntityImages(card, opt.name, stop.lat, stop.lng, 'hotel');
-      }
-    });
-  });
+  // Lazy-load images when cards scroll near the viewport (rootMargin 200px).
+  _observeAccCardImages(grid, options, stop);
 
   const count = options.length;
   progressOverlay.completeLine('acc_' + stopId, t('accommodation.options_found', {count}));
@@ -289,14 +303,7 @@ async function researchAccommodation(stopId) {
 
     if (grid) {
       grid.innerHTML = renderAccCards(stopId, options, []);
-      requestAnimationFrame(() => {
-        grid.querySelectorAll('.acc-option-card').forEach((card, i) => {
-          const opt = options[i];
-          if (opt && typeof _lazyLoadEntityImages === 'function') {
-            _lazyLoadEntityImages(card, opt.name, stop.lat, stop.lng, 'hotel');
-          }
-        });
-      });
+      _observeAccCardImages(grid, options, stop);
     }
 
     updateBudgetFromSelections();
