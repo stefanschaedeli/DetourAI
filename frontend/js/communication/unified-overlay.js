@@ -411,13 +411,10 @@
      */
     addLine: function (key, text) {
       if (_tasks.has(key)) return;
-      const el = _createTaskEl(key, text, 'active');
-      if (_tasksEl && _mode === 'sse') {
-        _tasksEl.appendChild(el);
-        _tasksEl.scrollTop = _tasksEl.scrollHeight;
-      }
+      _createTaskEl(key, text, 'active');
       // A new task changes the group order (active before upcoming).
       _taskOrderDirty = true;
+      _scheduleRender();
     },
 
     /**
@@ -453,10 +450,9 @@
    */
   window.overlayAddUpcoming = function (key, text) {
     if (_tasks.has(key)) return;
-    const el = _createTaskEl(key, text, 'upcoming');
-    if (_tasksEl && _mode === 'sse') {
-      _tasksEl.appendChild(el);
-    }
+    _createTaskEl(key, text, 'upcoming');
+    _taskOrderDirty = true;
+    _scheduleRender();
   };
 
   /**
