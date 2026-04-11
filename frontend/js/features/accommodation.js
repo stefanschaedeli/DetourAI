@@ -88,6 +88,9 @@ function buildAllStopPanels(stops) {
           <div class="shimmer-card"></div>
           <div class="shimmer-card"></div>
           <div class="shimmer-card"></div>
+          <div class="shimmer-card"></div>
+          <div class="shimmer-card"></div>
+          <div class="shimmer-card"></div>
         </div>
         <div class="acc-resarch-row" id="acc-resarch-row-${stop.id}">
           <input class="acc-resarch-input" id="acc-resarch-input-${stop.id}"
@@ -104,7 +107,7 @@ function onAccommodationLoading(data) {
   const stopId = data.stop_id;
   const grid = document.getElementById(`acc-options-${stopId}`);
   if (grid) {
-    grid.innerHTML = '<div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div>';
+    grid.innerHTML = '<div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div>';
   }
   progressOverlay.addLine('acc_' + stopId, t('accommodation.searching_options', {region: data.region || ''}));
 }
@@ -123,9 +126,15 @@ function renderAccCards(stopId, options, mustHaves) {
     }).slice(0, 5).join('');
     const imgHtml = buildHeroPhotoLoading('md');
     const isGeheimtipp = opt.is_geheimtipp === true;
-    const cardClass = isGeheimtipp ? 'acc-option-card acc-geheimtipp-card' : 'acc-option-card';
+    const isGoogle = opt.source === 'google';
+    const cardClass = isGeheimtipp ? 'acc-option-card acc-geheimtipp-card'
+      : isGoogle ? 'acc-option-card acc-google-card'
+      : 'acc-option-card';
     const geheimtippBadge = isGeheimtipp
       ? `<span class="geheimtipp-badge">${t('accommodation.geheimtipp_badge')}</span>`
+      : '';
+    const googleBadge = isGoogle
+      ? `<span class="google-verified-badge">${t('accommodation.google_badge')}</span>`
       : '';
     const descHtml = opt.description
       ? `<div class="acc-description">${highlightMustHaves(opt.description, opt.matched_must_haves || [])}</div>`
@@ -150,7 +159,7 @@ function renderAccCards(stopId, options, mustHaves) {
            data-stop="${stopId}" data-idx="${i}">
         ${imgHtml}
         <div class="acc-card-body">
-          ${geheimtippBadge}
+          ${geheimtippBadge}${googleBadge}
           <h4>${esc(opt.name)}</h4>
           <div class="acc-type-badge">${esc(opt.type)}</div>
           ${stars ? `<div class="acc-stars">${stars}</div>` : ''}
@@ -290,7 +299,7 @@ async function researchAccommodation(stopId) {
 
   const grid = document.getElementById(`acc-options-${stopId}`);
   if (grid) {
-    grid.innerHTML = '<div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div>';
+    grid.innerHTML = '<div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div><div class="shimmer-card"></div>';
   }
 
   try {

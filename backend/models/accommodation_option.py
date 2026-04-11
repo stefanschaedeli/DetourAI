@@ -28,6 +28,7 @@ class AccommodationOption(BaseModel):
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None
     place_id: Optional[str] = None
+    source: Optional[str] = None      # "google", "ai", "ai_geheimtipp"
 
 
 class BudgetState(BaseModel):
