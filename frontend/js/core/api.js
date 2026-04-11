@@ -2,7 +2,7 @@
 
 // API — fetch wrappers with auth injection and all apiXxx() backend call helpers.
 // Reads: authGetToken, authSilentRefresh, showLoginRequired (auth.js), showLoading, hideLoading (unified-overlay.js), S (state.js), t (i18n.js), getLocale (i18n.js), SSEClient (communication/sse-client.js).
-// Provides: apiLogin, apiLogout, apiGetMe, apiChangePassword, apiInitJob, apiPlanTrip, apiPlanLocation, apiSelectStop, apiConfirmRoute, apiStartAccommodations, apiConfirmAccommodations, apiSelectAccommodation, apiStartPlanning, apiConfirmAccommodationsQuiet, apiStartPlanningQuiet, apiGetResult, apiPatchJob, apiResearchAccommodation, apiRecomputeOptions, apiSetRundreiseMode, apiSkipToLegEnd, apiSkipSegment, apiSaveTravel, apiGetTravels, apiGetTravel, apiDeleteTravel, apiReplanTravel, apiUpdateTravel, apiGetShared, apiShareTravel, apiUnshareTravel, apiLogError, apiGetSettings, apiSaveSettings, apiResetSettings, apiReplaceStop, apiRemoveStop, apiAddStop, apiReorderStops, apiReplaceStopSelect, apiUpdateNights, openSSE, showToast, showConfirm.
+// Provides: apiLogin, apiLogout, apiGetMe, apiChangePassword, apiInitJob, apiPlanTrip, apiPlanLocation, apiSelectStop, apiConfirmRoute, apiStartAccommodations, apiConfirmAccommodations, apiSelectAccommodation, apiStartPlanning, apiConfirmAccommodationsQuiet, apiStartPlanningQuiet, apiGetResult, apiPatchJob, apiResearchAccommodation, apiRecomputeOptions, apiSetRundreiseMode, apiSkipToLegEnd, apiSkipSegment, apiSaveTravel, apiGetTravels, apiGetTravel, apiDeleteTravel, apiReplanTravel, apiUpdateTravel, apiGetShared, apiShareTravel, apiUnshareTravel, apiLogError, apiGetSettings, apiSaveSettings, apiResetSettings, apiOllamaHealth, apiReplaceStop, apiRemoveStop, apiAddStop, apiReorderStops, apiReplaceStopSelect, apiUpdateNights, openSSE, showToast, showConfirm.
 
 // ---------------------------------------------------------------------------
 // Internal helpers — fetch wrappers with auth, loading overlay, and retry
@@ -356,6 +356,11 @@ async function apiResetSettings(section) {
     method: 'POST',
     body: JSON.stringify({ section }),
   })).json();
+}
+
+/** Check Ollama connectivity and retrieve available models. */
+async function apiOllamaHealth() {
+  return (await _fetchQuiet(`${API}/ollama/health`)).json();
 }
 
 // ---------------------------------------------------------------------------

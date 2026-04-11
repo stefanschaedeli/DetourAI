@@ -1,7 +1,7 @@
 'use strict';
 
 // Settings — settings page: per-agent model selection (9 AI agents), budget defaults, API keys.
-// Reads: S (state.js), Router (router.js), t (i18n.js).
+// Reads: S (state.js), Router (router.js), t (i18n.js), apiOllamaHealth (api.js).
 // Provides: openSettingsPage, closeSettingsPage, loadSettings.
 
 // ---------------------------------------------------------------------------
@@ -199,6 +199,9 @@ function toggleSettingsCategory(section) {
 }
 
 function _renderAgentCards(settings, defaults) {
+  const useLocalLlm = settings['system.use_local_llm'];
+  const localModel = settings['system.ollama_model'] || '';
+
   return Object.entries(AGENT_META).map(([key, meta]) => {
     const modelKey = `agent.${key}.model`;
     const tokensKey = `agent.${key}.max_tokens`;
@@ -206,12 +209,17 @@ function _renderAgentCards(settings, defaults) {
     const currentTokens = settings[tokensKey] || defaults[tokensKey];
     const isDefault = currentModel === defaults[modelKey] && currentTokens === defaults[tokensKey];
 
+    const localBadge = useLocalLlm
+      ? `<span class="settings-badge badge-ok">${esc(t('settings.local_llm_agents_note').replace('{model}', localModel || 'Ollama'))}</span>`
+      : '';
+
     return `
       <div class="settings-agent-card">
         <div class="settings-agent-header" onclick="toggleAgentCard(this)">
           <div class="settings-agent-info">
             <span class="settings-agent-name">${esc(meta.label)}</span>
             <span class="settings-badge">${esc(meta.role)}</span>
+            ${localBadge}
           </div>
           <div class="settings-agent-model-badge ${_modelClass(currentModel)}">
             ${esc(_modelLabel(currentModel))}
@@ -220,7 +228,7 @@ function _renderAgentCards(settings, defaults) {
         <div class="settings-agent-body">
           <div class="settings-row">
             <label>${t('settings.model_label')}</label>
-            <select onchange="saveSetting('${modelKey}', this.value)">
+            <select onchange="saveSetting('${modelKey}', this.value)" ${useLocalLlm ? 'disabled' : ''}>
               ${MODEL_OPTIONS.map(m => `<option value="${m.value}" ${m.value === currentModel ? 'selected' : ''}>${esc(m.label)}</option>`).join('')}
             </select>
           </div>
@@ -267,7 +275,47 @@ function _renderApiSection(settings, defaults) {
 
 function _renderSystemSection(settings, defaults, apiKeys) {
   const testMode = settings['system.test_mode'];
+  const useLocalLlm = settings['system.use_local_llm'];
+  const ollamaEndpoint = settings['system.ollama_endpoint'] || '';
+  const ollamaModel = settings['system.ollama_model'] || '';
   return `
+    <div class="settings-row">
+      <label>${t('settings.use_local_llm_label')}</label>
+      <div class="settings-toggle-wrapper">
+        <label class="settings-toggle">
+          <input type="checkbox" id="local-llm-toggle" ${useLocalLlm ? 'checked' : ''}
+            onchange="saveSetting('system.use_local_llm', this.checked); _toggleLocalLlmDetails(this.checked)">
+          <span class="settings-toggle-slider"></span>
+        </label>
+        <span class="settings-toggle-label">${useLocalLlm ? 'An' : 'Aus'}</span>
+      </div>
+    </div>
+    <div id="local-llm-details" style="display:${useLocalLlm ? '' : 'none'}">
+      <div class="settings-row">
+        <label>${t('settings.ollama_endpoint_label')}</label>
+        <div class="settings-input-group">
+          <input type="text" value="${esc(ollamaEndpoint)}"
+            placeholder="${t('settings.ollama_endpoint_placeholder')}"
+            onchange="debounceSave('system.ollama_endpoint', this.value)">
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>${t('settings.ollama_model_label')}</label>
+        <div class="settings-input-group">
+          <input type="text" value="${esc(ollamaModel)}"
+            placeholder="${t('settings.ollama_model_placeholder')}"
+            onchange="debounceSave('system.ollama_model', this.value)">
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>${t('settings.ollama_test_btn')}</label>
+        <button class="btn-primary" onclick="_testOllamaConnection()">${t('settings.ollama_test_btn')}</button>
+      </div>
+      <div id="ollama-status" style="display:none" class="settings-row">
+        <label></label>
+        <div id="ollama-status-content"></div>
+      </div>
+    </div>
     <div class="settings-row">
       <label>Test-Modus</label>
       <div class="settings-toggle-wrapper">
@@ -336,6 +384,47 @@ function _modelLabel(model) {
   if (model.includes('opus')) return 'Opus';
   if (model.includes('sonnet')) return 'Sonnet';
   return 'Haiku';
+}
+
+/* ── Local LLM helpers ── */
+
+function _toggleLocalLlmDetails(enabled) {
+  const details = document.getElementById('local-llm-details');
+  if (details) details.style.display = enabled ? '' : 'none';
+  // Update toggle label to match new state
+  const toggleLabel = document.querySelector('#local-llm-toggle')
+    ?.closest('.settings-toggle-wrapper')
+    ?.querySelector('.settings-toggle-label');
+  if (toggleLabel) toggleLabel.textContent = enabled ? 'An' : 'Aus';
+}
+
+async function _testOllamaConnection() {
+  const statusEl = document.getElementById('ollama-status');
+  const contentEl = document.getElementById('ollama-status-content');
+  if (!statusEl || !contentEl) return;
+  statusEl.style.display = '';
+  contentEl.textContent = '…';
+  try {
+    const result = await apiOllamaHealth();
+    const models = Array.isArray(result.models) ? result.models : [];
+    contentEl.textContent = '';
+    const badge = document.createElement('span');
+    badge.className = 'settings-badge badge-ok';
+    badge.textContent = t('settings.ollama_status_ok');
+    contentEl.appendChild(badge);
+    if (models.length) {
+      const modelNote = document.createElement('div');
+      modelNote.className = 'settings-toggle-label';
+      modelNote.textContent = t('settings.ollama_available_models') + ': ' + models.join(', ');
+      contentEl.appendChild(modelNote);
+    }
+  } catch (err) {
+    contentEl.textContent = '';
+    const badge = document.createElement('span');
+    badge.className = 'settings-badge badge-err';
+    badge.textContent = t('settings.ollama_status_error');
+    contentEl.appendChild(badge);
+  }
 }
 
 /* ── Save Logic ── */
