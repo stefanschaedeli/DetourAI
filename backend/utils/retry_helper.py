@@ -3,6 +3,11 @@ import asyncio
 import random
 import time
 from anthropic import BadRequestError, InternalServerError, RateLimitError
+try:
+    from openai import RateLimitError as OAIRateLimitError, APIStatusError as OAIAPIStatusError
+except ImportError:
+    OAIRateLimitError = type(None)  # type: ignore[assignment,misc]
+    OAIAPIStatusError = type(None)  # type: ignore[assignment,misc]
 from utils.debug_logger import LogLevel, debug_logger
 from utils.settings_store import get_setting
 
@@ -61,7 +66,7 @@ async def call_with_retry(fn, *, job_id: str = None, agent_name: str = None,
 
             return response
 
-        except (RateLimitError, InternalServerError) as exc:
+        except (RateLimitError, InternalServerError, OAIRateLimitError) as exc:
             if attempt == max_attempts:
                 raise
             delay = 2 ** (attempt - 1) + random.random()
@@ -72,7 +77,7 @@ async def call_with_retry(fn, *, job_id: str = None, agent_name: str = None,
                 job_id=job_id, agent=agent_name,
             )
             await asyncio.sleep(delay)
-        except BadRequestError as exc:
+        except (BadRequestError, OAIAPIStatusError) as exc:
             if "usage limit" in str(exc).lower() or "spending" in str(exc).lower():
                 await debug_logger.log(
                     LogLevel.ERROR,

@@ -61,6 +61,9 @@ DEFAULTS: dict[str, Any] = {
     "system.test_mode": True,
     "system.log_retention_days": 30,
     "system.redis_job_ttl_s": 86400,
+    "system.use_local_llm": False,
+    "system.ollama_endpoint": "http://localhost:11434/v1/",
+    "system.ollama_model": "qwen3:32b",
 }
 
 ALLOWED_MODELS = ["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5"]
@@ -191,10 +194,15 @@ def validate_setting(key: str, value: Any) -> Optional[str]:
         if not isinstance(value, str):
             return f"{key}: String erwartet"
 
-    # Model-Allowlist
-    if key.endswith(".model"):
+    # Model-Allowlist (system.ollama_model is free-text, not a Claude model name)
+    if key.endswith(".model") and key != "system.ollama_model":
         if value not in ALLOWED_MODELS:
             return f"{key}: Modell muss eines von {ALLOWED_MODELS} sein"
+
+    # Endpoint-URL validation
+    if key == "system.ollama_endpoint":
+        if not isinstance(value, str) or not value.startswith("http"):
+            return f"{key}: Gueltige URL erwartet (http:// oder https://)"
 
     # Range-Check
     if key in _RANGES:
