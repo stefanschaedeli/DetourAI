@@ -404,7 +404,22 @@ class TravelPlannerOrchestrator:
 
         await debug_logger.log(LogLevel.SUCCESS, "Reiseplan fertig!", job_id=job_id)
 
-        # Phase 4: Reise-Analyse
+        # Inject token counts as internal metadata (before job_complete so they're in the initial payload)
+        total_in  = sum(e["input"]  for e in self._token_accumulator)
+        total_out = sum(e["output"] for e in self._token_accumulator)
+        plan["_token_counts"] = {
+            "total_input_tokens":  total_in,
+            "total_output_tokens": total_out,
+            "total_tokens":        total_in + total_out,
+        }
+
+        # Phase 4 kicks off AFTER job_complete so the guide is visible immediately
+        plan["trip_analysis"] = None
+
+        # Send job_complete — frontend shows the guide now
+        await self.progress("job_complete", None, plan, 100)
+
+        # Phase 4: Reise-Analyse (runs in background while user views the guide)
         await debug_logger.log(LogLevel.INFO, i18n_t("progress.analysis_start", lang),
                                job_id=job_id, message_key="progress.analysis_start")
         try:
@@ -416,16 +431,12 @@ class TravelPlannerOrchestrator:
                 message_key="progress.analysis_failed")
             plan["trip_analysis"] = None
 
-        # Inject token counts as internal metadata
-        total_in  = sum(e["input"]  for e in self._token_accumulator)
-        total_out = sum(e["output"] for e in self._token_accumulator)
-        plan["_token_counts"] = {
-            "total_input_tokens":  total_in,
-            "total_output_tokens": total_out,
-            "total_tokens":        total_in + total_out,
-        }
+        # Notify frontend of analysis result (null if failed — frontend guards on this)
+        await self.progress("analysis_complete", None, {"trip_analysis": plan["trip_analysis"]}, 100)
 
-        # Send job_complete
-        await self.progress("job_complete", None, plan, 100)
+        # Persist the merged plan (with trip_analysis) back to Redis so saved travels are complete
+        job = self._load_job()
+        job["plan"] = plan
+        self._save_job(job)
 
         return plan
