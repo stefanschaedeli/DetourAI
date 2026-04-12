@@ -116,29 +116,29 @@ async function loadTravelsList() {
       container.innerHTML = '<div class="travels-empty">' + esc(t('travels.no_travels')) + '</div>';
       return;
     }
-    container.innerHTML = travels.map(t => {
-      const date = new Date(t.created_at).toLocaleDateString('de-CH',
+    container.innerHTML = travels.map(travel => {
+      const date = new Date(travel.created_at).toLocaleDateString('de-CH',
         { day: '2-digit', month: '2-digit', year: 'numeric' });
-      const cost = typeof t.total_cost_chf === 'number'
-        ? `CHF ${t.total_cost_chf.toLocaleString('de-CH')}` : '–';
-      const hasGuide = t.has_travel_guide ? '<span class="travel-card-badge">' + esc(t('travels.guide_badge')) + '</span>' : '';
-      const displayName = t.custom_name || t.title;
-      const starsHtml = _renderStars(t.id, t.rating || 0);
+      const cost = typeof travel.total_cost_chf === 'number'
+        ? `CHF ${travel.total_cost_chf.toLocaleString('de-CH')}` : '–';
+      const hasGuide = travel.has_travel_guide ? '<span class="travel-card-badge">' + esc(t('travels.guide_badge')) + '</span>' : '';
+      const displayName = travel.custom_name || travel.title;
+      const starsHtml = _renderStars(travel.id, travel.rating || 0);
       return `
-        <div class="travel-card" data-id="${t.id}">
+        <div class="travel-card" data-id="${travel.id}">
           <div class="travel-card-body">
-            <div class="travel-card-title" data-id="${t.id}" data-title="${esc(t.title)}" data-current="${esc(displayName)}" title="${esc(t('travels.rename_title'))}">${esc(displayName)} ${hasGuide}</div>
+            <div class="travel-card-title" data-id="${travel.id}" data-title="${esc(travel.title)}" data-current="${esc(displayName)}" title="${esc(t('travels.rename_title'))}">${esc(displayName)} ${hasGuide}</div>
             <div class="travel-card-rating">${starsHtml}</div>
             <div class="travel-card-meta">
               <span>${esc(date)}</span>
-              <span>${esc(t('travels.stops_days', {stops: t.num_stops, days: t.total_days}))}</span>
+              <span>${esc(t('travels.stops_days', {stops: travel.num_stops, days: travel.total_days}))}</span>
               <span>${cost}</span>
             </div>
           </div>
           <div class="travel-card-actions">
-            <button class="btn btn-sm btn-primary" onclick="openSavedTravel(${t.id})">${esc(t('travels.open_btn'))}</button>
-            <button class="btn btn-sm btn-secondary" onclick="replanSavedTravel(${t.id},this)" title="${esc(t('travels.replan_title'))}">${esc(t('travels.replan_btn'))}</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteSavedTravel(${t.id},this)">${esc(t('travels.delete_btn'))}</button>
+            <button class="btn btn-sm btn-primary" onclick="openSavedTravel(${travel.id})">${esc(t('travels.open_btn'))}</button>
+            <button class="btn btn-sm btn-secondary" onclick="replanSavedTravel(${travel.id},this)" title="${esc(t('travels.replan_title'))}">${esc(t('travels.replan_btn'))}</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteSavedTravel(${travel.id},this)">${esc(t('travels.delete_btn'))}</button>
           </div>
         </div>`;
     }).join('');
