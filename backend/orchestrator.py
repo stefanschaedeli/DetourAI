@@ -434,7 +434,16 @@ class TravelPlannerOrchestrator:
         # Notify frontend of analysis result (null if failed — frontend guards on this)
         await self.progress("analysis_complete", None, {"trip_analysis": plan["trip_analysis"]}, 100)
 
-        # Persist the merged plan (with trip_analysis) back to Redis so saved travels are complete
+        # Recompute token counts now that analysis tokens have accumulated
+        total_in  = sum(e["input"]  for e in self._token_accumulator)
+        total_out = sum(e["output"] for e in self._token_accumulator)
+        plan["_token_counts"] = {
+            "total_input_tokens":  total_in,
+            "total_output_tokens": total_out,
+            "total_tokens":        total_in + total_out,
+        }
+
+        # Persist the merged plan (with trip_analysis and complete token counts) back to Redis
         job = self._load_job()
         job["plan"] = plan
         self._save_job(job)
