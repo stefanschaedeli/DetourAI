@@ -8,7 +8,6 @@ from utils.debug_logger import debug_logger, LogLevel
 from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
 from utils.image_fetcher import fetch_unsplash_images
-from utils.brave_search import search_places
 from utils.google_places import search_hotels, place_photo_url, find_place_from_text, place_details
 from utils.currency import detect_currency, get_chf_rate
 from utils.maps_helper import haversine_km
@@ -72,86 +71,8 @@ SYSTEM_PROMPTS = {
 }
 
 
-def _google_place_to_option(
-    h: dict,
-    stop_id: int,
-    index: int,
-    region: str,
-    budget_min: float,
-    budget_max: float,
-    nights: int,
-    checkin,
-    adults: int,
-    children_count: int,
-    lang: str,
-    google_verified_label: str,
-    reviews_label: str,
-) -> dict:
-    """Convert a raw Google Places lodging result to an AccommodationOption-compatible dict.
-
-    Price is estimated from Google's 0-4 price_level scale mapped onto the budget range.
-    Rating is converted from Google's 0-5 scale to the app's 0-10 scale.
-    """
-    price_level = h.get("price_level")
-    if price_level is not None:
-        # Map 0-4 price_level linearly onto budget_min..budget_max
-        price = budget_min + (price_level / 4.0) * (budget_max - budget_min)
-    else:
-        price = (budget_min + budget_max) / 2.0
-    price = round(price, 0)
-
-    raw_rating = h.get("rating")
-    rating_10 = round(raw_rating * 2, 1) if raw_rating is not None else None
-
-    review_count = h.get("user_ratings_total", 0)
-    features = [google_verified_label, f"{review_count} {reviews_label}"] if review_count else [google_verified_label]
-
-    address = h.get("address", "")
-    teaser = f"{h.get('name', '')} — {address}" if address else h.get("name", "")
-
-    photo_ref = h.get("photo_reference")
-    image_overview = place_photo_url(photo_ref) if photo_ref else None
-
-    booking_url = _build_booking_url(
-        hotel_name=h.get("name", ""),
-        region=region,
-        checkin=checkin,
-        nights=nights,
-        adults=adults,
-        children=children_count,
-        language=lang,
-    )
-
-    return {
-        "id": f"acc_{stop_id}_g{index + 1}",
-        "name": h.get("name", ""),
-        "type": "Hotel",
-        "price_per_night_chf": price,
-        "total_price_chf": round(price * nights, 0),
-        "separate_rooms_available": False,
-        "max_persons": 4,
-        "rating": rating_10,
-        "features": features,
-        "teaser": teaser,
-        "description": "",
-        "suitable_for_children": False,
-        "is_geheimtipp": False,
-        "geheimtipp_hinweis": None,
-        "preference_index": None,
-        "matched_must_haves": [],
-        "booking_url": booking_url,
-        "hotel_website_url": None,
-        "booking_search_url": None,
-        "image_overview": image_overview,
-        "image_mood": None,
-        "image_customer": None,
-        "place_id": h.get("place_id"),
-        "source": "google",
-    }
-
-
 class AccommodationResearcherAgent:
-    """Agent that generates 7 accommodation options per stop (3 from Google Places + 3 preference-matched AI + 1 AI Geheimtipp), enriched with Places data and Booking.com links."""
+    """Agent that generates 4 accommodation options per stop (3 preference-matched + 1 Geheimtipp), enriched with Google Places data and Booking.com links."""
 
     def __init__(self, request: TravelRequest, job_id: str, extra_instructions: str = ""):
         self.request = request
@@ -193,13 +114,6 @@ class AccommodationResearcherAgent:
                 "children_hint": "Kinder: {n} — erwähne bitte Kindermenüs, Spielbereiche, Kinderanimation oder familienfreundliche Aktivitäten in der Beschreibung.",
                 "extra_hint": "Zusätzliche Wünsche des Gastes",
                 "desc_label": "Reisebeschreibung", "pref_label": "Bevorzugte Aktivitäten", "mandatory_label": "Pflichtaktivitäten",
-                "reviews": "Bewertungen",
-                "google_verified": "Google verifiziert",
-                "real_hotels": "Echte Hotels in der Nähe (Google Places Daten):",
-                "prefer_real": "Nutze diese echten Hotels als Kontext. Die 3 Google-Ergebnisse werden separat angezeigt.",
-                "no_dupes": "WICHTIG: Schlage KEINE der folgenden Hotels vor — sie sind bereits als Google-Ergebnisse enthalten: {names}",
-                "real_search": "Echte Suchergebnisse für Unterkünfte:",
-                "prefer_real2": "Bevorzuge diese echten Unterkünfte.",
                 "currency_note": "Das Land verwendet {c}. Gib Preise trotzdem in CHF an.\nAktueller Kurs: 1 {c} = {r} CHF",
                 "coord_hint": "Stopzentrum: {lat}N, {lon}E — alle Unterkuenfte muessen innerhalb von {r} km davon liegen.",
                 "find": "Finde genau 4 Unterkunftsoptionen in",
@@ -210,24 +124,17 @@ class AccommodationResearcherAgent:
                 "rule1": 'Option 1 (preference_index: 0): Entspricht diesem Wunsch des Gastes: "{p}"',
                 "rule2": 'Option 2 (preference_index: 1): Entspricht diesem Wunsch des Gastes: "{p}"',
                 "rule3": 'Option 3 (preference_index: 2): Entspricht diesem Wunsch des Gastes: "{p}"',
-                "rule4": "Option 4 (is_geheimtipp: true, preference_index: null): Ein echter Geheimtipp — etwas Besonderes/Ungewöhnliches für die Region (Glamping, Baumhaus, Boutique-Hotel, Weingut, Bauernhof, etc.). MUSS innerhalb von {r} km vom Zentrum von {region} liegen.",
+                "rule4": "Option 4 (is_geheimtipp: true, preference_index: null): Ein echter Geheimtipp — etwas Besonderes oder Ungewöhnliches für die Region. MUSS innerhalb von {r} km vom Zentrum von {region} liegen.",
                 "rule5": "Verwende realistische, tatsächlich existierende Unterkunftsnamen für {region}.",
                 "rule6": "Beschreibung: 1-2 Absätze mit Zimmerausstattung, Aktivitäten und spezifischen Services.",
                 "rule7": "matched_must_haves: Immer leeres Array [].",
                 "rule8": "hotel_website_url: Echte Hotelwebseite falls bekannt, sonst null.",
-                "rule9": "WICHTIG: Alle 4 Optionen (inkl. Geheimtipp) müssen innerhalb des Suchradius von {r} km vom Zentrum von {region} liegen. Keine Ausnahmen.",
+                "json_instruction": "Gib exakt dieses JSON-Format zurück (4 Objekte im options-Array, jedes mit denselben Feldern):",
             },
             "en": {
                 "children_hint": "Children: {n} — please mention children's menus, play areas, kids' animation, or family-friendly activities in the description.",
                 "extra_hint": "Additional guest requests",
                 "desc_label": "Travel description", "pref_label": "Preferred activities", "mandatory_label": "Mandatory activities",
-                "reviews": "reviews",
-                "google_verified": "Google verified",
-                "real_hotels": "Real hotels nearby (Google Places data):",
-                "prefer_real": "Use these real hotels as context. The 3 Google results will be shown separately.",
-                "no_dupes": "IMPORTANT: Do NOT suggest any of the following hotels — they are already included as Google results: {names}",
-                "real_search": "Real search results for accommodations:",
-                "prefer_real2": "Prefer these real accommodations.",
                 "currency_note": "The country uses {c}. Still provide prices in CHF.\nCurrent rate: 1 {c} = {r} CHF",
                 "coord_hint": "Stop center: {lat}N, {lon}E — all accommodations must be within {r} km of this.",
                 "find": "Find exactly 4 accommodation options in",
@@ -238,24 +145,17 @@ class AccommodationResearcherAgent:
                 "rule1": 'Option 1 (preference_index: 0): Matches this guest preference: "{p}"',
                 "rule2": 'Option 2 (preference_index: 1): Matches this guest preference: "{p}"',
                 "rule3": 'Option 3 (preference_index: 2): Matches this guest preference: "{p}"',
-                "rule4": "Option 4 (is_geheimtipp: true, preference_index: null): A real hidden gem — something special/unusual for the region (glamping, treehouse, boutique hotel, winery, farm, etc.). MUST be within {r} km of the center of {region}.",
+                "rule4": "Option 4 (is_geheimtipp: true, preference_index: null): A real hidden gem — something special or unusual for the region. MUST be within {r} km of the center of {region}.",
                 "rule5": "Use realistic, actually existing accommodation names for {region}.",
                 "rule6": "Description: 1-2 paragraphs with room amenities, activities, and specific services.",
                 "rule7": "matched_must_haves: Always empty array [].",
                 "rule8": "hotel_website_url: Real hotel website if known, otherwise null.",
-                "rule9": "IMPORTANT: All 4 options (incl. hidden gem) must be within the search radius of {r} km from the center of {region}. No exceptions.",
+                "json_instruction": "Return exactly this JSON format (4 objects in the options array, each with the same fields):",
             },
             "hi": {
                 "children_hint": "बच्चे: {n} — कृपया विवरण में बच्चों का मेनू, खेल क्षेत्र, या परिवार-अनुकूल गतिविधियों का उल्लेख करें।",
                 "extra_hint": "अतिथि के अतिरिक्त अनुरोध",
                 "desc_label": "यात्रा विवरण", "pref_label": "पसंदीदा गतिविधियां", "mandatory_label": "अनिवार्य गतिविधियां",
-                "reviews": "समीक्षाएं",
-                "google_verified": "Google सत्यापित",
-                "real_hotels": "पास के वास्तविक होटल (Google Places डेटा):",
-                "prefer_real": "इन वास्तविक होटलों को संदर्भ के रूप में उपयोग करें। 3 Google परिणाम अलग से दिखाए जाएंगे।",
-                "no_dupes": "महत्वपूर्ण: निम्नलिखित होटलों में से किसी का सुझाव न दें — वे पहले से ही Google परिणामों के रूप में शामिल हैं: {names}",
-                "real_search": "आवासों के लिए वास्तविक खोज परिणाम:",
-                "prefer_real2": "इन वास्तविक आवासों को प्राथमिकता दें।",
                 "currency_note": "यह देश {c} का उपयोग करता है। फिर भी CHF में कीमतें दें।\nवर्तमान दर: 1 {c} = {r} CHF",
                 "coord_hint": "स्टॉप केंद्र: {lat}N, {lon}E — सभी आवास इससे {r} km के भीतर होने चाहिए।",
                 "find": "में बिल्कुल 4 आवास विकल्प खोजें",
@@ -266,12 +166,12 @@ class AccommodationResearcherAgent:
                 "rule1": 'विकल्प 1 (preference_index: 0): इस अतिथि वरीयता से मेल खाता है: "{p}"',
                 "rule2": 'विकल्प 2 (preference_index: 1): इस अतिथि वरीयता से मेल खाता है: "{p}"',
                 "rule3": 'विकल्प 3 (preference_index: 2): इस अतिथि वरीयता से मेल खाता है: "{p}"',
-                "rule4": "विकल्प 4 (is_geheimtipp: true, preference_index: null): एक वास्तविक छिपा रत्न — क्षेत्र के लिए कुछ विशेष/असामान्य। {region} के केंद्र से {r} km के भीतर होना चाहिए।",
+                "rule4": "विकल्प 4 (is_geheimtipp: true, preference_index: null): एक वास्तविक छिपा रत्न — क्षेत्र के लिए कुछ विशेष या असामान्य। {region} के केंद्र से {r} km के भीतर होना चाहिए।",
                 "rule5": "{region} के लिए यथार्थवादी, वास्तव में मौजूद आवास नामों का उपयोग करें।",
                 "rule6": "विवरण: कमरे की सुविधाओं, गतिविधियों और विशिष्ट सेवाओं के साथ 1-2 पैराग्राफ।",
                 "rule7": "matched_must_haves: हमेशा खाली सरणी []।",
                 "rule8": "hotel_website_url: वास्तविक होटल वेबसाइट यदि ज्ञात हो, अन्यथा null।",
-                "rule9": "महत्वपूर्ण: सभी 4 विकल्प {region} के केंद्र से {r} km के खोज दायरे के भीतर होने चाहिए। कोई अपवाद नहीं।",
+                "json_instruction": "बिल्कुल इस JSON प्रारूप को लौटाएं (options array में 4 ऑब्जेक्ट, प्रत्येक में समान फ़ील्ड):",
             },
         }
         AL = _L.get(lang, _L["de"])
@@ -292,54 +192,14 @@ class AccommodationResearcherAgent:
         # Pre-fetch: echte Hoteldaten + Wechselkurse
         lat = stop.get("lat")
         lon = stop.get("lon")
-        real_data_block = ""
         currency_block = ""
         gp_results: list = []
-        google_options: list = []
 
         arrival_day = stop.get("arrival_day", 1)
         checkin = req.start_date + timedelta(days=arrival_day - 1)
 
         if lat and lon:
             gp_results = await search_hotels(lat, lon, radius_m=req.hotel_radius_km * 1000)
-            if gp_results:
-                # Build Google-sourced options from the top 3 results (sorted by rating)
-                sorted_gp = sorted(gp_results, key=lambda h: (h.get("rating") or 0), reverse=True)
-                for idx, h in enumerate(sorted_gp[:3]):
-                    google_options.append(_google_place_to_option(
-                        h=h,
-                        stop_id=stop_id,
-                        index=idx,
-                        region=region,
-                        budget_min=budget_min,
-                        budget_max=budget_max,
-                        nights=nights,
-                        checkin=checkin,
-                        adults=req.adults,
-                        children_count=children_count,
-                        lang=lang,
-                        google_verified_label=AL["google_verified"],
-                        reviews_label=AL["reviews"],
-                    ))
-                if len(google_options) < 3:
-                    await debug_logger.log(
-                        LogLevel.DEBUG,
-                        f"Google Places returned only {len(google_options)} hotel(s) for {region} (expected 3)",
-                        job_id=self.job_id, agent=AGENT_KEY,
-                    )
-                lines = [f"- {h['name']} | \u2605{h.get('rating','?')} ({h.get('user_ratings_total',0)} {AL['reviews']}) | {h.get('address','')}" for h in gp_results[:8]]
-                real_data_block = f"\n\n{AL['real_hotels']}\n" + "\n".join(lines) + f"\n{AL['prefer_real']}\n"
-                # Tell AI not to duplicate the hotels already shown as Google results
-                if google_options:
-                    google_names = ", ".join(f'"{o["name"]}"' for o in google_options)
-                    real_data_block += AL["no_dupes"].format(names=google_names) + "\n"
-
-        if not real_data_block:
-            brave_results = await search_places(f"Hotel {region} {country}", count=5)
-            if brave_results:
-                lines = [f"- {r['name']} ({r.get('rating','?')}\u2605) \u2014 {r.get('address','')}" for r in brave_results if r.get("name")]
-                if lines:
-                    real_data_block = f"\n\n{AL['real_search']}\n" + "\n".join(lines) + f"\n{AL['prefer_real2']}\n"
 
         local_currency = detect_currency(country)
         if local_currency != "CHF":
@@ -372,33 +232,14 @@ class AccommodationResearcherAgent:
 6. {AL['rule6']}
 7. {AL['rule7']}
 8. {AL['rule8']}
-9. {AL['rule9'].format(r=req.hotel_radius_km, region=region)}
 
-Gib exakt dieses JSON zurück:
+{AL['json_instruction']}
 {{
   "stop_id": {stop_id},
   "region": "{region}",
   "options": [
     {{
-      "id": "acc_{stop_id}_1",
-      "name": "...",
-      "type": "...",
-      "price_per_night_chf": {budget_min:.0f},
-      "total_price_chf": {budget_min * nights:.0f},
-      "separate_rooms_available": false,
-      "max_persons": 4,
-      "rating": 8.0,
-      "features": ["WiFi", "Parkplatz"],
-      "teaser": "...",
-      "description": "...",
-      "suitable_for_children": true,
-      "is_geheimtipp": false,
-      "preference_index": 0,
-      "matched_must_haves": [],
-      "hotel_website_url": null
-    }},
-    {{
-      "id": "acc_{stop_id}_2",
+      "id": "acc_{stop_id}_N",
       "name": "...",
       "type": "...",
       "price_per_night_chf": {budget_per_night:.0f},
@@ -406,54 +247,17 @@ Gib exakt dieses JSON zurück:
       "separate_rooms_available": true,
       "max_persons": 4,
       "rating": 8.5,
-      "features": ["WiFi", "Frühstück", "Parkplatz"],
+      "features": ["...", "..."],
       "teaser": "...",
       "description": "...",
       "suitable_for_children": true,
       "is_geheimtipp": false,
-      "preference_index": 1,
+      "preference_index": 0,
       "matched_must_haves": [],
       "hotel_website_url": null
-    }},
-    {{
-      "id": "acc_{stop_id}_3",
-      "name": "...",
-      "type": "...",
-      "price_per_night_chf": {budget_per_night:.0f},
-      "total_price_chf": {budget_per_night * nights:.0f},
-      "separate_rooms_available": true,
-      "max_persons": 4,
-      "rating": 8.8,
-      "features": ["Natur", "Ruhig"],
-      "teaser": "...",
-      "description": "...",
-      "suitable_for_children": true,
-      "is_geheimtipp": false,
-      "preference_index": 2,
-      "matched_must_haves": [],
-      "hotel_website_url": null
-    }},
-    {{
-      "id": "acc_{stop_id}_4",
-      "name": "...",
-      "type": "...",
-      "price_per_night_chf": {budget_per_night:.0f},
-      "total_price_chf": {budget_per_night * nights:.0f},
-      "separate_rooms_available": true,
-      "max_persons": 4,
-      "rating": 9.0,
-      "features": ["Einzigartig", "Authentisch", "Ruhig"],
-      "teaser": "...",
-      "description": "...",
-      "suitable_for_children": true,
-      "is_geheimtipp": true,
-      "preference_index": null,
-      "matched_must_haves": [],
-      "hotel_website_url": null,
-      "geheimtipp_hinweis": "Buche direkt beim Betrieb oder über lokales Tourismusbüro."
     }}
   ]
-}}{real_data_block}"""
+}}"""
 
         await debug_logger.log(
             LogLevel.API, f"→ Anthropic API call: {self.model} (Stop {stop_id}: {region})",
@@ -591,14 +395,13 @@ Gib exakt dieses JSON zurück:
                 opt["place_id"] = gp_match["place_id"]
             return opt
 
-        # Enrich AI options (Google options skip enrichment via early return inside enrich_option)
-        all_opts = google_options + result.get("options", [])
-        options = list(await asyncio.gather(*[enrich_option(opt, gp_results) for opt in all_opts]))
+        # Enrich all AI options with Google Places data (rating, photos, place_id) post-call
+        options = list(await asyncio.gather(*[enrich_option(opt, gp_results) for opt in result.get("options", [])]))
 
         # ACC-01: drop geheimtipps that are too far from stop center
         options = [o for o in options if not o.pop("_geheimtipp_too_far", False)]
 
-        # ACC-02: name-based dedup — Google options come first, so they win over AI duplicates
+        # ACC-02: name-based dedup — remove duplicate names from AI output
         seen_names: set = set()
         deduped = []
         for opt in options:
