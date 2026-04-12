@@ -1,11 +1,10 @@
-# SSE Events Reference
+ # SSE Events Reference
 
 All SSE streams require authentication via the `?token=` query parameter.
 `EventSource` does not support `Authorization` headers, so the JWT access
 token is passed as a URL query parameter instead.
 
-**Stream lifecycle:** The client must close the `EventSource` connection when
-it receives `job_complete` or `job_error`. These are the only terminal events.
+**Stream lifecycle:** The client closes the `EventSource` connection on `job_complete` or `job_error`. Note: `analysis_complete` fires **after** `job_complete` — clients that want to receive the trip analysis patch should keep the connection open until `analysis_complete` arrives.
 
 ---
 
@@ -52,7 +51,8 @@ it receives `job_complete` or `job_error`. These are the only terminal events.
 
 | Event | Data Shape | Emitter | When |
 |-------|------------|---------|------|
-| `job_complete` | `{ result: TravelPlan }` | `orchestrator` / `main.py` | Full planning pipeline finished — **client must close SSE** |
+| `job_complete` | `{ result: TravelPlan }` (with `trip_analysis: null`) | `orchestrator` / `main.py` | Day planner done — guide is ready — **client must close SSE** |
+| `analysis_complete` | `{ trip_analysis: TripAnalysis \| null }` | `orchestrator` | Trip analysis finished (or failed); patch into visible guide. Fires after `job_complete`. |
 | `job_error` | `{ error: str }` | any component | Fatal failure occurred — **client must close SSE** |
 
 ### Optional / Conditional Events
