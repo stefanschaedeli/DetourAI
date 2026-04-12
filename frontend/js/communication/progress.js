@@ -160,7 +160,6 @@ async function onJobComplete(data) {
   progressOverlay.completeLine('day_planner',   t('progress.day_plan_complete'));
   progressOverlay.completeLine('guide_phase',   t('progress.guide_complete'));
   progressOverlay.completeLine('route_arch',    t('progress.route_confirmed'));
-  _completeAnalysisTimelineRow();
   overlaySetProgress(100);
   progressOverlay.close();
   S.result = data;
@@ -181,6 +180,34 @@ async function onJobComplete(data) {
   showSection('travel-guide');
   if (data._saved_travel_id) Router.navigate(Router.travelPath(data._saved_travel_id, travelTitle));
   hideLoading();
+}
+
+function onAnalysisComplete(data) {
+  // Mark the analysis timeline row as done
+  _completeAnalysisTimelineRow();
+
+  if (!data || !data.trip_analysis) return;
+
+  // Patch S.result so future re-renders have the analysis
+  if (S.result) {
+    S.result.trip_analysis = data.trip_analysis;
+    lsSet(LS_RESULT, { jobId: S.jobId, savedAt: new Date().toISOString(), plan: S.result });
+  }
+
+  // Inject analysis HTML into the already-visible overview collapsible body
+  const body = document.querySelector('.overview-collapsible__body > div');
+  if (!body) return;
+
+  const analysisHtml = renderTripAnalysis(data.trip_analysis, S.result && S.result.request);
+  if (!analysisHtml) return;
+
+  // Replace existing .trip-analysis element, or prepend if not yet present
+  const existing = body.querySelector('.trip-analysis');
+  if (existing) {
+    existing.outerHTML = analysisHtml;
+  } else {
+    body.insertAdjacentHTML('afterbegin', analysisHtml);
+  }
 }
 
 function onJobError(data) {
@@ -220,5 +247,12 @@ function connectSSE(jobId) {
     },
     ping:    () => {},
     onerror: () => { console.warn('Progress SSE error'); },
+  });
+
+  // analysis_complete fires after job_complete (after progressSSE is closed),
+  // so it must be handled via window event — SSEClient keeps the EventSource open.
+  window.addEventListener('sse:analysis_complete', function _onAnalysisComplete(e) {
+    window.removeEventListener('sse:analysis_complete', _onAnalysisComplete);
+    onAnalysisComplete(e.detail);
   });
 }
