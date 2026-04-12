@@ -1146,15 +1146,15 @@ function renderOrtsreiseForm() {
         <label for="acc-pref-0" class="sr-only">${esc(t('form.accommodation_pref1_placeholder'))}</label>
         <input type="text" id="acc-pref-0"
           placeholder="${esc(t('form.accommodation_pref1_placeholder'))}"
-          oninput="saveFormToCache()">
+          oninput="saveFormToCache()" autocomplete="off">
         <label for="acc-pref-1" class="sr-only">${esc(t('form.accommodation_pref2_placeholder'))}</label>
         <input type="text" id="acc-pref-1"
           placeholder="${esc(t('form.accommodation_pref2_placeholder'))}"
-          oninput="saveFormToCache()" style="margin-top:8px">
+          oninput="saveFormToCache()" style="margin-top:8px" autocomplete="off">
         <label for="acc-pref-2" class="sr-only">${esc(t('form.accommodation_pref3_placeholder'))}</label>
         <input type="text" id="acc-pref-2"
           placeholder="${esc(t('form.accommodation_pref3_placeholder'))}"
-          oninput="saveFormToCache()" style="margin-top:8px">
+          oninput="saveFormToCache()" style="margin-top:8px" autocomplete="off">
         <p class="form-hint">${esc(t('form.accommodation_4th_hint'))}</p>
       </div>
 
