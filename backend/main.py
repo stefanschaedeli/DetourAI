@@ -2087,7 +2087,7 @@ async def progress(job_id: str, request: Request, token: Optional[str] = None, c
                         "event": event_type,
                         "data": json.dumps(payload),
                     }
-                    if event_type in ("job_complete", "job_error"):
+                    if event_type in ("analysis_complete", "job_error"):
                         break
                 except asyncio.TimeoutError:
                     # Drain Redis again before sending ping
@@ -2164,6 +2164,29 @@ async def api_update_settings(body: SettingsUpdateRequest, current_user: Current
 async def api_reset_settings(body: SettingsResetRequest, current_user: CurrentUser = Depends(get_current_user)):
     count = await async_reset_section(body.section)
     return {"reset": True, "section": body.section, "deleted": count}
+
+
+@app.get("/api/ollama/health")
+async def ollama_health(current_user: CurrentUser = Depends(get_current_user)) -> dict:
+    """Check connectivity to the locally-configured Ollama LLM server."""
+    import aiohttp
+    endpoint = get_setting("system.ollama_endpoint") or "http://localhost:11434/v1/"
+    # Convert the OpenAI-compatible /v1 URL to the native Ollama /api/tags endpoint
+    base = endpoint.rstrip("/")
+    if base.endswith("/v1"):
+        base = base[:-3]
+    tags_url = base + "/api/tags"
+    try:
+        timeout = aiohttp.ClientTimeout(total=5)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(tags_url) as resp:
+                if resp.status != 200:
+                    return {"status": "error", "detail": f"Ollama antwortete mit HTTP {resp.status}"}
+                data = await resp.json()
+                models = [m["name"] for m in data.get("models", [])]
+                return {"status": "ok", "models": models, "endpoint": endpoint}
+    except Exception as exc:
+        return {"status": "error", "detail": str(exc)}
 
 
 # ---------------------------------------------------------------------------

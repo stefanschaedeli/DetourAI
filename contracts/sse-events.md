@@ -1,10 +1,10 @@
- # SSE Events Reference
+# SSE Events Reference
 
 All SSE streams require authentication via the `?token=` query parameter.
 `EventSource` does not support `Authorization` headers, so the JWT access
 token is passed as a URL query parameter instead.
 
-**Stream lifecycle:** The client closes the `EventSource` connection on `job_complete` or `job_error`. Note: `analysis_complete` fires **after** `job_complete` — clients that want to receive the trip analysis patch should keep the connection open until `analysis_complete` arrives.
+**Stream lifecycle:** The SSE stream stays open through `analysis_complete`. The client closes the `EventSource` connection when it receives `analysis_complete` or `job_error`. `job_complete` is no longer a terminal event — it fires first (guide ready), then `analysis_complete` follows (trip analysis patch).
 
 ---
 
