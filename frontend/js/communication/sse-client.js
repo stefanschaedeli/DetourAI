@@ -20,6 +20,7 @@ const SSEClient = (() => {
     'reorder_stops_progress', 'reorder_stops_complete',
     'update_nights_progress', 'update_nights_complete',
     'style_mismatch_warning', 'ferry_detected',
+    'analysis_complete',
   ];
 
   const MAX_RECONNECT_ATTEMPTS = 5;
