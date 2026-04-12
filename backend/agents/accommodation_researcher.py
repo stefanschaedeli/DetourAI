@@ -9,7 +9,7 @@ from utils.retry_helper import call_with_retry
 from utils.json_parser import parse_agent_json
 from utils.image_fetcher import fetch_unsplash_images
 from utils.brave_search import search_places
-from utils.google_places import search_hotels, place_photo_url
+from utils.google_places import search_hotels, place_photo_url, find_place_from_text, place_details
 from utils.currency import detect_currency, get_chf_rate
 from utils.maps_helper import haversine_km
 from agents._client import get_client, get_model, get_max_tokens
@@ -522,13 +522,51 @@ Gib exakt dieses JSON zurück:
                     language=lang,
                 )
 
-            # Bilder: Google Places — reuse cached results from the pre-fetch above
-            # to avoid 4 redundant identical API calls per stop.
+            # ACC-03: Look up AI hotels in Google Places by name to get real place_id,
+            # coordinates, rating, and photo. First try the pre-fetched cache by name;
+            # if not found, call find_place_from_text (cheapest Places API endpoint).
             hotel_name_lower = hotel_name.lower()
+            gp_match = None
             if cached_gp:
                 gp_match = next((h for h in cached_gp if h["name"].lower() == hotel_name_lower), None)
-            else:
-                gp_match = None
+
+            # For non-geheimtipp AI options: try Google lookup if not already in cache
+            if not gp_match and not is_geheimtipp and hotel_name:
+                found = await find_place_from_text(f"{hotel_name}, {region}, {country}")
+                if found and found.get("place_id"):
+                    # Check if place_id matches something in cache (avoid duplicate API call)
+                    cached_by_id = next(
+                        (h for h in cached_gp if h.get("place_id") == found["place_id"]), None
+                    )
+                    if cached_by_id:
+                        gp_match = cached_by_id
+                    else:
+                        # Fetch details for photo + real rating
+                        details = await place_details(found["place_id"])
+                        photos = details.get("photos", [])
+                        photo_ref = photos[0].get("photo_reference") if photos else None
+                        gp_match = {
+                            "place_id": found["place_id"],
+                            "name": found.get("name", hotel_name),
+                            "lat": found.get("lat"),
+                            "lon": found.get("lon"),
+                            "rating": details.get("rating"),
+                            "photo_reference": photo_ref,
+                        }
+                        await debug_logger.log(
+                            LogLevel.DEBUG,
+                            f"ACC-03: '{hotel_name}' in Google Places gefunden — place_id={found['place_id']}",
+                            job_id=self.job_id, agent=AGENT_KEY,
+                        )
+
+            # Overwrite AI-estimated rating with real Google rating if available
+            if gp_match and gp_match.get("rating") is not None and not is_geheimtipp:
+                real_rating = gp_match["rating"]
+                # Google rating is 0-5; convert to app's 0-10 scale only if it looks like 0-5
+                if real_rating <= 5.0:
+                    opt["rating"] = round(real_rating * 2, 1)
+                else:
+                    opt["rating"] = real_rating
 
             # ACC-01: haversine distance check for Geheimtipp
             if is_geheimtipp and lat and lon and gp_match and gp_match.get("lat") and gp_match.get("lon"):
