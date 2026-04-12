@@ -40,7 +40,6 @@ _L = {
         "travelers": "Reisende", "adults": "Erwachsene", "children": "Kinder",
         "styles": "Reisestile", "styles_default": "allgemein",
         "already_planned": "Bereits geplante Aktivitäten (NICHT wiederholen)",
-        "return_json": "Gib exakt dieses JSON zurück:",
         "intro_desc": "Einladende Einleitung über {region} (2 Sätze)",
         "history_desc": "Geschichte und kulturelle Highlights (2 Sätze)",
         "food_desc": "Lokale Spezialitäten (2 Sätze)",
@@ -49,7 +48,6 @@ _L = {
         "best_time_desc": "Beste Reisezeit (1-2 Sätze)",
         "write_lang": "Schreibe alle Texte auf Deutsch.",
         "further": "Gib 2-3 weitere Aktivitäten zurück, die sich von den bereits geplanten unterscheiden.",
-        "radius_note": "WICHTIG: Alle weiteren Aktivitäten müssen innerhalb von {r} km vom Übernachtungsort in {region} liegen.",
         "activities_header": "Schlage weitere Aktivitäten vor für",
     },
     "en": {
@@ -62,7 +60,6 @@ _L = {
         "travelers": "Travelers", "adults": "adults", "children": "children",
         "styles": "Travel styles", "styles_default": "general",
         "already_planned": "Already planned activities (do NOT repeat)",
-        "return_json": "Return exactly this JSON:",
         "intro_desc": "Inviting introduction about {region} (2 sentences)",
         "history_desc": "History and cultural highlights (2 sentences)",
         "food_desc": "Local specialties (2 sentences)",
@@ -71,7 +68,6 @@ _L = {
         "best_time_desc": "Best time to visit (1-2 sentences)",
         "write_lang": "Write all texts in English.",
         "further": "Return 2-3 additional activities that differ from the already planned ones.",
-        "radius_note": "IMPORTANT: All additional activities must be within {r} km of the accommodation in {region}.",
         "activities_header": "Suggest further activities for",
     },
     "hi": {
@@ -84,7 +80,6 @@ _L = {
         "travelers": "यात्रीगण", "adults": "वयस्क", "children": "बच्चे",
         "styles": "यात्रा शैलियां", "styles_default": "सामान्य",
         "already_planned": "पहले से नियोजित गतिविधियां (दोहराएं नहीं)",
-        "return_json": "बिल्कुल यह JSON लौटाएं:",
         "intro_desc": "{region} के बारे में आमंत्रित परिचय (2 वाक्य)",
         "history_desc": "इतिहास और सांस्कृतिक हाइलाइट्स (2 वाक्य)",
         "food_desc": "स्थानीय विशेषताएं (2 वाक्य)",
@@ -93,7 +88,6 @@ _L = {
         "best_time_desc": "यात्रा का सबसे अच्छा समय (1-2 वाक्य)",
         "write_lang": "सभी पाठ हिंदी में लिखें।",
         "further": "पहले से नियोजित गतिविधियों से भिन्न 2-3 अतिरिक्त गतिविधियां लौटाएं।",
-        "radius_note": "महत्वपूर्ण: सभी अतिरिक्त गतिविधियां {region} में आवास से {r} km के भीतर होनी चाहिए।",
         "activities_header": "के लिए आगे की गतिविधियाँ सुझाएं",
     },
 }
@@ -166,7 +160,6 @@ class TravelGuideAgent:
 {GL['travelers']}: {req.adults} {GL['adults']}{children_str}
 {GL['styles']}: {', '.join(req.travel_styles) if req.travel_styles else GL['styles_default']}{mandatory_line}{pref_line}{desc_line}
 
-{GL['return_json']}
 {{
   "travel_guide": {{
     "intro_narrative": "{GL['intro_desc'].format(region=region)}",
@@ -221,7 +214,6 @@ class TravelGuideAgent:
 
 {GL['already_planned']}: {existing_names_str}
 
-{GL['return_json']}
 {{
   "further_activities": [
     {{
@@ -237,7 +229,7 @@ class TravelGuideAgent:
   ]
 }}
 
-{GL['write_lang']} {GL['further']} {GL['radius_note'].format(r=req.activities_radius_km * 2, region=region)}{wiki_block}"""
+{GL['write_lang']} {GL['further']}{wiki_block}"""
 
         await debug_logger.log(
             LogLevel.API, f"→ Anthropic API call: {self.model} (Weitere Aktivitäten: {region})",

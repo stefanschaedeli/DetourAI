@@ -287,14 +287,12 @@ class DayPlannerAgent:
                 "weather_adapt": "Passe den Tagesplan ans Wetter an (bei Regen: Indoor-Aktivitäten bevorzugen).",
                 "ferry": "FAEHRE: Dieser Tag beinhaltet eine Faehrueberfahrt von {h} Stunden. Verbleibende Fahrzeit nach der Faehre: {r}h. Plane die Faehre als eigenen time_block mit activity_type 'ferry' ein.",
                 "desc_label": "Reisebeschreibung", "pref_label": "Bevorzugte Aktivitäten", "mandatory_label": "Pflichtaktivitäten",
-                "important": 'WICHTIG: Verwende in den time_blocks die exakten Namen der unten genannten Aktivitäten und Restaurants als "title" und "location".',
                 "create_plan": "Erstelle einen stündlichen Tagesplan für Tag",
                 "region": "Region", "departure": "Abfahrt von", "drive_time": "Fahrtzeit",
                 "activities": "Aktivitäten", "restaurants": "Restaurants",
                 "none_specific": "keine spezifischen",
                 "travelers": "Reisende", "adults": "Erwachsene", "children": "Kinder",
                 "start_at": "Starte um 08:00 Uhr. Erstelle einen realistischen Zeitplan.",
-                "return_json": "Gib exakt dieses JSON zurück:",
                 "title_short": "Kurzer Tages-Titel",
                 "desc_day": "2-3 Sätze Beschreibung des Tages",
                 "departure_to": "Abfahrt nach",
@@ -312,14 +310,12 @@ class DayPlannerAgent:
                 "weather_adapt": "Adapt the daily plan to the weather (in case of rain: prefer indoor activities).",
                 "ferry": "FERRY: This day includes a ferry crossing of {h} hours. Remaining drive time after the ferry: {r}h. Plan the ferry as its own time_block with activity_type 'ferry'.",
                 "desc_label": "Travel description", "pref_label": "Preferred activities", "mandatory_label": "Mandatory activities",
-                "important": 'IMPORTANT: Use the exact names of the activities and restaurants listed below as "title" and "location" in time_blocks.',
                 "create_plan": "Create an hourly daily plan for day",
                 "region": "Region", "departure": "Departure from", "drive_time": "Drive time",
                 "activities": "Activities", "restaurants": "Restaurants",
                 "none_specific": "none specific",
                 "travelers": "Travelers", "adults": "adults", "children": "children",
                 "start_at": "Start at 08:00. Create a realistic schedule.",
-                "return_json": "Return exactly this JSON:",
                 "title_short": "Short day title",
                 "desc_day": "2-3 sentence description of the day",
                 "departure_to": "Departure to",
@@ -337,14 +333,12 @@ class DayPlannerAgent:
                 "weather_adapt": "मौसम के अनुसार दैनिक योजना अनुकूलित करें (बारिश में: इनडोर गतिविधियों को प्राथमिकता दें)।",
                 "ferry": "नौका: इस दिन {h} घंटे की नौका क्रॉसिंग शामिल है। नौका के बाद शेष ड्राइव समय: {r}h।",
                 "desc_label": "यात्रा विवरण", "pref_label": "पसंदीदा गतिविधियां", "mandatory_label": "अनिवार्य गतिविधियां",
-                "important": 'महत्वपूर्ण: time_blocks में "title" और "location" के रूप में नीचे सूचीबद्ध गतिविधियों और रेस्तरां के सटीक नामों का उपयोग करें।',
                 "create_plan": "दिन के लिए प्रति घंटा दैनिक योजना बनाएं",
                 "region": "क्षेत्र", "departure": "से प्रस्थान", "drive_time": "ड्राइव समय",
                 "activities": "गतिविधियां", "restaurants": "रेस्तरां",
                 "none_specific": "कोई विशिष्ट नहीं",
                 "travelers": "यात्रीगण", "adults": "वयस्क", "children": "बच्चे",
                 "start_at": "08:00 बजे शुरू करें। एक यथार्थवादी समय सारिणी बनाएं।",
-                "return_json": "बिल्कुल यह JSON लौटाएं:",
                 "title_short": "छोटा दैनिक शीर्षक",
                 "desc_day": "दिन का 2-3 वाक्य विवरण",
                 "departure_to": "की ओर प्रस्थान",
@@ -387,9 +381,7 @@ class DayPlannerAgent:
 
         children_str = f", {len(req.children)} {DL['children']}" if req.children else ""
 
-        prompt = f"""{DL['important']}
-
-{DL['create_plan']} {day_num} ({date_str}):
+        prompt = f"""{DL['create_plan']} {day_num} ({date_str}):
 
 {DL['region']}: {region}
 {DL['departure']}: {prev_region}
@@ -400,7 +392,6 @@ class DayPlannerAgent:
 {weather_block}{ferry_info}
 {DL['start_at']}
 
-{DL['return_json']}
 {{
   "day": {day_num},
   "date": "{date_str}",

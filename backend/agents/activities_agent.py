@@ -300,8 +300,6 @@ class ActivitiesAgent:
                 "act_budget": "Aktivitätenbudget", "for_stop": "für diesen Stopp — nutze das Budget möglichst aus",
                 "desc_label": "Reisebeschreibung", "pref_label": "Bevorzugte Aktivitäten", "mandatory_label": "Pflichtaktivitäten",
                 "find_best": "Finde die besten Aktivitäten in",
-                "important_radius": "WICHTIG: Alle Aktivitäten müssen innerhalb des Suchradius von {r} km vom Übernachtungsort in {region} liegen. Keine Ausnahmen — empfehle lieber weniger Aktivitäten als solche außerhalb des Radius.",
-                "return_json": "Gib exakt dieses JSON zurück:",
                 "age_group_ex": "ab 4 Jahre",
                 "tags_hint": "tags: 2-3 kurze Schlagworte basierend auf den gefundenen Aktivitaeten (z.B. \"Wandern\", \"Kultur\", \"Wassersport\", \"Natur\", \"Geschichte\")",
             },
@@ -318,8 +316,6 @@ class ActivitiesAgent:
                 "act_budget": "Activities budget", "for_stop": "for this stop — use the budget as much as possible",
                 "desc_label": "Travel description", "pref_label": "Preferred activities", "mandatory_label": "Mandatory activities",
                 "find_best": "Find the best activities in",
-                "important_radius": "IMPORTANT: All activities must be within the search radius of {r} km from the accommodation in {region}. No exceptions — rather recommend fewer activities than ones outside the radius.",
-                "return_json": "Return exactly this JSON:",
                 "age_group_ex": "from age 4",
                 "tags_hint": "tags: 2-3 short keywords based on the found activities (e.g. \"Hiking\", \"Culture\", \"Water Sports\", \"Nature\", \"History\")",
             },
@@ -336,8 +332,6 @@ class ActivitiesAgent:
                 "act_budget": "गतिविधि बजट", "for_stop": "इस स्टॉप के लिए — बजट का अधिकतम उपयोग करें",
                 "desc_label": "यात्रा विवरण", "pref_label": "पसंदीदा गतिविधियां", "mandatory_label": "अनिवार्य गतिविधियां",
                 "find_best": "में सर्वश्रेष्ठ गतिविधियां खोजें",
-                "important_radius": "महत्वपूर्ण: सभी गतिविधियां {region} में आवास से {r} km के खोज दायरे के भीतर होनी चाहिए। कोई अपवाद नहीं।",
-                "return_json": "बिल्कुल यह JSON लौटाएं:",
                 "age_group_ex": "4 वर्ष से",
                 "tags_hint": "tags: गतिविधियों के आधार पर 2-3 छोटे कीवर्ड",
             },
@@ -406,9 +400,6 @@ class ActivitiesAgent:
 {AL['max_act']}: {req.max_activities_per_stop}
 {AL['act_budget']}: ca. CHF {budget_per_stop:.0f} {AL['for_stop']}{mandatory_line}{pref_line}{desc_line}{style_guidance}
 
-{AL['important_radius'].format(r=req.activities_radius_km, region=region)}
-
-{AL['return_json']}
 {{
   "stop_id": {stop_id},
   "region": "{region}",

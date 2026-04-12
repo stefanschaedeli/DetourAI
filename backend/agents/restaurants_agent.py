@@ -63,8 +63,6 @@ class RestaurantsAgent:
                 "styles": "Reisestile", "styles_default": "allgemein",
                 "search_radius": "Suchradius", "max_rest": "Max. Restaurants",
                 "budget_meal": "Budget pro Mahlzeit/Person",
-                "important": "WICHTIG: Alle Restaurants müssen innerhalb des Suchradius von {r} km vom Übernachtungsort in {region} liegen. Keine Ausnahmen.",
-                "return_json": "Gib exakt dieses JSON zurück:",
                 "desc_label": "Reisebeschreibung", "pref_label": "Bevorzugte Aktivitäten", "mandatory_label": "Pflichtaktivitäten",
             },
             "en": {
@@ -78,8 +76,6 @@ class RestaurantsAgent:
                 "styles": "Travel styles", "styles_default": "general",
                 "search_radius": "Search radius", "max_rest": "Max. restaurants",
                 "budget_meal": "Budget per meal/person",
-                "important": "IMPORTANT: All restaurants must be within the search radius of {r} km from the accommodation in {region}. No exceptions.",
-                "return_json": "Return exactly this JSON:",
                 "desc_label": "Travel description", "pref_label": "Preferred activities", "mandatory_label": "Mandatory activities",
             },
             "hi": {
@@ -93,8 +89,6 @@ class RestaurantsAgent:
                 "styles": "यात्रा शैलियां", "styles_default": "सामान्य",
                 "search_radius": "खोज दायरा", "max_rest": "अधिकतम रेस्तरां",
                 "budget_meal": "प्रति भोजन/व्यक्ति बजट",
-                "important": "महत्वपूर्ण: सभी रेस्तरां {region} में आवास से {r} km के खोज दायरे के भीतर होने चाहिए। कोई अपवाद नहीं।",
-                "return_json": "बिल्कुल यह JSON लौटाएं:",
                 "desc_label": "यात्रा विवरण", "pref_label": "पसंदीदा गतिविधियां", "mandatory_label": "अनिवार्य गतिविधियां",
             },
         }
@@ -140,9 +134,6 @@ class RestaurantsAgent:
 {RL['max_rest']}: {req.max_restaurants_per_stop}
 {RL['budget_meal']}: ca. CHF {budget_per_meal:.0f}{mandatory_line}{pref_line}{desc_line}
 
-{RL['important'].format(r=req.activities_radius_km, region=region)}
-
-{RL['return_json']}
 {{
   "stop_id": {stop_id},
   "region": "{region}",
