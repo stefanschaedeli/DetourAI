@@ -432,7 +432,7 @@ async function apiUpdateNights(travelId, stopId, nights) {
  * New code should subscribe to window 'sse:X' CustomEvents directly.
  * @param {string} jobId
  * @param {Object} handlers - keyed by SSE event name
- * @returns {{ close: function, opened: Promise<void> }} — `opened` resolves when EventSource fires onopen
+ * @returns {{ detachListeners: function, close: function, opened: Promise<void> }} — `opened` resolves when EventSource fires onopen
  */
 function openSSE(jobId, handlers) {
   const listeners = [];

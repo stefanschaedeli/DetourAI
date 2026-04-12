@@ -16,6 +16,7 @@ let progressSSE  = null;
 let stopProgress = {};  // stop_id => {activities: bool, restaurants: bool}
 let _totalStops = 0;  // set from route_ready event for research phase interpolation
 let _researchDone = 0; // count of stop_done events received
+let _analysisCompleteHandler = null;  // store listener reference to prevent double registration
 
 // ---------------------------------------------------------------------------
 // UI: Stops timeline
@@ -254,8 +255,15 @@ function connectSSE(jobId) {
 
   // analysis_complete fires after job_complete (after progressSSE is closed),
   // so it must be handled via window event — SSEClient keeps the EventSource open.
-  window.addEventListener('sse:analysis_complete', function _onAnalysisComplete(e) {
-    window.removeEventListener('sse:analysis_complete', _onAnalysisComplete);
+  // Remove any previous analysis_complete listener before registering a new one
+  if (_analysisCompleteHandler) {
+    window.removeEventListener('sse:analysis_complete', _analysisCompleteHandler);
+    _analysisCompleteHandler = null;
+  }
+  _analysisCompleteHandler = function(e) {
+    window.removeEventListener('sse:analysis_complete', _analysisCompleteHandler);
+    _analysisCompleteHandler = null;
     onAnalysisComplete(e.detail);
-  });
+  };
+  window.addEventListener('sse:analysis_complete', _analysisCompleteHandler);
 }
