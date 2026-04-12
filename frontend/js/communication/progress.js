@@ -155,7 +155,7 @@ function onAgentDone(data) {
 }
 
 async function onJobComplete(data) {
-  if (progressSSE) { progressSSE.close(); progressSSE = null; }
+  if (progressSSE) { progressSSE.detachListeners(); progressSSE = null; }
   progressOverlay.completeLine('trip_analysis', t('progress.analysis_complete'));
   progressOverlay.completeLine('day_planner',   t('progress.day_plan_complete'));
   progressOverlay.completeLine('guide_phase',   t('progress.guide_complete'));
@@ -183,6 +183,9 @@ async function onJobComplete(data) {
 }
 
 function onAnalysisComplete(data) {
+  // Close the EventSource now — we've received everything we need
+  SSEClient.close();
+
   // Mark the analysis timeline row as done
   _completeAnalysisTimelineRow();
 

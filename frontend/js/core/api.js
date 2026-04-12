@@ -452,6 +452,9 @@ function openSSE(jobId, handlers) {
   const opened = SSEClient.open(jobId);
   return {
     opened,
+    detachListeners() {
+      listeners.forEach(({ name, fn }) => window.removeEventListener(name, fn));
+    },
     close() {
       SSEClient.close();
       listeners.forEach(({ name, fn }) => window.removeEventListener(name, fn));
