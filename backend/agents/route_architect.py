@@ -85,12 +85,9 @@ class RouteArchitectAgent:
                     "from_port, to_port, estimated_hours, estimated_cost_chf."
                 ),
                 "drive_limit_header": "FAHRZEITLIMIT (KRITISCH — MUSS eingehalten werden):",
-                "drive_limit_1": "Maximale Fahrzeit pro Tag: {h}h (NUR reine Fahrzeit, OHNE Fährüberfahrten)",
-                "drive_limit_2": "Fährzeit zählt NICHT als Fahrzeit. Wenn ein Tag 2h Fahrt + 4h Fähre hat, ist die Fahrzeit = 2h.",
-                "drive_limit_3": "Jeder Stop muss ein drive_hours Feld haben, das NUR die Fahrzeit (ohne Fähre) angibt.",
-                "drive_limit_4": "KEIN Stop darf drive_hours > {h}h haben.",
-                "drive_limit_5": "Bei Inselzielen oder Fährüberfahrten: Plane einen Stopp VOR dem Fährhafen, damit die Fahrzeit zum Hafen unter dem Limit bleibt.",
-                "drive_limit_6": "Wenn die Distanz zwischen zwei sinnvollen Stopps zu gross ist, füge einen zusätzlichen Zwischenstopp ein.",
+                "drive_limit_1": "Maximale Fahrzeit pro Etappe: {h}h (NUR reine Fahrzeit — Fährzeit zählt NICHT).",
+                "drive_limit_2": "Wenn eine Etappe das Limit überschreitet, füge einen Zwischenstopp ein.",
+                "drive_limit_3": "Bei Inselzielen: Plane einen Stopp VOR dem Fährhafen.",
                 "plan_route": "Plane eine Reiseroute mit Zwischenstopps:",
                 "start": "Start", "main_dest": "Hauptziel",
                 "duration": "Reisedauer", "days": "Tage",
@@ -134,12 +131,9 @@ class RouteArchitectAgent:
                     "from_port, to_port, estimated_hours, estimated_cost_chf."
                 ),
                 "drive_limit_header": "DRIVE TIME LIMIT (CRITICAL — MUST be respected):",
-                "drive_limit_1": "Maximum drive time per day: {h}h (ONLY actual driving time, WITHOUT ferry crossings)",
-                "drive_limit_2": "Ferry time does NOT count as drive time. If a day has 2h driving + 4h ferry, the drive time = 2h.",
-                "drive_limit_3": "Each stop must have a drive_hours field that indicates ONLY driving time (without ferry).",
-                "drive_limit_4": "NO stop may have drive_hours > {h}h.",
-                "drive_limit_5": "For island destinations or ferry crossings: Plan a stop BEFORE the ferry port so the drive time to the port stays under the limit.",
-                "drive_limit_6": "If the distance between two sensible stops is too large, add an additional intermediate stop.",
+                "drive_limit_1": "Maximum drive time per leg: {h}h (ONLY actual driving time — ferry time does NOT count).",
+                "drive_limit_2": "If a leg exceeds the limit, add an intermediate stop.",
+                "drive_limit_3": "For island destinations: Plan a stop BEFORE the ferry port.",
                 "plan_route": "Plan a travel route with intermediate stops:",
                 "start": "Start", "main_dest": "Main destination",
                 "duration": "Travel duration", "days": "days",
@@ -183,12 +177,9 @@ class RouteArchitectAgent:
                     "from_port, to_port, estimated_hours, estimated_cost_chf."
                 ),
                 "drive_limit_header": "ड्राइव समय सीमा (महत्वपूर्ण — पालन अनिवार्य):",
-                "drive_limit_1": "प्रति दिन अधिकतम ड्राइव समय: {h}h (केवल वास्तविक ड्राइविंग समय, नौका क्रॉसिंग के बिना)",
-                "drive_limit_2": "नौका समय ड्राइव समय में नहीं गिना जाता। यदि एक दिन में 2h ड्राइविंग + 4h नौका है, तो ड्राइव समय = 2h।",
-                "drive_limit_3": "प्रत्येक स्टॉप में drive_hours फ़ील्ड होना चाहिए जो केवल ड्राइविंग समय (नौका के बिना) दर्शाता है।",
-                "drive_limit_4": "किसी भी स्टॉप का drive_hours > {h}h नहीं हो सकता।",
-                "drive_limit_5": "द्वीप गंतव्यों या नौका क्रॉसिंग के लिए: नौका बंदरगाह से पहले एक स्टॉप की योजना बनाएं।",
-                "drive_limit_6": "यदि दो उचित स्टॉप के बीच की दूरी बहुत अधिक है, तो एक अतिरिक्त मध्यवर्ती स्टॉप जोड़ें।",
+                "drive_limit_1": "प्रति चरण अधिकतम ड्राइव समय: {h}h (केवल वास्तविक ड्राइविंग — नौका समय नहीं गिना जाता)।",
+                "drive_limit_2": "यदि कोई चरण सीमा से अधिक है, तो एक मध्यवर्ती स्टॉप जोड़ें।",
+                "drive_limit_3": "द्वीप गंतव्यों के लिए: नौका बंदरगाह से पहले एक स्टॉप की योजना बनाएं।",
                 "plan_route": "मध्यवर्ती स्टॉप के साथ एक यात्रा मार्ग की योजना बनाएं:",
                 "start": "शुरुआत", "main_dest": "मुख्य गंतव्य",
                 "duration": "यात्रा अवधि", "days": "दिन",
@@ -266,9 +257,6 @@ class RouteArchitectAgent:
             f"- {L['drive_limit_1'].format(h=req.max_drive_hours_per_day)}\n"
             f"- {L['drive_limit_2']}\n"
             f"- {L['drive_limit_3']}\n"
-            f"- {L['drive_limit_4'].format(h=req.max_drive_hours_per_day)}\n"
-            f"- {L['drive_limit_5']}\n"
-            f"- {L['drive_limit_6']}\n"
         )
 
         children_note = f", {L['children_age']} {children_ages}" if children_ages else ""
@@ -289,9 +277,7 @@ class RouteArchitectAgent:
 {L['return_json']}
 {{
   "stops": [
-    {{"id": 1, "region": "{req.start_location}", "country": "CH", "arrival_day": 1, "nights": 0, "drive_hours": 0, "ferry_hours": 0, "is_fixed": false, "notes": "{L['notes_start']}"}},
-    {{"id": 2, "region": "Annecy", "country": "FR", "arrival_day": 2, "nights": 2, "drive_hours": 3.5, "ferry_hours": 0, "is_fixed": false, "notes": "..."}},
-    {{"id": 3, "region": "{req.main_destination}", "country": "FR", "arrival_day": 8, "nights": 3, "drive_hours": 4.0, "ferry_hours": 0, "is_fixed": false, "notes": "{L['notes_dest']}"}}
+    {{"id": 1, "region": "...", "country": "...", "arrival_day": 1, "nights": 2, "drive_hours": 3.5, "ferry_hours": 0, "is_fixed": false, "notes": "..."}}
   ],
   "total_drive_days": 3,
   "total_rest_days": 7,

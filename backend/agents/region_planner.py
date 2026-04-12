@@ -325,27 +325,24 @@ class RegionPlannerAgent:
                 "desc_header": "Beschreibung des Reisenden:",
                 "create": "Erstelle einen Regionen-Plan: eine geordnete Liste von Regionen, die der Reisende auf einer Rundreise besuchen soll.",
                 "each_region": "Jede Region = ein Gebiet mit mehreren möglichen Stopps",
-                "order": "Logistisch sinnvolle Reihenfolge (minimale Rückwege)",
                 "count": "Anzahl Regionen passend zur verfügbaren Zeit",
-                "important": "WICHTIG: Die Route startet bei {s} und endet bei {e}. Ordne die Regionen geographisch logisch von dort aus — keine Zickzack-Muster!",
+                "important": "Route: {s} → {e}.",
                 "format": "Antwortformat:",
             },
             "en": {
                 "desc_header": "Traveler's description:",
                 "create": "Create a region plan: an ordered list of regions the traveler should visit on a round trip.",
                 "each_region": "Each region = an area with multiple possible stops",
-                "order": "Logistically sensible order (minimal backtracking)",
                 "count": "Number of regions appropriate for the available time",
-                "important": "IMPORTANT: The route starts at {s} and ends at {e}. Arrange the regions geographically logically from there — no zigzag patterns!",
+                "important": "Route: {s} → {e}.",
                 "format": "Response format:",
             },
             "hi": {
                 "desc_header": "यात्री का विवरण:",
                 "create": "एक क्षेत्र योजना बनाएं: क्षेत्रों की एक क्रमबद्ध सूची जिन्हें यात्री को दौरे पर जाना चाहिए।",
                 "each_region": "प्रत्येक क्षेत्र = कई संभावित स्टॉप वाला एक क्षेत्र",
-                "order": "तार्किक रूप से समझदार क्रम (न्यूनतम वापसी)",
                 "count": "उपलब्ध समय के अनुसार क्षेत्रों की संख्या",
-                "important": "महत्वपूर्ण: मार्ग {s} से शुरू होता है और {e} पर समाप्त होता है। क्षेत्रों को वहां से भौगोलिक रूप से तार्किक रूप से व्यवस्थित करें — कोई ज़िगज़ैग पैटर्न नहीं!",
+                "important": "मार्ग: {s} → {e}.",
                 "format": "उत्तर प्रारूप:",
             },
         }
@@ -356,7 +353,6 @@ class RegionPlannerAgent:
             f"{L['desc_header']}\n{description}\n\n"
             f"{L['create']}\n"
             f"- {L['each_region']}\n"
-            f"- {L['order']}\n"
             f"- {L['count']}\n"
             f"- {L['important'].format(s=leg.start_location, e=end_loc)}\n\n"
             f"{L['format']}\n{region_schema}"

@@ -15,9 +15,6 @@ from utils.ferry_ports import is_island_destination, validate_island_coordinates
 
 AGENT_KEY = "stop_options_finder"
 
-# Backward compat alias for tests
-SYSTEM_PROMPT = None  # set after SYSTEM_PROMPTS definition
-
 SYSTEM_PROMPTS = {
     "de": (
         "Du bist ein Reiseplaner der Zwischenstopps entlang einer konkreten Fahrroute vorschlägt. "
@@ -162,6 +159,8 @@ class StopOptionsFinderAgent:
                 "return_json": "Gib exakt dieses JSON zurück. lat/lon = WGS84-Koordinaten des Stadtzentrums (PFLICHT – keine null):",
                 "fill_fields": "Befülle folgende Felder kontextabhängig:",
                 "travel_date": "unbekannt",
+                "example_abbr": "z.B.",
+                "if_known": "falls bekannt",
             },
             "en": {
                 "previous_stops": "Previous stops", "last": "last",
@@ -232,6 +231,8 @@ class StopOptionsFinderAgent:
                 "return_json": "Return exactly this JSON. lat/lon = WGS84 coordinates of the city center (REQUIRED — no null):",
                 "fill_fields": "Fill in the following fields contextually:",
                 "travel_date": "unknown",
+                "example_abbr": "e.g.",
+                "if_known": "if known",
             },
             "hi": {
                 "previous_stops": "पिछले स्टॉप", "last": "अंतिम",
@@ -302,6 +303,8 @@ class StopOptionsFinderAgent:
                 "return_json": "बिल्कुल यह JSON लौटाएं। lat/lon = शहर के केंद्र के WGS84 निर्देशांक (अनिवार्य — कोई null नहीं):",
                 "fill_fields": "निम्नलिखित फ़ील्ड संदर्भानुसार भरें:",
                 "travel_date": "अज्ञात",
+                "example_abbr": "जैसे",
+                "if_known": "यदि ज्ञात हो",
             },
         }
         L = _L.get(lang, _L["de"])
@@ -463,15 +466,13 @@ class StopOptionsFinderAgent:
             )
         else:
             rules_block = (
-                f"{L['rules_header'].format(n=7)}\n"
+                f"{L['rules_header'].format(n=5)}\n"
                 f"1. {L['rule_drive'].format(prev=prev_stop, h=req.max_drive_hours_per_day)}\n"
                 f"2. {L['rule_dist'].format(km=ideal_km_str, prev=prev_stop)}\n"
                 f"   ({L['rule_tolerance'].format(km=half_km_str)})\n"
                 f"3. {L['rule_origin'].format(origin=origin_loc, km=min_origin_km)}\n"
                 f"4. {L['rule_target'].format(target=segment_target, km=min_target_km)}\n"
                 f"5. {L['rule_split'].format(n=geo.get('stops_remaining', 1))}\n"
-                f"6. {L['rule_direction'].format(prev=prev_stop, target=segment_target)}\n"
-                f"7. {L['rule_area']}\n"
             )
 
         # Travel style emphasis (D-05)
@@ -516,7 +517,7 @@ class StopOptionsFinderAgent:
 {rules_block}{L['nights_range']}: {req.min_nights_per_stop}–{req.max_nights_per_stop}.
 
 {L['fill_fields']}:
-- population: {L['population']} (z.B. "45'000 {L['inhabitants']}"), falls bekannt
+- population: {L['population']} ({L['example_abbr']} "45'000 {L['inhabitants']}"), {L['if_known']}
 - altitude_m: {L['altitude']}
 - language: {L['language_field']}
 - climate_note: {L['climate']} ({getattr(req, 'start_date', L['travel_date'])})
@@ -530,9 +531,7 @@ class StopOptionsFinderAgent:
 {L['return_json']}
 {{
   "options": [
-    {{"id": 1, "option_type": "{ex1_type}", "region": "...", "country": "FR", "lat": 45.7640, "lon": 4.8357, "drive_hours": 3.5, "drive_km": 280, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."], "matches_travel_style": true, "tags": ["Kultur", "Altstadt", "Kulinarik"]{', ' + family_field[:-1] if family_field else ''}}},
-    {{"id": 2, "option_type": "{ex2_type}", "region": "...", "country": "FR", "lat": 45.9237, "lon": 6.8694, "drive_hours": 4.0, "drive_km": 320, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": 1200, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."], "matches_travel_style": true, "tags": ["Berge", "Natur", "Wandern"]{', ' + family_field[:-1] if family_field else ''}}},
-    {{"id": 3, "option_type": "{ex3_type}", "region": "...", "country": "FR", "lat": 43.2965, "lon": 5.3698, "drive_hours": 3.0, "drive_km": 250, "nights": 2, "highlights": ["...", "..."], "teaser": "Ausführliche Begründung in 3-4 Sätzen warum dieser Stop perfekt zur Reise passt, mit Bezug auf Reisestile und Reisende...", "population": "...", "altitude_m": null, "language": "Französisch", "climate_note": "...", "must_see": ["...", "..."], "matches_travel_style": true, "tags": ["Kueste", "Strand", "Entspannung"]{', ' + family_field[:-1] if family_field else ''}}}
+    {{"id": 1, "option_type": "{ex1_type}", "region": "...", "country": "...", "lat": 0.0, "lon": 0.0, "drive_hours": 3.5, "drive_km": 280, "nights": 2, "highlights": ["...", "..."], "teaser": "...", "population": "...", "altitude_m": null, "language": "...", "climate_note": "...", "must_see": ["...", "..."], "matches_travel_style": true, "tags": ["...", "...", "..."]{', ' + family_field[:-1] if family_field else ''}}}
   ],
   "estimated_total_stops": 4,
   "route_could_be_complete": false

@@ -66,14 +66,6 @@ class TripAnalysisAgent:
                 "analysis_desc": "Detaillierte Analyse in 3-5 Sätzen, wie gut der Plan die Anforderungen erfüllt",
                 "strength": "Stärke", "weakness": "Schwäche",
                 "short_title": "Kurzer Titel", "suggestion_desc": "Konkreter Verbesserungsvorschlag",
-                "rules": "Regeln",
-                "rule_summary": "settings_summary: 3-5 Sätze, fasst alle Reiseeinstellungen zusammen",
-                "rule_score": "requirements_match_score: Ganzzahl 1-10 (10 = perfekte Erfüllung)",
-                "rule_analysis": "requirements_analysis: 3-5 Sätze kritische Bewertung",
-                "rule_strengths": "strengths: 2-4 konkrete Stärken des Plans",
-                "rule_weaknesses": "weaknesses: 1-3 ehrliche Schwachstellen",
-                "rule_suggestions": "improvement_suggestions: 2-4 Einträge mit impact \"high\", \"medium\" oder \"low\"",
-                "rule_lang": "Alle Texte auf Deutsch",
             },
             "en": {
                 "no_acc": "no accommodation", "no_acts": "none", "no_stops": "No stops",
@@ -98,14 +90,6 @@ class TripAnalysisAgent:
                 "analysis_desc": "Detailed analysis in 3-5 sentences of how well the plan meets requirements",
                 "strength": "Strength", "weakness": "Weakness",
                 "short_title": "Short title", "suggestion_desc": "Concrete improvement suggestion",
-                "rules": "Rules",
-                "rule_summary": "settings_summary: 3-5 sentences, summarizes all travel settings",
-                "rule_score": "requirements_match_score: Integer 1-10 (10 = perfect fulfillment)",
-                "rule_analysis": "requirements_analysis: 3-5 sentences critical evaluation",
-                "rule_strengths": "strengths: 2-4 concrete strengths of the plan",
-                "rule_weaknesses": "weaknesses: 1-3 honest weaknesses",
-                "rule_suggestions": "improvement_suggestions: 2-4 entries with impact \"high\", \"medium\" or \"low\"",
-                "rule_lang": "All texts in English",
             },
             "hi": {
                 "no_acc": "कोई आवास नहीं", "no_acts": "कोई नहीं", "no_stops": "कोई स्टॉप नहीं",
@@ -130,14 +114,6 @@ class TripAnalysisAgent:
                 "analysis_desc": "3-5 वाक्यों में विस्तृत विश्लेषण",
                 "strength": "ताकत", "weakness": "कमजोरी",
                 "short_title": "छोटा शीर्षक", "suggestion_desc": "ठोस सुधार सुझाव",
-                "rules": "नियम",
-                "rule_summary": "settings_summary: 3-5 वाक्य, सभी यात्रा सेटिंग्स का सारांश",
-                "rule_score": "requirements_match_score: पूर्णांक 1-10 (10 = सही पूर्ति)",
-                "rule_analysis": "requirements_analysis: 3-5 वाक्य आलोचनात्मक मूल्यांकन",
-                "rule_strengths": "strengths: योजना की 2-4 ठोस ताकतें",
-                "rule_weaknesses": "weaknesses: 1-3 ईमानदार कमजोरियां",
-                "rule_suggestions": "improvement_suggestions: impact \"high\", \"medium\" या \"low\" के साथ 2-4 प्रविष्टियां",
-                "rule_lang": "सभी पाठ हिंदी में",
             },
         }
         TL = _L.get(lang, _L["de"])
@@ -208,16 +184,7 @@ class TripAnalysisAgent:
       "impact": "high"
     }}
   ]
-}}
-
-{TL['rules']}:
-- {TL['rule_summary']}
-- {TL['rule_score']}
-- {TL['rule_analysis']}
-- {TL['rule_strengths']}
-- {TL['rule_weaknesses']}
-- {TL['rule_suggestions']}
-- {TL['rule_lang']}"""
+}}"""
 
         await debug_logger.log(
             LogLevel.API, f"→ Anthropic API call: {self.model} (Reise-Analyse)",
