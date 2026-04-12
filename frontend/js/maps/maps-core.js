@@ -152,13 +152,51 @@ const GoogleMaps = (() => {
     wrapper.style.cssText = 'position:relative; display:contents;';
     inputEl.parentNode.insertBefore(wrapper, inputEl);
     wrapper.appendChild(inputEl);
+
+    // Display input: visible read-only field showing the selected/cached location.
+    // Clicking it activates the real autocomplete widget.
+    const displayEl = document.createElement('input');
+    displayEl.type      = 'text';
+    displayEl.readOnly  = true;
+    displayEl.className = inputEl.className;
+    displayEl.style.cssText = inputEl.style.cssText || '';
+    displayEl.placeholder   = inputEl.placeholder || '';
+    displayEl.style.cursor  = 'pointer';
+    // Pre-populate from cached value if present; hide displayEl when empty so acEl shows directly
+    const hasCached = !!inputEl.value;
+    if (hasCached) displayEl.value = inputEl.value;
+    displayEl.style.display = hasCached ? '' : 'none';
+    inputEl.parentNode.insertBefore(displayEl, inputEl.nextSibling);
+
     const acEl = new google.maps.places.PlaceAutocompleteElement({
       includedPrimaryTypes: (opts && opts.types) ? opts.types : ['(cities)'],
     });
     acEl.style.cssText = inputEl.style.cssText;
     acEl.className     = inputEl.className;
-    inputEl.parentNode.insertBefore(acEl, inputEl.nextSibling);
+    // Show acEl directly when there's no cached value; otherwise show displayEl
+    acEl.style.display = hasCached ? 'none' : '';
+    inputEl.parentNode.insertBefore(acEl, displayEl.nextSibling);
     inputEl.style.display = 'none';
+
+    // Clicking the display field switches to the live autocomplete widget
+    displayEl.addEventListener('focus', () => {
+      displayEl.style.display = 'none';
+      acEl.style.display = '';
+      // Defer focus so the element is visible first
+      setTimeout(() => { try { acEl.focus(); } catch (_) {} }, 0);
+    });
+
+    // When autocomplete loses focus without a selection, restore display field
+    acEl.addEventListener('focusout', () => {
+      setTimeout(() => {
+        // Only restore if focus didn't move inside acEl itself
+        if (!acEl.contains(document.activeElement)) {
+          acEl.style.display = 'none';
+          displayEl.style.display = '';
+        }
+      }, 200);
+    });
+
     acEl.addEventListener('gmp-select', async ({ placePrediction }) => {
       try {
         const place = placePrediction.toPlace();
@@ -167,17 +205,28 @@ const GoogleMaps = (() => {
         inputEl.style.display = '';
         inputEl.value         = addr;
         inputEl.style.display = 'none';
+        // Show display field with the selected address
+        displayEl.value        = addr;
+        displayEl.style.display = '';
+        acEl.style.display     = 'none';
         inputEl.dispatchEvent(new CustomEvent('place_changed', { detail: { formatted_address: addr, place }, bubbles: true }));
       } catch (e) { _log('WARNING', 'Autocomplete place fetch fehlgeschlagen: ' + e.message); }
     });
+
     return {
-      _acEl: acEl, _inputEl: inputEl,
+      _acEl: acEl, _inputEl: inputEl, _displayEl: displayEl,
       addListener(event, cb) {
         if (event === 'place_changed') {
           inputEl.addEventListener('place_changed', (e) => { this._lastPlace = e.detail; cb(); });
         }
       },
       getPlace() { return this._lastPlace || {}; },
+      /** Sets the visible display value (e.g. after restoring from cache). */
+      setDisplayValue(text) {
+        displayEl.value = text || '';
+        displayEl.style.display = text ? '' : 'none';
+        acEl.style.display = text ? 'none' : '';
+      },
     };
   }
 

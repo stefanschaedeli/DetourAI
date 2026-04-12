@@ -2,6 +2,8 @@
   "app.title": "DetourAI — AI Travel Planner",
   "header.home_link_title": "Go to home",
   "header.subtitle": "AI-powered travel planner",
+  "header.reset_presets_title": "Reset form",
+  "header.reset_presets_confirm": "Reset all saved form values?",
   "header.my_travels": "My Trips",
   "header.logout": "Log out",
   "header.settings_title": "Settings",

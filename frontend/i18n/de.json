@@ -2,6 +2,8 @@
   "app.title": "DetourAI — KI-Reiseplaner",
   "header.home_link_title": "Zur Startseite",
   "header.subtitle": "KI-gestützter Reiseplaner",
+  "header.reset_presets_title": "Formular zurücksetzen",
+  "header.reset_presets_confirm": "Alle gespeicherten Formularwerte zurücksetzen?",
   "header.my_travels": "Meine Reisen",
   "header.logout": "Abmelden",
   "header.settings_title": "Einstellungen",

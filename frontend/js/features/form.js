@@ -1146,15 +1146,15 @@ function renderOrtsreiseForm() {
         <label for="acc-pref-0" class="sr-only">${esc(t('form.accommodation_pref1_placeholder'))}</label>
         <input type="text" id="acc-pref-0"
           placeholder="${esc(t('form.accommodation_pref1_placeholder'))}"
-          oninput="saveFormToCache()" autocomplete="off">
+          oninput="saveOrtsreiseToCache()" autocomplete="off">
         <label for="acc-pref-1" class="sr-only">${esc(t('form.accommodation_pref2_placeholder'))}</label>
         <input type="text" id="acc-pref-1"
           placeholder="${esc(t('form.accommodation_pref2_placeholder'))}"
-          oninput="saveFormToCache()" style="margin-top:8px" autocomplete="off">
+          oninput="saveOrtsreiseToCache()" style="margin-top:8px" autocomplete="off">
         <label for="acc-pref-2" class="sr-only">${esc(t('form.accommodation_pref3_placeholder'))}</label>
         <input type="text" id="acc-pref-2"
           placeholder="${esc(t('form.accommodation_pref3_placeholder'))}"
-          oninput="saveFormToCache()" style="margin-top:8px" autocomplete="off">
+          oninput="saveOrtsreiseToCache()" style="margin-top:8px" autocomplete="off">
         <p class="form-hint">${esc(t('form.accommodation_4th_hint'))}</p>
       </div>
 
@@ -1233,6 +1233,16 @@ function saveOrtsreiseToCache() {
     maxRestaurants: parseInt(document.getElementById('ortsreise-max-restaurants')?.value, 10) || 3,
     hotelRadius:    parseInt(document.getElementById('ortsreise-hotel-radius')?.value, 10) || 10,
     logVerbosity:   document.getElementById('ortsreise-log-verbosity')?.value || 'normal',
+    accommodationPreferences: [
+      document.getElementById('acc-pref-0')?.value?.trim() || '',
+      document.getElementById('acc-pref-1')?.value?.trim() || '',
+      document.getElementById('acc-pref-2')?.value?.trim() || '',
+    ],
+    travelStyles:   S.travelStyles,
+    mandatoryTags:  S.mandatoryTags,
+    preferredTags:  S.preferredTags,
+    adults:         S.adults,
+    children:       S.children,
   };
   lsSet(LS_FORM, existing);
 }
@@ -1274,6 +1284,38 @@ function restoreOrtsreiseForm() {
       setVal('ortsreise-start-date', cached.startDate);
     }
   }
+
+  // Restore accommodation preferences
+  if (cached.accommodationPreferences) {
+    cached.accommodationPreferences.forEach((val, i) => setVal(`acc-pref-${i}`, val));
+  }
+
+  // Restore travelers, styles, tags
+  if (cached.adults != null) {
+    S.adults = cached.adults;
+    const el = document.getElementById('adults-count');
+    if (el) el.textContent = S.adults;
+  }
+  if (cached.children) {
+    S.children = cached.children;
+    if (typeof renderChildren === 'function') renderChildren();
+  }
+  if (cached.travelStyles) {
+    S.travelStyles = cached.travelStyles;
+    document.querySelectorAll('.style-card').forEach(card => {
+      const selected = S.travelStyles.includes(card.dataset.id);
+      card.classList.toggle('selected', selected);
+      card.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+  }
+  if (cached.mandatoryTags) {
+    S.mandatoryTags = cached.mandatoryTags;
+    if (typeof renderTags === 'function') renderTags();
+  }
+  if (cached.preferredTags) {
+    S.preferredTags = cached.preferredTags;
+    if (typeof renderTags === 'function') renderTags();
+  }
 }
 
 /** Attaches input/change listeners to all Ortsreise form controls so every edit is auto-saved. */
@@ -1287,6 +1329,9 @@ function _wireOrtsreiseSaveListeners() {
     'ortsreise-max-restaurants',
     'ortsreise-hotel-radius',
     'ortsreise-log-verbosity',
+    'acc-pref-0',
+    'acc-pref-1',
+    'acc-pref-2',
   ].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -1413,4 +1458,30 @@ async function submitLocationTrip() {
     if (errEl) { errEl.textContent = t('form.trip_planning_error') + ' ' + msg; errEl.style.display = ''; }
     else { showToast(t('form.trip_planning_error') + ' ' + msg, 'error'); }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Reset
+// ---------------------------------------------------------------------------
+
+/** Clears all cached form data and resets state to defaults, then shows the mode picker. */
+function resetAllPresets() {
+  if (!confirm(t('header.reset_presets_confirm'))) return;
+
+  lsClear(LS_FORM);
+  lsClear(LS_APP_MODE);
+
+  S.appMode             = null;
+  S.step                = 1;
+  S.adults              = 2;
+  S.children            = [];
+  S.travelStyles        = [];
+  S.mandatoryTags       = [];
+  S.preferredTags       = [];
+  S.locationQuery       = '';
+  S.locationNights      = 7;
+  S.ortsreiseDescription = '';
+  S.legs                = [];
+
+  Router.navigate('/');
 }

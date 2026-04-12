@@ -2,6 +2,8 @@
   "app.title": "DetourAI — एआई यात्रा योजनाकार",
   "header.home_link_title": "होम पर जाएं",
   "header.subtitle": "एआई-संचालित यात्रा योजनाकार",
+  "header.reset_presets_title": "फ़ॉर्म रीसेट करें",
+  "header.reset_presets_confirm": "सभी सहेजे गए फ़ॉर्म मान रीसेट करें?",
   "header.my_travels": "मेरी यात्राएं",
   "header.logout": "लॉग आउट",
   "header.settings_title": "सेटिंग्स",
