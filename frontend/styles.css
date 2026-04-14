@@ -122,11 +122,6 @@
   --shadow: 0 4px 24px rgba(196, 98, 58, 0.10);
 }
 
-@keyframes pastel-shift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
 
 body {
   font-family: var(--font-primary);
@@ -146,68 +141,6 @@ html[lang="hi"] button {
   line-height: 1.8;
 }
 
-/* ============================================================ Background Slideshow */
-/* Slideshow sits at z:1; pastel wash at z:2; all real UI at z:3+
-   (header is z:100 so there's plenty of headroom) */
-#bg-slideshow {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.bg-slide {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: 0;
-  transition: opacity 1.8s ease-in-out;
-  /* Soft pastel overlay: desaturate + lighten to keep colours gentle */
-  filter: saturate(0.65) brightness(1.15);
-  will-change: opacity;
-}
-
-.bg-slide.active {
-  opacity: 0.40;
-}
-
-/* Gentle white vignette to soften edges */
-#bg-slideshow::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at center,
-    transparent 40%,
-    rgba(250, 248, 255, 0.45) 100%
-  );
-  pointer-events: none;
-}
-
-/* Animated warm earth wash — above photos, below all UI */
-#bg-pastel-wash {
-  position: fixed;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background: linear-gradient(
-    135deg,
-    rgba(250, 246, 240, 0.75) 0%,
-    rgba(242, 235, 224, 0.75) 25%,
-    rgba(245, 240, 228, 0.75) 50%,
-    rgba(250, 241, 230, 0.75) 75%,
-    rgba(250, 246, 240, 0.75) 100%
-  );
-  background-size: 400% 400%;
-  animation: pastel-shift 18s ease infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bg-slide { transition: none; }
-  #bg-pastel-wash { animation: none; }
-}
 
 /* ============================================================ 3D Lift Micro-Interactions
    Rules:

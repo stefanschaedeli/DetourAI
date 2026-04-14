@@ -14,18 +14,6 @@
 </head>
 <body>
 
-<!-- ======================================================== Background Slideshow + Pastel Wash -->
-<div id="bg-slideshow" aria-hidden="true">
-  <div class="bg-slide active" style="background-image:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80')"></div>
-  <div class="bg-slide" style="background-image:url('https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1920&q=80')"></div>
-  <div class="bg-slide" style="background-image:url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80')"></div>
-  <div class="bg-slide" style="background-image:url('https://images.unsplash.com/photo-1509233725247-49e657c54213?w=1920&q=80')"></div>
-  <div class="bg-slide" style="background-image:url('https://images.unsplash.com/photo-1533240332313-0db49b459ad6?w=1920&q=80')"></div>
-  <div class="bg-slide" style="background-image:url('https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1920&q=80')"></div>
-  <div class="bg-slide" style="background-image:url('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1920&q=80')"></div>
-  <div class="bg-slide" style="background-image:url('https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=1920&q=80')"></div>
-</div>
-<div id="bg-pastel-wash" aria-hidden="true"></div>
 
 <!-- ======================================================== Header -->
 <header class="app-header">
@@ -1098,37 +1086,6 @@
     .catch(err => _gmDebugLog('ERROR', `maps-config Fehler: ${err.message}`));
 </script>
 
-<!-- ======================================================== Background Slideshow Controller -->
-<script>
-(function () {
-  const slides = Array.from(document.querySelectorAll('.bg-slide'));
-  if (!slides.length) return;
-
-  let current = 0;
-
-  function randomDelay() {
-    // random between 10 000 and 30 000 ms
-    return 10000 + Math.random() * 20000;
-  }
-
-  function advance() {
-    slides[current].classList.remove('active');
-    current = (current + 1) % slides.length;
-    slides[current].classList.add('active');
-    setTimeout(advance, randomDelay());
-  }
-
-  // Preload the next image before showing it
-  slides.forEach((slide, i) => {
-    const url = slide.style.backgroundImage.replace(/url\(['"]?(.*?)['"]?\)/, '$1');
-    const img = new Image();
-    img.src = url;
-  });
-
-  // Start the cycle after the first random delay
-  setTimeout(advance, randomDelay());
-})();
-</script>
 
 <button class="feedback-fab" onclick="openFeedbackModal()" title="Feedback senden" aria-label="Feedback senden">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
