@@ -81,18 +81,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/detour-ai-frontend:latest
           platforms: linux/amd64
 
-      - name: Update TrueNAS catalog
-        env:
-          GITHUB_USER: ${{ github.repository_owner }}
-        run: |
-          eval "$(ssh-agent -s)"
-          echo "${{ secrets.CATALOG_DEPLOY_KEY }}" | ssh-add -
-          mkdir -p ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          ./scripts/update-catalog.sh \
-            "${{ steps.version.outputs.app_version }}" \
-            "git@github.com:${{ github.repository_owner }}/detour-ai-catalog.git"
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
