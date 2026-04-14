@@ -50,27 +50,49 @@ from services.redis_store import redis_client, get_job, save_job, _InMemoryStore
 
 def _fire_task(task_name: str, job_id: str, **kwargs):
     """Dispatch a background task as a fire-and-forget asyncio coroutine."""
-    if task_name == "prefetch_accommodations":
-        from tasks.prefetch_accommodations import _prefetch_all_accommodations
-        asyncio.ensure_future(_prefetch_all_accommodations(job_id))
-    elif task_name == "run_planning_job":
-        from tasks.run_planning_job import _run_job
-        asyncio.ensure_future(_run_job(job_id, **kwargs))
-    elif task_name == "replace_stop_job":
-        from tasks.replace_stop_job import _replace_stop_job
-        asyncio.ensure_future(_replace_stop_job(job_id))
-    elif task_name == "remove_stop_job":
-        from tasks.remove_stop_job import _remove_stop_job
-        asyncio.ensure_future(_remove_stop_job(job_id))
-    elif task_name == "add_stop_job":
-        from tasks.add_stop_job import _add_stop_job
-        asyncio.ensure_future(_add_stop_job(job_id))
-    elif task_name == "reorder_stops_job":
-        from tasks.reorder_stops_job import _reorder_stops_job
-        asyncio.ensure_future(_reorder_stops_job(job_id))
-    elif task_name == "update_nights_job":
-        from tasks.update_nights_job import _update_nights_job
-        asyncio.ensure_future(_update_nights_job(job_id))
+    import logging as _logging
+
+    _coros = {
+        "prefetch_accommodations": lambda: __import__(
+            "tasks.prefetch_accommodations", fromlist=["_prefetch_all_accommodations"]
+        )._prefetch_all_accommodations(job_id),
+        "run_planning_job": lambda: __import__(
+            "tasks.run_planning_job", fromlist=["_run_job"]
+        )._run_job(job_id, **kwargs),
+        "replace_stop_job": lambda: __import__(
+            "tasks.replace_stop_job", fromlist=["_replace_stop_job"]
+        )._replace_stop_job(job_id),
+        "remove_stop_job": lambda: __import__(
+            "tasks.remove_stop_job", fromlist=["_remove_stop_job"]
+        )._remove_stop_job(job_id),
+        "add_stop_job": lambda: __import__(
+            "tasks.add_stop_job", fromlist=["_add_stop_job"]
+        )._add_stop_job(job_id),
+        "reorder_stops_job": lambda: __import__(
+            "tasks.reorder_stops_job", fromlist=["_reorder_stops_job"]
+        )._reorder_stops_job(job_id),
+        "update_nights_job": lambda: __import__(
+            "tasks.update_nights_job", fromlist=["_update_nights_job"]
+        )._update_nights_job(job_id),
+    }
+
+    if task_name not in _coros:
+        return
+
+    async def _run_with_logging():
+        try:
+            await _coros[task_name]()
+        except Exception as exc:
+            _logging.getLogger("travelman").error(
+                "Background task %s failed for job %s: %s", task_name, job_id, exc, exc_info=True
+            )
+            # Push a job_error SSE event so the frontend doesn't hang indefinitely.
+            try:
+                await debug_logger.push_event(job_id, "job_error", None, {"message": str(exc)})
+            except Exception:
+                pass
+
+    asyncio.ensure_future(_run_with_logging())
 
 
 async def _periodic_subscriber_cleanup():
