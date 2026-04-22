@@ -115,21 +115,9 @@ const Router = (() => {
   const _handlers = {
     _form() {
       document.title = _titles.form;
-      // Restore appMode from localStorage if not already set (e.g. after page reload)
-      if (!S.appMode) {
-        const savedMode = lsGet(LS_APP_MODE);
-        if (savedMode) S.appMode = savedMode;
-      }
-      if (!S.appMode) {
-        showSection('mode-picker');
-        initModePicker();
-      } else if (S.appMode === 'ortsreise') {
-        showSection('form-section');
-        if (typeof renderOrtsreiseForm === 'function') renderOrtsreiseForm();
-      } else {
-        // rundreise or erkunden — show the standard planning form
-        showSection('form-section');
-      }
+      // Always show the mode picker when navigating to / — user explicitly chose to go home
+      showSection('mode-picker');
+      initModePicker();
     },
 
     _formStep(m) {

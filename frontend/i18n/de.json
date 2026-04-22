@@ -38,6 +38,7 @@
   "form.step.summary": "Zusammenfassung",
   "form.plan_trip": "Reise planen",
   "form.switch_mode": "Modus wechseln",
+  "form.back_to_home": "← Zurück zur Auswahl",
   "form.legs_label": "Reisesegmente",
   "form.legs_hint": "Jedes Segment definiert einen Abschnitt deiner Reise mit Start, Ziel und Daten.",
   "form.add_leg": "+ Segment hinzufügen",

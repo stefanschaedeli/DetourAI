@@ -639,6 +639,9 @@ main { max-width: none; margin: 0; padding: 0 0 96px; }
   from { opacity: 0; transform: translateX(12px); }
   to   { opacity: 1; transform: translateX(0); }
 }
+.form-back-bar { padding: 8px 0 4px; }
+.form-back-bar .btn-link { font-size: 0.875rem; color: var(--text-secondary); opacity: 0.75; }
+.form-back-bar .btn-link:hover { opacity: 1; color: var(--accent); }
 .form-step { display: none; }
 .form-step.active { display: block; animation: stepFadeIn 0.25s ease-out; }
 @media (prefers-reduced-motion: reduce) {
