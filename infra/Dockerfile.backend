@@ -8,4 +8,4 @@ RUN addgroup --system --gid 568 appgroup \
  && mkdir -p /app/outputs /app/data /app/logs \
  && chown -R appuser:appgroup /app/outputs /app/data /app/logs
 USER appuser
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["gunicorn", "main:app", "--workers", "2", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "120"]

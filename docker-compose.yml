@@ -41,6 +41,10 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     volumes:
       - travel_data:/app/data
       - ./logs:/app/logs

@@ -48,6 +48,15 @@ from utils.google_places import validate_stop_quality
 from services.redis_store import redis_client, get_job, save_job, _InMemoryStore, _job_lang
 
 
+# Tracks currently running background tasks: job_id → start timestamp.
+# Used by /health to detect stuck jobs.
+_running_tasks: dict = {}
+
+# Maximum wall-clock time (seconds) a background task is allowed to run before
+# it is forcibly cancelled and marked as failed.
+_TASK_TIMEOUT_SECONDS = 1800  # 30 minutes
+
+
 def _fire_task(task_name: str, job_id: str, **kwargs):
     """Dispatch a background task as a fire-and-forget asyncio coroutine."""
     import logging as _logging
@@ -80,8 +89,19 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
         return
 
     async def _run_with_logging():
+        _running_tasks[job_id] = _time.time()
         try:
-            await _coros[task_name]()
+            await asyncio.wait_for(_coros[task_name](), timeout=_TASK_TIMEOUT_SECONDS)
+        except asyncio.TimeoutError:
+            _logging.getLogger("travelman").error(
+                "Background task %s timed out after %ds for job %s",
+                task_name, _TASK_TIMEOUT_SECONDS, job_id,
+            )
+            try:
+                await debug_logger.push_event(job_id, "job_error", None,
+                                              {"message": "Job-Timeout: Die Verarbeitung hat zu lange gedauert."})
+            except Exception:
+                pass
         except Exception as exc:
             _logging.getLogger("travelman").error(
                 "Background task %s failed for job %s: %s", task_name, job_id, exc, exc_info=True
@@ -91,6 +111,8 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
                 await debug_logger.push_event(job_id, "job_error", None, {"message": str(exc)})
             except Exception:
                 pass
+        finally:
+            _running_tasks.pop(job_id, None)
 
     asyncio.ensure_future(_run_with_logging())
 
@@ -108,12 +130,71 @@ async def _periodic_subscriber_cleanup():
             debug_logger._subscribers.pop(jid, None)
 
 
+# Active statuses that indicate a job is in progress and can become stuck.
+_ACTIVE_JOB_STATUSES = frozenset((
+    "building_route", "loading_accommodations", "selecting_accommodations",
+    "accommodations_confirmed", "pending", "running",
+))
+
+# Max age in seconds before a job in an active status is declared stuck and terminated.
+_STUCK_JOB_TIMEOUT_SECONDS = 2700  # 45 minutes
+
+
+async def _periodic_stuck_job_reaper():
+    """Marks zombie jobs (active status for >45 min) as failed every 5 minutes.
+
+    Prevents jobs that crash without writing an error status from blocking
+    the UI indefinitely. Runs independently of _running_tasks tracking so it
+    also catches jobs whose worker process was killed.
+    """
+    import logging as _logging
+    logger = _logging.getLogger("travelman")
+    while True:
+        await asyncio.sleep(300)  # check every 5 minutes
+        now = _time.time()
+        try:
+            keys = redis_client.keys("job:*")
+        except Exception:
+            continue
+        for key in keys:
+            try:
+                raw = redis_client.get(key)
+                if not raw:
+                    continue
+                job = json.loads(raw)
+                if job.get("status") not in _ACTIVE_JOB_STATUSES:
+                    continue
+                started_at = job.get("created_at") or job.get("started_at")
+                if started_at is None:
+                    continue
+                age = now - float(started_at)
+                if age < _STUCK_JOB_TIMEOUT_SECONDS:
+                    continue
+                # Job has been stuck too long — mark as error.
+                job_id = key.decode() if isinstance(key, bytes) else key
+                job_id = job_id.removeprefix("job:")
+                logger.error("Stuck job detected: %s (age %.0fs) — marking as error", job_id, age)
+                job["status"] = "error"
+                redis_client.set(key, json.dumps(job))
+                try:
+                    await debug_logger.push_event(
+                        job_id, "job_error", None,
+                        {"message": "Job wurde automatisch beendet (Timeout nach 45 Minuten)."},
+                    )
+                except Exception:
+                    pass
+            except Exception as exc:
+                logger.warning("Stuck-job reaper error for key %s: %s", key, exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup/Shutdown für gemeinsame Ressourcen."""
     cleanup_task = asyncio.create_task(_periodic_subscriber_cleanup())
+    reaper_task = asyncio.create_task(_periodic_stuck_job_reaper())
     yield
     cleanup_task.cancel()
+    reaper_task.cancel()
     from utils.http_session import close_session
     await close_session()
 
@@ -453,6 +534,7 @@ def _calc_budget_state(request: TravelRequest, selected_stops: list,
 def _new_job(job_id: str, request: TravelRequest) -> dict:
     return {
         "status": "building_route",
+        "created_at": _time.time(),
         "request": request.model_dump(mode="json"),
         "selected_stops": [],
         "current_options": [],
@@ -2227,14 +2309,35 @@ async def chrome_devtools():
 
 @app.get("/health")
 async def health():
+    # Check Redis connectivity — unhealthy if unreachable.
     try:
         keys = redis_client.keys("job:*")
-        active = len([k for k in keys if json.loads(redis_client.get(k) or "{}").get("status") in
-                      ("building_route", "loading_accommodations", "selecting_accommodations",
-                       "accommodations_confirmed", "pending", "running")])
+        active_statuses = (
+            "building_route", "loading_accommodations", "selecting_accommodations",
+            "accommodations_confirmed", "pending", "running",
+        )
+        active = len([k for k in keys if json.loads(redis_client.get(k) or "{}").get("status") in active_statuses])
+        redis_ok = True
     except Exception:
         active = 0
-    return {"status": "ok", "active_jobs": active}
+        redis_ok = False
+
+    # Check for stuck background tasks (running longer than the timeout).
+    now = _time.time()
+    stuck_jobs = [jid for jid, started in _running_tasks.items() if now - started > _TASK_TIMEOUT_SECONDS]
+
+    if not redis_ok or stuck_jobs:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unhealthy",
+                "redis_ok": redis_ok,
+                "active_jobs": active,
+                "stuck_jobs": stuck_jobs,
+            },
+        )
+
+    return {"status": "ok", "active_jobs": active, "running_tasks": len(_running_tasks)}
 
 
 # ---------------------------------------------------------------------------
