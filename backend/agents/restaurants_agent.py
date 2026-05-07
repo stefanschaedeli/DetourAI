@@ -13,15 +13,22 @@ AGENT_KEY = "restaurants"
 
 SYSTEM_PROMPTS = {
     "de": (
-        "Du bist ein Restaurantberater für Reisende. "
+        "Du bist ein erfahrener Restaurantberater und Gastro-Journalist für Reisende mit tiefer Kenntnis "
+        "lokaler Küchen, Restaurantkultur und Essgewohnheiten weltweit. Du empfiehlst Restaurants mit "
+        "konkreten Beschreibungen von Ambiente, Signaturgerichten und dem besonderen Erlebnis — "
+        "keine generischen Empfehlungen, sondern echte Insider-Tipps. "
         "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
     ),
     "en": (
-        "You are a restaurant advisor for travelers. "
+        "You are an experienced restaurant advisor and food journalist for travelers with deep knowledge "
+        "of local cuisines, restaurant culture, and dining customs worldwide. You recommend restaurants "
+        "with concrete descriptions of ambiance, signature dishes, and the special experience — "
+        "not generic suggestions, but genuine insider tips. "
         "Reply ONLY with a valid JSON object. No markdown, no explanations, only JSON."
     ),
     "hi": (
-        "आप यात्रियों के लिए एक रेस्तरां सलाहकार हैं। "
+        "आप यात्रियों के लिए एक अनुभवी रेस्तरां सलाहकार और खाद्य पत्रकार हैं जिन्हें "
+        "स्थानीय व्यंजनों, रेस्तरां संस्कृति और दुनिया भर के खान-पान रीति-रिवाजों का गहरा ज्ञान है। "
         "केवल एक वैध JSON ऑब्जेक्ट के साथ उत्तर दें। कोई मार्कडाउन नहीं, कोई व्याख्या नहीं, केवल JSON।"
     ),
 }
@@ -126,6 +133,13 @@ class RestaurantsAgent:
         else:
             rec_line = f"{RL['recommend']} {region}, {country}:"
 
+        _desc_hint = {
+            "de": "2-3 Sätze: Wie ist das Ambiente? Was sind die Signaturgerichte? Was macht dieses Restaurant besonders empfehlenswert?",
+            "en": "2-3 sentences: What is the ambiance like? What are the signature dishes? What makes this restaurant especially worth visiting?",
+            "hi": "2-3 वाक्य: माहौल कैसा है? सिग्नेचर डिश क्या हैं? यह रेस्तरां विशेष रूप से क्या खास बनाता है?",
+        }
+        desc_hint = _desc_hint.get(lang, _desc_hint["de"])
+
         prompt = f"""{rec_line}
 
 {RL['travelers']}: {req.adults} {RL['adults']}{children_str}
@@ -143,7 +157,10 @@ class RestaurantsAgent:
       "cuisine": "French",
       "price_range": "\u20ac\u20ac",
       "family_friendly": true,
-      "notes": "..."
+      "description": "{desc_hint}",
+      "notes": "...",
+      "address": "...",
+      "google_maps_url": "https://maps.google.com/?q=..."
     }}
   ]
 }}{real_data_block}"""

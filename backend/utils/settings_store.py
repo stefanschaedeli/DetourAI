@@ -33,11 +33,11 @@ DEFAULTS: dict[str, Any] = {
     "agent.route_architect.max_tokens": 2048,
     "agent.stop_options_finder.max_tokens": 4096,
     "agent.region_planner.max_tokens": 4096,
-    "agent.accommodation_researcher.max_tokens": 3500,
-    "agent.activities.max_tokens": 2048,
-    "agent.restaurants.max_tokens": 1024,
+    "agent.accommodation_researcher.max_tokens": 4096,
+    "agent.activities.max_tokens": 4096,
+    "agent.restaurants.max_tokens": 2048,
     "agent.day_planner.max_tokens": 4096,
-    "agent.travel_guide.max_tokens": 4096,
+    "agent.travel_guide.max_tokens": 8192,
     "agent.trip_analysis.max_tokens": 2048,
 
     # ── Budget-Standardwerte ──

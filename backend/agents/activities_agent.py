@@ -391,6 +391,13 @@ class ActivitiesAgent:
         else:
             find_line = f"{AL['find_best']} {region}, {country}:"
 
+        _desc_hint = {
+            "de": "3-4 Sätze: Was macht diese Aktivität besonders? Was erwartet den Besucher? Welche praktischen Tipps gibt es?",
+            "en": "3-4 sentences: What makes this activity special? What can visitors expect? Any practical tips?",
+            "hi": "3-4 वाक्य: यह गतिविधि क्या खास बनाती है? आगंतुक क्या उम्मीद कर सकते हैं? कोई व्यावहारिक सुझाव?",
+        }
+        desc_hint = _desc_hint.get(lang, _desc_hint["de"])
+
         prompt = f"""{find_line}
 
 {AL['travelers']}: {travelers_desc}
@@ -407,7 +414,7 @@ class ActivitiesAgent:
   "top_activities": [
     {{
       "name": "...",
-      "description": "...",
+      "description": "{desc_hint}",
       "duration_hours": 2.0,
       "price_chf": 25.0,
       "suitable_for_children": true,{children_fields}

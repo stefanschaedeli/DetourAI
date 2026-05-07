@@ -337,15 +337,19 @@ function renderProse(text) {
 function renderTravelGuide(guide) {
   if (!guide) return '';
   const sections = [
-    { key: 'history_culture',  label: 'Geschichte & Kultur' },
-    { key: 'food_specialties', label: 'Lokale Spezialit\u00e4ten' },
-    { key: 'local_tips',       label: 'Praktische Tipps' },
-    { key: 'insider_gems',     label: 'Insider-Tipps' },
-    { key: 'best_time_to_visit', label: 'Beste Reisezeit' },
+    { key: 'history_culture',    label: t('guide.travel_guide.history_culture') },
+    { key: 'food_specialties',   label: t('guide.travel_guide.food_specialties') },
+    { key: 'nature_landscape',   label: t('guide.travel_guide.nature_landscape') },
+    { key: 'local_tips',         label: t('guide.travel_guide.local_tips') },
+    { key: 'insider_gems',       label: t('guide.travel_guide.insider_gems') },
+    { key: 'getting_around',     label: t('guide.travel_guide.getting_around') },
+    { key: 'shopping_markets',   label: t('guide.travel_guide.shopping_markets') },
+    { key: 'family_highlights',  label: t('guide.travel_guide.family_highlights') },
+    { key: 'best_time_to_visit', label: t('guide.travel_guide.best_time') },
   ];
   return `
     <div class="reisefuehrer-section">
-      <h4 class="reisefuehrer-title">Reisef\u00fchrer</h4>
+      <h4 class="reisefuehrer-title">${t('guide.travel_guide.title')}</h4>
       <div class="guide-intro">${renderProse(guide.intro_narrative)}</div>
       ${sections.map(s => guide[s.key] ? `
         <details class="guide-collapse">

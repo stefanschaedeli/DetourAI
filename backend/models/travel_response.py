@@ -11,6 +11,10 @@ class TravelGuide(BaseModel):
     local_tips: str
     insider_gems: str
     best_time_to_visit: str
+    getting_around: Optional[str] = None
+    nature_landscape: Optional[str] = None
+    family_highlights: Optional[str] = None
+    shopping_markets: Optional[str] = None
 
 
 class TimeBlock(BaseModel):
@@ -70,7 +74,10 @@ class Restaurant(BaseModel):
     cuisine: str
     price_range: str                 # €, €€, €€€
     family_friendly: bool = False
+    description: Optional[str] = None
     notes: Optional[str] = None
+    address: Optional[str] = None
+    google_maps_url: Optional[str] = None
     image_overview: Optional[str] = None
     image_mood: Optional[str] = None
     image_customer: Optional[str] = None
