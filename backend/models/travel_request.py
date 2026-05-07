@@ -38,8 +38,8 @@ class TravelRequest(BaseModel):
     # Activities
     mandatory_activities: List[MandatoryActivity] = Field(default=[], max_length=20)
     preferred_activities: List[str] = Field(default=[], max_length=20)
-    max_activities_per_stop: int = Field(default=5, ge=1, le=20)
-    max_restaurants_per_stop: int = Field(default=3, ge=1, le=10)
+    max_activities_per_stop: int = Field(default=5, ge=1, le=50)
+    max_restaurants_per_stop: int = Field(default=3, ge=1, le=30)
     activities_radius_km: int = Field(default=30, ge=1, le=200)
 
     # Route rules (global — apply to all legs)

@@ -1391,6 +1391,10 @@ async def plan_location(
         "is_fixed": True,
     }
 
+    # Scale activities/restaurants for location mode: at least 3 per day / 2 per day
+    request.max_activities_per_stop = max(request.max_activities_per_stop, nights * 3)
+    request.max_restaurants_per_stop = max(request.max_restaurants_per_stop, nights * 2)
+
     job["request"] = request.model_dump(mode="json")
     job["user_id"] = current_user.id
     job["selected_stops"] = [stop]
