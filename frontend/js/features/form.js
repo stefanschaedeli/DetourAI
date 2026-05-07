@@ -639,7 +639,7 @@ function addChild() {
   renderChildren();
 }
 
-function removeChild(idx) {
+function removeChildEntry(idx) {
   S.children.splice(idx, 1);
   renderChildren();
 }
@@ -652,7 +652,7 @@ function renderChildren() {
       <label>${t('form.child_row_label', {index: i + 1})}</label>
       <input type="number" min="0" max="17" value="${child.age}"
         oninput="S.children[${i}].age = parseInt(this.value) || 0; saveFormToCache()">
-      <button class="btn-icon btn-danger" onclick="removeChild(${i})" aria-label="${t('form.remove_child_aria', {index: i + 1})}">×</button>
+      <button class="btn-icon btn-danger" onclick="removeChildEntry(${i})" aria-label="${t('form.remove_child_aria', {index: i + 1})}">×</button>
     </div>
   `).join('');
   document.getElementById('adults-count').textContent = S.adults;
