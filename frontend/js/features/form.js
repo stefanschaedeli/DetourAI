@@ -225,10 +225,14 @@ function toggleSettings() {
 
 /**
  * Prepend a "Konto" section to the settings dropdown for mobile screens.
- * Idempotent — does nothing if the section already exists in the menu.
+ * Rebuilds on every call so stale state (e.g. after logout) is never shown.
  */
 function _injectKontoSection(menu) {
-  if (menu.querySelector('.settings-konto-section')) return;
+  // Never show account actions to unauthenticated users
+  if (!S.currentUser) return;
+
+  // Remove any previously injected section so we always rebuild fresh
+  menu.querySelector('.settings-konto-section')?.remove();
 
   const username = S.currentUser?.username || '';
   const isAdmin  = !!(S.currentUser?.is_admin);
@@ -251,7 +255,7 @@ function _injectKontoSection(menu) {
   const travelsBtn = document.createElement('button');
   travelsBtn.className = 'settings-konto-btn';
   travelsBtn.id = 'settings-konto-travels';
-  travelsBtn.textContent = 'Meine Reisen';
+  travelsBtn.textContent = t('header.my_travels');
   travelsBtn.addEventListener('click', () => {
     toggleSettings();
     if (typeof openTravelsDrawer === 'function') openTravelsDrawer();
@@ -274,7 +278,7 @@ function _injectKontoSection(menu) {
   const logoutBtn = document.createElement('button');
   logoutBtn.className = 'settings-konto-btn';
   logoutBtn.id = 'settings-konto-logout';
-  logoutBtn.textContent = 'Abmelden';
+  logoutBtn.textContent = t('header.logout');
   logoutBtn.addEventListener('click', () => {
     toggleSettings();
     // Delegate to the existing header logout button to keep logic centralised
