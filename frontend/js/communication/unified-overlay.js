@@ -352,6 +352,9 @@
   window.resetLoading = function () {
     _pendingCount = 0;
     if (_mode === 'simple') _mode = null;
+    if (_pendingCount === 0 && _mode === null) {
+      document.body.classList.remove('scroll-lock');
+    }
     _scheduleRender();
   };
 

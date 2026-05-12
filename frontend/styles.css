@@ -142,7 +142,14 @@ body {
 }
 
 /* Prevent background scroll while any overlay/modal/drawer is open */
-body.scroll-lock { overflow: hidden; touch-action: none; }
+body.scroll-lock { overflow: hidden; }
+/* Re-enable vertical panning inside the overlay's own scrollable regions on iOS */
+body.scroll-lock .uo-card,
+body.scroll-lock .travels-list,
+body.scroll-lock .modal-content,
+body.scroll-lock .replace-modal-content {
+  touch-action: pan-y;
+}
 
 /* Hindi (Devanagari) font and spacing adjustments */
 html[lang="hi"] body,
@@ -202,7 +209,7 @@ html[lang="hi"] button {
   border-bottom: 1px solid var(--border-subtle);
   padding: 0 clamp(20px, 4vw, 56px);
   padding-top: max(var(--safe-top), 0px);
-  height: 56px;
+  min-height: 56px;
   display: flex; align-items: center; gap: 10px;
   animation: header-fade-in 0.3s ease both;
   backdrop-filter: blur(12px);
@@ -5375,7 +5382,7 @@ strong.req-keyword {
 .sb-pill--days { background: rgba(196, 98, 58, 0.12); color: var(--accent-primary); }
 
 /* Mobile Responsive */
-@media (max-width: 768px) {
+@media (max-width: 600px) {
   .app-layout { display: block; }
   .trip-sidebar {
     position: fixed; left: 0; top: 60px; z-index: 90; width: 260px;
@@ -5393,7 +5400,7 @@ strong.req-keyword {
   }
   .sidebar-mobile-overlay.visible { display: block; }
 }
-@media (min-width: 769px) {
+@media (min-width: 601px) {
   .sidebar-mobile-toggle { display: none !important; }
 }
 
