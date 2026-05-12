@@ -58,7 +58,8 @@ function goToStep(n) {
   window.scrollTo(0, 0);
   // Scroll active step into view on mobile
   const activeStep = document.querySelector('.step-indicator .step.active');
-  if (activeStep) activeStep.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+  const activeIndicator = activeStep?.closest('.step-indicator');
+  if (activeIndicator) activeIndicator.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
   // Re-bind click handlers on done steps
   document.querySelectorAll('.step-indicator .step').forEach((el, i) => {
     const stepNum = i + 1;

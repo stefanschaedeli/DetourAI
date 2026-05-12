@@ -6625,7 +6625,8 @@ strong.req-keyword {
     scrollbar-width: none;
   }
   .step-indicators::-webkit-scrollbar { display: none; }
-  .step-indicator { scroll-snap-align: center; }
+  .step-indicator { scroll-snap-align: center; flex-shrink: 0; min-width: 64px; }
+  .step-connector { flex-shrink: 0; min-width: 24px; }
   .step-indicator .step-label { display: none; }
   .step-indicator:has(.step.active) .step-label { display: block; }
 }
@@ -6649,7 +6650,7 @@ strong.req-keyword {
 @media (max-width: 600px) {
   .budget-slider-row { flex-direction: column; align-items: stretch; gap: 4px; }
   .budget-slider-label { width: 100%; }
-  .budget-preview { flex-wrap: wrap; }
+  .budget-preview { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 }
 
 /* C5 — Step 6 Summary: stack label/value */
