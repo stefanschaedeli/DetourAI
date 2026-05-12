@@ -6727,3 +6727,32 @@ body[data-reorder-mode="on"] .stop-edit-drag { display: none; }
 @media (max-width: 768px) {
   .reorder-mode-btn { display: inline-flex; }
 }
+
+/* ============================================================ Task E — Overlays + Standalone Pages */
+
+/* E1 — Unified overlay sizing on mobile */
+@media (max-width: 600px) {
+  .uo-card { max-width: 92vw; max-height: calc(100dvh - 32px); margin: 16px; }
+  .uo-debug-log { max-height: 140px; }
+}
+
+/* E2 — Toast positioning on mobile */
+@media (max-width: 480px) {
+  .app-toast { left: 16px; right: 16px; max-width: none; }
+}
+
+/* E3 — Travels drawer card wrapping */
+@media (max-width: 600px) {
+  .travel-card { flex-wrap: wrap; }
+  .travel-card-actions { width: 100%; justify-content: flex-end; }
+}
+
+/* E4 — Settings dropdown max-width on narrow screens */
+@media (max-width: 600px) {
+  .settings-menu { max-width: calc(100vw - 16px); right: 8px; }
+}
+
+/* E5 — Settings row select min-height on mobile */
+@media (max-width: 600px) {
+  .settings-row select { min-height: 44px; }
+}

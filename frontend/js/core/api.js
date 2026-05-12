@@ -492,8 +492,8 @@ function showToast(message, type, opts) {
   }
   // Stack above existing toasts
   const existing = document.querySelectorAll('.app-toast');
-  const offset = 24 + existing.length * 48;
-  toast.style.bottom = offset + 'px';
+  const count = existing.length;
+  toast.style.bottom = `calc(${24 + count * 48}px + var(--safe-bottom))`;
   document.body.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add('visible'));
   if (!persistent) {
