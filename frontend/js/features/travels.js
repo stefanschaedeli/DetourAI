@@ -84,7 +84,7 @@ function _startRename(titleEl) {
 function openTravelsDrawer() {
   document.getElementById('travels-drawer-overlay').classList.add('open');
   document.getElementById('travels-drawer').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  document.body.classList.add('scroll-lock');
   if (location.pathname !== '/travels') {
     Router.navigate('/travels');
   }
@@ -95,7 +95,7 @@ function openTravelsDrawer() {
 function closeTravelsDrawer() {
   document.getElementById('travels-drawer-overlay').classList.remove('open');
   document.getElementById('travels-drawer').classList.remove('open');
-  document.body.style.overflow = '';
+  document.body.classList.remove('scroll-lock');
   // Navigate back if we came from /travels URL
   if (location.pathname === '/travels') {
     Router.navigate('/', { replace: true });

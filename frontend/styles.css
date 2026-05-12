@@ -88,6 +88,16 @@
   --lift-shadow-sm: 0 4px 14px rgba(196, 98, 58, 0.14), 0 1px 4px rgba(44, 32, 23, 0.06);
   --press-scale:    0.97;
 
+  /* Canonical breakpoints — use these values for all new mobile/tablet media queries */
+  /* --bp-mobile: 600px   (phone ≤ 600px) */
+  /* --bp-tablet: 900px   (tablet 601–900px, desktop ≥ 901px) */
+
+  /* Safe-area insets for notched devices (iPhone, etc.) */
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+
   /* ── Legacy-Aliases (backwards compat) ── */
   --bg:          var(--bg-primary);
   --card:        var(--bg-elevated);
@@ -130,6 +140,9 @@ body {
   line-height: 1.6;
   min-height: 100dvh;
 }
+
+/* Prevent background scroll while any overlay/modal/drawer is open */
+body.scroll-lock { overflow: hidden; touch-action: none; }
 
 /* Hindi (Devanagari) font and spacing adjustments */
 html[lang="hi"] body,
@@ -188,6 +201,7 @@ html[lang="hi"] button {
   position: sticky; top: 0; z-index: 100;
   border-bottom: 1px solid var(--border-subtle);
   padding: 0 clamp(20px, 4vw, 56px);
+  padding-top: max(var(--safe-top), 0px);
   height: 56px;
   display: flex; align-items: center; gap: 10px;
   animation: header-fade-in 0.3s ease both;
@@ -2521,6 +2535,7 @@ details[open] > .stop-section-summary::before { transform: rotate(90deg); }
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
   display: none; align-items: center; justify-content: space-between;
   gap: 16px; padding: 14px clamp(24px, 4vw, 60px);
+  padding-bottom: calc(8px + var(--safe-bottom));
   background: rgba(250, 248, 255, 0.92);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
@@ -3778,7 +3793,7 @@ strong.req-keyword {
 /* ── Toast ── */
 .settings-toast {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px + var(--safe-bottom));
   right: 24px;
   background: var(--accent, #6C63FF);
   color: #fff;
@@ -5841,7 +5856,7 @@ strong.req-keyword {
 .app-toast {
   position: fixed;
   right: 24px;
-  bottom: 24px;
+  bottom: calc(24px + var(--safe-bottom));
   max-width: 400px;
   padding: 8px 16px;
   border-radius: 8px;
@@ -6115,7 +6130,7 @@ strong.req-keyword {
    --------------------------------------------------------------------------- */
 .feedback-fab {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(16px + var(--safe-bottom));
   right: 24px;
   width: 48px;
   height: 48px;
@@ -6559,4 +6574,12 @@ strong.req-keyword {
 @media (prefers-reduced-motion: reduce) {
   .uo-progress-indeterminate { animation: none; width: 60% !important; }
   .uo-spinner { animation: none; }
+}
+
+/* ============================================================ iOS auto-zoom prevention
+   iOS Safari zooms in when an input with font-size < 16px is focused.
+   This rule pins all form elements to 16px on phones to prevent that.
+   ============================================================ */
+@media (max-width: 600px) {
+  input, select, textarea { font-size: 16px; }
 }

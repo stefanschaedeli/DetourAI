@@ -537,6 +537,7 @@ function showConfirm(message) {
     content.appendChild(actions);
     backdrop.appendChild(content);
     document.body.appendChild(backdrop);
+    document.body.classList.add('scroll-lock');
 
     // Trigger open animation and move focus to confirm button for keyboard users
     requestAnimationFrame(() => { backdrop.classList.add('modal-open'); confirmBtn.focus(); });
@@ -545,6 +546,7 @@ function showConfirm(message) {
       backdrop.classList.add('modal-closing');
       backdrop.classList.remove('modal-open');
       setTimeout(() => backdrop.remove(), 200);
+      document.body.classList.remove('scroll-lock');
       resolve(result);
     }
 

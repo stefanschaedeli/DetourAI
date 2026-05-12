@@ -107,12 +107,14 @@ function openFeedbackModal() {
   modal.appendChild(content);
 
   document.body.appendChild(modal);
+  document.body.classList.add('scroll-lock');
   setTimeout(() => textarea.focus(), 100);
 }
 
 function closeFeedbackModal() {
   const modal = document.getElementById('feedback-modal');
   if (modal) modal.remove();
+  document.body.classList.remove('scroll-lock');
   _feedbackScreenshot = null;
 }
 

@@ -279,7 +279,7 @@ function openLightbox(url, caption) {
   const overlay = document.getElementById('lightbox-overlay');
   overlay.dataset.single = _lbUrls.length === 1 ? 'true' : 'false';
   overlay.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
+  document.body.classList.add('scroll-lock');
 }
 
 /** Navigate lightbox to prev (-1) or next (+1) image. */
@@ -300,7 +300,7 @@ function lightboxNav(dir) {
 function closeLightbox() {
   const overlay = document.getElementById('lightbox-overlay');
   if (overlay) overlay.style.display = 'none';
-  document.body.style.overflow = '';
+  document.body.classList.remove('scroll-lock');
 }
 
 // ---------------------------------------------------------------------------

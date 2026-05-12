@@ -897,6 +897,7 @@ function openReplaceStopModal(stopId, currentNights) {
     </div>
   `;
   document.body.appendChild(modal);
+  document.body.classList.add('scroll-lock');
   requestAnimationFrame(() => modal.classList.add('visible'));
 
   // Focus input
@@ -911,6 +912,7 @@ function closeReplaceStopModal() {
     modal.classList.remove('visible');
     setTimeout(() => modal.remove(), 200);
   }
+  document.body.classList.remove('scroll-lock');
   if (_replaceStopSSE) {
     _replaceStopSSE.close();
     _replaceStopSSE = null;

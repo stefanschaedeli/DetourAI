@@ -333,7 +333,7 @@ const Sidebar = (() => {
     const sidebar = document.getElementById('trip-sidebar');
     if (!sidebar) return;
 
-    const isDesktop = window.innerWidth > 768;
+    const isDesktop = window.innerWidth > 600;
 
     if (isDesktop) {
       sidebar.classList.toggle('collapsed');

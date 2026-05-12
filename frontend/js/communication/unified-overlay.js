@@ -316,6 +316,7 @@
    */
   window.showLoading = function (message) {
     _pendingCount++;
+    document.body.classList.add('scroll-lock');
     if (_mode !== 'sse') {
       _mode = 'simple';
       _summary = message || (typeof t === 'function' ? t('loading.default') : 'Laden…');
@@ -337,6 +338,9 @@
     _pendingCount = Math.max(0, _pendingCount - 1);
     if (_pendingCount === 0 && _mode === 'simple') {
       _mode = null;
+    }
+    if (_pendingCount === 0 && _mode === null) {
+      document.body.classList.remove('scroll-lock');
     }
     _scheduleRender();
   };
@@ -388,6 +392,7 @@
      */
     open: function (phase) {
       _mode = 'sse';
+      document.body.classList.add('scroll-lock');
       _tasks.clear();
       if (_tasksEl) _clearEl(_tasksEl);
       _summary        = phase || (typeof t === 'function' ? t('loading.default') : 'Laden…');
@@ -403,6 +408,9 @@
     close: function () {
       _mode = null;
       _progress = null;
+      if (_pendingCount === 0) {
+        document.body.classList.remove('scroll-lock');
+      }
       _scheduleRender();
     },
 
