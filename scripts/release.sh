@@ -41,8 +41,11 @@ read -r -p "Push and trigger pipeline? [y/N] " CONFIRM
 
 git tag "$NEW_VERSION"
 git tag "$RELEASE_TAG"
+# Move the floating 'latest' tag to the new release commit
+git tag -f latest
 git push origin "$NEW_VERSION" "$RELEASE_TAG"
+git push origin latest --force
 
 echo ""
-echo "✓ Tags pushed: $NEW_VERSION  $RELEASE_TAG"
+echo "✓ Tags pushed: $NEW_VERSION  $RELEASE_TAG  latest"
 echo "→ Pipeline: https://github.com/stefanschaedeli/DetourAI/actions"
