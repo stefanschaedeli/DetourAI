@@ -9,7 +9,8 @@
 //           _onDropZoneDrop, _editStopNights, _listenForNightsComplete,
 //           openReplaceStopModal, closeReplaceStopModal, _switchReplaceTab,
 //           _showReplaceProgress, _hideReplaceProgress, _doManualReplace,
-//           _doSearchReplace, _selectSearchOption, _listenForReplaceComplete
+//           _doSearchReplace, _selectSearchOption, _listenForReplaceComplete,
+//           enterReorderMode, exitReorderMode, toggleReorderMode
 'use strict';
 
 let _editInProgress = false;
@@ -1065,3 +1066,139 @@ function _listenForReplaceComplete(jobId, travelId) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Touch Reorder Mode (D6) — ▲/▼ buttons for mobile stop reordering
+// ---------------------------------------------------------------------------
+
+/**
+ * Injects ▲/▼ reorder buttons into every .stop-card-row and sets
+ * body[data-reorder-mode="on"] so the CSS shows them.
+ * Desktop drag-and-drop is left intact — this is an additive parallel path.
+ */
+function enterReorderMode() {
+  document.body.dataset.reorderMode = 'on';
+
+  const cards = document.querySelectorAll('.stop-card-row');
+  const total = cards.length;
+
+  cards.forEach(function(card, i) {
+    // Remove any stale injected buttons from a previous enter call
+    card.querySelectorAll('.reorder-up-btn, .reorder-down-btn').forEach(function(b) { b.remove(); });
+
+    const upBtn = document.createElement('button');
+    upBtn.className = 'reorder-up-btn';
+    upBtn.setAttribute('aria-label', 'Stopp nach oben');
+    upBtn.textContent = '▲';
+    upBtn.disabled = (i === 0);
+    upBtn.onclick = function(e) {
+      e.stopPropagation();
+      _reorderStopByIndex(i, i - 1);
+    };
+
+    const downBtn = document.createElement('button');
+    downBtn.className = 'reorder-down-btn';
+    downBtn.setAttribute('aria-label', 'Stopp nach unten');
+    downBtn.textContent = '▼';
+    downBtn.disabled = (i === total - 1);
+    downBtn.onclick = function(e) {
+      e.stopPropagation();
+      _reorderStopByIndex(i, i + 1);
+    };
+
+    // Append to the actions row inside the card if present, otherwise to the card itself
+    const actionsRow = card.querySelector('.stop-card-actions');
+    if (actionsRow) {
+      actionsRow.appendChild(upBtn);
+      actionsRow.appendChild(downBtn);
+    } else {
+      card.appendChild(upBtn);
+      card.appendChild(downBtn);
+    }
+  });
+}
+
+/** Removes injected ▲/▼ buttons and clears the reorder mode flag. */
+function exitReorderMode() {
+  document.body.dataset.reorderMode = '';
+  document.querySelectorAll('.reorder-up-btn, .reorder-down-btn').forEach(function(b) { b.remove(); });
+}
+
+/**
+ * Toggles reorder mode on/off and updates the trigger button label.
+ * Called by the "Reihenfolge ändern" / "Fertig" button rendered in renderStopsOverview.
+ */
+function toggleReorderMode(btn) {
+  if (document.body.dataset.reorderMode === 'on') {
+    exitReorderMode();
+    if (btn) btn.textContent = 'Reihenfolge ändern';
+  } else {
+    enterReorderMode();
+    if (btn) btn.textContent = 'Fertig';
+  }
+}
+
+/**
+ * Moves a stop from fromIndex to toIndex via the existing apiReorderStops backend call.
+ * Reuses the same SSE flow as drag-and-drop (_onStopDrop).
+ */
+function _reorderStopByIndex(fromIndex, toIndex) {
+  if (_editInProgress) return;
+  var plan = S.result;
+  if (!plan) return;
+  var travelId = plan._saved_travel_id || plan.id;
+  if (!travelId) {
+    showToast(t('guide.edit.save_first'), 'warning');
+    return;
+  }
+
+  // Exit reorder mode before triggering the SSE flow so buttons don't linger
+  exitReorderMode();
+  // Re-label the trigger button if it is still in the DOM
+  var triggerBtn = document.querySelector('.reorder-mode-btn');
+  if (triggerBtn) triggerBtn.textContent = 'Reihenfolge ändern';
+
+  _lockEditing();
+  apiReorderStops(travelId, fromIndex, toIndex).then(function(res) {
+    progressOverlay.open(t('api.reordering_stops'));
+    overlayAddUpcoming('reordering', t('edit.phase_reordering'));
+    overlayAddUpcoming('directions', t('edit.phase_directions'));
+    overlayAddUpcoming('day_planner', t('edit.phase_day_planner'));
+    overlaySetProgress(0);
+    _editSSE = openSSE(res.job_id, {
+      reorder_stops_progress: function(data) {
+        var phaseMap = { reordering: 10, directions: 40, day_planner: 90 };
+        var phase = data.phase || '';
+        if (phaseMap[phase] !== undefined) {
+          progressOverlay.completeLine(phase, '');
+          overlaySetProgress(phaseMap[phase]);
+        }
+      },
+      reorder_stops_complete: function(data) {
+        overlaySetProgress(100);
+        progressOverlay.close();
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        data._saved_travel_id = travelId;
+        S.result = data;
+        lsSet(LS_RESULT, { savedAt: new Date().toISOString(), plan: data });
+        _unlockEditing();
+        renderGuide(data, 'stops');
+        if (typeof GoogleMaps !== 'undefined') GoogleMaps.setGuideMarkers(data, _onMarkerClick);
+      },
+      job_error: function(data) {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        progressOverlay.close();
+        _unlockEditing();
+        showToast(t('guide.edit.error_reorder') + ' ' + (data.error || t('progress.unknown_error')), 'error');
+      },
+      onerror: function() {
+        if (_editSSE) { _editSSE.close(); _editSSE = null; }
+        progressOverlay.close();
+        _unlockEditing();
+        showToast(t('guide.edit.connection_lost_reorder'), 'error', { persistent: true });
+      },
+    });
+  }).catch(function(err) {
+    _unlockEditing();
+    showToast(t('guide.edit.error_generic') + ' ' + err.message, 'error');
+  });
+}

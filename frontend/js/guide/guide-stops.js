@@ -99,6 +99,7 @@ function renderStopsOverview(plan) {
   return '<div class="stop-cards-list">' + html + '</div>' +
     '<div class="stops-overview-actions">' +
       '<button class="btn btn-primary add-stop-btn" onclick="_openAddStopModal()">+ Stopp hinzuf\u00fcgen</button>' +
+      '<button class="btn btn-secondary reorder-mode-btn" onclick="toggleReorderMode(this)">Reihenfolge \u00e4ndern</button>' +
     '</div>';
 }
 

@@ -5617,15 +5617,15 @@ strong.req-keyword {
 --------------------------------------------------------------------------- */
 .guide-marker { cursor: pointer; }
 .guide-marker-num {
-  width: 28px; height: 28px; border-radius: 50%;
+  width: 36px; height: 36px; border-radius: 50%;
   background: var(--text-primary); color: white;
-  font-size: 14px; font-weight: 600;
+  font-size: 14px; font-weight: 600; line-height: 36px;
   display: flex; align-items: center; justify-content: center;
   transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
   transform: translate(-50%, -50%);
 }
 .guide-marker-num.selected {
-  width: 36px; height: 36px;
+  width: 44px; height: 44px; line-height: 44px;
   background: var(--accent-primary, var(--accent-primary));
   box-shadow: 0 4px 12px rgba(124,107,224,0.3);
 }
@@ -6657,4 +6657,71 @@ strong.req-keyword {
 @media (max-width: 600px) {
   .summary-item { flex-direction: column; gap: 4px; }
   .summary-label { min-width: 0; }
+}
+
+/* ---------------------------------------------------------------------------
+   D1 — Drop sticky on guide map + stop-toggle on mobile
+   --------------------------------------------------------------------------- */
+@media (max-width: 600px) {
+  .guide-map-section { position: static; }
+  .stop-toggle { position: static; }
+}
+
+/* ---------------------------------------------------------------------------
+   D2 — Guide tab bar scroll-fade hint
+   --------------------------------------------------------------------------- */
+@media (max-width: 600px) {
+  .guide-tabs-wrapper { position: relative; }
+  .guide-tabs-wrapper::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 32px;
+    background: linear-gradient(to right, transparent, var(--bg-primary, #FAF6F0));
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   D4 — Click-to-add popup constraints on mobile
+   --------------------------------------------------------------------------- */
+@media (max-width: 600px) {
+  .click-to-add-popup { max-width: calc(100vw - 32px); }
+  .popup-add-btn { min-height: 44px; padding: 10px 16px; }
+}
+
+/* ---------------------------------------------------------------------------
+   D5 — Stop card photo compact on phone
+   --------------------------------------------------------------------------- */
+@media (max-width: 600px) {
+  .stop-card-photo { width: 72px; aspect-ratio: 1; }
+  .stop-card-meta { flex-direction: column; }
+}
+
+/* ---------------------------------------------------------------------------
+   D6 — Touch reorder mode (▲/▼ buttons)
+   --------------------------------------------------------------------------- */
+.reorder-up-btn,
+.reorder-down-btn {
+  display: none; /* hidden by default */
+}
+body[data-reorder-mode="on"] .reorder-up-btn,
+body[data-reorder-mode="on"] .reorder-down-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+}
+.reorder-mode-btn {
+  display: none; /* shown only on ≤768px */
+}
+@media (max-width: 768px) {
+  .reorder-mode-btn { display: inline-flex; }
 }

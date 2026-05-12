@@ -23,7 +23,7 @@
 <header class="app-header">
   <div class="app-logo" onclick="showModePicker()" style="cursor:pointer" title="Zur Startseite" data-i18n="header.home_link_title" data-i18n-attr="title">DetourAI</div>
   <div class="app-subtitle" data-i18n="header.subtitle">KI-gestützter Reiseplaner</div>
-  <span class="app-version">v15.3.6</span>
+  <span class="app-version">v15.3.7</span>
   <button id="btn-reset-presets" class="btn-icon" onclick="resetAllPresets()"
           data-i18n="header.reset_presets_title" data-i18n-attr="title" title="Formular zurücksetzen">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
@@ -600,12 +600,14 @@
 
         <div id="guide-stats-bar"></div>
 
-        <div class="guide-tabs" role="tablist">
-          <button class="guide-tab active" role="tab" aria-selected="true" data-tab="overview" onclick="switchGuideTab('overview')" data-i18n="guide.tab_overview">Übersicht</button>
-          <button class="guide-tab" role="tab" aria-selected="false" data-tab="stops" onclick="switchGuideTab('stops')" data-i18n="guide.tab_stops">Stopps</button>
-          <button class="guide-tab" role="tab" aria-selected="false" data-tab="days" onclick="switchGuideTab('days')" data-i18n="guide.tab_days">Tage</button>
-          <button class="guide-tab" role="tab" aria-selected="false" data-tab="calendar" onclick="switchGuideTab('calendar')" data-i18n="guide.tab_calendar">Kalender</button>
-          <button class="guide-tab" role="tab" aria-selected="false" data-tab="budget" onclick="switchGuideTab('budget')" data-i18n="guide.tab_budget">Budget</button>
+        <div class="guide-tabs-wrapper">
+          <div class="guide-tabs" role="tablist">
+            <button class="guide-tab active" role="tab" aria-selected="true" data-tab="overview" onclick="switchGuideTab('overview')" data-i18n="guide.tab_overview">Übersicht</button>
+            <button class="guide-tab" role="tab" aria-selected="false" data-tab="stops" onclick="switchGuideTab('stops')" data-i18n="guide.tab_stops">Stopps</button>
+            <button class="guide-tab" role="tab" aria-selected="false" data-tab="days" onclick="switchGuideTab('days')" data-i18n="guide.tab_days">Tage</button>
+            <button class="guide-tab" role="tab" aria-selected="false" data-tab="calendar" onclick="switchGuideTab('calendar')" data-i18n="guide.tab_calendar">Kalender</button>
+            <button class="guide-tab" role="tab" aria-selected="false" data-tab="budget" onclick="switchGuideTab('budget')" data-i18n="guide.tab_budget">Budget</button>
+          </div>
         </div>
 
         <div id="guide-breadcrumb" class="guide-breadcrumb" style="display:none"></div>
