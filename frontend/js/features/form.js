@@ -56,6 +56,9 @@ function goToStep(n) {
   });
   Router.navigate('/form/step/' + n, { replace: true });
   window.scrollTo(0, 0);
+  // Scroll active step into view on mobile
+  const activeStep = document.querySelector('.step-indicator .step.active');
+  if (activeStep) activeStep.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
   // Re-bind click handlers on done steps
   document.querySelectorAll('.step-indicator .step').forEach((el, i) => {
     const stepNum = i + 1;
