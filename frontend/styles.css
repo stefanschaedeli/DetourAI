@@ -6774,5 +6774,6 @@ body[data-reorder-mode="on"] .stop-edit-drag { display: none; }
     content: '';
     position: absolute;
     inset: -8px; /* expands hit area to ~44px without changing visual size */
+    pointer-events: none;
   }
 }
