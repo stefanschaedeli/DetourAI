@@ -1076,6 +1076,7 @@ function _listenForReplaceComplete(jobId, travelId) {
  * Desktop drag-and-drop is left intact — this is an additive parallel path.
  */
 function enterReorderMode() {
+  if (_editInProgress) return;
   document.body.dataset.reorderMode = 'on';
 
   const cards = document.querySelectorAll('.stop-card-row');
@@ -1087,7 +1088,7 @@ function enterReorderMode() {
 
     const upBtn = document.createElement('button');
     upBtn.className = 'reorder-up-btn';
-    upBtn.setAttribute('aria-label', 'Stopp nach oben');
+    upBtn.setAttribute('aria-label', t('guide.reorder_up'));
     upBtn.textContent = '▲';
     upBtn.disabled = (i === 0);
     upBtn.onclick = function(e) {
@@ -1097,7 +1098,7 @@ function enterReorderMode() {
 
     const downBtn = document.createElement('button');
     downBtn.className = 'reorder-down-btn';
-    downBtn.setAttribute('aria-label', 'Stopp nach unten');
+    downBtn.setAttribute('aria-label', t('guide.reorder_down'));
     downBtn.textContent = '▼';
     downBtn.disabled = (i === total - 1);
     downBtn.onclick = function(e) {
@@ -1119,7 +1120,7 @@ function enterReorderMode() {
 
 /** Removes injected ▲/▼ buttons and clears the reorder mode flag. */
 function exitReorderMode() {
-  document.body.dataset.reorderMode = '';
+  delete document.body.dataset.reorderMode;
   document.querySelectorAll('.reorder-up-btn, .reorder-down-btn').forEach(function(b) { b.remove(); });
 }
 
@@ -1130,10 +1131,10 @@ function exitReorderMode() {
 function toggleReorderMode(btn) {
   if (document.body.dataset.reorderMode === 'on') {
     exitReorderMode();
-    if (btn) btn.textContent = 'Reihenfolge ändern';
+    if (btn) btn.textContent = t('guide.reorder_start');
   } else {
     enterReorderMode();
-    if (btn) btn.textContent = 'Fertig';
+    if (btn) btn.textContent = t('guide.reorder_done');
   }
 }
 
@@ -1155,7 +1156,7 @@ function _reorderStopByIndex(fromIndex, toIndex) {
   exitReorderMode();
   // Re-label the trigger button if it is still in the DOM
   var triggerBtn = document.querySelector('.reorder-mode-btn');
-  if (triggerBtn) triggerBtn.textContent = 'Reihenfolge ändern';
+  if (triggerBtn) triggerBtn.textContent = t('guide.reorder_start');
 
   _lockEditing();
   apiReorderStops(travelId, fromIndex, toIndex).then(function(res) {

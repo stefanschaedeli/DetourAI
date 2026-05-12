@@ -5501,6 +5501,7 @@ strong.req-keyword {
 .stops-overview-actions {
   display: flex;
   justify-content: center;
+  gap: 0.5rem;
   margin-top: 1rem;
 }
 
@@ -6713,12 +6714,13 @@ body[data-reorder-mode="on"] .reorder-down-btn {
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
-  background: var(--bg-card);
+  background: var(--bg-card, var(--bg-elevated));
   border: 1px solid var(--border-default);
   border-radius: 6px;
   cursor: pointer;
   font-size: 16px;
 }
+body[data-reorder-mode="on"] .stop-edit-drag { display: none; }
 .reorder-mode-btn {
   display: none; /* shown only on ≤768px */
 }
