@@ -6756,3 +6756,23 @@ body[data-reorder-mode="on"] .stop-edit-drag { display: none; }
 @media (max-width: 600px) {
   .settings-row select { min-height: 44px; }
 }
+
+/* =========================================================================
+   Task F — Touch-target sweep (≤768px)
+   All interactive elements brought to ≥44×44px (or ≥32px for secondary)
+   Skipped: .tag button (already ≥32px at ≤600px in C3 above)
+   Skipped: .lightbox-prev/.lightbox-next (font-size:56px + padding already ≥44px)
+   ========================================================================= */
+@media (max-width: 768px) {
+  .btn-sm { min-height: 44px; padding: 10px 18px; }
+  .btn-my-travels { min-height: 44px; height: auto; }
+  .app-header .btn-secondary { min-height: 44px; height: auto; }
+  .settings-btn { min-width: 44px; min-height: 44px; }
+  .mode-btn { padding: 10px 14px; min-height: 44px; }
+  .step-indicator .step { position: relative; }
+  .step-indicator .step::before {
+    content: '';
+    position: absolute;
+    inset: -8px; /* expands hit area to ~44px without changing visual size */
+  }
+}
