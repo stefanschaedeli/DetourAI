@@ -215,6 +215,79 @@ function toggleSettings() {
   menu.style.display = open ? 'none' : 'block';
   menu.setAttribute('aria-hidden', open ? 'true' : 'false');
   if (btn) btn.setAttribute('aria-expanded', String(!open));
+
+  // On mobile (≤600px), prepend a "Konto" section with account actions that
+  // are hidden from the header to save space. Only inject when opening.
+  if (!open && window.innerWidth <= 600) {
+    _injectKontoSection(menu);
+  }
+}
+
+/**
+ * Prepend a "Konto" section to the settings dropdown for mobile screens.
+ * Idempotent — does nothing if the section already exists in the menu.
+ */
+function _injectKontoSection(menu) {
+  if (menu.querySelector('.settings-konto-section')) return;
+
+  const username = S.currentUser?.username || '';
+  const isAdmin  = !!(S.currentUser?.is_admin);
+  const version  = document.querySelector('.app-version')?.textContent?.trim() || '';
+
+  // Build section using safe DOM methods to avoid XSS
+  const section = document.createElement('div');
+  section.className = 'settings-konto-section';
+
+  const usernameEl = document.createElement('div');
+  usernameEl.className = 'settings-konto-username';
+  usernameEl.textContent = username;
+  section.appendChild(usernameEl);
+
+  const versionEl = document.createElement('div');
+  versionEl.className = 'settings-konto-version';
+  versionEl.textContent = version;
+  section.appendChild(versionEl);
+
+  const travelsBtn = document.createElement('button');
+  travelsBtn.className = 'settings-konto-btn';
+  travelsBtn.id = 'settings-konto-travels';
+  travelsBtn.textContent = 'Meine Reisen';
+  travelsBtn.addEventListener('click', () => {
+    toggleSettings();
+    if (typeof openTravelsDrawer === 'function') openTravelsDrawer();
+  });
+  section.appendChild(travelsBtn);
+
+  if (isAdmin) {
+    const adminBtn = document.createElement('button');
+    adminBtn.className = 'settings-konto-btn';
+    adminBtn.id = 'settings-konto-admin';
+    adminBtn.textContent = 'Admin';
+    adminBtn.addEventListener('click', () => {
+      toggleSettings();
+      // Delegate to the existing header admin button to keep logic centralised
+      document.getElementById('btn-admin')?.click();
+    });
+    section.appendChild(adminBtn);
+  }
+
+  const logoutBtn = document.createElement('button');
+  logoutBtn.className = 'settings-konto-btn';
+  logoutBtn.id = 'settings-konto-logout';
+  logoutBtn.textContent = 'Abmelden';
+  logoutBtn.addEventListener('click', () => {
+    toggleSettings();
+    // Delegate to the existing header logout button to keep logic centralised
+    document.getElementById('btn-logout')?.click();
+  });
+  section.appendChild(logoutBtn);
+
+  const divider = document.createElement('hr');
+  divider.className = 'settings-konto-divider';
+  section.appendChild(divider);
+
+  // Insert before the first child (the menu title row)
+  menu.insertBefore(section, menu.firstChild);
 }
 
 function toggleAdvanced() {
