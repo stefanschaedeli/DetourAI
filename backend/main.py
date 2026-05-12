@@ -45,7 +45,7 @@ from utils.maps_helper import (
 )
 from utils.ferry_ports import is_island_destination
 from utils.google_places import validate_stop_quality
-from services.redis_store import redis_client, get_job, save_job, _InMemoryStore, _job_lang
+from services.redis_store import redis_client, get_job, save_job, _InMemoryStore, _job_lang, _JOB_ID_RE
 
 
 # Tracks currently running background tasks: job_id → start timestamp.
