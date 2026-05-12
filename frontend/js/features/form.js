@@ -405,6 +405,15 @@ function renderLegs() {
   if (!container) return;
   container.innerHTML = S.legs.map((leg, i) => renderLegCard(leg, i)).join("");
 
+  // Hide label, hint, and add-button in erkunden mode (single-leg only)
+  const isErkunden = S.appMode === 'erkunden';
+  const addBtn = document.getElementById("add-leg-btn");
+  const legsHint = document.getElementById("legs-hint");
+  const legsLabel = document.querySelector('#legs-section > label.form-label');
+  if (addBtn) addBtn.style.display = isErkunden ? 'none' : '';
+  if (legsHint) legsHint.style.display = isErkunden ? 'none' : '';
+  if (legsLabel) legsLabel.style.display = isErkunden ? 'none' : '';
+
   // Attach autocomplete if Google Maps is ready (transit legs only)
   const gmReady = typeof google !== 'undefined' && google.maps && google.maps.places;
   S.legs.forEach((leg, i) => {
@@ -421,7 +430,7 @@ function renderLegCard(leg, index) {
   const isFirst = index === 0;
   const modeColor = leg.mode === "explore" ? "#D4923A" : "#C4623A";
   const days = leg.start_date && leg.end_date ? dateDiffDays(leg.start_date, leg.end_date) : 0;
-  const canDelete = S.legs.length > 1;
+  const canDelete = S.legs.length > 1 && S.appMode !== 'erkunden';
 
   // Location row — start location shown for all modes, end location only for transit
   const startReadonly = !isFirst ? 'readonly tabindex="-1"' : '';
@@ -513,6 +522,7 @@ function renderLegCard(leg, index) {
 }
 
 function addLeg() {
+  if (S.appMode === 'erkunden') return;
   const prevLeg = S.legs[S.legs.length - 1];
   const originalEnd = prevLeg.end_location || '';
   const originalEndDate = prevLeg.end_date || '';
@@ -548,6 +558,7 @@ function addLeg() {
 }
 
 function removeLeg(index) {
+  if (S.appMode === 'erkunden') return;
   if (S.legs.length <= 1) return;
 
   if (index === 0) {
@@ -1100,7 +1111,10 @@ function restoreFormFromCache() {
     S.legs = cached.legs;
     // Enforce fixed leg mode for modes that don't allow user selection
     if (S.appMode === 'roadtrip') S.legs.forEach(leg => { leg.mode = 'transit'; });
-    if (S.appMode === 'erkunden') S.legs.forEach(leg => { leg.mode = 'explore'; });
+    if (S.appMode === 'erkunden') {
+      if (S.legs.length > 1) S.legs = S.legs.slice(0, 1);
+      S.legs.forEach(leg => { leg.mode = 'explore'; });
+    }
   } else if (cached.start_location || cached.main_destination) {
     S.legs = [{
       leg_id: "leg-0",

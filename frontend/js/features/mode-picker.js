@@ -80,7 +80,11 @@ function _selectMode(mode) {
   } else {
     // Fix leg mode based on app mode: roadtrip → transit, erkunden → explore
     const fixedLegMode = mode === 'erkunden' ? 'explore' : 'transit';
-    if (S.legs) S.legs.forEach(leg => { leg.mode = fixedLegMode; });
+    if (S.legs) {
+      // erkunden = single-leg only; drop extras from a previous roadtrip session
+      if (mode === 'erkunden' && S.legs.length > 1) S.legs = S.legs.slice(0, 1);
+      S.legs.forEach(leg => { leg.mode = fixedLegMode; });
+    }
     showSection('form-section');
   }
 }
