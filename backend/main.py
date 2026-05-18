@@ -33,6 +33,7 @@ from utils.auth_db import admin_exists, create_user, assign_orphan_trips, get_us
 from utils.migrations import run_migrations
 from routers.auth import router as auth_router
 from routers.admin import router as admin_router
+from routers.logs import router as logs_router
 from routers.feedback import router as feedback_router
 from utils.debug_logger import debug_logger, LogLevel
 from utils.route_edit_lock import acquire_edit_lock
@@ -225,6 +226,7 @@ async def language_middleware(request: Request, call_next):
 
 app.include_router(auth_router)
 app.include_router(admin_router)
+app.include_router(logs_router)
 app.include_router(feedback_router)
 
 @app.exception_handler(RequestValidationError)
