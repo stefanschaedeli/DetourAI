@@ -19,6 +19,7 @@ const Router = (() => {
     { pattern: /^\/travel\/(\d+)(?:-[^/]+)?\/(stops|calendar|budget|days)$/,  handler: '_travelTab',       section: 'travel-guide' },
     { pattern: /^\/travel\/(\d+)(?:-[^/]*)?$/,                      handler: '_travel',          section: 'travel-guide' },
     { pattern: /^\/travels\/?$/,                                    handler: '_travels',         section: null },
+    { pattern: /^\/admin\/logs\/?$/,                               handler: '_adminLogs',       section: 'logs-section' },
     { pattern: /^\/settings\/?$/,                                   handler: '_settings',        section: 'settings-section' },
     { pattern: /^\/?$/,                                             handler: '_form',            section: 'form-section' },
   ];
@@ -30,6 +31,7 @@ const Router = (() => {
     get progress()      { return t('router.progress_title'); },
     get travels()       { return t('header.my_travels') + ' — DetourAI'; },
     get settings()      { return t('settings.page_title') + ' — DetourAI'; },
+    get adminLogs()     { return t('logs.title') + ' — DetourAI'; },
   };
 
   // Internal flag to prevent re-entrant dispatch (including across async handlers)
@@ -358,6 +360,11 @@ const Router = (() => {
     _travels() {
       document.title = _titles.travels;
       openTravelsDrawer();
+    },
+
+    _adminLogs() {
+      document.title = _titles.adminLogs;
+      if (typeof showLogViewer === 'function') showLogViewer();
     },
 
     _settings() {

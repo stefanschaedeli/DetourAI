@@ -23,7 +23,7 @@
 <header class="app-header">
   <div class="app-logo" onclick="showModePicker()" style="cursor:pointer" title="Zur Startseite" data-i18n="header.home_link_title" data-i18n-attr="title">DetourAI</div>
   <div class="app-subtitle" data-i18n="header.subtitle">KI-gestützter Reiseplaner</div>
-  <span class="app-version">v15.5.1</span>
+  <span class="app-version">v15.6.0</span>
   <button id="btn-reset-presets" class="btn-icon" onclick="resetAllPresets()"
           data-i18n="header.reset_presets_title" data-i18n-attr="title" title="Formular zurücksetzen">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
@@ -34,6 +34,7 @@
   <button class="btn-my-travels" onclick="openTravelsDrawer()" data-i18n="header.my_travels">Meine Reisen</button>
   <span id="header-username" style="display:none" class="header-username"></span>
   <button id="btn-admin" onclick="showSection('admin-section'); loadAdminUsers();" style="display:none" class="btn-secondary">Admin</button>
+  <button id="btn-logs" onclick="Router.navigate('/admin/logs');" style="display:none" class="btn-secondary" data-i18n="logs.title">Logs</button>
   <button id="btn-logout" onclick="handleLogout()" style="display:none" class="btn-secondary" data-i18n="header.logout">Abmelden</button>
   <button class="btn-icon sidebar-mobile-toggle" id="sidebar-mobile-toggle"
           onclick="toggleSidebar()" aria-label="Reisefortschritt anzeigen" data-i18n="sidebar.mobile_toggle_aria" data-i18n-attr="aria-label" style="display:none">
@@ -628,6 +629,63 @@
     <!-- Dynamisch befüllt durch settings.js -->
   </section>
 
+  <!-- Log Viewer (admin only) -->
+  <section id="logs-section" class="section" style="display:none">
+    <div class="logs-page">
+      <div class="logs-header">
+        <h2 data-i18n="logs.title">Logs</h2>
+        <span id="logs-status-pill" class="logs-status-pill paused">
+          <span class="status-dot"></span> Pausiert
+        </span>
+      </div>
+      <div class="logs-toolbar">
+        <div class="logs-toolbar-group">
+          <span class="logs-toolbar-label" data-i18n="logs.source_label">Quelle</span>
+          <button class="logs-chip logs-source-chip active" data-source="agents" data-i18n="logs.source_agents">Agents</button>
+          <button class="logs-chip logs-source-chip active" data-source="orchestrator" data-i18n="logs.source_orchestrator">Orchestrator</button>
+          <button class="logs-chip logs-source-chip active" data-source="api" data-i18n="logs.source_api">API</button>
+          <button class="logs-chip logs-source-chip active" data-source="frontend" data-i18n="logs.source_frontend">Frontend</button>
+        </div>
+        <div class="logs-toolbar-divider"></div>
+        <div class="logs-toolbar-group">
+          <span class="logs-toolbar-label" data-i18n="logs.file_label">Datei</span>
+          <select id="logs-file-select">
+            <option value="" data-i18n="logs.file_all">Alle Dateien</option>
+          </select>
+        </div>
+        <div class="logs-toolbar-divider"></div>
+        <div class="logs-toolbar-group">
+          <span class="logs-toolbar-label" data-i18n="logs.level_label">Level</span>
+          <button class="logs-chip logs-level-chip" data-level="DEBUG">DEBUG</button>
+          <button class="logs-chip logs-level-chip" data-level="INFO">INFO</button>
+          <button class="logs-chip logs-level-chip" data-level="SUCCESS">SUCCESS</button>
+          <button class="logs-chip logs-level-chip" data-level="WARNING">WARNING</button>
+          <button class="logs-chip logs-level-chip" data-level="ERROR">ERROR</button>
+          <button class="logs-chip logs-level-chip" data-level="AGENT">AGENT</button>
+          <button class="logs-chip logs-level-chip" data-level="API">API</button>
+          <button class="logs-chip logs-level-chip" data-level="PROMPT">PROMPT</button>
+        </div>
+        <div class="logs-toolbar-divider"></div>
+        <div class="logs-toolbar-group">
+          <input id="logs-job-input" type="text" placeholder="Job-ID filtern…" data-i18n-placeholder="logs.job_placeholder" style="width:120px">
+          <input id="logs-search-input" type="text" placeholder="Nachricht filtern…" data-i18n-placeholder="logs.search_placeholder" style="width:160px">
+        </div>
+        <div class="logs-toolbar-divider"></div>
+        <div class="logs-toolbar-group">
+          <label class="logs-live-toggle">
+            <input id="logs-live-checkbox" type="checkbox" checked>
+            <span data-i18n="logs.live_toggle">Live</span>
+          </label>
+          <button id="logs-download-btn" class="btn-secondary" style="font-size:0.75rem;padding:0.25rem 0.6rem" data-i18n="logs.download_btn">Herunterladen</button>
+        </div>
+      </div>
+      <div class="logs-pane-wrapper">
+        <div id="logs-pane" class="logs-pane" aria-live="polite" aria-label="Log-Ausgabe"></div>
+        <button id="logs-new-indicator" class="logs-new-indicator" data-i18n="logs.new_logs_btn">Neue Logs</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ============================================================ Admin Panel -->
   <section id="admin-section" class="section">
     <div class="admin-page">
@@ -818,6 +876,7 @@
 <script src="/js/features/settings.js"></script>
 <script src="/js/features/sidebar.js"></script>
 <script src="/js/features/feedback.js"></script>
+<script src="/js/features/logviewer.js"></script>
 
 <script>
   // ── Auth helpers ──────────────────────────────────────────────────────────────
@@ -826,6 +885,7 @@
     showSection('login-section');
     document.getElementById('header-username').style.display = 'none';
     document.getElementById('btn-admin').style.display = 'none';
+    document.getElementById('btn-logs').style.display = 'none';
     document.getElementById('btn-logout').style.display = 'none';
     document.querySelectorAll('.btn-my-travels').forEach(b => b.style.display = 'none');
   }
@@ -836,6 +896,7 @@
     document.getElementById('btn-logout').style.display = '';
     if (user.is_admin) {
       document.getElementById('btn-admin').style.display = '';
+      document.getElementById('btn-logs').style.display = '';
     }
     document.querySelectorAll('.btn-my-travels').forEach(b => b.style.display = '');
     // Navigate via router so mode-picker / form logic is applied correctly.

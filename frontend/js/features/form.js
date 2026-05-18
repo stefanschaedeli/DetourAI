@@ -273,10 +273,19 @@ function _injectKontoSection(menu) {
     adminBtn.textContent = 'Admin';
     adminBtn.addEventListener('click', () => {
       toggleSettings();
-      // Delegate to the existing header admin button to keep logic centralised
       document.getElementById('btn-admin')?.click();
     });
     section.appendChild(adminBtn);
+
+    const logsBtn = document.createElement('button');
+    logsBtn.className = 'settings-konto-btn';
+    logsBtn.id = 'settings-konto-logs';
+    logsBtn.textContent = t('logs.title');
+    logsBtn.addEventListener('click', () => {
+      toggleSettings();
+      Router.navigate('/admin/logs');
+    });
+    section.appendChild(logsBtn);
   }
 
   const logoutBtn = document.createElement('button');
