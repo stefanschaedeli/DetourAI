@@ -308,3 +308,7 @@ class DebugLogger:
 
 
 debug_logger = DebugLogger()   # module-level singleton
+
+# Module-level constant so other modules can locate log files without
+# importing the singleton or duplicating the env-var resolution.
+LOGS_DIR: Path = debug_logger._logs_dir
