@@ -7,6 +7,7 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 dist/
+!dist/docker-compose.yml
 build/
 .venv/
 venv/

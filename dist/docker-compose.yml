@@ -1,0 +1,50 @@
+# TrueNAS Scale 25 — pre-built images only (no build stanzas).
+# Before first run:
+#   mkdir -p /mnt/flash/docker/outputs && chmod 777 /mnt/flash/docker/outputs
+#
+# Required env vars (create a .env file or export before running):
+#   ANTHROPIC_API_KEY, GOOGLE_MAPS_API_KEY, JWT_SECRET, ADMIN_PASSWORD
+# Optional: BRAVE_API_KEY, TEST_MODE (default true), ADMIN_USERNAME (default admin)
+#
+# Start:
+#   docker compose up -d
+#
+# Access: http://<TRUENAS_IP>:8787
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 64mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+
+  backend:
+    image: ghcr.io/stefanschaedeli/detour-ai-backend:latest
+    restart: unless-stopped
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - BRAVE_API_KEY=${BRAVE_API_KEY:-}
+      - TEST_MODE=${TEST_MODE:-true}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - COOKIE_SECURE=${COOKIE_SECURE:-true}
+      - DATA_DIR=/app/data
+      - LOGS_DIR=/app/logs
+    depends_on: [redis]
+    volumes:
+      - /mnt/flash/docker/outputs:/app/outputs
+      - travel_logs:/app/logs
+
+  frontend:
+    image: ghcr.io/stefanschaedeli/detour-ai-frontend:latest
+    restart: unless-stopped
+    ports: ["8787:8080"]
+    depends_on: [backend]
+
+volumes:
+  redis_data:
+  travel_logs:
