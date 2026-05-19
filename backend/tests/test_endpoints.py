@@ -124,11 +124,13 @@ def test_plan_trip_success(client, mock_redis, sample_request, mocker):
         'agents.stop_options_finder.StopOptionsFinderAgent.find_options_streaming',
         side_effect=mock_find_options_streaming,
     )
-    mocker.patch('main.geocode_google', return_value=(47.5, 7.6, 'ChIJMz5dPRdMkEcRjnz1cE6JLGU'))
-    mocker.patch('main.google_directions_simple', return_value=(1.0, 80.0))
-    mocker.patch('main.google_directions', return_value=(1.0, 80.0, 'encodedPolyline123'))
-    mocker.patch('main.reference_cities_along_route_google', return_value=['Bern', 'Fribourg', 'Lausanne'])
-    mocker.patch('main.reverse_geocode_google', return_value=('Bern', 'ChIJMz5dPRdMkEcR123'))
+    # Planning endpoints now live in routers/planning.py with helpers in
+    # services/job_helpers.py — patch at the actual import sites.
+    mocker.patch('services.job_helpers.geocode_google', return_value=(47.5, 7.6, 'ChIJMz5dPRdMkEcRjnz1cE6JLGU'))
+    mocker.patch('routers.planning.geocode_google', return_value=(47.5, 7.6, 'ChIJMz5dPRdMkEcRjnz1cE6JLGU'))
+    mocker.patch('services.job_helpers.google_directions_simple', return_value=(1.0, 80.0))
+    mocker.patch('services.job_helpers.google_directions', return_value=(1.0, 80.0, 'encodedPolyline123'))
+    mocker.patch('services.job_helpers.reference_cities_along_route_google', return_value=['Bern', 'Fribourg', 'Lausanne'])
 
     r = client.post("/api/plan-trip", json=sample_request)
     assert r.status_code == 200
@@ -682,9 +684,9 @@ def _location_request_payload(mode="location", start="Zürich", end="", start_da
 
 def test_plan_location_valid(client, mocker):
     """plan-location endpoint geocodes location and returns loading_accommodations."""
-    mocker.patch("main.get_job", return_value={"lang": "de"})
-    mocker.patch("main.geocode_google", new=AsyncMock(return_value=(47.3769, 8.5417, "ChIJ_place_id")))
-    mock_save = mocker.patch("main.save_job")
+    mocker.patch("routers.planning.get_job", return_value={"lang": "de"})
+    mocker.patch("routers.planning.geocode_google", new=AsyncMock(return_value=(47.3769, 8.5417, "ChIJ_place_id")))
+    mock_save = mocker.patch("routers.planning.save_job")
 
     response = client.post(
         "/api/plan-location/test-job-123",
@@ -706,7 +708,7 @@ def test_plan_location_valid(client, mocker):
 
 def test_plan_location_wrong_mode(client, mocker):
     """plan-location returns 400 when leg mode is not location."""
-    mocker.patch("main.get_job", return_value={"lang": "de"})
+    mocker.patch("routers.planning.get_job", return_value={"lang": "de"})
 
     response = client.post(
         "/api/plan-location/test-job-456",
@@ -720,8 +722,8 @@ def test_plan_location_wrong_mode(client, mocker):
 
 def test_plan_location_geocode_fail(client, mocker):
     """plan-location returns 422 when geocoding fails."""
-    mocker.patch("main.get_job", return_value={"lang": "de"})
-    mocker.patch("main.geocode_google", new=AsyncMock(return_value=None))
+    mocker.patch("routers.planning.get_job", return_value={"lang": "de"})
+    mocker.patch("routers.planning.geocode_google", new=AsyncMock(return_value=None))
 
     response = client.post(
         "/api/plan-location/test-job-789",

@@ -203,16 +203,17 @@ class TestSilentReask:
     def test_silent_reask_pipeline_design(self):
         """Verify that validate_stop_quality returning False leads to None return in _enrich_one.
 
-        This is a design-level test: we verify that main.py contains the pattern where
-        validate_stop_quality failure returns None (which triggers the existing retry loop).
-        Integration testing of the full _enrich_one pipeline requires a running server,
-        so we verify the code pattern statically."""
-        main_file = os.path.join(os.path.dirname(__file__), "..", "main.py")
-        with open(main_file) as f:
+        Design-level test: we verify that the planning pipeline (now in
+        services/job_helpers.py) calls validate_stop_quality and returns None on
+        failure, which triggers the existing retry loop. Integration testing of the
+        full _enrich_one pipeline requires a running server, so we check the code
+        pattern statically."""
+        helpers_file = os.path.join(os.path.dirname(__file__), "..", "services", "job_helpers.py")
+        with open(helpers_file) as f:
             source = f.read()
         # Verify the quality check pattern: call validate_stop_quality, return None on failure
-        assert "validate_stop_quality" in source, "main.py must call validate_stop_quality"
-        assert "is_quality" in source or "not is_quality" in source, "main.py must check quality result"
+        assert "validate_stop_quality" in source, "job_helpers.py must call validate_stop_quality"
+        assert "is_quality" in source or "not is_quality" in source, "job_helpers.py must check quality result"
         # Verify the silent rejection pattern (return None after quality failure)
         # The pattern: if not is_quality: ... return None
         lines = source.split("\n")
@@ -224,4 +225,4 @@ class TestSilentReask:
                     if "return None" in lines[j]:
                         found_quality_reject = True
                         break
-        assert found_quality_reject, "main.py must return None after quality validation failure (silent rejection per D-08)"
+        assert found_quality_reject, "job_helpers.py must return None after quality validation failure (silent rejection per D-08)"
