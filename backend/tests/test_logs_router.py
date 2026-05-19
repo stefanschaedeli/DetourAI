@@ -110,12 +110,19 @@ def test_stream_path_traversal_rejected(client, tmp_logs):
     assert res.status_code == 400
 
 
-def test_stream_returns_initial_lines(client, tmp_logs):
+def test_stream_returns_initial_lines(client, tmp_logs, mocker):
     from utils.auth import create_access_token
     token = create_access_token(user_id=1, username="admin", is_admin=True)
+
+    async def _no_tail(paths, filter_fn, poll_interval=0.5):
+        return
+        yield  # make it an async generator
+
+    mocker.patch("routers.logs.tail_files", _no_tail)
     res = client.get(
         f"/api/admin/logs/stream?token={token}&sources=agents&initial_lines=5",
         headers={"Accept": "text/event-stream"},
     )
     assert res.status_code == 200
     assert "text/event-stream" in res.headers.get("content-type", "")
+    assert "data:" in res.text
