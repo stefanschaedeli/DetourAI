@@ -101,8 +101,9 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
             try:
                 await debug_logger.push_event(job_id, "job_error", None,
                                               {"message": "Job-Timeout: Die Verarbeitung hat zu lange gedauert."})
-            except Exception:
-                pass
+            except Exception as _push_exc:
+                import logging as _logging
+                _logging.getLogger("travelman").warning("SSE push fehlgeschlagen nach Timeout: %s", _push_exc)
         except Exception as exc:
             _logging.getLogger("travelman").error(
                 "Background task %s failed for job %s: %s", task_name, job_id, exc, exc_info=True
@@ -110,8 +111,9 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
             # Push a job_error SSE event so the frontend doesn't hang indefinitely.
             try:
                 await debug_logger.push_event(job_id, "job_error", None, {"message": str(exc)})
-            except Exception:
-                pass
+            except Exception as _push_exc:
+                import logging as _logging
+                _logging.getLogger("travelman").warning("SSE push fehlgeschlagen nach Fehler: %s", _push_exc)
         finally:
             _running_tasks.pop(job_id, None)
 
@@ -155,7 +157,8 @@ async def _periodic_stuck_job_reaper():
         now = _time.time()
         try:
             keys = redis_client.keys("job:*")
-        except Exception:
+        except Exception as _redis_exc:
+            logger.warning("Stuck-job reaper: Redis nicht erreichbar: %s", _redis_exc)
             continue
         for key in keys:
             try:
@@ -182,8 +185,8 @@ async def _periodic_stuck_job_reaper():
                         job_id, "job_error", None,
                         {"message": "Job wurde automatisch beendet (Timeout nach 45 Minuten)."},
                     )
-                except Exception:
-                    pass
+                except Exception as _push_exc:
+                    logger.warning("SSE push fehlgeschlagen im Stuck-Job-Reaper: %s", _push_exc)
             except Exception as exc:
                 logger.warning("Stuck-job reaper error for key %s: %s", key, exc)
 
@@ -237,8 +240,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     try:
         body = await request.body()
         logger.error(f"Request body: {body.decode('utf-8', errors='replace')[:2000]}")
-    except Exception:
-        pass
+    except Exception as _body_exc:
+        logger.warning("Request body konnte nicht gelesen werden: %s", _body_exc)
     errors = [
         {k: str(v) if not isinstance(v, (str, int, float, bool, list, tuple, type(None))) else v
          for k, v in e.items()}
@@ -2178,8 +2181,9 @@ async def progress(job_id: str, request: Request, token: Optional[str] = None, c
                     queue.put_nowait(event)
                 except asyncio.QueueFull:
                     break
-        except Exception:
-            pass
+        except Exception as _drain_exc:
+            import logging as _logging
+            _logging.getLogger("travelman").warning("Redis drain fehlgeschlagen: %s", _drain_exc)
 
     async def event_generator():
         try:
@@ -2211,8 +2215,9 @@ async def progress(job_id: str, request: Request, token: Optional[str] = None, c
             if r:
                 try:
                     await asyncio.to_thread(r.delete, redis_key)
-                except Exception:
-                    pass
+                except Exception as _del_exc:
+                    import logging as _logging
+                    _logging.getLogger("travelman").warning("Redis cleanup fehlgeschlagen: %s", _del_exc)
 
     return EventSourceResponse(event_generator())
 
@@ -2324,7 +2329,9 @@ async def health():
         )
         active = len([k for k in keys if json.loads(redis_client.get(k) or "{}").get("status") in active_statuses])
         redis_ok = True
-    except Exception:
+    except Exception as _redis_exc:
+        import logging as _logging
+        _logging.getLogger("travelman").warning("/health: Redis nicht erreichbar: %s", _redis_exc)
         active = 0
         redis_ok = False
 
