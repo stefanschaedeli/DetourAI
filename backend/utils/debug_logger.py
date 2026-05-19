@@ -97,6 +97,8 @@ class DebugLogger:
         self._verbosity: dict[str, VerbosityLevel] = {}  # per job_id
         self._default_verbosity = VerbosityLevel.NORMAL
         self._logs_dir = Path(os.getenv("LOGS_DIR", Path(__file__).parent.parent / "logs"))
+        for _subdir in ("agents", "orchestrator", "api", "frontend"):
+            (self._logs_dir / _subdir).mkdir(parents=True, exist_ok=True)
 
     def _r(self):
         """Lazily get Redis client (cached after first attempt)."""
