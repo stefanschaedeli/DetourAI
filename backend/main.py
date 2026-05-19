@@ -102,7 +102,6 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
                 await debug_logger.push_event(job_id, "job_error", None,
                                               {"message": "Job-Timeout: Die Verarbeitung hat zu lange gedauert."})
             except Exception as _push_exc:
-                import logging as _logging
                 _logging.getLogger("travelman").warning("SSE push fehlgeschlagen nach Timeout: %s", _push_exc)
         except Exception as exc:
             _logging.getLogger("travelman").error(
@@ -112,7 +111,6 @@ def _fire_task(task_name: str, job_id: str, **kwargs):
             try:
                 await debug_logger.push_event(job_id, "job_error", None, {"message": str(exc)})
             except Exception as _push_exc:
-                import logging as _logging
                 _logging.getLogger("travelman").warning("SSE push fehlgeschlagen nach Fehler: %s", _push_exc)
         finally:
             _running_tasks.pop(job_id, None)
@@ -2168,6 +2166,7 @@ async def progress(job_id: str, request: Request, token: Optional[str] = None, c
 
     async def _drain_redis():
         """Move any events queued in Redis (by Celery workers) into the local queue."""
+        import logging as _logging
         r = debug_logger._r()
         if not r:
             return
@@ -2182,10 +2181,10 @@ async def progress(job_id: str, request: Request, token: Optional[str] = None, c
                 except asyncio.QueueFull:
                     break
         except Exception as _drain_exc:
-            import logging as _logging
             _logging.getLogger("travelman").warning("Redis drain fehlgeschlagen: %s", _drain_exc)
 
     async def event_generator():
+        import logging as _logging
         try:
             while True:
                 # First drain any events published by Celery workers via Redis
@@ -2216,7 +2215,6 @@ async def progress(job_id: str, request: Request, token: Optional[str] = None, c
                 try:
                     await asyncio.to_thread(r.delete, redis_key)
                 except Exception as _del_exc:
-                    import logging as _logging
                     _logging.getLogger("travelman").warning("Redis cleanup fehlgeschlagen: %s", _del_exc)
 
     return EventSourceResponse(event_generator())
@@ -2320,6 +2318,7 @@ async def chrome_devtools():
 
 @app.get("/health")
 async def health():
+    import logging as _logging
     # Check Redis connectivity — unhealthy if unreachable.
     try:
         keys = redis_client.keys("job:*")
@@ -2330,7 +2329,6 @@ async def health():
         active = len([k for k in keys if json.loads(redis_client.get(k) or "{}").get("status") in active_statuses])
         redis_ok = True
     except Exception as _redis_exc:
-        import logging as _logging
         _logging.getLogger("travelman").warning("/health: Redis nicht erreichbar: %s", _redis_exc)
         active = 0
         redis_ok = False
