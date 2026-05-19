@@ -19,7 +19,6 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse
 
-from models.accommodation_option import BudgetState  # noqa: F401  (re-export hint)
 from models.stop_option import StopSelectRequest
 from models.travel_request import TravelRequest
 from services.job_helpers import (
