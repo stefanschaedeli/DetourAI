@@ -25,9 +25,11 @@ SYSTEM_PROMPTS = {
         "Für jede Region liefere:\n"
         "- name: Name der Region, immer mit Land (z.B. 'Peloponnes, Griechenland')\n"
         "- lat/lon: Zentrale Koordinaten der Region\n"
-        "- reason: Warum diese Region zur Reise passt (1 Satz)\n"
-        "- teaser: Kurzer, einladender Satz der die Region beschreibt und Lust auf den Besuch macht\n"
-        "- highlights: 3-5 konkrete Sehenswürdigkeiten, Aktivitäten oder Besonderheiten der Region\n\n"
+        "- reason: Warum diese Region zur Reise passt (1 Satz, max. 150 Zeichen)\n"
+        "- teaser: Kurzer, einladender Satz der die Region beschreibt (max. 120 Zeichen)\n"
+        "- highlights: 3 konkrete Sehenswürdigkeiten oder Aktivitäten (max. 3 Einträge)\n\n"
+        "WICHTIG: Plane maximal 8 Regionen, auch bei langen Reisen. Weniger Regionen mit mehr "
+        "Tiefe sind besser als viele Regionen mit wenig Inhalt.\n"
         "Antworte AUSSCHLIESSLICH als valides JSON-Objekt. Kein Markdown, keine Erklärungen, nur JSON."
     ),
     "en": (
@@ -42,9 +44,11 @@ SYSTEM_PROMPTS = {
         "For each region provide:\n"
         "- name: Name of the region, always including the country (e.g. 'Peloponnese, Greece')\n"
         "- lat/lon: Central coordinates of the region\n"
-        "- reason: Why this region fits the trip (1 sentence)\n"
-        "- teaser: Short, inviting sentence describing the region and making you want to visit\n"
-        "- highlights: 3-5 specific sights, activities, or special features of the region\n\n"
+        "- reason: Why this region fits the trip (1 sentence, max. 150 characters)\n"
+        "- teaser: Short, inviting sentence describing the region (max. 120 characters)\n"
+        "- highlights: 3 specific sights or activities (max. 3 entries)\n\n"
+        "IMPORTANT: Plan at most 8 regions, even for long trips. Fewer regions with more depth "
+        "are better than many regions with little content.\n"
         "Reply ONLY with a valid JSON object. No markdown, no explanations, only JSON."
     ),
     "hi": (
@@ -58,9 +62,10 @@ SYSTEM_PROMPTS = {
         "प्रत्येक क्षेत्र के लिए प्रदान करें:\n"
         "- name: क्षेत्र का नाम, हमेशा देश के नाम के साथ (जैसे 'पेलोपोनिस, ग्रीस')\n"
         "- lat/lon: क्षेत्र के केंद्रीय निर्देशांक\n"
-        "- reason: यह क्षेत्र यात्रा के लिए क्यों उपयुक्त है (1 वाक्य)\n"
-        "- teaser: क्षेत्र का वर्णन करने वाला छोटा, आमंत्रित वाक्य\n"
-        "- highlights: क्षेत्र के 3-5 विशिष्ट दर्शनीय स्थल, गतिविधियां या विशेषताएं\n\n"
+        "- reason: यह क्षेत्र यात्रा के लिए क्यों उपयुक्त है (1 वाक्य, अधिकतम 150 अक्षर)\n"
+        "- teaser: क्षेत्र का वर्णन करने वाला छोटा, आमंत्रित वाक्य (अधिकतम 120 अक्षर)\n"
+        "- highlights: 3 विशिष्ट दर्शनीय स्थल या गतिविधियां (अधिकतम 3 प्रविष्टियां)\n\n"
+        "महत्वपूर्ण: अधिकतम 8 क्षेत्र बनाएं, लंबी यात्राओं के लिए भी।\n"
         "केवल एक वैध JSON ऑब्जेक्ट के साथ उत्तर दें। कोई मार्कडाउन नहीं, कोई व्याख्या नहीं, केवल JSON।"
     ),
 }
